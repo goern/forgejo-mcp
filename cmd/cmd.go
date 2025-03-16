@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"flag"
 
 	"gitea.com/gitea/gitea-mcp/operation"
@@ -57,6 +58,10 @@ func init() {
 func Execute(version string) {
 	defer log.Default().Sync()
 	if err := operation.Run(transport, version); err != nil {
+		if err == context.Canceled {
+			log.Info("Server shutdown due to context cancellation")
+			return
+		}
 		log.Fatalf("Run Gitea MCP Server Error: %v", err)
 	}
 }
