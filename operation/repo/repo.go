@@ -14,13 +14,13 @@ const (
 )
 
 var (
-	GetMyReposTool = mcp.NewTool(
+	ListMyReposTool = mcp.NewTool(
 		ListMyReposToolName,
 		mcp.WithDescription("List My Repositories"),
 	)
 )
 
-func MyUserReposFn(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func ListMyReposFn(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	opts := gitea.ListReposOptions{
 		ListOptions: gitea.ListOptions{
 			Page:     1,

@@ -20,7 +20,7 @@ var (
 	)
 )
 
-func MyUserInfoFn(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func GetUserInfoFn(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	user, _, err := gitea.Client().GetMyUserInfo()
 	if err != nil {
 		return mcp.NewToolResultError("Get My User Info Error"), err

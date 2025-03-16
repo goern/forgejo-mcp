@@ -1,9 +1,11 @@
 GO ?= go
 EXECUTABLE := gitea-mcp
+VERSION ?= $(shell git describe --tags --always | sed 's/-/+/' | sed 's/^v//')
+LDFLAGS := -X "main.Version=$(VERSION)"
 
 .PHONY: build
 build:
-	$(GO) build -v -ldflags '-s -w' -o $(EXECUTABLE)
+	$(GO) build -v -ldflags '-s -w $(LDFLAGS)' -o $(EXECUTABLE)
 
 ## air: install air for hot reload
 .PHONY: air
