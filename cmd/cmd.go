@@ -55,7 +55,7 @@ func init() {
 }
 
 func Execute(version string) {
-	defer log.Sync()
+	defer log.Default().Sync()
 	if err := operation.Run(transport, version); err != nil {
 		log.Fatalf("Run Gitea MCP Server Error: %v", err)
 	}

@@ -71,30 +71,22 @@ func Panic(msg string, fields ...zap.Field) {
 	Default().Panic(msg, fields...)
 }
 
-func Debugf(format string, args ...interface{}) {
+func Debugf(format string, args ...any) {
 	Default().Sugar().Debugf(format, args...)
 }
 
-func Infof(format string, args ...interface{}) {
+func Infof(format string, args ...any) {
 	Default().Sugar().Infof(format, args...)
 }
 
-func Warnf(format string, args ...interface{}) {
+func Warnf(format string, args ...any) {
 	Default().Sugar().Warnf(format, args...)
 }
 
-func Errorf(format string, args ...interface{}) {
+func Errorf(format string, args ...any) {
 	Default().Sugar().Errorf(format, args...)
 }
 
-func Fatalf(format string, args ...interface{}) {
+func Fatalf(format string, args ...any) {
 	Default().Sugar().Fatalf(format, args...)
-}
-
-func Sync() {
-	err := defaultLogger.Sync()
-	if err != nil {
-		Error(err.Error())
-	}
-	Info("logger has been synced")
 }
