@@ -3,6 +3,7 @@ package operation
 import (
 	"fmt"
 
+	"gitea.com/gitea/gitea-mcp/operation/issue"
 	"gitea.com/gitea/gitea-mcp/operation/repo"
 	"gitea.com/gitea/gitea-mcp/operation/user"
 	"gitea.com/gitea/gitea-mcp/operation/version"
@@ -21,6 +22,9 @@ func RegisterTool(s *server.MCPServer) {
 
 	// Repo Tool
 	s.AddTool(repo.ListMyReposTool, repo.ListMyReposFn)
+
+	// Issue Tool
+	s.AddTool(issue.GetIssueByIndexTool, issue.GetIssueByIndexFn)
 
 	// Version Tool
 	s.AddTool(version.GetGiteaMCPServerVersionTool, version.GetGiteaMCPServerVersionFn)

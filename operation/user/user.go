@@ -16,7 +16,7 @@ const (
 var (
 	GetMyUserInfoTool = mcp.NewTool(
 		GetMyUserInfoToolName,
-		mcp.WithDescription("Get My User Info"),
+		mcp.WithDescription("Get my user info"),
 	)
 )
 
@@ -28,7 +28,7 @@ func GetUserInfoFn(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallT
 
 	result, err := json.Marshal(user)
 	if err != nil {
-		return mcp.NewToolResultError("Get My User Info Error"), err
+		return mcp.NewToolResultError("marshal my user info error"), err
 	}
 	return mcp.NewToolResultText(string(result)), nil
 }
