@@ -35,6 +35,7 @@ cp gitea-mcp /usr/local/bin/
 
 ## 🚀 Usage
 
+This example is for Cursor, you can also use plugins in VSCode.
 To configure the MCP server for Gitea, add the following to your MCP configuration file:
 
 ```json
@@ -58,6 +59,7 @@ To configure the MCP server for Gitea, add the following to your MCP configurati
 
 > [!NOTE]
 > You can provide your Gitea host and access token either as command-line arguments or environment variables.
+> Command-line arguments have the highest priority
 
 Once everything is set up, try typing the following in your MCP-compatible chatbox:
 
