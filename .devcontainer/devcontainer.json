@@ -1,0 +1,19 @@
+{
+    "name": "Gitea MCP DevContainer",
+    "image": "mcr.microsoft.com/devcontainers/go:1.24-bookworm",
+    "features": {
+    },
+    "customizations": {
+      "vscode": {
+        "settings": {},
+        "extensions": [
+          "editorconfig.editorconfig",
+          "dbaeumer.vscode-eslint",
+          "golang.go",
+          "stylelint.vscode-stylelint",
+          "DavidAnson.vscode-markdownlint",
+          "github.copilot"
+        ]
+      }
+    }
+  }
