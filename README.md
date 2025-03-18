@@ -21,3 +21,19 @@
   }
 }
 ```
+
+- Cursor config
+```json
+{
+  "mcpServers": {
+    "gitea": {
+      "command": "gitea-mcp",
+      "args": [
+        "-t": "stdio",
+        "--host": "https://gitea.com",
+        "--token": "<your personal access token>"
+      ]
+    }
+  }
+}
+```
