@@ -21,6 +21,7 @@ func RegisterTool(s *server.MCPServer) {
 	s.AddTool(user.GetMyUserInfoTool, user.GetUserInfoFn)
 
 	// Repo Tool
+	s.AddTool(repo.CreateRepoTool, repo.CreateRepoFn)
 	s.AddTool(repo.ListMyReposTool, repo.ListMyReposFn)
 
 	// Issue Tool
