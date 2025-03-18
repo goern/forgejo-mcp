@@ -10,7 +10,7 @@ There is currently no official release. You will need to build the Gitea MCP Ser
 
 You can download the source code by cloning the repository using Git:
 
-```
+```bash
 git clone https://gitea.com/gitea/gitea-mcp.git
 ```
 
@@ -55,12 +55,13 @@ To configure the MCP server for Gitea, add the following to your MCP configurati
   }
 }
 ```
+
 > [!NOTE]
 > You can provide your Gitea host and access token either as command-line arguments or environment variables.
 
 Once everything is set up, try typing the following in your MCP-compatible chatbox:
 
-```
+```text
 list all my repositories
 ```
 
