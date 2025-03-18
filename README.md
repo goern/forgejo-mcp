@@ -8,11 +8,18 @@ There is currently no official release. You will need to build the Gitea MCP Ser
 
 ### 🔧 Build from Source
 
-Before building, make sure you have the following installed:
-	- make
-	- Golang (Go 1.24 or later recommended)
+You can download the source code by cloning the repository using Git:
 
-Clone the repository and run:
+```
+git clone https://gitea.com/gitea/gitea-mcp.git
+```
+
+Before building, make sure you have the following installed:
+
+- make
+- Golang (Go 1.24 or later recommended)
+
+Then run:
 
 ```bash
 make build
