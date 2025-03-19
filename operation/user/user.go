@@ -7,6 +7,7 @@ import (
 	"gitea.com/gitea/gitea-mcp/pkg/to"
 
 	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
 )
 
 const (
@@ -19,6 +20,10 @@ var (
 		mcp.WithDescription("Get my user info"),
 	)
 )
+
+func RegisterTool(s *server.MCPServer) {
+	s.AddTool(GetMyUserInfoTool, GetUserInfoFn)
+}
 
 func GetUserInfoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	user, _, err := gitea.Client().GetMyUserInfo()

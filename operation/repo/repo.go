@@ -6,7 +6,9 @@ import (
 	"code.gitea.io/sdk/gitea"
 	giteaPkg "gitea.com/gitea/gitea-mcp/pkg/gitea"
 	"gitea.com/gitea/gitea-mcp/pkg/to"
+
 	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
 )
 
 const (
@@ -22,16 +24,16 @@ var (
 
 	CreateRepoOpt = []mcp.ToolOption{
 		mcp.WithDescription("Create repository"),
-		mcp.WithString("name", mcp.Required(), mcp.Description("Name of the repository to create")),
-		mcp.WithString("description", mcp.Description("Description of the repository to create")),
-		mcp.WithBoolean("private", mcp.Description("Whether the repository is private")),
-		mcp.WithString("issue_labels", mcp.Description("Issue Label set to use")),
-		mcp.WithBoolean("auto_init", mcp.Description("Whether the repository should be auto-intialized?")),
-		mcp.WithBoolean("template", mcp.Description("Whether the repository is template")),
-		mcp.WithString("gitignores", mcp.Description("Gitignores to use")),
-		mcp.WithString("license", mcp.Description("License to use")),
-		mcp.WithString("readme", mcp.Description("Readme of the repository to create")),
-		mcp.WithString("default_branch", mcp.Description("DefaultBranch of the repository (used when initializes and in template)")),
+		mcp.WithString("name", mcp.Required(), mcp.DefaultString("test"), mcp.Description("Name of the repository to create")),
+		mcp.WithString("description", mcp.DefaultString(""), mcp.Description("Description of the repository to create")),
+		mcp.WithBoolean("private", mcp.DefaultBool(true), mcp.Description("Whether the repository is private")),
+		mcp.WithString("issue_labels", mcp.DefaultString(""), mcp.Description("Issue Label set to use")),
+		mcp.WithBoolean("auto_init", mcp.DefaultBool(false), mcp.Description("Whether the repository should be auto-intialized?")),
+		mcp.WithBoolean("template", mcp.DefaultBool(false), mcp.Description("Whether the repository is template")),
+		mcp.WithString("gitignores", mcp.DefaultString(""), mcp.Description("Gitignores to use")),
+		mcp.WithString("license", mcp.DefaultString("MIT"), mcp.Description("License to use")),
+		mcp.WithString("readme", mcp.DefaultString(""), mcp.Description("Readme of the repository to create")),
+		mcp.WithString("default_branch", mcp.DefaultString("main"), mcp.Description("DefaultBranch of the repository (used when initializes and in template)")),
 	}
 
 	ListMyReposTool = mcp.NewTool(
@@ -55,6 +57,11 @@ var (
 		),
 	}
 )
+
+func RegisterTool(s *server.MCPServer) {
+	s.AddTool(CreateRepoTool, CreateRepoFn)
+	s.AddTool(ListMyReposTool, ListMyReposFn)
+}
 
 func CreateRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := req.Params.Arguments["name"].(string)

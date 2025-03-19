@@ -9,6 +9,7 @@ import (
 	"gitea.com/gitea/gitea-mcp/operation/version"
 	"gitea.com/gitea/gitea-mcp/pkg/flag"
 	"gitea.com/gitea/gitea-mcp/pkg/log"
+
 	"github.com/mark3labs/mcp-go/server"
 )
 
@@ -18,17 +19,16 @@ var (
 
 func RegisterTool(s *server.MCPServer) {
 	// User Tool
-	s.AddTool(user.GetMyUserInfoTool, user.GetUserInfoFn)
+	user.RegisterTool(s)
 
 	// Repo Tool
-	s.AddTool(repo.CreateRepoTool, repo.CreateRepoFn)
-	s.AddTool(repo.ListMyReposTool, repo.ListMyReposFn)
+	repo.RegisterTool(s)
 
 	// Issue Tool
-	s.AddTool(issue.GetIssueByIndexTool, issue.GetIssueByIndexFn)
+	issue.RegisterTool(s)
 
 	// Version Tool
-	s.AddTool(version.GetGiteaMCPServerVersionTool, version.GetGiteaMCPServerVersionFn)
+	version.RegisterTool(s)
 }
 
 func Run(transport, version string) error {

@@ -6,7 +6,9 @@ import (
 
 	"gitea.com/gitea/gitea-mcp/pkg/gitea"
 	"gitea.com/gitea/gitea-mcp/pkg/to"
+
 	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
 )
 
 const (
@@ -25,19 +27,26 @@ var (
 			"owner",
 			mcp.Required(),
 			mcp.Description("repository owner"),
+			mcp.DefaultString(""),
 		),
 		mcp.WithString(
 			"repo",
 			mcp.Required(),
 			mcp.Description("repository name"),
+			mcp.DefaultString(""),
 		),
 		mcp.WithNumber(
 			"index",
 			mcp.Required(),
 			mcp.Description("repository issue index"),
+			mcp.DefaultNumber(0),
 		),
 	}
 )
+
+func RegisterTool(s *server.MCPServer) {
+	s.AddTool(GetIssueByIndexTool, GetIssueByIndexFn)
+}
 
 func GetIssueByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	owner := req.Params.Arguments["owner"].(string)
