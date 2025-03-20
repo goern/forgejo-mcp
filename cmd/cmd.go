@@ -46,13 +46,13 @@ func init() {
 	flag.BoolVar(
 		&debug,
 		"d",
-		false,
+		true,
 		"debug mode",
 	)
 	flag.BoolVar(
 		&debug,
 		"debug",
-		false,
+		true,
 		"debug mode",
 	)
 
