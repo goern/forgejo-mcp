@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"flag"
+	"os"
 
 	"gitea.com/gitea/gitea-mcp/operation"
 	flagPkg "gitea.com/gitea/gitea-mcp/pkg/flag"
@@ -44,6 +45,12 @@ func init() {
 	)
 	flag.BoolVar(
 		&debug,
+		"d",
+		false,
+		"debug mode",
+	)
+	flag.BoolVar(
+		&debug,
 		"debug",
 		false,
 		"debug mode",
@@ -52,7 +59,24 @@ func init() {
 	flag.Parse()
 
 	flagPkg.Host = host
+	if flagPkg.Host == "" {
+		flagPkg.Host = os.Getenv("GITEA_HOST")
+	}
+	if flagPkg.Host == "" {
+		flagPkg.Host = "https://gitea.com"
+	}
+
 	flagPkg.Token = token
+	if flagPkg.Token == "" {
+		flagPkg.Token = os.Getenv("GITEA_TOKEN")
+	}
+
+	if debug {
+		flagPkg.Debug = debug
+	}
+	if !debug {
+		flagPkg.Debug = os.Getenv("GITEA_DEBUG") == "true"
+	}
 }
 
 func Execute(version string) {

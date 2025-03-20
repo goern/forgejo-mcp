@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"gitea.com/gitea/gitea-mcp/pkg/gitea"
+	"gitea.com/gitea/gitea-mcp/pkg/log"
 	"github.com/mark3labs/mcp-go/mcp"
 
 	gitea_sdk "code.gitea.io/sdk/gitea"
@@ -25,6 +26,7 @@ var (
 )
 
 func CreateBranchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called CreateBranchFn")
 	owner := req.Params.Arguments["owner"].(string)
 	repo := req.Params.Arguments["repo"].(string)
 	branch := req.Params.Arguments["branch"].(string)

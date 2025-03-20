@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"gitea.com/gitea/gitea-mcp/pkg/flag"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -28,7 +29,13 @@ func Default() *zap.Logger {
 			ws = zapcore.NewMultiWriteSyncer(wss...)
 
 			enc := zapcore.NewConsoleEncoder(ec)
-			core := zapcore.NewCore(enc, ws, zapcore.DebugLevel)
+			var level zapcore.Level
+			if flag.Debug {
+				level = zapcore.DebugLevel
+			} else {
+				level = zapcore.InfoLevel
+			}
+			core := zapcore.NewCore(enc, ws, level)
 			options := []zap.Option{
 				zap.AddStacktrace(zapcore.ErrorLevel),
 				zap.AddCaller(),

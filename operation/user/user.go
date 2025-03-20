@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"gitea.com/gitea/gitea-mcp/pkg/gitea"
+	"gitea.com/gitea/gitea-mcp/pkg/log"
 	"gitea.com/gitea/gitea-mcp/pkg/to"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -26,6 +27,7 @@ func RegisterTool(s *server.MCPServer) {
 }
 
 func GetUserInfoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called GetUserInfoFn")
 	user, _, err := gitea.Client().GetMyUserInfo()
 	if err != nil {
 		return mcp.NewToolResultError("Get My User Info Error"), err

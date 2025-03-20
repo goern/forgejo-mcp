@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"gitea.com/gitea/gitea-mcp/pkg/gitea"
+	"gitea.com/gitea/gitea-mcp/pkg/log"
 	"gitea.com/gitea/gitea-mcp/pkg/to"
 
 	gitea_sdk "code.gitea.io/sdk/gitea"
@@ -72,6 +73,7 @@ func RegisterTool(s *server.MCPServer) {
 }
 
 func GetIssueByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called GetIssueByIndexFn")
 	owner := req.Params.Arguments["owner"].(string)
 	repo := req.Params.Arguments["repo"].(string)
 	index := req.Params.Arguments["index"].(float64)
@@ -84,6 +86,7 @@ func GetIssueByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 }
 
 func GetPullRequestByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called GetPullRequestByIndexFn")
 	owner := req.Params.Arguments["owner"].(string)
 	repo := req.Params.Arguments["repo"].(string)
 	index := req.Params.Arguments["index"].(float64)
@@ -96,6 +99,7 @@ func GetPullRequestByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 }
 
 func CreateIssueFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called CreateIssueFn")
 	owner := req.Params.Arguments["owner"].(string)
 	repo := req.Params.Arguments["repo"].(string)
 	title := req.Params.Arguments["title"].(string)
@@ -112,6 +116,7 @@ func CreateIssueFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 }
 
 func CreateIssueCommentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called CreateIssueCommentFn")
 	owner := req.Params.Arguments["owner"].(string)
 	repo := req.Params.Arguments["repo"].(string)
 	index := req.Params.Arguments["index"].(float64)
@@ -127,6 +132,7 @@ func CreateIssueCommentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 }
 
 func CreatePullRequestFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called CreatePullRequestFn")
 	owner := req.Params.Arguments["owner"].(string)
 	repo := req.Params.Arguments["repo"].(string)
 	title := req.Params.Arguments["title"].(string)

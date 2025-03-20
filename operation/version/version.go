@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"gitea.com/gitea/gitea-mcp/pkg/flag"
+	"gitea.com/gitea/gitea-mcp/pkg/log"
 	"gitea.com/gitea/gitea-mcp/pkg/to"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -27,6 +28,7 @@ func RegisterTool(s *server.MCPServer) {
 }
 
 func GetGiteaMCPServerVersionFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called GetGiteaMCPServerVersionFn")
 	version := flag.Version
 	if version == "" {
 		version = "dev"

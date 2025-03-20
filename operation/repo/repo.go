@@ -3,8 +3,9 @@ package repo
 import (
 	"context"
 
-	"code.gitea.io/sdk/gitea"
-	giteaPkg "gitea.com/gitea/gitea-mcp/pkg/gitea"
+	gitea_sdk "code.gitea.io/sdk/gitea"
+	"gitea.com/gitea/gitea-mcp/pkg/gitea"
+	"gitea.com/gitea/gitea-mcp/pkg/log"
 	"gitea.com/gitea/gitea-mcp/pkg/to"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -49,6 +50,7 @@ func RegisterTool(s *server.MCPServer) {
 }
 
 func CreateRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called CreateRepoFn")
 	name := req.Params.Arguments["name"].(string)
 	description := req.Params.Arguments["description"].(string)
 	private := req.Params.Arguments["private"].(bool)
@@ -60,7 +62,7 @@ func CreateRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 	readme := req.Params.Arguments["readme"].(string)
 	defaultBranch := req.Params.Arguments["default_branch"].(string)
 
-	opt := gitea.CreateRepoOption{
+	opt := gitea_sdk.CreateRepoOption{
 		Name:          name,
 		Description:   description,
 		Private:       private,
@@ -72,7 +74,7 @@ func CreateRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 		Readme:        readme,
 		DefaultBranch: defaultBranch,
 	}
-	repo, _, err := giteaPkg.Client().CreateRepo(opt)
+	repo, _, err := gitea.Client().CreateRepo(opt)
 	if err != nil {
 		return nil, err
 	}
@@ -80,6 +82,7 @@ func CreateRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 }
 
 func ListMyReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called ListMyReposFn")
 	page, ok := req.Params.Arguments["page"].(float64)
 	if !ok {
 		return mcp.NewToolResultError("get page number error"), nil
@@ -88,13 +91,13 @@ func ListMyReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	if !ok {
 		return mcp.NewToolResultError("get page size number error"), nil
 	}
-	opts := gitea.ListReposOptions{
-		ListOptions: gitea.ListOptions{
+	opt := gitea_sdk.ListReposOptions{
+		ListOptions: gitea_sdk.ListOptions{
 			Page:     int(page),
 			PageSize: int(size),
 		},
 	}
-	repos, _, err := giteaPkg.Client().ListMyRepos(opts)
+	repos, _, err := gitea.Client().ListMyRepos(opt)
 	if err != nil {
 		return mcp.NewToolResultError("List my repositories error"), err
 	}

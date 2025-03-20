@@ -1,7 +1,6 @@
 package gitea
 
 import (
-	"os"
 	"sync"
 
 	"gitea.com/gitea/gitea-mcp/pkg/flag"
@@ -18,18 +17,7 @@ var (
 func Client() *gitea.Client {
 	clientOnce.Do(func() {
 		if client == nil {
-			host, token := flag.Host, flag.Token
-			if host == "" {
-				host = os.Getenv("GITEA_HOST")
-			}
-			if host == "" {
-				host = "https://gitea.com"
-			}
-			if token == "" {
-				token = os.Getenv("GITEA_TOKEN")
-			}
-
-			c, err := gitea.NewClient(host, gitea.SetToken(token))
+			c, err := gitea.NewClient(flag.Host, gitea.SetToken(flag.Token))
 			if err != nil {
 				log.Fatalf("create gitea client err: %v", err)
 			}
