@@ -38,6 +38,7 @@ cp gitea-mcp /usr/local/bin/
 This example is for Cursor, you can also use plugins in VSCode.
 To configure the MCP server for Gitea, add the following to your MCP configuration file:
 
+- **stdio mode**
 ```json
 {
   "mcpServers": {
@@ -52,6 +53,17 @@ To configure the MCP server for Gitea, add the following to your MCP configurati
         // "GITEA_HOST": "https://gitea.com",
         "GITEA_ACCESS_TOKEN": "<your personal access token>"
       }
+    }
+  }
+}
+```
+
+- **sse mode**
+```json
+{
+  "mcpServers": {
+    "gitea": {
+      "url": "http://localhost:8080/sse"
     }
   }
 }
