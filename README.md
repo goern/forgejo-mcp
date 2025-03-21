@@ -1,6 +1,6 @@
 # Gitea MCP Server
 
-**Gitea MCP Server** is an integration plugin designed to connect Gitea with Multi-Command Protocol (MCP) systems. This allows for seamless command execution and repository management through an MCP-compatible chat interface.
+**Gitea MCP Server** is an integration plugin designed to connect Gitea with Model Context Protocol (MCP) systems. This allows for seamless command execution and repository management through an MCP-compatible chat interface.
 
 ## 🚧 Installation
 
@@ -27,7 +27,7 @@ make build
 
 ### 🛠️ Add to PATH
 
-After building, copy the binary gitea-mcp to a directory included in your system’s PATH. For example:
+After building, copy the binary gitea-mcp to a directory included in your system's PATH. For example:
 
 ```bash
 cp gitea-mcp /usr/local/bin/
