@@ -1,0 +1,31 @@
+name: release
+
+on: 
+  push:
+    tags:
+      - '*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: setup go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+      - name: release-build
+        run: go build -ldflags="-s -w -X 'main.Version=${{  gitea.ref_name }}'" -o bin/mcp-gitea-${{  gitea.ref_name }}-linux-amd64
+      - name: release-build-windows
+        run: GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -X 'main.Version=${{  gitea.ref_name }}'" -o bin/mcp-gitea-${{  gitea.ref_name }}-windows-amd64.exe
+      - name: release-build-darwin
+        run: GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w -X 'main.Version=${{  gitea.ref_name }}'" -o bin/mcp-gitea-${{  gitea.ref_name }}-darwin-amd64
+      - name: Use Go Action  
+        id: use-go-action
+        uses: https://gitea.com/actions/gitea-release-action@main
+        with:
+          files: |-
+            bin/**
+          token: '${{secrets.RELEASE_TOKEN}}'
