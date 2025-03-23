@@ -79,6 +79,37 @@ Once everything is set up, try typing the following in your MCP-compatible chatb
 list all my repositories
 ```
 
+## ✅Available Tools
+
+The Gitea MCP Server supports the following tools:
+
+|  Tool  |  Scope  | Description  |
+|:------:|:-------:|:------------:|
+|get_my_user_info|User|Get the information of the authenticated user|
+|create_repo|Repository|Create a new repository|
+|fork_repo|Repository|Fork a repository|
+|list_my_repos|Repository|List all repositories owned by the authenticated user|
+|create_branch|Branch|Create a new branch|
+|delete_branch|Branch|Delete a branch|
+|list_branches|Branch|List all branches in a repository|
+|list_repo_commits|Commit|List all commits in a repository|
+|get_file|File|Get the content of a file|
+|create_file|File|Create a new file|
+|update_file|File|Update an existing file|
+|delete_file|File|Delete a file|
+|get_issue_by_index|Issue|Get an issue by its index|
+|list_repo_issues|Issue|List all issues in a repository|
+|create_issue|Issue|Create a new issue|
+|create_issue_comment|Issue|Create a comment on an issue|
+|get_pull_request_by_index|Pull Request|Get a pull request by its index|
+|list_repo_pull_requests|Pull Request|List all pull requests in a repository|
+|create_pull_request|Pull Request|Create a new pull request|
+|search_users|User|Search for users|
+|search_org_teams|Organization|Search for teams in an organization|
+|search_repos|Repository|Search for repositories|
+|get_gitea_mcp_server_version|Server|Get the version of the Gitea MCP Server|
+
+
 ## 🐛 Debugging
 
 To enable debug mode, add the `-d` flag when running the Gitea MCP Server with sse mode:

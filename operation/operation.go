@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"gitea.com/gitea/gitea-mcp/operation/issue"
+	"gitea.com/gitea/gitea-mcp/operation/pull"
 	"gitea.com/gitea/gitea-mcp/operation/repo"
 	"gitea.com/gitea/gitea-mcp/operation/search"
 	"gitea.com/gitea/gitea-mcp/operation/user"
@@ -27,6 +28,9 @@ func RegisterTool(s *server.MCPServer) {
 
 	// Issue Tool
 	issue.RegisterTool(s)
+
+	// Pull Tool
+	pull.RegisterTool(s)
 
 	// Search Tool
 	search.RegisterTool(s)
