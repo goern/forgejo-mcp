@@ -4,7 +4,7 @@ go 1.24.0
 
 require (
 	code.gitea.io/sdk/gitea v0.20.0
-	github.com/mark3labs/mcp-go v0.14.1
+	github.com/mark3labs/mcp-go v0.15.0
 	go.uber.org/zap v1.27.0
 )
 
