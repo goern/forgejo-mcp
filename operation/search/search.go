@@ -24,7 +24,7 @@ var (
 	SearchUsersTool = mcp.NewTool(
 		SearchUsersToolName,
 		mcp.WithDescription("search users"),
-		mcp.WithString("keyword", mcp.Description("Keyword"), mcp.DefaultString("")),
+		mcp.WithString("keyword", mcp.Description("Keyword")),
 		mcp.WithNumber("page", mcp.Description("Page"), mcp.DefaultNumber(1)),
 		mcp.WithNumber("pageSize", mcp.Description("PageSize"), mcp.DefaultNumber(100)),
 	)
@@ -32,9 +32,9 @@ var (
 	SearOrgTeamsTool = mcp.NewTool(
 		SearchOrgTeamsToolName,
 		mcp.WithDescription("search organization teams"),
-		mcp.WithString("org", mcp.Description("organization name"), mcp.DefaultString("")),
-		mcp.WithString("query", mcp.Description("search organization teams"), mcp.DefaultString("")),
-		mcp.WithBoolean("includeDescription", mcp.Description("include description?"), mcp.DefaultBool(true)),
+		mcp.WithString("org", mcp.Description("organization name")),
+		mcp.WithString("query", mcp.Description("search organization teams")),
+		mcp.WithBoolean("includeDescription", mcp.Description("include description?")),
 		mcp.WithNumber("page", mcp.Description("Page"), mcp.DefaultNumber(1)),
 		mcp.WithNumber("pageSize", mcp.Description("PageSize"), mcp.DefaultNumber(100)),
 	)
@@ -42,14 +42,14 @@ var (
 	SearchReposTool = mcp.NewTool(
 		SearchReposToolName,
 		mcp.WithDescription("search repos"),
-		mcp.WithString("keyword", mcp.Description("Keyword"), mcp.DefaultString("")),
-		mcp.WithBoolean("keywordIsTopic", mcp.Description("KeywordIsTopic"), mcp.DefaultBool(false)),
-		mcp.WithBoolean("keywordInDescription", mcp.Description("KeywordInDescription"), mcp.DefaultBool(false)),
-		mcp.WithNumber("ownerID", mcp.Description("OwnerID"), mcp.DefaultNumber(0)),
-		mcp.WithBoolean("isPrivate", mcp.Description("IsPrivate"), mcp.DefaultBool(false)),
-		mcp.WithBoolean("isArchived", mcp.Description("IsArchived"), mcp.DefaultBool(false)),
-		mcp.WithString("sort", mcp.Description("Sort"), mcp.DefaultString(""), mcp.Enum("")),
-		mcp.WithString("order", mcp.Description("Order"), mcp.DefaultString(""), mcp.Enum("")),
+		mcp.WithString("keyword", mcp.Description("Keyword")),
+		mcp.WithBoolean("keywordIsTopic", mcp.Description("KeywordIsTopic")),
+		mcp.WithBoolean("keywordInDescription", mcp.Description("KeywordInDescription")),
+		mcp.WithNumber("ownerID", mcp.Description("OwnerID")),
+		mcp.WithBoolean("isPrivate", mcp.Description("IsPrivate")),
+		mcp.WithBoolean("isArchived", mcp.Description("IsArchived")),
+		mcp.WithString("sort", mcp.Description("Sort")),
+		mcp.WithString("order", mcp.Description("Order")),
 		mcp.WithNumber("page", mcp.Description("Page"), mcp.DefaultNumber(1)),
 		mcp.WithNumber("pageSize", mcp.Description("PageSize"), mcp.DefaultNumber(100)),
 	)
@@ -63,11 +63,23 @@ func RegisterTool(s *server.MCPServer) {
 
 func SearchUsersFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called SearchUsersFn")
+	keyword, ok := req.Params.Arguments["keyword"].(string)
+	if !ok {
+		return nil, fmt.Errorf("keyword is required")
+	}
+	page, ok := req.Params.Arguments["page"].(float64)
+	if !ok {
+		page = 1
+	}
+	pageSize, ok := req.Params.Arguments["pageSize"].(float64)
+	if !ok {
+		pageSize = 100
+	}
 	opt := gitea_sdk.SearchUsersOption{
-		KeyWord: req.Params.Arguments["keyword"].(string),
+		KeyWord: keyword,
 		ListOptions: gitea_sdk.ListOptions{
-			Page:     req.Params.Arguments["page"].(int),
-			PageSize: req.Params.Arguments["pageSize"].(int),
+			Page:     int(page),
+			PageSize: int(pageSize),
 		},
 	}
 	users, _, err := gitea.Client().SearchUsers(opt)
@@ -79,13 +91,29 @@ func SearchUsersFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 
 func SearchOrgTeamsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called SearchOrgTeamsFn")
-	org := req.Params.Arguments["org"].(string)
+	org, ok := req.Params.Arguments["org"].(string)
+	if !ok {
+		return nil, fmt.Errorf("organization is required")
+	}
+	query, ok := req.Params.Arguments["query"].(string)
+	if !ok {
+		return nil, fmt.Errorf("query is required")
+	}
+	includeDescription, _ := req.Params.Arguments["includeDescription"].(bool)
+	page, ok := req.Params.Arguments["page"].(float64)
+	if !ok {
+		page = 1
+	}
+	pageSize, ok := req.Params.Arguments["pageSize"].(float64)
+	if !ok {
+		pageSize = 100
+	}
 	opt := gitea_sdk.SearchTeamsOptions{
-		Query:              req.Params.Arguments["query"].(string),
-		IncludeDescription: req.Params.Arguments["includeDescription"].(bool),
+		Query:              query,
+		IncludeDescription: includeDescription,
 		ListOptions: gitea_sdk.ListOptions{
-			Page:     req.Params.Arguments["page"].(int),
-			PageSize: req.Params.Arguments["pageSize"].(int),
+			Page:     int(page),
+			PageSize: int(pageSize),
 		},
 	}
 	teams, _, err := gitea.Client().SearchOrgTeams(org, &opt)
@@ -97,18 +125,37 @@ func SearchOrgTeamsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 
 func SearchReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called SearchReposFn")
+	keyword, ok := req.Params.Arguments["keyword"].(string)
+	if !ok {
+		return nil, fmt.Errorf("keyword is required")
+	}
+	keywordIsTopic, _ := req.Params.Arguments["keywordIsTopic"].(bool)
+	keywordInDescription, _ := req.Params.Arguments["keywordInDescription"].(bool)
+	ownerID, _ := req.Params.Arguments["ownerID"].(float64)
+	isPrivate, _ := req.Params.Arguments["isPrivate"].(bool)
+	isArchived, _ := req.Params.Arguments["isArchived"].(bool)
+	sort, _ := req.Params.Arguments["sort"].(string)
+	order, _ := req.Params.Arguments["order"].(string)
+	page, ok := req.Params.Arguments["page"].(float64)
+	if !ok {
+		page = 1
+	}
+	pageSize, ok := req.Params.Arguments["pageSize"].(float64)
+	if !ok {
+		pageSize = 100
+	}
 	opt := gitea_sdk.SearchRepoOptions{
-		Keyword:              req.Params.Arguments["keyword"].(string),
-		KeywordIsTopic:       req.Params.Arguments["keywordIsTopic"].(bool),
-		KeywordInDescription: req.Params.Arguments["keywordInDescription"].(bool),
-		OwnerID:              req.Params.Arguments["ownerID"].(int64),
-		IsPrivate:            ptr.To(req.Params.Arguments["isPrivate"].(bool)),
-		IsArchived:           ptr.To(req.Params.Arguments["isArchived"].(bool)),
-		Sort:                 req.Params.Arguments["sort"].(string),
-		Order:                req.Params.Arguments["order"].(string),
+		Keyword:              keyword,
+		KeywordIsTopic:       keywordIsTopic,
+		KeywordInDescription: keywordInDescription,
+		OwnerID:              int64(ownerID),
+		IsPrivate:            ptr.To(isPrivate),
+		IsArchived:           ptr.To(isArchived),
+		Sort:                 sort,
+		Order:                order,
 		ListOptions: gitea_sdk.ListOptions{
-			Page:     req.Params.Arguments["page"].(int),
-			PageSize: req.Params.Arguments["pageSize"].(int),
+			Page:     int(page),
+			PageSize: int(pageSize),
 		},
 	}
 	repos, _, err := gitea.Client().SearchRepos(opt)

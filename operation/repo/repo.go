@@ -25,16 +25,16 @@ var (
 	CreateRepoTool = mcp.NewTool(
 		CreateRepoToolName,
 		mcp.WithDescription("Create repository"),
-		mcp.WithString("name", mcp.Required(), mcp.Description("Name of the repository to create"), mcp.DefaultString("test")),
-		mcp.WithString("description", mcp.Description("Description of the repository to create"), mcp.DefaultString("")),
-		mcp.WithBoolean("private", mcp.Description("Whether the repository is private"), mcp.DefaultBool(true)),
-		mcp.WithString("issue_labels", mcp.Description("Issue Label set to use"), mcp.DefaultString("")),
-		mcp.WithBoolean("auto_init", mcp.Description("Whether the repository should be auto-intialized?"), mcp.DefaultBool(false)),
-		mcp.WithBoolean("template", mcp.Description("Whether the repository is template"), mcp.DefaultBool(false)),
-		mcp.WithString("gitignores", mcp.Description("Gitignores to use"), mcp.DefaultString("")),
-		mcp.WithString("license", mcp.Description("License to use"), mcp.DefaultString("MIT")),
-		mcp.WithString("readme", mcp.Description("Readme of the repository to create"), mcp.DefaultString("")),
-		mcp.WithString("default_branch", mcp.Description("DefaultBranch of the repository (used when initializes and in template)"), mcp.DefaultString("main")),
+		mcp.WithString("name", mcp.Required(), mcp.Description("Name of the repository to create")),
+		mcp.WithString("description", mcp.Description("Description of the repository to create")),
+		mcp.WithBoolean("private", mcp.Description("Whether the repository is private")),
+		mcp.WithString("issue_labels", mcp.Description("Issue Label set to use")),
+		mcp.WithBoolean("auto_init", mcp.Description("Whether the repository should be auto-intialized?")),
+		mcp.WithBoolean("template", mcp.Description("Whether the repository is template")),
+		mcp.WithString("gitignores", mcp.Description("Gitignores to use")),
+		mcp.WithString("license", mcp.Description("License to use")),
+		mcp.WithString("readme", mcp.Description("Readme of the repository to create")),
+		mcp.WithString("default_branch", mcp.Description("DefaultBranch of the repository (used when initializes and in template)")),
 	)
 
 	ForkRepoTool = mcp.NewTool(
@@ -50,7 +50,7 @@ var (
 		ListMyReposToolName,
 		mcp.WithDescription("List my repositories"),
 		mcp.WithNumber("page", mcp.Required(), mcp.Description("Page number"), mcp.DefaultNumber(1), mcp.Min(1)),
-		mcp.WithNumber("pageSize", mcp.Required(), mcp.Description("Page size number"), mcp.DefaultNumber(10), mcp.Min(1)),
+		mcp.WithNumber("pageSize", mcp.Required(), mcp.Description("Page size number"), mcp.DefaultNumber(100), mcp.Min(1)),
 	)
 )
 
@@ -76,16 +76,19 @@ func RegisterTool(s *server.MCPServer) {
 
 func CreateRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called CreateRepoFn")
-	name := req.Params.Arguments["name"].(string)
-	description := req.Params.Arguments["description"].(string)
-	private := req.Params.Arguments["private"].(bool)
-	issueLabels := req.Params.Arguments["issue_labels"].(string)
-	autoInit := req.Params.Arguments["auto_init"].(bool)
-	template := req.Params.Arguments["template"].(bool)
-	gitignores := req.Params.Arguments["gitignores"].(string)
-	license := req.Params.Arguments["license"].(string)
-	readme := req.Params.Arguments["readme"].(string)
-	defaultBranch := req.Params.Arguments["default_branch"].(string)
+	name, ok := req.Params.Arguments["name"].(string)
+	if !ok {
+		return nil, errors.New("repository name is required")
+	}
+	description, _ := req.Params.Arguments["description"].(string)
+	private, _ := req.Params.Arguments["private"].(bool)
+	issueLabels, _ := req.Params.Arguments["issue_labels"].(string)
+	autoInit, _ := req.Params.Arguments["auto_init"].(bool)
+	template, _ := req.Params.Arguments["template"].(bool)
+	gitignores, _ := req.Params.Arguments["gitignores"].(string)
+	license, _ := req.Params.Arguments["license"].(string)
+	readme, _ := req.Params.Arguments["readme"].(string)
+	defaultBranch, _ := req.Params.Arguments["default_branch"].(string)
 
 	opt := gitea_sdk.CreateRepoOption{
 		Name:          name,
@@ -108,11 +111,19 @@ func CreateRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 
 func ForkRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called ForkRepoFn")
-	user := req.Params.Arguments["user"].(string)
-	repo := req.Params.Arguments["repo"].(string)
+	user, ok := req.Params.Arguments["user"].(string)
+	if !ok {
+		return nil, errors.New("user name is required")
+	}
+	repo, ok := req.Params.Arguments["repo"].(string)
+	if !ok {
+		return nil, errors.New("repository name is required")
+	}
+	organization, _ := req.Params.Arguments["organization"].(string)
+	name, _ := req.Params.Arguments["name"].(string)
 	opt := gitea_sdk.CreateForkOption{
-		Organization: ptr.To(req.Params.Arguments["organization"].(string)),
-		Name:         ptr.To(req.Params.Arguments["name"].(string)),
+		Organization: ptr.To(organization),
+		Name:         ptr.To(name),
 	}
 	_, _, err := gitea.Client().CreateFork(user, repo, opt)
 	if err != nil {

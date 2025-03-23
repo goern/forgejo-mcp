@@ -22,34 +22,43 @@ var (
 	CreateBranchTool = mcp.NewTool(
 		CreateBranchToolName,
 		mcp.WithDescription("Create branch"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner"), mcp.DefaultString("")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name"), mcp.DefaultString("")),
-		mcp.WithString("branch", mcp.Required(), mcp.Description("Name of the branch to create"), mcp.DefaultString("")),
-		mcp.WithString("old_branch", mcp.Description("Name of the old branch to create from"), mcp.DefaultString("")),
+		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
+		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
+		mcp.WithString("branch", mcp.Required(), mcp.Description("Name of the branch to create")),
+		mcp.WithString("old_branch", mcp.Required(), mcp.Description("Name of the old branch to create from")),
 	)
 
 	DeleteBranchTool = mcp.NewTool(
 		DeleteBranchToolName,
 		mcp.WithDescription("Delete branch"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner"), mcp.DefaultString("")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name"), mcp.DefaultString("")),
-		mcp.WithString("branch", mcp.Required(), mcp.Description("Name of the branch to delete"), mcp.DefaultString("")),
+		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
+		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
+		mcp.WithString("branch", mcp.Required(), mcp.Description("Name of the branch to delete")),
 	)
 
 	ListBranchesTool = mcp.NewTool(
 		ListBranchesToolName,
 		mcp.WithDescription("List branches"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner"), mcp.DefaultString("")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name"), mcp.DefaultString("")),
+		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
+		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
 	)
 )
 
 func CreateBranchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called CreateBranchFn")
-	owner := req.Params.Arguments["owner"].(string)
-	repo := req.Params.Arguments["repo"].(string)
-	branch := req.Params.Arguments["branch"].(string)
-	oldBranch := req.Params.Arguments["old_branch"].(string)
+	owner, ok := req.Params.Arguments["owner"].(string)
+	if !ok {
+		return nil, fmt.Errorf("owner is required")
+	}
+	repo, ok := req.Params.Arguments["repo"].(string)
+	if !ok {
+		return nil, fmt.Errorf("repo is required")
+	}
+	branch, ok := req.Params.Arguments["branch"].(string)
+	if !ok {
+		return nil, fmt.Errorf("branch is required")
+	}
+	oldBranch, _ := req.Params.Arguments["old_branch"].(string)
 
 	_, _, err := gitea.Client().CreateBranch(owner, repo, gitea_sdk.CreateBranchOption{
 		BranchName:    branch,
@@ -64,9 +73,18 @@ func CreateBranchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 
 func DeleteBranchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called DeleteBranchFn")
-	owner := req.Params.Arguments["owner"].(string)
-	repo := req.Params.Arguments["repo"].(string)
-	branch := req.Params.Arguments["branch"].(string)
+	owner, ok := req.Params.Arguments["owner"].(string)
+	if !ok {
+		return nil, fmt.Errorf("owner is required")
+	}
+	repo, ok := req.Params.Arguments["repo"].(string)
+	if !ok {
+		return nil, fmt.Errorf("repo is required")
+	}
+	branch, ok := req.Params.Arguments["branch"].(string)
+	if !ok {
+		return nil, fmt.Errorf("branch is required")
+	}
 	_, _, err := gitea.Client().DeleteRepoBranch(owner, repo, branch)
 	if err != nil {
 		return nil, fmt.Errorf("Delete Branch Error: %v", err)
@@ -77,8 +95,14 @@ func DeleteBranchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 
 func ListBranchesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called ListBranchesFn")
-	owner := req.Params.Arguments["owner"].(string)
-	repo := req.Params.Arguments["repo"].(string)
+	owner, ok := req.Params.Arguments["owner"].(string)
+	if !ok {
+		return nil, fmt.Errorf("owner is required")
+	}
+	repo, ok := req.Params.Arguments["repo"].(string)
+	if !ok {
+		return nil, fmt.Errorf("repo is required")
+	}
 	opt := gitea_sdk.ListRepoBranchesOptions{
 		ListOptions: gitea_sdk.ListOptions{
 			Page:     1,
