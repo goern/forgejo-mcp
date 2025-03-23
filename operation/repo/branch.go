@@ -2,16 +2,20 @@ package repo
 
 import (
 	"context"
+	"fmt"
 
 	"gitea.com/gitea/gitea-mcp/pkg/gitea"
 	"gitea.com/gitea/gitea-mcp/pkg/log"
-	"github.com/mark3labs/mcp-go/mcp"
+	"gitea.com/gitea/gitea-mcp/pkg/to"
 
 	gitea_sdk "code.gitea.io/sdk/gitea"
+	"github.com/mark3labs/mcp-go/mcp"
 )
 
 const (
 	CreateBranchToolName = "create_branch"
+	DeleteBranchToolName = "delete_branch"
+	ListBranchesToolName = "list_branches"
 )
 
 var (
@@ -22,6 +26,21 @@ var (
 		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name"), mcp.DefaultString("")),
 		mcp.WithString("branch", mcp.Required(), mcp.Description("Name of the branch to create"), mcp.DefaultString("")),
 		mcp.WithString("old_branch", mcp.Description("Name of the old branch to create from"), mcp.DefaultString("")),
+	)
+
+	DeleteBranchTool = mcp.NewTool(
+		DeleteBranchToolName,
+		mcp.WithDescription("Delete branch"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner"), mcp.DefaultString("")),
+		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name"), mcp.DefaultString("")),
+		mcp.WithString("branch", mcp.Required(), mcp.Description("Name of the branch to delete"), mcp.DefaultString("")),
+	)
+
+	ListBranchesTool = mcp.NewTool(
+		ListBranchesToolName,
+		mcp.WithDescription("List branches"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner"), mcp.DefaultString("")),
+		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name"), mcp.DefaultString("")),
 	)
 )
 
@@ -37,8 +56,39 @@ func CreateBranchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 		OldBranchName: oldBranch,
 	})
 	if err != nil {
-		return mcp.NewToolResultError("Create Branch Error"), err
+		return nil, fmt.Errorf("Create Branch Error: %v", err)
 	}
 
 	return mcp.NewToolResultText("Branch Created"), nil
+}
+
+func DeleteBranchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called DeleteBranchFn")
+	owner := req.Params.Arguments["owner"].(string)
+	repo := req.Params.Arguments["repo"].(string)
+	branch := req.Params.Arguments["branch"].(string)
+	_, _, err := gitea.Client().DeleteRepoBranch(owner, repo, branch)
+	if err != nil {
+		return nil, fmt.Errorf("Delete Branch Error: %v", err)
+	}
+
+	return to.TextResult("Branch Deleted")
+}
+
+func ListBranchesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called ListBranchesFn")
+	owner := req.Params.Arguments["owner"].(string)
+	repo := req.Params.Arguments["repo"].(string)
+	opt := gitea_sdk.ListRepoBranchesOptions{
+		ListOptions: gitea_sdk.ListOptions{
+			Page:     1,
+			PageSize: 100,
+		},
+	}
+	branches, _, err := gitea.Client().ListRepoBranches(owner, repo, opt)
+	if err != nil {
+		return nil, fmt.Errorf("List Branches Error: %v", err)
+	}
+
+	return to.TextResult(branches)
 }

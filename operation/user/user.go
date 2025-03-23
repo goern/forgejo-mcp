@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"fmt"
 
 	"gitea.com/gitea/gitea-mcp/pkg/gitea"
 	"gitea.com/gitea/gitea-mcp/pkg/log"
@@ -30,7 +31,7 @@ func GetUserInfoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	log.Debugf("Called GetUserInfoFn")
 	user, _, err := gitea.Client().GetMyUserInfo()
 	if err != nil {
-		return mcp.NewToolResultError("Get My User Info Error"), err
+		return nil, fmt.Errorf("get user info err: %v", err)
 	}
 
 	return to.TextResult(user)

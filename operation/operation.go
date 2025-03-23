@@ -5,6 +5,7 @@ import (
 
 	"gitea.com/gitea/gitea-mcp/operation/issue"
 	"gitea.com/gitea/gitea-mcp/operation/repo"
+	"gitea.com/gitea/gitea-mcp/operation/search"
 	"gitea.com/gitea/gitea-mcp/operation/user"
 	"gitea.com/gitea/gitea-mcp/operation/version"
 	"gitea.com/gitea/gitea-mcp/pkg/flag"
@@ -26,6 +27,9 @@ func RegisterTool(s *server.MCPServer) {
 
 	// Issue Tool
 	issue.RegisterTool(s)
+
+	// Search Tool
+	search.RegisterTool(s)
 
 	// Version Tool
 	version.RegisterTool(s)

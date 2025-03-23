@@ -79,7 +79,7 @@ func GetIssueByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 	index := req.Params.Arguments["index"].(float64)
 	issue, _, err := gitea.Client().GetIssue(owner, repo, int64(index))
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("get %v/%v/issue/%v err", owner, repo, int64(index))), err
+		return nil, fmt.Errorf("get %v/%v/issue/%v err", owner, repo, int64(index))
 	}
 
 	return to.TextResult(issue)
@@ -92,7 +92,7 @@ func GetPullRequestByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	index := req.Params.Arguments["index"].(float64)
 	pr, _, err := gitea.Client().GetPullRequest(owner, repo, int64(index))
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("get %v/%v/pr/%v err", owner, repo, int64(index))), err
+		return nil, fmt.Errorf("get %v/%v/pr/%v err", owner, repo, int64(index))
 	}
 
 	return to.TextResult(pr)
@@ -109,7 +109,7 @@ func CreateIssueFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 		Body:  body,
 	})
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("create %v/%v/issue err", owner, repo)), err
+		return nil, fmt.Errorf("create %v/%v/issue err", owner, repo)
 	}
 
 	return to.TextResult(issue)
@@ -125,7 +125,7 @@ func CreateIssueCommentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 		Body: body,
 	})
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("create %v/%v/issue/%v/comment err", owner, repo, int64(index))), err
+		return nil, fmt.Errorf("create %v/%v/issue/%v/comment err", owner, repo, int64(index))
 	}
 
 	return to.TextResult(issueComment)
@@ -146,7 +146,7 @@ func CreatePullRequestFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Cal
 		Base:  base,
 	})
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("create %v/%v/pull_request err", owner, repo)), err
+		return nil, fmt.Errorf("create %v/%v/pull_request err", owner, repo)
 	}
 
 	return to.TextResult(pr)

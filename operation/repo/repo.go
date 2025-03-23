@@ -2,18 +2,22 @@ package repo
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
-	gitea_sdk "code.gitea.io/sdk/gitea"
 	"gitea.com/gitea/gitea-mcp/pkg/gitea"
 	"gitea.com/gitea/gitea-mcp/pkg/log"
+	"gitea.com/gitea/gitea-mcp/pkg/ptr"
 	"gitea.com/gitea/gitea-mcp/pkg/to"
 
+	gitea_sdk "code.gitea.io/sdk/gitea"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
 
 const (
 	CreateRepoToolName  = "create_repo"
+	ForkRepoToolName    = "fork_repo"
 	ListMyReposToolName = "list_my_repos"
 )
 
@@ -33,6 +37,15 @@ var (
 		mcp.WithString("default_branch", mcp.Description("DefaultBranch of the repository (used when initializes and in template)"), mcp.DefaultString("main")),
 	)
 
+	ForkRepoTool = mcp.NewTool(
+		ForkRepoToolName,
+		mcp.WithDescription("Fork repository"),
+		mcp.WithString("user", mcp.Required(), mcp.Description("User name of the repository to fork")),
+		mcp.WithString("repo", mcp.Required(), mcp.Description("Repository name to fork")),
+		mcp.WithString("organization", mcp.Description("Organization name to fork")),
+		mcp.WithString("name", mcp.Description("Name of the forked repository")),
+	)
+
 	ListMyReposTool = mcp.NewTool(
 		ListMyReposToolName,
 		mcp.WithDescription("List my repositories"),
@@ -43,10 +56,22 @@ var (
 
 func RegisterTool(s *server.MCPServer) {
 	s.AddTool(CreateRepoTool, CreateRepoFn)
+	s.AddTool(ForkRepoTool, ForkRepoFn)
 	s.AddTool(ListMyReposTool, ListMyReposFn)
+
+	// File
+	s.AddTool(GetFileTool, GetFileFn)
+	s.AddTool(CreateFileTool, CreateFileFn)
+	s.AddTool(UpdateFileTool, UpdateFileFn)
+	s.AddTool(DeleteFileTool, DeleteFileFn)
 
 	// Branch
 	s.AddTool(CreateBranchTool, CreateBranchFn)
+	s.AddTool(DeleteBranchTool, DeleteBranchFn)
+	s.AddTool(ListBranchesTool, ListBranchesFn)
+
+	// Commit
+	s.AddTool(ListRepoCommitsTool, ListRepoCommitsFn)
 }
 
 func CreateRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -81,15 +106,30 @@ func CreateRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 	return to.TextResult(repo)
 }
 
+func ForkRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called ForkRepoFn")
+	user := req.Params.Arguments["user"].(string)
+	repo := req.Params.Arguments["repo"].(string)
+	opt := gitea_sdk.CreateForkOption{
+		Organization: ptr.To(req.Params.Arguments["organization"].(string)),
+		Name:         ptr.To(req.Params.Arguments["name"].(string)),
+	}
+	_, _, err := gitea.Client().CreateFork(user, repo, opt)
+	if err != nil {
+		return nil, fmt.Errorf("fork repository error %v", err)
+	}
+	return to.TextResult("Fork success")
+}
+
 func ListMyReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called ListMyReposFn")
 	page, ok := req.Params.Arguments["page"].(float64)
 	if !ok {
-		return mcp.NewToolResultError("get page number error"), nil
+		return nil, errors.New("get page number error")
 	}
 	size, ok := req.Params.Arguments["pageSize"].(float64)
 	if !ok {
-		return mcp.NewToolResultError("get page size number error"), nil
+		return nil, errors.New("get page size number error")
 	}
 	opt := gitea_sdk.ListReposOptions{
 		ListOptions: gitea_sdk.ListOptions{
@@ -99,7 +139,7 @@ func ListMyReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	}
 	repos, _, err := gitea.Client().ListMyRepos(opt)
 	if err != nil {
-		return mcp.NewToolResultError("List my repositories error"), err
+		return nil, fmt.Errorf("list my repositories error %v", err)
 	}
 
 	return to.TextResult(repos)
