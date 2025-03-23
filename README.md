@@ -79,4 +79,11 @@ Once everything is set up, try typing the following in your MCP-compatible chatb
 list all my repositories
 ```
 
+## 🐛 Debugging
+
+To enable debug mode, add the `-d` flag when running the Gitea MCP Server with sse mode:
+```sh
+./gitea-mcp -t sse --token <your personal access token> -d
+```
+
 Enjoy exploring and managing your Gitea repositories via chat!
