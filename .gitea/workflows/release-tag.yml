@@ -22,6 +22,13 @@ jobs:
         run: GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -X 'main.Version=${{  gitea.ref_name }}'" -o bin/mcp-gitea-${{  gitea.ref_name }}-windows-amd64.exe
       - name: release-build-darwin
         run: GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w -X 'main.Version=${{  gitea.ref_name }}'" -o bin/mcp-gitea-${{  gitea.ref_name }}-darwin-amd64
+      - name: release-build-arm64
+        run: GOARCH=arm64 go build -ldflags="-s -w -X 'main.Version=${{  gitea.ref_name }}'" -o bin/mcp-gitea-${{  gitea.ref_name }}-linux-arm64
+      - name: release-build-windows-arm64
+        run: GOOS=windows GOARCH=arm64 go build -ldflags="-s -w -X 'main.Version=${{  gitea.ref_name }}'" -o bin/mcp-gitea-${{  gitea.ref_name }}-windows-arm64.exe
+      - name: release-build-darwin-arm64
+        run: GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w -X 'main.Version=${{  gitea.ref_name }}'" -o bin/mcp-gitea-${{  gitea.ref_name }}-darwin-arm64
+
       - name: Use Go Action  
         id: use-go-action
         uses: https://gitea.com/actions/gitea-release-action@main
