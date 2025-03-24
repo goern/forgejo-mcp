@@ -68,7 +68,7 @@ func init() {
 
 	flagPkg.Token = token
 	if flagPkg.Token == "" {
-		flagPkg.Token = os.Getenv("GITEA_TOKEN")
+		flagPkg.Token = os.Getenv("GITEA_ACCESS_TOKEN")
 	}
 
 	if debug {
