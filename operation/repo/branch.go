@@ -65,7 +65,7 @@ func CreateBranchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 		OldBranchName: oldBranch,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Create Branch Error: %v", err)
+		return nil, fmt.Errorf("create branch error: %v", err)
 	}
 
 	return mcp.NewToolResultText("Branch Created"), nil
@@ -87,7 +87,7 @@ func DeleteBranchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 	}
 	_, _, err := gitea.Client().DeleteRepoBranch(owner, repo, branch)
 	if err != nil {
-		return nil, fmt.Errorf("Delete Branch Error: %v", err)
+		return nil, fmt.Errorf("delete branch error: %v", err)
 	}
 
 	return to.TextResult("Branch Deleted")
@@ -111,7 +111,7 @@ func ListBranchesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 	}
 	branches, _, err := gitea.Client().ListRepoBranches(owner, repo, opt)
 	if err != nil {
-		return nil, fmt.Errorf("List Branches Error: %v", err)
+		return nil, fmt.Errorf("list branches error: %v", err)
 	}
 
 	return to.TextResult(branches)
