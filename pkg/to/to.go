@@ -21,3 +21,8 @@ func TextResult(v any) (*mcp.CallToolResult, error) {
 	log.Debugf("Text Result: %s", string(resultBytes))
 	return mcp.NewToolResultText(string(resultBytes)), nil
 }
+
+func ErrorResult(err error) (*mcp.CallToolResult, error) {
+	log.Errorf(err.Error())
+	return nil, err
+}

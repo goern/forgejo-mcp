@@ -65,7 +65,7 @@ func SearchUsersFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	log.Debugf("Called SearchUsersFn")
 	keyword, ok := req.Params.Arguments["keyword"].(string)
 	if !ok {
-		return nil, fmt.Errorf("keyword is required")
+		return to.ErrorResult(fmt.Errorf("keyword is required"))
 	}
 	page, ok := req.Params.Arguments["page"].(float64)
 	if !ok {
@@ -84,7 +84,7 @@ func SearchUsersFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	}
 	users, _, err := gitea.Client().SearchUsers(opt)
 	if err != nil {
-		return nil, err
+		return to.ErrorResult(fmt.Errorf("search users err: %v", err))
 	}
 	return to.TextResult(users)
 }
@@ -93,11 +93,11 @@ func SearchOrgTeamsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	log.Debugf("Called SearchOrgTeamsFn")
 	org, ok := req.Params.Arguments["org"].(string)
 	if !ok {
-		return nil, fmt.Errorf("organization is required")
+		return to.ErrorResult(fmt.Errorf("organization is required"))
 	}
 	query, ok := req.Params.Arguments["query"].(string)
 	if !ok {
-		return nil, fmt.Errorf("query is required")
+		return to.ErrorResult(fmt.Errorf("query is required"))
 	}
 	includeDescription, _ := req.Params.Arguments["includeDescription"].(bool)
 	page, ok := req.Params.Arguments["page"].(float64)
@@ -118,7 +118,7 @@ func SearchOrgTeamsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	}
 	teams, _, err := gitea.Client().SearchOrgTeams(org, &opt)
 	if err != nil {
-		return nil, fmt.Errorf("search organization teams error: %v", err)
+		return to.ErrorResult(fmt.Errorf("search organization teams error: %v", err))
 	}
 	return to.TextResult(teams)
 }
@@ -127,7 +127,7 @@ func SearchReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	log.Debugf("Called SearchReposFn")
 	keyword, ok := req.Params.Arguments["keyword"].(string)
 	if !ok {
-		return nil, fmt.Errorf("keyword is required")
+		return to.ErrorResult(fmt.Errorf("keyword is required"))
 	}
 	keywordIsTopic, _ := req.Params.Arguments["keywordIsTopic"].(bool)
 	keywordInDescription, _ := req.Params.Arguments["keywordInDescription"].(bool)
@@ -160,7 +160,7 @@ func SearchReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	}
 	repos, _, err := gitea.Client().SearchRepos(opt)
 	if err != nil {
-		return nil, fmt.Errorf("search repos error: %v", err)
+		return to.ErrorResult(fmt.Errorf("search repos error: %v", err))
 	}
 	return to.TextResult(repos)
 }

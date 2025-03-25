@@ -78,7 +78,7 @@ func CreateRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 	log.Debugf("Called CreateRepoFn")
 	name, ok := req.Params.Arguments["name"].(string)
 	if !ok {
-		return nil, errors.New("repository name is required")
+		return to.ErrorResult(errors.New("repository name is required"))
 	}
 	description, _ := req.Params.Arguments["description"].(string)
 	private, _ := req.Params.Arguments["private"].(bool)
@@ -104,7 +104,7 @@ func CreateRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 	}
 	repo, _, err := gitea.Client().CreateRepo(opt)
 	if err != nil {
-		return nil, err
+		return to.ErrorResult(fmt.Errorf("create repo err: %v", err))
 	}
 	return to.TextResult(repo)
 }
@@ -113,11 +113,11 @@ func ForkRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResu
 	log.Debugf("Called ForkRepoFn")
 	user, ok := req.Params.Arguments["user"].(string)
 	if !ok {
-		return nil, errors.New("user name is required")
+		return to.ErrorResult(errors.New("user name is required"))
 	}
 	repo, ok := req.Params.Arguments["repo"].(string)
 	if !ok {
-		return nil, errors.New("repository name is required")
+		return to.ErrorResult(errors.New("repository name is required"))
 	}
 	organization, _ := req.Params.Arguments["organization"].(string)
 	name, _ := req.Params.Arguments["name"].(string)
@@ -127,7 +127,7 @@ func ForkRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResu
 	}
 	_, _, err := gitea.Client().CreateFork(user, repo, opt)
 	if err != nil {
-		return nil, fmt.Errorf("fork repository error %v", err)
+		return to.ErrorResult(fmt.Errorf("fork repository error %v", err))
 	}
 	return to.TextResult("Fork success")
 }
@@ -136,21 +136,21 @@ func ListMyReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	log.Debugf("Called ListMyReposFn")
 	page, ok := req.Params.Arguments["page"].(float64)
 	if !ok {
-		return nil, errors.New("get page number error")
+		page = 1
 	}
-	size, ok := req.Params.Arguments["pageSize"].(float64)
+	pageSize, ok := req.Params.Arguments["pageSize"].(float64)
 	if !ok {
-		return nil, errors.New("get page size number error")
+		pageSize = 100
 	}
 	opt := gitea_sdk.ListReposOptions{
 		ListOptions: gitea_sdk.ListOptions{
 			Page:     int(page),
-			PageSize: int(size),
+			PageSize: int(pageSize),
 		},
 	}
 	repos, _, err := gitea.Client().ListMyRepos(opt)
 	if err != nil {
-		return nil, fmt.Errorf("list my repositories error %v", err)
+		return to.ErrorResult(fmt.Errorf("list my repositories error: %v", err))
 	}
 
 	return to.TextResult(repos)

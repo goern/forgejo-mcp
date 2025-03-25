@@ -69,20 +69,20 @@ func GetFileContentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	log.Debugf("Called GetFileFn")
 	owner, ok := req.Params.Arguments["owner"].(string)
 	if !ok {
-		return nil, fmt.Errorf("owner is required")
+		return to.ErrorResult(fmt.Errorf("owner is required"))
 	}
 	repo, ok := req.Params.Arguments["repo"].(string)
 	if !ok {
-		return nil, fmt.Errorf("repo is required")
+		return to.ErrorResult(fmt.Errorf("repo is required"))
 	}
 	ref, _ := req.Params.Arguments["ref"].(string)
 	filePath, ok := req.Params.Arguments["filePath"].(string)
 	if !ok {
-		return nil, fmt.Errorf("filePath is required")
+		return to.ErrorResult(fmt.Errorf("filePath is required"))
 	}
 	content, _, err := gitea.Client().GetContents(owner, repo, ref, filePath)
 	if err != nil {
-		return nil, fmt.Errorf("get file err: %v", err)
+		return to.ErrorResult(fmt.Errorf("get file err: %v", err))
 	}
 	return to.TextResult(content)
 }
@@ -91,15 +91,15 @@ func CreateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 	log.Debugf("Called CreateFileFn")
 	owner, ok := req.Params.Arguments["owner"].(string)
 	if !ok {
-		return nil, fmt.Errorf("owner is required")
+		return to.ErrorResult(fmt.Errorf("owner is required"))
 	}
 	repo, ok := req.Params.Arguments["repo"].(string)
 	if !ok {
-		return nil, fmt.Errorf("repo is required")
+		return to.ErrorResult(fmt.Errorf("repo is required"))
 	}
 	filePath, ok := req.Params.Arguments["filePath"].(string)
 	if !ok {
-		return nil, fmt.Errorf("filePath is required")
+		return to.ErrorResult(fmt.Errorf("filePath is required"))
 	}
 	content, _ := req.Params.Arguments["content"].(string)
 	message, _ := req.Params.Arguments["message"].(string)
@@ -114,7 +114,7 @@ func CreateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 
 	_, _, err := gitea.Client().CreateFile(owner, repo, filePath, opt)
 	if err != nil {
-		return nil, fmt.Errorf("create file err: %v", err)
+		return to.ErrorResult(fmt.Errorf("create file err: %v", err))
 	}
 	return to.TextResult("Create file success")
 }
@@ -123,19 +123,19 @@ func UpdateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 	log.Debugf("Called UpdateFileFn")
 	owner, ok := req.Params.Arguments["owner"].(string)
 	if !ok {
-		return nil, fmt.Errorf("owner is required")
+		return to.ErrorResult(fmt.Errorf("owner is required"))
 	}
 	repo, ok := req.Params.Arguments["repo"].(string)
 	if !ok {
-		return nil, fmt.Errorf("repo is required")
+		return to.ErrorResult(fmt.Errorf("repo is required"))
 	}
 	filePath, ok := req.Params.Arguments["filePath"].(string)
 	if !ok {
-		return nil, fmt.Errorf("filePath is required")
+		return to.ErrorResult(fmt.Errorf("filePath is required"))
 	}
 	sha, ok := req.Params.Arguments["sha"].(string)
 	if !ok {
-		return nil, fmt.Errorf("sha is required")
+		return to.ErrorResult(fmt.Errorf("sha is required"))
 	}
 	content, _ := req.Params.Arguments["content"].(string)
 	message, _ := req.Params.Arguments["message"].(string)
@@ -151,7 +151,7 @@ func UpdateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 	}
 	_, _, err := gitea.Client().UpdateFile(owner, repo, filePath, opt)
 	if err != nil {
-		return nil, fmt.Errorf("update file err: %v", err)
+		return to.ErrorResult(fmt.Errorf("update file err: %v", err))
 	}
 	return to.TextResult("Update file success")
 }
@@ -160,15 +160,15 @@ func DeleteFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 	log.Debugf("Called DeleteFileFn")
 	owner, ok := req.Params.Arguments["owner"].(string)
 	if !ok {
-		return nil, fmt.Errorf("owner is required")
+		return to.ErrorResult(fmt.Errorf("owner is required"))
 	}
 	repo, ok := req.Params.Arguments["repo"].(string)
 	if !ok {
-		return nil, fmt.Errorf("repo is required")
+		return to.ErrorResult(fmt.Errorf("repo is required"))
 	}
 	filePath, ok := req.Params.Arguments["filePath"].(string)
 	if !ok {
-		return nil, fmt.Errorf("filePath is required")
+		return to.ErrorResult(fmt.Errorf("filePath is required"))
 	}
 	message, _ := req.Params.Arguments["message"].(string)
 	branchName, _ := req.Params.Arguments["branch_name"].(string)
@@ -180,7 +180,7 @@ func DeleteFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 	}
 	_, err := gitea.Client().DeleteFile(owner, repo, filePath, opt)
 	if err != nil {
-		return nil, fmt.Errorf("delete file err: %v", err)
+		return to.ErrorResult(fmt.Errorf("delete file err: %v", err))
 	}
 	return to.TextResult("Delete file success")
 }

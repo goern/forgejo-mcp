@@ -33,19 +33,19 @@ func ListRepoCommitsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 	log.Debugf("Called ListRepoCommitsFn")
 	owner, ok := req.Params.Arguments["owner"].(string)
 	if !ok {
-		return nil, fmt.Errorf("owner is required")
+		return to.ErrorResult(fmt.Errorf("owner is required"))
 	}
 	repo, ok := req.Params.Arguments["repo"].(string)
 	if !ok {
-		return nil, fmt.Errorf("repo is required")
+		return to.ErrorResult(fmt.Errorf("repo is required"))
 	}
 	page, ok := req.Params.Arguments["page"].(float64)
 	if !ok {
-		return nil, fmt.Errorf("page is required")
+		return to.ErrorResult(fmt.Errorf("page is required"))
 	}
 	pageSize, ok := req.Params.Arguments["page_size"].(float64)
 	if !ok {
-		return nil, fmt.Errorf("page_size is required")
+		return to.ErrorResult(fmt.Errorf("page_size is required"))
 	}
 	sha, _ := req.Params.Arguments["sha"].(string)
 	path, _ := req.Params.Arguments["path"].(string)
@@ -59,7 +59,7 @@ func ListRepoCommitsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 	}
 	commits, _, err := gitea.Client().ListRepoCommits(owner, repo, opt)
 	if err != nil {
-		return nil, fmt.Errorf("list repo commits err: %v", err)
+		return to.ErrorResult(fmt.Errorf("list repo commits err: %v", err))
 	}
 	return to.TextResult(commits)
 }

@@ -60,19 +60,19 @@ func GetPullRequestByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	log.Debugf("Called GetPullRequestByIndexFn")
 	owner, ok := req.Params.Arguments["owner"].(string)
 	if !ok {
-		return nil, fmt.Errorf("owner is required")
+		return to.ErrorResult(fmt.Errorf("owner is required"))
 	}
 	repo, ok := req.Params.Arguments["repo"].(string)
 	if !ok {
-		return nil, fmt.Errorf("repo is required")
+		return to.ErrorResult(fmt.Errorf("repo is required"))
 	}
 	index, ok := req.Params.Arguments["index"].(float64)
 	if !ok {
-		return nil, fmt.Errorf("index is required")
+		return to.ErrorResult(fmt.Errorf("index is required"))
 	}
 	pr, _, err := gitea.Client().GetPullRequest(owner, repo, int64(index))
 	if err != nil {
-		return nil, fmt.Errorf("get %v/%v/pr/%v err", owner, repo, int64(index))
+		return to.ErrorResult(fmt.Errorf("get %v/%v/pr/%v err: %v", owner, repo, int64(index), err))
 	}
 
 	return to.TextResult(pr)
@@ -82,11 +82,11 @@ func ListRepoPullRequestsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 	log.Debugf("Called ListRepoPullRequests")
 	owner, ok := req.Params.Arguments["owner"].(string)
 	if !ok {
-		return nil, fmt.Errorf("owner is required")
+		return to.ErrorResult(fmt.Errorf("owner is required"))
 	}
 	repo, ok := req.Params.Arguments["repo"].(string)
 	if !ok {
-		return nil, fmt.Errorf("repo is required")
+		return to.ErrorResult(fmt.Errorf("repo is required"))
 	}
 	state, _ := req.Params.Arguments["state"].(string)
 	sort, _ := req.Params.Arguments["sort"].(string)
@@ -102,7 +102,7 @@ func ListRepoPullRequestsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 	}
 	pullRequests, _, err := gitea.Client().ListRepoPullRequests("", "", opt)
 	if err != nil {
-		return nil, fmt.Errorf("list %v/%v/pull_requests err", owner, repo)
+		return to.ErrorResult(fmt.Errorf("list %v/%v/pull_requests err: %v", owner, repo, err))
 	}
 
 	return to.TextResult(pullRequests)
@@ -112,27 +112,27 @@ func CreatePullRequestFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Cal
 	log.Debugf("Called CreatePullRequestFn")
 	owner, ok := req.Params.Arguments["owner"].(string)
 	if !ok {
-		return nil, fmt.Errorf("owner is required")
+		return to.ErrorResult(fmt.Errorf("owner is required"))
 	}
 	repo, ok := req.Params.Arguments["repo"].(string)
 	if !ok {
-		return nil, fmt.Errorf("repo is required")
+		return to.ErrorResult(fmt.Errorf("repo is required"))
 	}
 	title, ok := req.Params.Arguments["title"].(string)
 	if !ok {
-		return nil, fmt.Errorf("title is required")
+		return to.ErrorResult(fmt.Errorf("title is required"))
 	}
 	body, ok := req.Params.Arguments["body"].(string)
 	if !ok {
-		return nil, fmt.Errorf("body is required")
+		return to.ErrorResult(fmt.Errorf("body is required"))
 	}
 	head, ok := req.Params.Arguments["head"].(string)
 	if !ok {
-		return nil, fmt.Errorf("head is required")
+		return to.ErrorResult(fmt.Errorf("head is required"))
 	}
 	base, ok := req.Params.Arguments["base"].(string)
 	if !ok {
-		return nil, fmt.Errorf("base is required")
+		return to.ErrorResult(fmt.Errorf("base is required"))
 	}
 	pr, _, err := gitea.Client().CreatePullRequest(owner, repo, gitea_sdk.CreatePullRequestOption{
 		Title: title,
@@ -141,7 +141,7 @@ func CreatePullRequestFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Cal
 		Base:  base,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("create %v/%v/pull_request err", owner, repo)
+		return to.ErrorResult(fmt.Errorf("create %v/%v/pull_request err: %v", owner, repo, err))
 	}
 
 	return to.TextResult(pr)

@@ -31,7 +31,7 @@ func GetUserInfoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	log.Debugf("Called GetUserInfoFn")
 	user, _, err := gitea.Client().GetMyUserInfo()
 	if err != nil {
-		return nil, fmt.Errorf("get user info err: %v", err)
+		return to.ErrorResult(fmt.Errorf("get user info err: %v", err))
 	}
 
 	return to.TextResult(user)

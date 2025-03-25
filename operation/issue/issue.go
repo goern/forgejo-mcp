@@ -68,19 +68,19 @@ func GetIssueByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 	log.Debugf("Called GetIssueByIndexFn")
 	owner, ok := req.Params.Arguments["owner"].(string)
 	if !ok {
-		return nil, fmt.Errorf("owner is required")
+		return to.ErrorResult(fmt.Errorf("owner is required"))
 	}
 	repo, ok := req.Params.Arguments["repo"].(string)
 	if !ok {
-		return nil, fmt.Errorf("repo is required")
+		return to.ErrorResult(fmt.Errorf("repo is required"))
 	}
 	index, ok := req.Params.Arguments["index"].(float64)
 	if !ok {
-		return nil, fmt.Errorf("index is required")
+		return to.ErrorResult(fmt.Errorf("index is required"))
 	}
 	issue, _, err := gitea.Client().GetIssue(owner, repo, int64(index))
 	if err != nil {
-		return nil, fmt.Errorf("get %v/%v/issue/%v err", owner, repo, int64(index))
+		return to.ErrorResult(fmt.Errorf("get %v/%v/issue/%v err: %v", owner, repo, int64(index), err))
 	}
 
 	return to.TextResult(issue)
@@ -90,11 +90,11 @@ func ListRepoIssuesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	log.Debugf("Called ListIssuesFn")
 	owner, ok := req.Params.Arguments["owner"].(string)
 	if !ok {
-		return nil, fmt.Errorf("owner is required")
+		return to.ErrorResult(fmt.Errorf("owner is required"))
 	}
 	repo, ok := req.Params.Arguments["repo"].(string)
 	if !ok {
-		return nil, fmt.Errorf("repo is required")
+		return to.ErrorResult(fmt.Errorf("repo is required"))
 	}
 	state, ok := req.Params.Arguments["state"].(string)
 	if !ok {
@@ -117,7 +117,7 @@ func ListRepoIssuesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	}
 	issues, _, err := gitea.Client().ListRepoIssues(owner, repo, opt)
 	if err != nil {
-		return nil, fmt.Errorf("get %v/%v/issues err", owner, repo)
+		return to.ErrorResult(fmt.Errorf("get %v/%v/issues err: %v", owner, repo, err))
 	}
 	return to.TextResult(issues)
 }
@@ -126,26 +126,26 @@ func CreateIssueFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	log.Debugf("Called CreateIssueFn")
 	owner, ok := req.Params.Arguments["owner"].(string)
 	if !ok {
-		return nil, fmt.Errorf("owner is required")
+		return to.ErrorResult(fmt.Errorf("owner is required"))
 	}
 	repo, ok := req.Params.Arguments["repo"].(string)
 	if !ok {
-		return nil, fmt.Errorf("repo is required")
+		return to.ErrorResult(fmt.Errorf("repo is required"))
 	}
 	title, ok := req.Params.Arguments["title"].(string)
 	if !ok {
-		return nil, fmt.Errorf("title is required")
+		return to.ErrorResult(fmt.Errorf("title is required"))
 	}
 	body, ok := req.Params.Arguments["body"].(string)
 	if !ok {
-		return nil, fmt.Errorf("body is required")
+		return to.ErrorResult(fmt.Errorf("body is required"))
 	}
 	issue, _, err := gitea.Client().CreateIssue(owner, repo, gitea_sdk.CreateIssueOption{
 		Title: title,
 		Body:  body,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("create %v/%v/issue err", owner, repo)
+		return to.ErrorResult(fmt.Errorf("create %v/%v/issue err", owner, repo))
 	}
 
 	return to.TextResult(issue)
@@ -155,26 +155,26 @@ func CreateIssueCommentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	log.Debugf("Called CreateIssueCommentFn")
 	owner, ok := req.Params.Arguments["owner"].(string)
 	if !ok {
-		return nil, fmt.Errorf("owner is required")
+		return to.ErrorResult(fmt.Errorf("owner is required"))
 	}
 	repo, ok := req.Params.Arguments["repo"].(string)
 	if !ok {
-		return nil, fmt.Errorf("repo is required")
+		return to.ErrorResult(fmt.Errorf("repo is required"))
 	}
 	index, ok := req.Params.Arguments["index"].(float64)
 	if !ok {
-		return nil, fmt.Errorf("index is required")
+		return to.ErrorResult(fmt.Errorf("index is required"))
 	}
 	body, ok := req.Params.Arguments["body"].(string)
 	if !ok {
-		return nil, fmt.Errorf("body is required")
+		return to.ErrorResult(fmt.Errorf("body is required"))
 	}
 	opt := gitea_sdk.CreateIssueCommentOption{
 		Body: body,
 	}
 	issueComment, _, err := gitea.Client().CreateIssueComment(owner, repo, int64(index), opt)
 	if err != nil {
-		return nil, fmt.Errorf("create %v/%v/issue/%v/comment err", owner, repo, int64(index))
+		return to.ErrorResult(fmt.Errorf("create %v/%v/issue/%v/comment err", owner, repo, int64(index)))
 	}
 
 	return to.TextResult(issueComment)
