@@ -2,11 +2,13 @@
 
 **Gitea MCP Server** is an integration plugin designed to connect Gitea with Model Context Protocol (MCP) systems. This allows for seamless command execution and repository management through an MCP-compatible chat interface.
 
-## 🚧 Installation
+## 🚧Installation
 
-There is currently no official release. You will need to build the Gitea MCP Server from source.
+### 📥Download the official binary release
 
-### 🔧 Build from Source
+You can download the official release from [here](https://gitea.com/gitea/gitea-mcp/releases).
+
+### 🔧Build from Source
 
 You can download the source code by cloning the repository using Git:
 
@@ -25,7 +27,7 @@ Then run:
 make build
 ```
 
-### 🛠️ Add to PATH
+### 📁Add to PATH
 
 After building, copy the binary gitea-mcp to a directory included in your system's PATH. For example:
 
@@ -33,12 +35,13 @@ After building, copy the binary gitea-mcp to a directory included in your system
 cp gitea-mcp /usr/local/bin/
 ```
 
-## 🚀 Usage
+## 🚀Usage
 
 This example is for Cursor, you can also use plugins in VSCode.
 To configure the MCP server for Gitea, add the following to your MCP configuration file:
 
 - **stdio mode**
+
 ```json
 {
   "mcpServers": {
@@ -59,6 +62,7 @@ To configure the MCP server for Gitea, add the following to your MCP configurati
 ```
 
 - **sse mode**
+
 ```json
 {
   "mcpServers": {
@@ -109,10 +113,10 @@ The Gitea MCP Server supports the following tools:
 |search_repos|Repository|Search for repositories|
 |get_gitea_mcp_server_version|Server|Get the version of the Gitea MCP Server|
 
-
-## 🐛 Debugging
+## 🐛Debugging
 
 To enable debug mode, add the `-d` flag when running the Gitea MCP Server with sse mode:
+
 ```sh
 ./gitea-mcp -t sse --token <your personal access token> -d
 ```
