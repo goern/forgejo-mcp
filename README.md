@@ -93,7 +93,7 @@ The Gitea MCP Server supports the following tools:
 |delete_branch|Branch|Delete a branch|
 |list_branches|Branch|List all branches in a repository|
 |list_repo_commits|Commit|List all commits in a repository|
-|get_file|File|Get the content of a file|
+|get_file_content|File|Get the content and metadata of a file|
 |create_file|File|Create a new file|
 |update_file|File|Update an existing file|
 |delete_file|File|Delete a file|
