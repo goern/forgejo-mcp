@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 
 	"gitea.com/gitea/gitea-mcp/pkg/gitea"
@@ -25,7 +26,7 @@ var (
 		mcp.WithDescription("Get file"),
 		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
 		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
-		mcp.WithString("ref", mcp.Required(), mcp.Description("ref")),
+		mcp.WithString("ref", mcp.Required(), mcp.Description("ref can be branch/tag/commit")),
 		mcp.WithString("filePath", mcp.Required(), mcp.Description("file path")),
 	)
 
@@ -47,7 +48,8 @@ var (
 		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
 		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
 		mcp.WithString("filePath", mcp.Required(), mcp.Description("file path")),
-		mcp.WithString("content", mcp.Required(), mcp.Description("file content")),
+		mcp.WithString("sha", mcp.Required(), mcp.Description("sha is the SHA for the file that already exists")),
+		mcp.WithString("content", mcp.Required(), mcp.Description("raw file content")),
 		mcp.WithString("message", mcp.Required(), mcp.Description("commit message")),
 		mcp.WithString("branch_name", mcp.Required(), mcp.Description("branch name")),
 	)
@@ -132,11 +134,17 @@ func UpdateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 	if !ok {
 		return nil, fmt.Errorf("filePath is required")
 	}
+	sha, ok := req.Params.Arguments["sha"].(string)
+	if !ok {
+		return nil, fmt.Errorf("sha is required")
+	}
 	content, _ := req.Params.Arguments["content"].(string)
 	message, _ := req.Params.Arguments["message"].(string)
 	branchName, _ := req.Params.Arguments["branch_name"].(string)
+
 	opt := gitea_sdk.UpdateFileOptions{
-		Content: content,
+		SHA:     sha,
+		Content: base64.StdEncoding.EncodeToString([]byte(content)),
 		FileOptions: gitea_sdk.FileOptions{
 			Message:    message,
 			BranchName: branchName,
