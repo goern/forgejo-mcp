@@ -4,7 +4,7 @@
 
 ## 🚧Installation
 
-### ⬇️Download the official binary release
+### 📥Download the official binary release
 
 You can download the official release from [here](https://gitea.com/gitea/gitea-mcp/releases).
 
