@@ -60,7 +60,7 @@ func RegisterTool(s *server.MCPServer) {
 	s.AddTool(ListMyReposTool, ListMyReposFn)
 
 	// File
-	s.AddTool(GetFileTool, GetFileFn)
+	s.AddTool(GetFileContentTool, GetFileContentFn)
 	s.AddTool(CreateFileTool, CreateFileFn)
 	s.AddTool(UpdateFileTool, UpdateFileFn)
 	s.AddTool(DeleteFileTool, DeleteFileFn)

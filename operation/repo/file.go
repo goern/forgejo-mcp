@@ -2,7 +2,6 @@ package repo
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 
 	"gitea.com/gitea/gitea-mcp/pkg/gitea"
@@ -14,16 +13,16 @@ import (
 )
 
 const (
-	GetFileToolName    = "get_file"
+	GetFileToolName    = "get_file_content"
 	CreateFileToolName = "create_file"
 	UpdateFileToolName = "update_file"
 	DeleteFileToolName = "delete_file"
 )
 
 var (
-	GetFileTool = mcp.NewTool(
+	GetFileContentTool = mcp.NewTool(
 		GetFileToolName,
-		mcp.WithDescription("Get file"),
+		mcp.WithDescription("Get file Content and Metadata"),
 		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
 		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
 		mcp.WithString("ref", mcp.Required(), mcp.Description("ref can be branch/tag/commit")),
@@ -49,7 +48,7 @@ var (
 		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
 		mcp.WithString("filePath", mcp.Required(), mcp.Description("file path")),
 		mcp.WithString("sha", mcp.Required(), mcp.Description("sha is the SHA for the file that already exists")),
-		mcp.WithString("content", mcp.Required(), mcp.Description("raw file content")),
+		mcp.WithString("content", mcp.Required(), mcp.Description("file content, base64 encoded")),
 		mcp.WithString("message", mcp.Required(), mcp.Description("commit message")),
 		mcp.WithString("branch_name", mcp.Required(), mcp.Description("branch name")),
 	)
@@ -66,7 +65,7 @@ var (
 	)
 )
 
-func GetFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func GetFileContentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called GetFileFn")
 	owner, ok := req.Params.Arguments["owner"].(string)
 	if !ok {
@@ -81,11 +80,11 @@ func GetFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResul
 	if !ok {
 		return nil, fmt.Errorf("filePath is required")
 	}
-	file, _, err := gitea.Client().GetFile(owner, repo, ref, filePath)
+	content, _, err := gitea.Client().GetContents(owner, repo, ref, filePath)
 	if err != nil {
 		return nil, fmt.Errorf("get file err: %v", err)
 	}
-	return to.TextResult(file)
+	return to.TextResult(content)
 }
 
 func CreateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -144,7 +143,7 @@ func UpdateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 
 	opt := gitea_sdk.UpdateFileOptions{
 		SHA:     sha,
-		Content: base64.StdEncoding.EncodeToString([]byte(content)),
+		Content: content,
 		FileOptions: gitea_sdk.FileOptions{
 			Message:    message,
 			BranchName: branchName,
