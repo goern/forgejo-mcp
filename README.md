@@ -27,7 +27,7 @@ Then run:
 make build
 ```
 
-### 🛠️Add to PATH
+### 📁Add to PATH
 
 After building, copy the binary gitea-mcp to a directory included in your system's PATH. For example:
 
