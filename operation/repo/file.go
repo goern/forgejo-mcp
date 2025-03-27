@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 
 	"gitea.com/gitea/gitea-mcp/pkg/gitea"
@@ -105,7 +106,7 @@ func CreateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 	message, _ := req.Params.Arguments["message"].(string)
 	branchName, _ := req.Params.Arguments["branch_name"].(string)
 	opt := gitea_sdk.CreateFileOptions{
-		Content: content,
+		Content: base64.StdEncoding.EncodeToString([]byte(content)),
 		FileOptions: gitea_sdk.FileOptions{
 			Message:    message,
 			BranchName: branchName,
@@ -172,11 +173,16 @@ func DeleteFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 	}
 	message, _ := req.Params.Arguments["message"].(string)
 	branchName, _ := req.Params.Arguments["branch_name"].(string)
+	sha, ok := req.Params.Arguments["sha"].(string)
+	if !ok {
+		return to.ErrorResult(fmt.Errorf("sha is required"))
+	}
 	opt := gitea_sdk.DeleteFileOptions{
 		FileOptions: gitea_sdk.FileOptions{
 			Message:    message,
 			BranchName: branchName,
 		},
+		SHA: sha,
 	}
 	_, err := gitea.Client().DeleteFile(owner, repo, filePath, opt)
 	if err != nil {

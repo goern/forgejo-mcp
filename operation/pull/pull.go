@@ -33,9 +33,11 @@ var (
 		mcp.WithDescription("List repository pull requests"),
 		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
 		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
-		mcp.WithString("state", mcp.Description("state")),
-		mcp.WithString("sort", mcp.Description("sort")),
+		mcp.WithString("state", mcp.Description("state"), mcp.Enum("open", "closed", "all"), mcp.DefaultString("all")),
+		mcp.WithString("sort", mcp.Description("sort"), mcp.Enum("oldest", "recentupdate", "leastupdate", "mostcomment", "leastcomment", "priority"), mcp.DefaultString("recentupdate")),
 		mcp.WithNumber("milestone", mcp.Description("milestone")),
+		mcp.WithNumber("page", mcp.Description("page number"), mcp.DefaultNumber(1)),
+		mcp.WithNumber("pageSize", mcp.Description("page size"), mcp.DefaultNumber(100)),
 	)
 
 	CreatePullRequestTool = mcp.NewTool(
@@ -89,18 +91,29 @@ func ListRepoPullRequestsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 		return to.ErrorResult(fmt.Errorf("repo is required"))
 	}
 	state, _ := req.Params.Arguments["state"].(string)
-	sort, _ := req.Params.Arguments["sort"].(string)
+	sort, ok := req.Params.Arguments["sort"].(string)
+	if !ok {
+		sort = "recentupdate"
+	}
 	milestone, _ := req.Params.Arguments["milestone"].(float64)
+	page, ok := req.Params.Arguments["page"].(float64)
+	if !ok {
+		page = 1
+	}
+	pageSize, ok := req.Params.Arguments["pageSize"].(float64)
+	if !ok {
+		pageSize = 100
+	}
 	opt := gitea_sdk.ListPullRequestsOptions{
 		State:     gitea_sdk.StateType(state),
 		Sort:      sort,
 		Milestone: int64(milestone),
 		ListOptions: gitea_sdk.ListOptions{
-			Page:     1,
-			PageSize: 1000,
+			Page:     int(page),
+			PageSize: int(pageSize),
 		},
 	}
-	pullRequests, _, err := gitea.Client().ListRepoPullRequests("", "", opt)
+	pullRequests, _, err := gitea.Client().ListRepoPullRequests(owner, repo, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list %v/%v/pull_requests err: %v", owner, repo, err))
 	}
