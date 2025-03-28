@@ -119,11 +119,19 @@ func ForkRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResu
 	if !ok {
 		return to.ErrorResult(errors.New("repository name is required"))
 	}
-	organization, _ := req.Params.Arguments["organization"].(string)
-	name, _ := req.Params.Arguments["name"].(string)
+	organization, ok := req.Params.Arguments["organization"].(string)
+	organizationPtr := ptr.To(organization)
+	if !ok || organization == "" {
+		organizationPtr = nil
+	}
+	name, ok := req.Params.Arguments["name"].(string)
+	namePtr := ptr.To(name)
+	if !ok || name == "" {
+		namePtr = nil
+	}
 	opt := gitea_sdk.CreateForkOption{
-		Organization: ptr.To(organization),
-		Name:         ptr.To(name),
+		Organization: organizationPtr,
+		Name:         namePtr,
 	}
 	_, _, err := gitea.Client().CreateFork(user, repo, opt)
 	if err != nil {
