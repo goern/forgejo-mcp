@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "codeberg": {
+      "command": "node",
+      "args": ["/absolute/path/to/mcp-codeberg/build/index.js"],
+      "env": {
+        "CODEBERG_API_TOKEN": "your-api-token-here"
+      },
+      "disabled": false,
+      "alwaysAllow": []
+    }
+  }
+}
