@@ -1,0 +1,40 @@
+# Project Guidelines
+
+## General Rules
+
+- Rate confidence (1-10) before saving files, after saving, after rejections, and before task completion
+- Ask 'stupid' questions like: are you sure this is the best way to implement this?
+- Use words like "elegant" and "simple" in prompts
+
+## Documentation Requirements
+
+- Update relevant documentation in /docs when modifying features
+- Keep README.md in sync with new capabilities
+- do not change or update CHANGELOG.md any time, as is automatically created
+
+## Code Style & Patterns
+
+- Use TypeScript axios template
+- Place generated code in /src/generated
+- Prefer composition over inheritance
+- Use repository pattern for data access
+
+### Code Quality Rules
+
+1. Test Coverage:
+   - Before attempting completion, always make sure that any code changes have test coverage
+   - Ensure all tests pass before submitting changes
+
+2. Lint Rules:
+   - Never disable any lint rules without explicit user approval
+
+3. Styling Guidelines:
+   - Use Tailwind CSS classes instead of inline style objects for new markup
+   - VSCode CSS variables must be added to webview-ui/src/index.css before using them in Tailwind classes
+   - Example: `<div className="text-md text-vscode-descriptionForeground mb-2" />` instead of style objects
+
+## Testing Standards
+
+- Unit tests required for business logic
+- Integration tests for API endpoints
+- E2E tests for critical user flows
