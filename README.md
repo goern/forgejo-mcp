@@ -130,6 +130,10 @@ node build/index.js --sse --host 0.0.0.0
 node build/index.js --help
 ```
 
+The HTTP server will look something like
+
+![mcp server screenshot](images/Screenshot%20From%202025-03-30%2017-01-48.png "HTTP mode")
+
 ## Available Tools
 
 ### list_repositories
