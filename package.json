@@ -1,0 +1,40 @@
+{
+  "name": "mcp-codeberg",
+  "version": "0.1.0",
+  "description": "This is a MCP Server able to talk to codeberg API",
+  "main": "build/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
+    "start": "node build/index.js",
+    "start:http": "node build/index.js --sse --port 3000 --host localhost",
+    "dev": "tsc -w",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "get-token": "node scripts/get-token.cjs",
+    "prepare": "husky"
+  },
+  "keywords": [
+    "mcp",
+    "codeberg"
+  ],
+  "author": "Christoph Görn <goern@b4mad.net>",
+  "license": "GPL-3.0-or-later",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.8.0",
+    "@types/node": "^22.13.14",
+    "@types/yargs": "^17.0.33",
+    "axios": "^1.8.4",
+    "dotenv": "^16.4.7",
+    "typescript": "^5.8.2",
+    "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "eslint-config-prettier": "^10.1.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.0",
+    "prettier": "3.5.3"
+  },
+  "lint-staged": {
+    "**/*": "prettier --write --ignore-unknown"
+  }
+}
