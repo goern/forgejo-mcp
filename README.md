@@ -266,6 +266,17 @@ URI Template: `codeberg://repos/{owner}/{repo}/issues`
 
 URI Template: `codeberg://users/{username}`
 
+## Development Costs
+
+up until commit 6ae7ebe1030d372646e38b59e4361d698ba16fc3 the cost has been:
+
+```
+Tokens i/o: 3.4m/28.3k
+Context Window: 85.9k of 200.0k
+API Cost: $2.1752
+Model: claude-3.7-sonnet via openrouter.ai
+```
+
 ## License
 
 GPL-3.0-or-later
