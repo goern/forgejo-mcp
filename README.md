@@ -118,7 +118,7 @@ The Gitea MCP Server supports the following tools:
 To enable debug mode, add the `-d` flag when running the Gitea MCP Server with sse mode:
 
 ```sh
-./gitea-mcp -t sse --token <your personal access token> -d
+./gitea-mcp -t sse [--port 8080] --token <your personal access token> -d
 ```
 
 Enjoy exploring and managing your Gitea repositories via chat!

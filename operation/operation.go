@@ -50,8 +50,8 @@ func Run(transport, version string) error {
 		}
 	case "sse":
 		sseServer := server.NewSSEServer(mcpServer)
-		log.Infof("Gitea MCP SSE server listening on :8080")
-		if err := sseServer.Start(":8080"); err != nil {
+		log.Infof("Gitea MCP SSE server listening on :%d", flag.Port)
+		if err := sseServer.Start(fmt.Sprintf(":%d", flag.Port)); err != nil {
 			return err
 		}
 	default:

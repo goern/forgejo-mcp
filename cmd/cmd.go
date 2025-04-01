@@ -13,6 +13,7 @@ import (
 var (
 	transport string
 	host      string
+	port      int
 	token     string
 
 	debug bool
@@ -36,6 +37,12 @@ func init() {
 		"host",
 		"https://gitea.com",
 		"Gitea host",
+	)
+	flag.IntVar(
+		&port,
+		"port",
+		8080,
+		"sse port",
 	)
 	flag.StringVar(
 		&token,
@@ -65,6 +72,8 @@ func init() {
 	if flagPkg.Host == "" {
 		flagPkg.Host = "https://gitea.com"
 	}
+
+	flagPkg.Port = port
 
 	flagPkg.Token = token
 	if flagPkg.Token == "" {
