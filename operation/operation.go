@@ -3,14 +3,14 @@ package operation
 import (
 	"fmt"
 
-	"gitea.com/gitea/gitea-mcp/operation/issue"
-	"gitea.com/gitea/gitea-mcp/operation/pull"
-	"gitea.com/gitea/gitea-mcp/operation/repo"
-	"gitea.com/gitea/gitea-mcp/operation/search"
-	"gitea.com/gitea/gitea-mcp/operation/user"
-	"gitea.com/gitea/gitea-mcp/operation/version"
-	"gitea.com/gitea/gitea-mcp/pkg/flag"
-	"gitea.com/gitea/gitea-mcp/pkg/log"
+	"forgejo.com/forgejo/forgejo-mcp/operation/issue"
+	"forgejo.com/forgejo/forgejo-mcp/operation/pull"
+	"forgejo.com/forgejo/forgejo-mcp/operation/repo"
+	"forgejo.com/forgejo/forgejo-mcp/operation/search"
+	"forgejo.com/forgejo/forgejo-mcp/operation/user"
+	"forgejo.com/forgejo/forgejo-mcp/operation/version"
+	"forgejo.com/forgejo/forgejo-mcp/pkg/flag"
+	"forgejo.com/forgejo/forgejo-mcp/pkg/log"
 
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -50,7 +50,7 @@ func Run(transport, version string) error {
 		}
 	case "sse":
 		sseServer := server.NewSSEServer(mcpServer)
-		log.Infof("Gitea MCP SSE server listening on :%d", flag.Port)
+		log.Infof("Forgejo MCP SSE server listening on :%d", flag.Port)
 		if err := sseServer.Start(fmt.Sprintf(":%d", flag.Port)); err != nil {
 			return err
 		}
@@ -62,7 +62,7 @@ func Run(transport, version string) error {
 
 func newMCPServer(version string) *server.MCPServer {
 	return server.NewMCPServer(
-		"Gitea MCP Server",
+		"Forgejo MCP Server",
 		version,
 		server.WithLogging(),
 	)

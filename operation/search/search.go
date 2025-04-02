@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"gitea.com/gitea/gitea-mcp/pkg/gitea"
-	"gitea.com/gitea/gitea-mcp/pkg/log"
-	"gitea.com/gitea/gitea-mcp/pkg/to"
+	"forgejo.com/forgejo/forgejo-mcp/pkg/forgejo"
+	"forgejo.com/forgejo/forgejo-mcp/pkg/log"
+	"forgejo.com/forgejo/forgejo-mcp/pkg/to"
 
 	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -64,7 +64,7 @@ func SearchUserFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 	}
 
 	// Use the correct options type for searching
-	result, _, err := gitea.Client().SearchUsers(opt)
+	result, _, err := forgejo.Client().SearchUsers(opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("search user err: %v", err))
 	}
@@ -87,7 +87,7 @@ func SearchOrgTeamsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	}
 
 	// Use the proper options type for search
-	result, _, err := gitea.Client().SearchOrgTeams(org, opt)
+	result, _, err := forgejo.Client().SearchOrgTeams(org, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("search org teams err: %v", err))
 	}
@@ -120,7 +120,7 @@ func SearchReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	}
 	
 	// Call search repos with proper options
-	result, _, err := gitea.Client().SearchRepos(opt)
+	result, _, err := forgejo.Client().SearchRepos(opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("search repos err: %v", err))
 	}

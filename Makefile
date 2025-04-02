@@ -1,5 +1,5 @@
 GO ?= go
-EXECUTABLE := gitea-mcp
+EXECUTABLE := forgejo-mcp
 VERSION ?= $(shell git describe --tags --always | sed 's/-/+/' | sed 's/^v//')
 LDFLAGS := -X "main.Version=$(VERSION)"
 
@@ -17,7 +17,7 @@ air:
 ## dev: run the application with hot reload
 .PHONY: dev
 dev: air
-	air --build.cmd "make build" --build.bin ./gitea-mcp
+	air --build.cmd "make build" --build.bin ./forgejo-mcp
 
 ## vendor: tidy and verify module dependencies
 .PHONY: vendor

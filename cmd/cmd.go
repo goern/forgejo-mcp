@@ -5,9 +5,9 @@ import (
 	"flag"
 	"os"
 
-	"gitea.com/gitea/gitea-mcp/operation"
-	flagPkg "gitea.com/gitea/gitea-mcp/pkg/flag"
-	"gitea.com/gitea/gitea-mcp/pkg/log"
+	"forgejo.com/forgejo/forgejo-mcp/operation"
+	flagPkg "forgejo.com/forgejo/forgejo-mcp/pkg/flag"
+	"forgejo.com/forgejo/forgejo-mcp/pkg/log"
 )
 
 var (
@@ -35,8 +35,8 @@ func init() {
 	flag.StringVar(
 		&host,
 		"host",
-		"https://gitea.com",
-		"Gitea host",
+		"https://forgejo.com",
+		"Forgejo host",
 	)
 	flag.IntVar(
 		&port,
@@ -70,7 +70,7 @@ func init() {
 		flagPkg.Host = os.Getenv("GITEA_HOST")
 	}
 	if flagPkg.Host == "" {
-		flagPkg.Host = "https://gitea.com"
+		flagPkg.Host = "https://forgejo.com"
 	}
 
 	flagPkg.Port = port
@@ -95,6 +95,6 @@ func Execute(version string) {
 			log.Info("Server shutdown due to context cancellation")
 			return
 		}
-		log.Fatalf("Run Gitea MCP Server Error: %v", err)
+		log.Fatalf("Run Forgejo MCP Server Error: %v", err)
 	}
 }

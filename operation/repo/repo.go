@@ -5,12 +5,12 @@ import (
 	"errors"
 	"fmt"
 
-	"gitea.com/gitea/gitea-mcp/pkg/gitea"
-	"gitea.com/gitea/gitea-mcp/pkg/log"
-	"gitea.com/gitea/gitea-mcp/pkg/ptr"
-	"gitea.com/gitea/gitea-mcp/pkg/to"
+	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2"
+	"forgejo.com/forgejo/forgejo-mcp/pkg/forgejo"
+	"forgejo.com/forgejo/forgejo-mcp/pkg/log"
+	"forgejo.com/forgejo/forgejo-mcp/pkg/ptr"
+	"forgejo.com/forgejo/forgejo-mcp/pkg/to"
 
-	gitea_sdk "code.gitea.io/sdk/gitea"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -102,7 +102,7 @@ func CreateRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 		Readme:        readme,
 		DefaultBranch: defaultBranch,
 	}
-	repo, _, err := gitea.Client().CreateRepo(opt)
+	repo, _, err := forgejo.Client().CreateRepo(opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("create repo err: %v", err))
 	}
@@ -133,7 +133,7 @@ func ForkRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResu
 		Organization: organizationPtr,
 		Name:         namePtr,
 	}
-	_, _, err := gitea.Client().CreateFork(user, repo, opt)
+	_, _, err := forgejo.Client().CreateFork(user, repo, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("fork repository error %v", err))
 	}
@@ -150,28 +150,16 @@ func ListMyReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	if !ok {
 		pageSize = 100
 	}
-	
-	// Create a safe wrapper for the API call
-	result, err := gitea.SafeAPICall(func() (interface{}, *forgejo_sdk.Response, error) {
-		opt := forgejo_sdk.ListReposOptions{
-			ListOptions: forgejo_sdk.ListOptions{
-				Page:     int(page),
-				PageSize: int(pageSize),
-			},
-		}
-		return gitea.Client().ListMyRepos(opt)
-	})
-	
+	opt := forgejo_sdk.ListReposOptions{
+		ListOptions: forgejo_sdk.ListOptions{
+			Page:     int(page),
+			PageSize: int(pageSize),
+		},
+	}
+	repos, _, err := forgejo.Client().ListMyRepos(opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list my repositories error: %v", err))
 	}
-	
-	// Safe type assertion with fallback
-	repos, ok := result.([]forgejo_sdk.Repository)
-	if !ok {
-		log.Warnf("Unexpected response type when listing repositories")
-		return to.TextResult("Retrieved repositories but couldn't parse the response")
-	}
-	
+
 	return to.TextResult(repos)
 }

@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"gitea.com/gitea/gitea-mcp/pkg/gitea"
-	"gitea.com/gitea/gitea-mcp/pkg/log"
-	"gitea.com/gitea/gitea-mcp/pkg/to"
+	"forgejo.com/forgejo/forgejo-mcp/pkg/forgejo"
+	"forgejo.com/forgejo/forgejo-mcp/pkg/log"
+	"forgejo.com/forgejo/forgejo-mcp/pkg/to"
 
 	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -65,7 +65,7 @@ func GetPullRequestByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	repo, _ := req.Params.Arguments["repo"].(string)
 	index, _ := req.Params.Arguments["index"].(float64)
 
-	pr, _, err := gitea.Client().GetPullRequest(owner, repo, int64(index))
+	pr, _, err := forgejo.Client().GetPullRequest(owner, repo, int64(index))
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get pull request err: %v", err))
 	}
@@ -107,7 +107,7 @@ func ListRepoPullRequestsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 	// Only set milestone if provided and valid
 	// Note: Not using milestone as it's not supported in the current Forgejo SDK
 
-	prs, _, err := gitea.Client().ListRepoPullRequests(owner, repo, opt)
+	prs, _, err := forgejo.Client().ListRepoPullRequests(owner, repo, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get pull request list err: %v", err))
 	}
@@ -129,7 +129,7 @@ func CreatePullRequestFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Cal
 		Title: title,
 		Body:  body,
 	}
-	pr, _, err := gitea.Client().CreatePullRequest(owner, repo, opt)
+	pr, _, err := forgejo.Client().CreatePullRequest(owner, repo, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("create pull request err: %v", err))
 	}

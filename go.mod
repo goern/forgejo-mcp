@@ -1,4 +1,4 @@
-module gitea.com/gitea/gitea-mcp
+module forgejo.com/forgejo/forgejo-mcp
 
 go 1.24.0
 

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"gitea.com/gitea/gitea-mcp/cmd"
+	"forgejo.com/forgejo/forgejo-mcp/cmd"
 )
 
 var (

@@ -1,19 +1,19 @@
-# Gitea MCP Server
+# Forgejo MCP Server
 
-**Gitea MCP Server** is an integration plugin designed to connect Gitea with Model Context Protocol (MCP) systems. This allows for seamless command execution and repository management through an MCP-compatible chat interface.
+**Forgejo MCP Server** is an integration plugin designed to connect Forgejo with Model Context Protocol (MCP) systems. This allows for seamless command execution and repository management through an MCP-compatible chat interface.
 
 ## 🚧Installation
 
 ### 📥Download the official binary release
 
-You can download the official release from [here](https://gitea.com/gitea/gitea-mcp/releases).
+You can download the official release from [here](https://forgejo.com/forgejo/forgejo-mcp/releases).
 
 ### 🔧Build from Source
 
 You can download the source code by cloning the repository using Git:
 
 ```bash
-git clone https://gitea.com/gitea/gitea-mcp.git
+git clone https://forgejo.com/forgejo/forgejo-mcp.git
 ```
 
 Before building, make sure you have the following installed:
@@ -29,31 +29,31 @@ make build
 
 ### 📁Add to PATH
 
-After building, copy the binary gitea-mcp to a directory included in your system's PATH. For example:
+After building, copy the binary forgejo-mcp to a directory included in your system's PATH. For example:
 
 ```bash
-cp gitea-mcp /usr/local/bin/
+cp forgejo-mcp /usr/local/bin/
 ```
 
 ## 🚀Usage
 
 This example is for Cursor, you can also use plugins in VSCode.
-To configure the MCP server for Gitea, add the following to your MCP configuration file:
+To configure the MCP server for Forgejo, add the following to your MCP configuration file:
 
 - **stdio mode**
 
 ```json
 {
   "mcpServers": {
-    "gitea": {
-      "command": "gitea-mcp",
+    "forgejo": {
+      "command": "forgejo-mcp",
       "args": [
         "-t", "stdio",
-        "--host", "https://gitea.com"
+        "--host", "https://forgejo.com"
         // "--token", "<your personal access token>"
       ],
       "env": {
-        // "GITEA_HOST": "https://gitea.com",
+        // "GITEA_HOST": "https://forgejo.com",
         "GITEA_ACCESS_TOKEN": "<your personal access token>"
       }
     }
@@ -66,7 +66,7 @@ To configure the MCP server for Gitea, add the following to your MCP configurati
 ```json
 {
   "mcpServers": {
-    "gitea": {
+    "forgejo": {
       "url": "http://localhost:8080/sse"
     }
   }
@@ -74,7 +74,7 @@ To configure the MCP server for Gitea, add the following to your MCP configurati
 ```
 
 > [!NOTE]
-> You can provide your Gitea host and access token either as command-line arguments or environment variables.
+> You can provide your Forgejo host and access token either as command-line arguments or environment variables.
 > Command-line arguments have the highest priority
 
 Once everything is set up, try typing the following in your MCP-compatible chatbox:
@@ -85,7 +85,7 @@ list all my repositories
 
 ## ✅Available Tools
 
-The Gitea MCP Server supports the following tools:
+The Forgejo MCP Server supports the following tools:
 
 |  Tool  |  Scope  | Description  |
 |:------:|:-------:|:------------:|
@@ -111,14 +111,14 @@ The Gitea MCP Server supports the following tools:
 |search_users|User|Search for users|
 |search_org_teams|Organization|Search for teams in an organization|
 |search_repos|Repository|Search for repositories|
-|get_gitea_mcp_server_version|Server|Get the version of the Gitea MCP Server|
+|get_forgejo_mcp_server_version|Server|Get the version of the Forgejo MCP Server|
 
 ## 🐛Debugging
 
-To enable debug mode, add the `-d` flag when running the Gitea MCP Server with sse mode:
+To enable debug mode, add the `-d` flag when running the Forgejo MCP Server with sse mode:
 
 ```sh
-./gitea-mcp -t sse [--port 8080] --token <your personal access token> -d
+./forgejo-mcp -t sse [--port 8080] --token <your personal access token> -d
 ```
 
-Enjoy exploring and managing your Gitea repositories via chat!
+Enjoy exploring and managing your Forgejo repositories via chat!

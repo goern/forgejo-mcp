@@ -4,34 +4,34 @@ import (
 	"context"
 	"fmt"
 
-	"gitea.com/gitea/gitea-mcp/pkg/flag"
-	"gitea.com/gitea/gitea-mcp/pkg/log"
-	"gitea.com/gitea/gitea-mcp/pkg/to"
+	"forgejo.com/forgejo/forgejo-mcp/pkg/flag"
+	"forgejo.com/forgejo/forgejo-mcp/pkg/log"
+	"forgejo.com/forgejo/forgejo-mcp/pkg/to"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
 
 const (
-	GetGiteaMCPServerVersion = "get_gitea_mcp_server_version"
+	GetForgejoMCPServerVersion = "get_forgejo_mcp_server_version"
 )
 
 var (
-	GetGiteaMCPServerVersionTool = mcp.NewTool(
-		GetGiteaMCPServerVersion,
-		mcp.WithDescription("Get Gitea MCP Server Version"),
+	GetForgejoMCPServerVersionTool = mcp.NewTool(
+		GetForgejoMCPServerVersion,
+		mcp.WithDescription("Get Forgejo MCP Server Version"),
 	)
 )
 
 func RegisterTool(s *server.MCPServer) {
-	s.AddTool(GetGiteaMCPServerVersionTool, GetGiteaMCPServerVersionFn)
+	s.AddTool(GetForgejoMCPServerVersionTool, GetForgejoMCPServerVersionFn)
 }
 
-func GetGiteaMCPServerVersionFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	log.Debugf("Called GetGiteaMCPServerVersionFn")
+func GetForgejoMCPServerVersionFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called GetForgejoMCPServerVersionFn")
 	version := flag.Version
 	if version == "" {
 		version = "dev"
 	}
-	return to.TextResult(fmt.Sprintf("Gitea MCP Server version: %v", version))
+	return to.TextResult(fmt.Sprintf("Forgejo MCP Server version: %v", version))
 }

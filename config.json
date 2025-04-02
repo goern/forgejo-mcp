@@ -1,14 +1,14 @@
 {
   "mcpServers": {
-    "gitea": {
-      "command": "gitea-mcp",
+    "forgejo": {
+      "command": "forgejo-mcp",
       "args": {
         "-t": "stdio",
-        "--host": "https://gitea.com",
+        "--host": "https://forgejo.com",
         "--token": "<your personal access token>"
       },
       "env": {
-        "GITEA_HOST": "https://gitea.com",
+        "GITEA_HOST": "https://forgejo.com",
         "GITEA_ACCESS_TOKEN": "<your personal access token>"
       }
     }

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"gitea.com/gitea/gitea-mcp/pkg/gitea"
-	"gitea.com/gitea/gitea-mcp/pkg/log"
-	"gitea.com/gitea/gitea-mcp/pkg/to"
+	"forgejo.com/forgejo/forgejo-mcp/pkg/forgejo"
+	"forgejo.com/forgejo/forgejo-mcp/pkg/log"
+	"forgejo.com/forgejo/forgejo-mcp/pkg/to"
 
 	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -75,7 +75,7 @@ func GetIssueByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 	repo, _ := req.Params.Arguments["repo"].(string)
 	index, _ := req.Params.Arguments["index"].(float64)
 
-	issue, _, err := gitea.Client().GetIssue(owner, repo, int64(index))
+	issue, _, err := forgejo.Client().GetIssue(owner, repo, int64(index))
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get issue err: %v", err))
 	}
@@ -128,7 +128,7 @@ func ListRepoIssuesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		opt.Labels = strings.Split(labels, ",")
 	}
 
-	issues, _, err := gitea.Client().ListRepoIssues(owner, repo, opt)
+	issues, _, err := forgejo.Client().ListRepoIssues(owner, repo, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get issues list err: %v", err))
 	}
@@ -146,7 +146,7 @@ func CreateIssueFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 		Title: title,
 		Body:  body,
 	}
-	issue, _, err := gitea.Client().CreateIssue(owner, repo, opt)
+	issue, _, err := forgejo.Client().CreateIssue(owner, repo, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("create issue err: %v", err))
 	}
@@ -163,7 +163,7 @@ func CreateIssueCommentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	opt := forgejo_sdk.CreateIssueCommentOption{
 		Body: body,
 	}
-	comment, _, err := gitea.Client().CreateIssueComment(owner, repo, int64(index), opt)
+	comment, _, err := forgejo.Client().CreateIssueComment(owner, repo, int64(index), opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("create issue comment err: %v", err))
 	}

@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"gitea.com/gitea/gitea-mcp/pkg/gitea"
-	"gitea.com/gitea/gitea-mcp/pkg/log"
-	"gitea.com/gitea/gitea-mcp/pkg/to"
+	"forgejo.com/forgejo/forgejo-mcp/pkg/forgejo"
+	"forgejo.com/forgejo/forgejo-mcp/pkg/log"
+	"forgejo.com/forgejo/forgejo-mcp/pkg/to"
 
-	gitea_sdk "code.gitea.io/sdk/gitea"
+	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
@@ -48,28 +48,29 @@ var (
 
 func CreateBranchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called CreateBranchFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	branch, _ := req.Params.Arguments["branch"].(string)
+	owner, ok := req.Params.Arguments["owner"].(string)
+	if !ok {
+		return to.ErrorResult(fmt.Errorf("owner is required"))
+	}
+	repo, ok := req.Params.Arguments["repo"].(string)
+	if !ok {
+		return to.ErrorResult(fmt.Errorf("repo is required"))
+	}
+	branch, ok := req.Params.Arguments["branch"].(string)
+	if !ok {
+		return to.ErrorResult(fmt.Errorf("branch is required"))
+	}
 	oldBranch, _ := req.Params.Arguments["old_branch"].(string)
 
-	// Get source branch information to get the commit SHA
-	branch_obj, _, err := gitea.Client().GetBranch(owner, repo, oldBranch)
+	_, _, err := forgejo.Client().CreateBranch(owner, repo, forgejo_sdk.CreateBranchOption{
+		BranchName:    branch,
+		OldBranchName: oldBranch,
+	})
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("get branch err: %v", err))
+		return to.ErrorResult(fmt.Errorf("create branch error: %v", err))
 	}
-	
-	// Create new branch
-	opt := gitea_sdk.CreateBranchOption{
-		BranchName: branch,
-		Revision:   branch_obj.Commit.SHA,
-	}
-	
-	_, err = gitea.Client().CreateBranch(owner, repo, opt)
-	if err != nil {
-		return to.ErrorResult(fmt.Errorf("create branch err: %v", err))
-	}
-	return to.TextResult("Create Branch Success")
+
+	return mcp.NewToolResultText("Branch Created"), nil
 }
 
 func DeleteBranchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -78,9 +79,12 @@ func DeleteBranchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 	repo, _ := req.Params.Arguments["repo"].(string)
 	branch, _ := req.Params.Arguments["branch"].(string)
 
-	_, err := gitea.Client().DeleteBranch(owner, repo, branch)
+	success, _, err := forgejo.Client().DeleteRepoBranch(owner, repo, branch)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("delete branch err: %v", err))
+	}
+	if !success {
+		return to.ErrorResult(fmt.Errorf("failed to delete branch (status not 204)"))
 	}
 	return to.TextResult("Delete Branch Success")
 }
@@ -97,15 +101,15 @@ func ListBranchesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 	if !ok {
 		pageSize = 100
 	}
-	
-	opt := gitea_sdk.ListBranchesOptions{
-		ListOptions: gitea_sdk.ListOptions{
+
+	opt := forgejo_sdk.ListRepoBranchesOptions{
+		ListOptions: forgejo_sdk.ListOptions{
 			Page:     int(page),
 			PageSize: int(pageSize),
 		},
 	}
-	
-	branches, _, err := gitea.Client().ListBranches(owner, repo, opt)
+
+	branches, _, err := forgejo.Client().ListRepoBranches(owner, repo, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list branches err: %v", err))
 	}

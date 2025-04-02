@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"gitea.com/gitea/gitea-mcp/pkg/gitea"
-	"gitea.com/gitea/gitea-mcp/pkg/log"
-	"gitea.com/gitea/gitea-mcp/pkg/to"
+	"forgejo.com/forgejo/forgejo-mcp/pkg/forgejo"
+	"forgejo.com/forgejo/forgejo-mcp/pkg/log"
+	"forgejo.com/forgejo/forgejo-mcp/pkg/to"
 
-	gitea_sdk "code.gitea.io/sdk/gitea"
+	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
@@ -51,15 +51,15 @@ func ListRepoCommitsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 	if !ok {
 		pageSize = 100
 	}
-	opt := gitea_sdk.ListCommitOptions{
+	opt := forgejo_sdk.ListCommitOptions{
 		Path: pathStr,
 		SHA:  shaStr,
-		ListOptions: gitea_sdk.ListOptions{
+		ListOptions: forgejo_sdk.ListOptions{
 			Page:     int(page),
 			PageSize: int(pageSize),
 		},
 	}
-	commits, _, err := gitea.Client().ListRepoCommits(owner, repo, opt)
+	commits, _, err := forgejo.Client().ListRepoCommits(owner, repo, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list repo commits error: %v", err))
 	}
