@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"forgejo.com/forgejo/forgejo-mcp/pkg/forgejo"
-	"forgejo.com/forgejo/forgejo-mcp/pkg/log"
-	"forgejo.com/forgejo/forgejo-mcp/pkg/to"
+	"forgejo.org/forgejo/forgejo-mcp/pkg/forgejo"
+	"forgejo.org/forgejo/forgejo-mcp/pkg/log"
+	"forgejo.org/forgejo/forgejo-mcp/pkg/to"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"

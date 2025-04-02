@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sync"
 
-	"forgejo.com/forgejo/forgejo-mcp/pkg/flag"
-	"forgejo.com/forgejo/forgejo-mcp/pkg/log"
+	"forgejo.org/forgejo/forgejo-mcp/pkg/flag"
+	"forgejo.org/forgejo/forgejo-mcp/pkg/log"
 
 	"codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2"
 )

@@ -6,10 +6,10 @@ import (
 	"fmt"
 
 	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2"
-	"forgejo.com/forgejo/forgejo-mcp/pkg/forgejo"
-	"forgejo.com/forgejo/forgejo-mcp/pkg/log"
-	"forgejo.com/forgejo/forgejo-mcp/pkg/ptr"
-	"forgejo.com/forgejo/forgejo-mcp/pkg/to"
+	"forgejo.org/forgejo/forgejo-mcp/pkg/forgejo"
+	"forgejo.org/forgejo/forgejo-mcp/pkg/log"
+	"forgejo.org/forgejo/forgejo-mcp/pkg/ptr"
+	"forgejo.org/forgejo/forgejo-mcp/pkg/to"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"

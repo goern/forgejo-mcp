@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"forgejo.com/forgejo/forgejo-mcp/pkg/forgejo"
-	"forgejo.com/forgejo/forgejo-mcp/pkg/log"
-	"forgejo.com/forgejo/forgejo-mcp/pkg/to"
+	"forgejo.org/forgejo/forgejo-mcp/pkg/forgejo"
+	"forgejo.org/forgejo/forgejo-mcp/pkg/log"
+	"forgejo.org/forgejo/forgejo-mcp/pkg/to"
 
 	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2"
 	"github.com/mark3labs/mcp-go/mcp"

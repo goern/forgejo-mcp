@@ -1,7 +1,7 @@
 package main
 
 import (
-	"forgejo.com/forgejo/forgejo-mcp/cmd"
+	"forgejo.org/forgejo/forgejo-mcp/cmd"
 )
 
 var (

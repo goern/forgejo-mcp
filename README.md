@@ -6,14 +6,14 @@
 
 ### 📥Download the official binary release
 
-You can download the official release from [here](https://forgejo.com/forgejo/forgejo-mcp/releases).
+You can download the official release from [here](https://forgejo.org/forgejo/forgejo-mcp/releases).
 
 ### 🔧Build from Source
 
 You can download the source code by cloning the repository using Git:
 
 ```bash
-git clone https://forgejo.com/forgejo/forgejo-mcp.git
+git clone https://forgejo.org/forgejo/forgejo-mcp.git
 ```
 
 Before building, make sure you have the following installed:
@@ -49,11 +49,11 @@ To configure the MCP server for Forgejo, add the following to your MCP configura
       "command": "forgejo-mcp",
       "args": [
         "-t", "stdio",
-        "--host", "https://forgejo.com"
+        "--host", "https://forgejo.org"
         // "--token", "<your personal access token>"
       ],
       "env": {
-        // "GITEA_HOST": "https://forgejo.com",
+        // "GITEA_HOST": "https://forgejo.org",
         "GITEA_ACCESS_TOKEN": "<your personal access token>"
       }
     }

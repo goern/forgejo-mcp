@@ -4,11 +4,11 @@
       "command": "forgejo-mcp",
       "args": {
         "-t": "stdio",
-        "--host": "https://forgejo.com",
+        "--host": "https://forgejo.org",
         "--token": "<your personal access token>"
       },
       "env": {
-        "GITEA_HOST": "https://forgejo.com",
+        "GITEA_HOST": "https://forgejo.org",
         "GITEA_ACCESS_TOKEN": "<your personal access token>"
       }
     }

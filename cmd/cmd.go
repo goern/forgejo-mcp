@@ -5,9 +5,9 @@ import (
 	"flag"
 	"os"
 
-	"forgejo.com/forgejo/forgejo-mcp/operation"
-	flagPkg "forgejo.com/forgejo/forgejo-mcp/pkg/flag"
-	"forgejo.com/forgejo/forgejo-mcp/pkg/log"
+	"forgejo.org/forgejo/forgejo-mcp/operation"
+	flagPkg "forgejo.org/forgejo/forgejo-mcp/pkg/flag"
+	"forgejo.org/forgejo/forgejo-mcp/pkg/log"
 )
 
 var (
@@ -35,7 +35,7 @@ func init() {
 	flag.StringVar(
 		&host,
 		"host",
-		"https://forgejo.com",
+		"https://forgejo.org",
 		"Forgejo host",
 	)
 	flag.IntVar(
@@ -70,7 +70,7 @@ func init() {
 		flagPkg.Host = os.Getenv("GITEA_HOST")
 	}
 	if flagPkg.Host == "" {
-		flagPkg.Host = "https://forgejo.com"
+		flagPkg.Host = "https://forgejo.org"
 	}
 
 	flagPkg.Port = port
