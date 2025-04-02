@@ -25,7 +25,8 @@ func Default() *zap.Logger {
 			var ws zapcore.WriteSyncer
 			var wss []zapcore.WriteSyncer
 
-			wss = append(wss, zapcore.AddSync(os.Stdout))
+			// wss = append(wss, zapcore.AddSync(os.Stdout))
+			wss = append(wss, zapcore.AddSync(os.Stderr))
 			ws = zapcore.NewMultiWriteSyncer(wss...)
 
 			enc := zapcore.NewConsoleEncoder(ec)
