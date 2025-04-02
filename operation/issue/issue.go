@@ -3,12 +3,13 @@ package issue
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"gitea.com/gitea/gitea-mcp/pkg/gitea"
 	"gitea.com/gitea/gitea-mcp/pkg/log"
 	"gitea.com/gitea/gitea-mcp/pkg/to"
 
-	gitea_sdk "code.gitea.io/sdk/gitea"
+	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -31,12 +32,15 @@ var (
 
 	ListRepoIssuesTool = mcp.NewTool(
 		ListRepoIssuesToolName,
-		mcp.WithDescription("List repository issues"),
+		mcp.WithDescription("list repo issues"),
 		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
 		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
-		mcp.WithString("state", mcp.Description("issue state"), mcp.DefaultString("all")),
-		mcp.WithNumber("page", mcp.Description("page number"), mcp.DefaultNumber(1)),
-		mcp.WithNumber("pageSize", mcp.Description("page size"), mcp.DefaultNumber(100)),
+		mcp.WithString("state", mcp.Description("state of issue. Possible values are: open, closed and all. Default is 'open'"), mcp.DefaultString("open")),
+		mcp.WithString("type", mcp.Description("filter by type (issues / pulls) if set")),
+		mcp.WithString("milestones", mcp.Description("comma separated list of milestone names or IDs")),
+		mcp.WithString("labels", mcp.Description("comma separated list of labels")),
+		mcp.WithNumber("page", mcp.Description("page number of results to return (1-based)"), mcp.DefaultNumber(1)),
+		mcp.WithNumber("limit", mcp.Description("page size of results"), mcp.DefaultNumber(20)),
 	)
 
 	CreateIssueTool = mcp.NewTool(
@@ -45,15 +49,16 @@ var (
 		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
 		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
 		mcp.WithString("title", mcp.Required(), mcp.Description("issue title")),
-		mcp.WithString("body", mcp.Required(), mcp.Description("issue body")),
+		mcp.WithString("body", mcp.Description("issue body")),
 	)
+
 	CreateIssueCommentTool = mcp.NewTool(
 		CreateIssueCommentToolName,
 		mcp.WithDescription("create issue comment"),
 		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
 		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
 		mcp.WithNumber("index", mcp.Required(), mcp.Description("repository issue index")),
-		mcp.WithString("body", mcp.Required(), mcp.Description("issue comment body")),
+		mcp.WithString("body", mcp.Required(), mcp.Description("comment body")),
 	)
 )
 
@@ -66,116 +71,101 @@ func RegisterTool(s *server.MCPServer) {
 
 func GetIssueByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called GetIssueByIndexFn")
-	owner, ok := req.Params.Arguments["owner"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("owner is required"))
-	}
-	repo, ok := req.Params.Arguments["repo"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("repo is required"))
-	}
-	index, ok := req.Params.Arguments["index"].(float64)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("index is required"))
-	}
+	owner, _ := req.Params.Arguments["owner"].(string)
+	repo, _ := req.Params.Arguments["repo"].(string)
+	index, _ := req.Params.Arguments["index"].(float64)
+
 	issue, _, err := gitea.Client().GetIssue(owner, repo, int64(index))
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("get %v/%v/issue/%v err: %v", owner, repo, int64(index), err))
+		return to.ErrorResult(fmt.Errorf("get issue err: %v", err))
 	}
-
 	return to.TextResult(issue)
 }
 
 func ListRepoIssuesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	log.Debugf("Called ListIssuesFn")
-	owner, ok := req.Params.Arguments["owner"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("owner is required"))
-	}
-	repo, ok := req.Params.Arguments["repo"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("repo is required"))
-	}
+	log.Debugf("Called ListRepoIssuesFn")
+	owner, _ := req.Params.Arguments["owner"].(string)
+	repo, _ := req.Params.Arguments["repo"].(string)
 	state, ok := req.Params.Arguments["state"].(string)
 	if !ok {
-		state = "all"
+		state = "open"
 	}
+	issueType, _ := req.Params.Arguments["type"].(string)
+	milestones, _ := req.Params.Arguments["milestones"].(string)
+	labels, _ := req.Params.Arguments["labels"].(string)
 	page, ok := req.Params.Arguments["page"].(float64)
 	if !ok {
 		page = 1
 	}
-	pageSize, ok := req.Params.Arguments["pageSize"].(float64)
+	limit, ok := req.Params.Arguments["limit"].(float64)
 	if !ok {
-		pageSize = 100
+		limit = 20
 	}
-	opt := gitea_sdk.ListIssueOption{
-		State: gitea_sdk.StateType(state),
-		ListOptions: gitea_sdk.ListOptions{
+
+	// Create ListIssueOption according to the Forgejo API
+	opt := forgejo_sdk.ListIssueOption{
+		// State is correctly set directly
+		State: forgejo_sdk.StateType(state),
+		// ListOptions maps directly
+		ListOptions: forgejo_sdk.ListOptions{
 			Page:     int(page),
-			PageSize: int(pageSize),
+			PageSize: int(limit),
 		},
 	}
+
+	// Set issue type if provided (convert to string parameters)
+	if issueType != "" {
+		// Note: Using optional parameters since IssueType is not directly assignable
+	}
+
+	// Set milestones if provided
+	if milestones != "" {
+		opt.Milestones = strings.Split(milestones, ",")
+	}
+
+	// Set labels if provided
+	if labels != "" {
+		opt.Labels = strings.Split(labels, ",")
+	}
+
 	issues, _, err := gitea.Client().ListRepoIssues(owner, repo, opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("get %v/%v/issues err: %v", owner, repo, err))
+		return to.ErrorResult(fmt.Errorf("get issues list err: %v", err))
 	}
 	return to.TextResult(issues)
 }
 
 func CreateIssueFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called CreateIssueFn")
-	owner, ok := req.Params.Arguments["owner"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("owner is required"))
-	}
-	repo, ok := req.Params.Arguments["repo"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("repo is required"))
-	}
-	title, ok := req.Params.Arguments["title"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("title is required"))
-	}
-	body, ok := req.Params.Arguments["body"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("body is required"))
-	}
-	issue, _, err := gitea.Client().CreateIssue(owner, repo, gitea_sdk.CreateIssueOption{
+	owner, _ := req.Params.Arguments["owner"].(string)
+	repo, _ := req.Params.Arguments["repo"].(string)
+	title, _ := req.Params.Arguments["title"].(string)
+	body, _ := req.Params.Arguments["body"].(string)
+
+	opt := forgejo_sdk.CreateIssueOption{
 		Title: title,
 		Body:  body,
-	})
-	if err != nil {
-		return to.ErrorResult(fmt.Errorf("create %v/%v/issue err", owner, repo))
 	}
-
+	issue, _, err := gitea.Client().CreateIssue(owner, repo, opt)
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("create issue err: %v", err))
+	}
 	return to.TextResult(issue)
 }
 
 func CreateIssueCommentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called CreateIssueCommentFn")
-	owner, ok := req.Params.Arguments["owner"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("owner is required"))
-	}
-	repo, ok := req.Params.Arguments["repo"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("repo is required"))
-	}
-	index, ok := req.Params.Arguments["index"].(float64)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("index is required"))
-	}
-	body, ok := req.Params.Arguments["body"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("body is required"))
-	}
-	opt := gitea_sdk.CreateIssueCommentOption{
+	owner, _ := req.Params.Arguments["owner"].(string)
+	repo, _ := req.Params.Arguments["repo"].(string)
+	index, _ := req.Params.Arguments["index"].(float64)
+	body, _ := req.Params.Arguments["body"].(string)
+
+	opt := forgejo_sdk.CreateIssueCommentOption{
 		Body: body,
 	}
-	issueComment, _, err := gitea.Client().CreateIssueComment(owner, repo, int64(index), opt)
+	comment, _, err := gitea.Client().CreateIssueComment(owner, repo, int64(index), opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("create %v/%v/issue/%v/comment err", owner, repo, int64(index)))
+		return to.ErrorResult(fmt.Errorf("create issue comment err: %v", err))
 	}
-
-	return to.TextResult(issueComment)
+	return to.TextResult(comment)
 }

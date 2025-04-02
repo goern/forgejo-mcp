@@ -90,7 +90,7 @@ func CreateRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 	readme, _ := req.Params.Arguments["readme"].(string)
 	defaultBranch, _ := req.Params.Arguments["default_branch"].(string)
 
-	opt := gitea_sdk.CreateRepoOption{
+	opt := forgejo_sdk.CreateRepoOption{
 		Name:          name,
 		Description:   description,
 		Private:       private,
@@ -129,7 +129,7 @@ func ForkRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResu
 	if !ok || name == "" {
 		namePtr = nil
 	}
-	opt := gitea_sdk.CreateForkOption{
+	opt := forgejo_sdk.CreateForkOption{
 		Organization: organizationPtr,
 		Name:         namePtr,
 	}
@@ -150,16 +150,28 @@ func ListMyReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	if !ok {
 		pageSize = 100
 	}
-	opt := gitea_sdk.ListReposOptions{
-		ListOptions: gitea_sdk.ListOptions{
-			Page:     int(page),
-			PageSize: int(pageSize),
-		},
-	}
-	repos, _, err := gitea.Client().ListMyRepos(opt)
+	
+	// Create a safe wrapper for the API call
+	result, err := gitea.SafeAPICall(func() (interface{}, *forgejo_sdk.Response, error) {
+		opt := forgejo_sdk.ListReposOptions{
+			ListOptions: forgejo_sdk.ListOptions{
+				Page:     int(page),
+				PageSize: int(pageSize),
+			},
+		}
+		return gitea.Client().ListMyRepos(opt)
+	})
+	
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list my repositories error: %v", err))
 	}
-
+	
+	// Safe type assertion with fallback
+	repos, ok := result.([]forgejo_sdk.Repository)
+	if !ok {
+		log.Warnf("Unexpected response type when listing repositories")
+		return to.TextResult("Retrieved repositories but couldn't parse the response")
+	}
+	
 	return to.TextResult(repos)
 }

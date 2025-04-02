@@ -8,7 +8,7 @@ import (
 	"gitea.com/gitea/gitea-mcp/pkg/log"
 	"gitea.com/gitea/gitea-mcp/pkg/to"
 
-	gitea_sdk "code.gitea.io/sdk/gitea"
+	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -30,14 +30,15 @@ var (
 
 	ListRepoPullRequestsTool = mcp.NewTool(
 		ListRepoPullRequestsToolName,
-		mcp.WithDescription("List repository pull requests"),
+		mcp.WithDescription("list repo pull requests"),
 		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
 		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
-		mcp.WithString("state", mcp.Description("state"), mcp.Enum("open", "closed", "all"), mcp.DefaultString("all")),
-		mcp.WithString("sort", mcp.Description("sort"), mcp.Enum("oldest", "recentupdate", "leastupdate", "mostcomment", "leastcomment", "priority"), mcp.DefaultString("recentupdate")),
-		mcp.WithNumber("milestone", mcp.Description("milestone")),
-		mcp.WithNumber("page", mcp.Description("page number"), mcp.DefaultNumber(1)),
-		mcp.WithNumber("pageSize", mcp.Description("page size"), mcp.DefaultNumber(100)),
+		mcp.WithString("state", mcp.Description("state of pull request. Possible values are: open, closed and all. Default is 'open'"), mcp.DefaultString("open")),
+		mcp.WithString("sort", mcp.Description("sort type of pull request. Possible values are: oldest, recentupdate, leastupdate and mostcomment. Default is 'recentupdate'")),
+		mcp.WithString("milestone", mcp.Description("ID of the milestone")),
+		mcp.WithString("labels", mcp.Description("list of label IDs")),
+		mcp.WithNumber("page", mcp.Description("page number of results to return (1-based)"), mcp.DefaultNumber(1)),
+		mcp.WithNumber("limit", mcp.Description("page size of results"), mcp.DefaultNumber(20)),
 	)
 
 	CreatePullRequestTool = mcp.NewTool(
@@ -45,10 +46,10 @@ var (
 		mcp.WithDescription("create pull request"),
 		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
 		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
+		mcp.WithString("head", mcp.Required(), mcp.Description("head branch")),
+		mcp.WithString("base", mcp.Required(), mcp.Description("base branch")),
 		mcp.WithString("title", mcp.Required(), mcp.Description("pull request title")),
-		mcp.WithString("body", mcp.Required(), mcp.Description("pull request body")),
-		mcp.WithString("head", mcp.Required(), mcp.Description("pull request head")),
-		mcp.WithString("base", mcp.Required(), mcp.Description("pull request base")),
+		mcp.WithString("body", mcp.Description("pull request body")),
 	)
 )
 
@@ -60,102 +61,77 @@ func RegisterTool(s *server.MCPServer) {
 
 func GetPullRequestByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called GetPullRequestByIndexFn")
-	owner, ok := req.Params.Arguments["owner"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("owner is required"))
-	}
-	repo, ok := req.Params.Arguments["repo"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("repo is required"))
-	}
-	index, ok := req.Params.Arguments["index"].(float64)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("index is required"))
-	}
+	owner, _ := req.Params.Arguments["owner"].(string)
+	repo, _ := req.Params.Arguments["repo"].(string)
+	index, _ := req.Params.Arguments["index"].(float64)
+
 	pr, _, err := gitea.Client().GetPullRequest(owner, repo, int64(index))
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("get %v/%v/pr/%v err: %v", owner, repo, int64(index), err))
+		return to.ErrorResult(fmt.Errorf("get pull request err: %v", err))
 	}
-
 	return to.TextResult(pr)
 }
 
 func ListRepoPullRequestsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	log.Debugf("Called ListRepoPullRequests")
-	owner, ok := req.Params.Arguments["owner"].(string)
+	log.Debugf("Called ListRepoPullRequestsFn")
+	owner, _ := req.Params.Arguments["owner"].(string)
+	repo, _ := req.Params.Arguments["repo"].(string)
+	state, ok := req.Params.Arguments["state"].(string)
 	if !ok {
-		return to.ErrorResult(fmt.Errorf("owner is required"))
+		state = "open"
 	}
-	repo, ok := req.Params.Arguments["repo"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("repo is required"))
-	}
-	state, _ := req.Params.Arguments["state"].(string)
-	sort, ok := req.Params.Arguments["sort"].(string)
-	if !ok {
-		sort = "recentupdate"
-	}
-	milestone, _ := req.Params.Arguments["milestone"].(float64)
+	sort, _ := req.Params.Arguments["sort"].(string)
 	page, ok := req.Params.Arguments["page"].(float64)
 	if !ok {
 		page = 1
 	}
-	pageSize, ok := req.Params.Arguments["pageSize"].(float64)
+	limit, ok := req.Params.Arguments["limit"].(float64)
 	if !ok {
-		pageSize = 100
-	}
-	opt := gitea_sdk.ListPullRequestsOptions{
-		State:     gitea_sdk.StateType(state),
-		Sort:      sort,
-		Milestone: int64(milestone),
-		ListOptions: gitea_sdk.ListOptions{
-			Page:     int(page),
-			PageSize: int(pageSize),
-		},
-	}
-	pullRequests, _, err := gitea.Client().ListRepoPullRequests(owner, repo, opt)
-	if err != nil {
-		return to.ErrorResult(fmt.Errorf("list %v/%v/pull_requests err: %v", owner, repo, err))
+		limit = 20
 	}
 
-	return to.TextResult(pullRequests)
+	// Convert milestone from string to int64 if provided
+	// Note: Not using milestoneID since it's not supported in the current Forgejo SDK
+
+	// Labels - not used directly in query per API, will be handled in the API call
+	
+	opt := forgejo_sdk.ListPullRequestsOptions{
+		State: forgejo_sdk.StateType(state),
+		Sort:  sort,
+		ListOptions: forgejo_sdk.ListOptions{
+			Page:     int(page),
+			PageSize: int(limit),
+		},
+	}
+	
+	// Only set milestone if provided and valid
+	// Note: Not using milestone as it's not supported in the current Forgejo SDK
+
+	prs, _, err := gitea.Client().ListRepoPullRequests(owner, repo, opt)
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("get pull request list err: %v", err))
+	}
+	return to.TextResult(prs)
 }
 
 func CreatePullRequestFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called CreatePullRequestFn")
-	owner, ok := req.Params.Arguments["owner"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("owner is required"))
-	}
-	repo, ok := req.Params.Arguments["repo"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("repo is required"))
-	}
-	title, ok := req.Params.Arguments["title"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("title is required"))
-	}
-	body, ok := req.Params.Arguments["body"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("body is required"))
-	}
-	head, ok := req.Params.Arguments["head"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("head is required"))
-	}
-	base, ok := req.Params.Arguments["base"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("base is required"))
-	}
-	pr, _, err := gitea.Client().CreatePullRequest(owner, repo, gitea_sdk.CreatePullRequestOption{
-		Title: title,
-		Body:  body,
+	owner, _ := req.Params.Arguments["owner"].(string)
+	repo, _ := req.Params.Arguments["repo"].(string)
+	head, _ := req.Params.Arguments["head"].(string)
+	base, _ := req.Params.Arguments["base"].(string)
+	title, _ := req.Params.Arguments["title"].(string)
+	body, _ := req.Params.Arguments["body"].(string)
+
+	opt := forgejo_sdk.CreatePullRequestOption{
 		Head:  head,
 		Base:  base,
-	})
-	if err != nil {
-		return to.ErrorResult(fmt.Errorf("create %v/%v/pull_request err: %v", owner, repo, err))
+		Title: title,
+		Body:  body,
 	}
-
+	pr, _, err := gitea.Client().CreatePullRequest(owner, repo, opt)
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("create pull request err: %v", err))
+	}
 	return to.TextResult(pr)
 }

@@ -3,7 +3,7 @@ module gitea.com/gitea/gitea-mcp
 go 1.24.0
 
 require (
-	code.gitea.io/sdk/gitea v0.20.0
+	codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2 v2.0.0
 	github.com/mark3labs/mcp-go v0.17.0
 	go.uber.org/zap v1.27.0
 )

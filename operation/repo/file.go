@@ -48,10 +48,11 @@ var (
 		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
 		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
 		mcp.WithString("filePath", mcp.Required(), mcp.Description("file path")),
-		mcp.WithString("sha", mcp.Required(), mcp.Description("sha is the SHA for the file that already exists")),
-		mcp.WithString("content", mcp.Required(), mcp.Description("file content, base64 encoded")),
+		mcp.WithString("content", mcp.Required(), mcp.Description("file content")),
 		mcp.WithString("message", mcp.Required(), mcp.Description("commit message")),
 		mcp.WithString("branch_name", mcp.Required(), mcp.Description("branch name")),
+		mcp.WithString("sha", mcp.Required(), mcp.Description("file sha")),
+		mcp.WithString("new_branch_name", mcp.Description("new branch name")),
 	)
 
 	DeleteFileTool = mcp.NewTool(
@@ -62,131 +63,109 @@ var (
 		mcp.WithString("filePath", mcp.Required(), mcp.Description("file path")),
 		mcp.WithString("message", mcp.Required(), mcp.Description("commit message")),
 		mcp.WithString("branch_name", mcp.Required(), mcp.Description("branch name")),
-		mcp.WithString("sha", mcp.Description("sha")),
+		mcp.WithString("sha", mcp.Required(), mcp.Description("file sha")),
+		mcp.WithString("new_branch_name", mcp.Description("new branch name")),
 	)
 )
 
 func GetFileContentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	log.Debugf("Called GetFileFn")
-	owner, ok := req.Params.Arguments["owner"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("owner is required"))
-	}
-	repo, ok := req.Params.Arguments["repo"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("repo is required"))
-	}
+	log.Debugf("Called GetFileContentFn")
+	owner, _ := req.Params.Arguments["owner"].(string)
+	repo, _ := req.Params.Arguments["repo"].(string)
 	ref, _ := req.Params.Arguments["ref"].(string)
-	filePath, ok := req.Params.Arguments["filePath"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("filePath is required"))
-	}
-	content, _, err := gitea.Client().GetContents(owner, repo, ref, filePath)
+	filePath, _ := req.Params.Arguments["filePath"].(string)
+
+	fileData, _, err := gitea.Client().GetFile(owner, repo, ref, filePath)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("get file err: %v", err))
+		return to.ErrorResult(fmt.Errorf("get file content err: %v", err))
 	}
-	return to.TextResult(content)
+	content, err := base64.StdEncoding.DecodeString(fileData.Content)
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("decode content err: %v", err))
+	}
+	fileData.Content = string(content)
+	return to.TextResult(fileData)
 }
 
 func CreateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called CreateFileFn")
-	owner, ok := req.Params.Arguments["owner"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("owner is required"))
-	}
-	repo, ok := req.Params.Arguments["repo"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("repo is required"))
-	}
-	filePath, ok := req.Params.Arguments["filePath"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("filePath is required"))
-	}
+	owner, _ := req.Params.Arguments["owner"].(string)
+	repo, _ := req.Params.Arguments["repo"].(string)
+	filePath, _ := req.Params.Arguments["filePath"].(string)
 	content, _ := req.Params.Arguments["content"].(string)
 	message, _ := req.Params.Arguments["message"].(string)
 	branchName, _ := req.Params.Arguments["branch_name"].(string)
+	newBranchName, ok := req.Params.Arguments["new_branch_name"].(string)
+	if !ok || newBranchName == "" {
+		newBranchName = ""
+	}
 	opt := gitea_sdk.CreateFileOptions{
-		Content: base64.StdEncoding.EncodeToString([]byte(content)),
 		FileOptions: gitea_sdk.FileOptions{
-			Message:    message,
-			BranchName: branchName,
+			Message:       message,
+			BranchName:    branchName,
+			NewBranchName: newBranchName,
 		},
+		Content: content,
 	}
-
-	_, _, err := gitea.Client().CreateFile(owner, repo, filePath, opt)
+	fileResp, _, err := gitea.Client().CreateFile(owner, repo, filePath, opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("create file err: %v", err))
+		return to.ErrorResult(fmt.Errorf("create file error: %v", err))
 	}
-	return to.TextResult("Create file success")
+	return to.TextResult(fileResp)
 }
 
 func UpdateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called UpdateFileFn")
-	owner, ok := req.Params.Arguments["owner"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("owner is required"))
-	}
-	repo, ok := req.Params.Arguments["repo"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("repo is required"))
-	}
-	filePath, ok := req.Params.Arguments["filePath"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("filePath is required"))
-	}
-	sha, ok := req.Params.Arguments["sha"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("sha is required"))
-	}
+	owner, _ := req.Params.Arguments["owner"].(string)
+	repo, _ := req.Params.Arguments["repo"].(string)
+	filePath, _ := req.Params.Arguments["filePath"].(string)
 	content, _ := req.Params.Arguments["content"].(string)
 	message, _ := req.Params.Arguments["message"].(string)
 	branchName, _ := req.Params.Arguments["branch_name"].(string)
-
+	sha, _ := req.Params.Arguments["sha"].(string)
+	newBranchName, ok := req.Params.Arguments["new_branch_name"].(string)
+	if !ok || newBranchName == "" {
+		newBranchName = ""
+	}
 	opt := gitea_sdk.UpdateFileOptions{
+		FileOptions: gitea_sdk.FileOptions{
+			Message:       message,
+			BranchName:    branchName,
+			NewBranchName: newBranchName,
+		},
 		SHA:     sha,
 		Content: content,
-		FileOptions: gitea_sdk.FileOptions{
-			Message:    message,
-			BranchName: branchName,
-		},
 	}
-	_, _, err := gitea.Client().UpdateFile(owner, repo, filePath, opt)
+	fileResp, _, err := gitea.Client().UpdateFile(owner, repo, filePath, opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("update file err: %v", err))
+		return to.ErrorResult(fmt.Errorf("update file error: %v", err))
 	}
-	return to.TextResult("Update file success")
+	return to.TextResult(fileResp)
 }
 
 func DeleteFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called DeleteFileFn")
-	owner, ok := req.Params.Arguments["owner"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("owner is required"))
-	}
-	repo, ok := req.Params.Arguments["repo"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("repo is required"))
-	}
-	filePath, ok := req.Params.Arguments["filePath"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("filePath is required"))
-	}
+	owner, _ := req.Params.Arguments["owner"].(string)
+	repo, _ := req.Params.Arguments["repo"].(string)
+	filePath, _ := req.Params.Arguments["filePath"].(string)
 	message, _ := req.Params.Arguments["message"].(string)
 	branchName, _ := req.Params.Arguments["branch_name"].(string)
-	sha, ok := req.Params.Arguments["sha"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("sha is required"))
+	sha, _ := req.Params.Arguments["sha"].(string)
+	newBranchName, ok := req.Params.Arguments["new_branch_name"].(string)
+	if !ok || newBranchName == "" {
+		newBranchName = ""
 	}
 	opt := gitea_sdk.DeleteFileOptions{
 		FileOptions: gitea_sdk.FileOptions{
-			Message:    message,
-			BranchName: branchName,
+			Message:       message,
+			BranchName:    branchName,
+			NewBranchName: newBranchName,
 		},
 		SHA: sha,
 	}
-	_, err := gitea.Client().DeleteFile(owner, repo, filePath, opt)
+	fileResp, _, err := gitea.Client().DeleteFile(owner, repo, filePath, opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("delete file err: %v", err))
+		return to.ErrorResult(fmt.Errorf("delete file error: %v", err))
 	}
-	return to.TextResult("Delete file success")
+	return to.TextResult(fileResp)
 }
