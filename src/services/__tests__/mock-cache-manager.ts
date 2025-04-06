@@ -1,10 +1,11 @@
 import { ICacheManager } from "../types.js";
 
 export class MockCacheManager implements ICacheManager {
-  private cache = new Map<string, any>();
+  private cache = new Map<string, unknown>();
 
   async get<T>(key: string): Promise<T | undefined> {
-    return this.cache.get(key) as T | undefined;
+    const value = this.cache.get(key);
+    return value as T | undefined;
   }
 
   async set<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
