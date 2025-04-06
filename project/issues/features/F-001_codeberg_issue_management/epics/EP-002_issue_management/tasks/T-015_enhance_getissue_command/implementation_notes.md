@@ -2,65 +2,55 @@
 
 ## Changes Made
 
-1. **Enhanced Issue Metadata**
+1. **Enhanced Metadata Support**
 
-   - Added support for includeMetadata option
-   - Implemented fetching of comments and events data
-   - Added lastModifiedBy tracking from events
-   - Added proper comment count tracking
+   - Added milestone data fetching and mapping
+   - Improved error handling for metadata fetches
+   - Added proper type validation for cached data
 
-2. **Caching Implementation**
+2. **Improved Caching**
 
-   - Added caching support with TTL
-   - Implemented cache key generation using repo and issue identifiers
-   - Added forceFresh option to bypass cache
-   - Cache successful responses for 5 minutes
+   - Added state-based TTL (Time To Live):
+     - Closed issues: 1 hour cache
+     - Open issues: 5 minutes cache
+   - Added cache validation using isIssue type guard
+   - Auto-invalidation of invalid cached data
 
 3. **Error Handling**
 
-   - Added graceful handling of metadata fetch failures
-   - Proper error propagation for API failures
-   - Added logging for cache hits/misses
+   - Added proper error handling for API calls
+   - Graceful handling of metadata fetch failures
+   - Improved error logging with context
 
-4. **Testing**
-   - Added comprehensive test suite
-   - Test cases for metadata fetching
-   - Test cases for caching behavior
-   - Test cases for error handling
-   - All tests passing
+4. **Validation Rules**
+   - Added basic validation rules for issue title:
+     - Required field validation
+     - Maximum length validation (255 characters)
+   - Rules are added to each issue instance
+
+## Testing
+
+1. **New Test Cases Added**
+
+   - Full metadata fetching including milestone
+   - Cache validation and invalidation
+   - State-based TTL verification
+   - Error handling for metadata fetches
+   - Validation rules presence
+
+2. **Test Coverage**
+   - All new functionality is covered by tests
+   - Existing tests continue to pass
+   - Edge cases and error scenarios tested
 
 ## Technical Decisions
 
-1. Cache TTL set to 5 minutes to balance freshness and performance
-2. Metadata fetching is optional to allow faster responses when not needed
-3. Used Promise.all for parallel metadata fetching
-4. Graceful degradation when metadata fetching fails
-
-## Dependencies
-
-- Added ICacheManager interface
-- Added MockCacheManager for testing
-- Updated DI container configuration
-
-## Usage Example
-
-```typescript
-// Basic usage
-const issue = await getIssue("owner", "repo", 123);
-
-// With metadata
-const issueWithMeta = await getIssue("owner", "repo", 123, {
-  includeMetadata: true,
-});
-
-// Force fresh data
-const freshIssue = await getIssue("owner", "repo", 123, {
-  forceFresh: true,
-});
-```
+1. Made milestone fetching part of metadata to keep backward compatibility
+2. Used Promise.all for parallel metadata fetches to improve performance
+3. Implemented individual error handling for each metadata fetch to prevent total failure
+4. Added type validation for cached data to prevent invalid data usage
 
 ## Next Steps
 
-1. Consider implementing background refresh for cached data
-2. Consider adding batch operation support
-3. Consider adding webhook support for cache invalidation
+1. Implement updateTitle command (T-016)
+2. Add comprehensive unit tests (T-019)

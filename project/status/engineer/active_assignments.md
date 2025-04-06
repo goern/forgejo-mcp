@@ -25,7 +25,7 @@ None
   - Priority: High
   - Story Points: 2
   - Started: 2025-04-06 16:49
-  - Completed: 2025-04-06 16:53
+  - Completed: 2025-04-07 08:13
   - Location: `/project/issues/features/F-001_codeberg_issue_management/epics/EP-002_issue_management/tasks/T-015_enhance_getissue_command/task_details.md`
   - Deliverables:
     - Enhanced getIssue command with metadata support
