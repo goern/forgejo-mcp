@@ -2,6 +2,20 @@
  * Type definitions for Codeberg API service layer
  */
 
+// Validation Types
+export interface ValidationRule {
+  field: string;
+  type: "required" | "minLength" | "maxLength" | "pattern" | "custom";
+  value?: number | string | RegExp;
+  message: string;
+  validate?: (value: unknown) => boolean;
+}
+
+export interface ValidationResult {
+  valid: boolean;
+  errors: ValidationError[];
+}
+
 // Core Models
 export interface Repository {
   id: number;
@@ -15,7 +29,11 @@ export interface Repository {
   owner: User;
 }
 
+/**
+ * Represents a Codeberg issue with enhanced metadata and validation support
+ */
 export interface Issue {
+  // Core fields
   id: number;
   number: number;
   title: string;
@@ -26,6 +44,35 @@ export interface Issue {
   updatedAt: Date;
   user: User;
   labels: Label[];
+
+  // Enhanced metadata
+  lastModifiedBy?: User;
+  assignees: User[];
+  milestone?: Milestone;
+  comments: number;
+  locked: boolean;
+
+  // Update tracking
+  lastUpdated: Date;
+  updateInProgress?: boolean;
+  updateError?: string;
+
+  // Validation
+  validationRules: ValidationRule[];
+}
+
+/**
+ * Represents a milestone in the issue tracking system
+ */
+export interface Milestone {
+  id: number;
+  number: number;
+  title: string;
+  description: string;
+  dueDate?: Date;
+  state: "open" | "closed";
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface User {
@@ -52,12 +99,51 @@ export interface CreateIssueData {
   labels?: string[];
 }
 
+/**
+ * Data required to update an issue
+ */
 export interface UpdateIssueData {
   title?: string;
   body?: string;
   state?: IssueState;
   labels?: string[];
+  assignees?: string[];
+  milestone?: number | null;
+  locked?: boolean;
 }
+
+// Type Guards
+export const isIssue = (value: unknown): value is Issue => {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "id" in value &&
+    "number" in value &&
+    "title" in value &&
+    "state" in value
+  );
+};
+
+export const isValidationRule = (value: unknown): value is ValidationRule => {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "field" in value &&
+    "type" in value &&
+    "message" in value
+  );
+};
+
+export const isMilestone = (value: unknown): value is Milestone => {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "id" in value &&
+    "number" in value &&
+    "title" in value &&
+    "state" in value
+  );
+};
 
 export interface ListIssueOptions {
   state?: IssueState;
