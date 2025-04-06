@@ -12,11 +12,13 @@ import {
   type IErrorHandler,
   type ILogger,
   type Issue,
-  type IssueState,
+  IssueState,
   type ListIssueOptions,
   type Repository,
   type UpdateIssueData,
   type User,
+  type Milestone,
+  isIssue,
 } from "./types.js";
 
 /**
@@ -210,40 +212,88 @@ export class CodebergService implements ICodebergService {
     if (!options.forceFresh && this.cacheManager) {
       const cached = await this.cacheManager.get<Issue>(cacheKey);
       if (cached) {
-        this.logger.debug("Returning cached issue", { cacheKey });
-        return cached;
+        // Validate cached data
+        if (isIssue(cached)) {
+          this.logger.debug("Returning cached issue", { cacheKey });
+          return cached;
+        } else {
+          this.logger.warn("Invalid cached issue data", { cacheKey });
+          await this.cacheManager.delete(cacheKey);
+        }
       }
     }
 
     return this.makeRequest(
       "getIssue",
       async () => {
-        // Fetch issue data
-        const issueResponse = await this.axiosInstance.get(
-          `/repos/${owner}/${repo}/issues/${number}`,
-        );
+        // Fetch issue data with error handling
+        let issueResponse;
+        try {
+          issueResponse = await this.axiosInstance.get(
+            `/repos/${owner}/${repo}/issues/${number}`,
+          );
+        } catch (error) {
+          throw this.errorHandler.handleApiError(error);
+        }
 
         // Fetch additional metadata if requested
-        let metadata: { lastModifiedBy?: User; comments?: number } = {};
+        let metadata: {
+          lastModifiedBy?: User;
+          comments?: number;
+          assignees?: User[];
+          milestone?: Milestone;
+          locked?: boolean;
+        } = {};
+
         if (options.includeMetadata) {
           try {
-            const [commentsResponse, eventsResponse] = await Promise.all([
-              this.axiosInstance.get(
-                `/repos/${owner}/${repo}/issues/${number}/comments`,
-              ),
-              this.axiosInstance.get(
-                `/repos/${owner}/${repo}/issues/${number}/events`,
-              ),
-            ]);
+            const [commentsResponse, eventsResponse, milestoneResponse] =
+              await Promise.all([
+                this.axiosInstance
+                  .get(`/repos/${owner}/${repo}/issues/${number}/comments`)
+                  .catch((error) => {
+                    this.logger.warn("Failed to fetch comments", { error });
+                    return { data: [] };
+                  }),
+                this.axiosInstance
+                  .get(`/repos/${owner}/${repo}/issues/${number}/events`)
+                  .catch((error) => {
+                    this.logger.warn("Failed to fetch events", { error });
+                    return { data: [] };
+                  }),
+                this.axiosInstance
+                  .get(`/repos/${owner}/${repo}/issues/${number}/milestone`)
+                  .catch((error) => {
+                    this.logger.warn("Failed to fetch milestone", { error });
+                    return { data: null };
+                  }),
+              ]);
 
             metadata = {
               comments: commentsResponse.data.length,
               lastModifiedBy: eventsResponse.data[0]?.actor
                 ? this.mapUser(eventsResponse.data[0].actor)
                 : undefined,
+              milestone: milestoneResponse.data
+                ? {
+                    id: milestoneResponse.data.id,
+                    number: milestoneResponse.data.number,
+                    title: milestoneResponse.data.title,
+                    description: milestoneResponse.data.description,
+                    dueDate: milestoneResponse.data.due_on
+                      ? new Date(milestoneResponse.data.due_on)
+                      : undefined,
+                    state: milestoneResponse.data.state,
+                    createdAt: new Date(milestoneResponse.data.created_at),
+                    updatedAt: new Date(milestoneResponse.data.updated_at),
+                  }
+                : undefined,
             };
           } catch (error) {
-            this.logger.warn("Failed to fetch issue metadata", { error });
+            this.logger.error(
+              "Failed to fetch issue metadata",
+              error instanceof Error ? error : new Error(String(error)),
+            );
           }
         }
 
@@ -252,9 +302,25 @@ export class CodebergService implements ICodebergService {
           ...metadata,
         });
 
-        // Cache the result
+        // Add validation rules based on issue state
+        issue.validationRules = [
+          {
+            field: "title",
+            type: "required",
+            message: "Issue title is required",
+          },
+          {
+            field: "title",
+            type: "maxLength",
+            value: 255,
+            message: "Issue title cannot exceed 255 characters",
+          },
+        ];
+
+        // Cache the result with TTL based on state
         if (this.cacheManager) {
-          await this.cacheManager.set(cacheKey, issue, 300); // Cache for 5 minutes
+          const ttl = issue.state === IssueState.Closed ? 3600 : 300; // 1 hour for closed, 5 mins for open
+          await this.cacheManager.set(cacheKey, issue, ttl);
         }
 
         return issue;
