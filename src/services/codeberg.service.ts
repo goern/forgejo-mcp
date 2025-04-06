@@ -7,6 +7,7 @@ import {
   ValidationError,
   type CodebergConfig,
   type CreateIssueData,
+  type ICacheManager,
   type ICodebergService,
   type IErrorHandler,
   type ILogger,
@@ -31,6 +32,7 @@ export class CodebergService implements ICodebergService {
     @inject(TYPES.Config) private readonly config: CodebergConfig,
     @inject(TYPES.ErrorHandler) private readonly errorHandler: IErrorHandler,
     @inject(TYPES.Logger) private readonly logger: ILogger,
+    @inject(TYPES.CacheManager) private readonly cacheManager: ICacheManager,
   ) {
     this.maxRetries = config.maxRetries ?? 3;
     this.axiosInstance = axios.create({
@@ -188,21 +190,76 @@ export class CodebergService implements ICodebergService {
   /**
    * Gets details about a specific issue
    */
-  async getIssue(owner: string, repo: string, number: number): Promise<Issue> {
+  async getIssue(
+    owner: string,
+    repo: string,
+    number: number,
+    options: {
+      includeMetadata?: boolean;
+      forceFresh?: boolean;
+    } = {},
+  ): Promise<Issue> {
     this.validateRepoParams(owner, repo);
     if (number <= 0) {
       throw new ValidationError("Issue number must be positive", { number });
     }
 
+    const cacheKey = `issue:${owner}:${repo}:${number}`;
+
+    // Check cache if not forcing fresh data
+    if (!options.forceFresh && this.cacheManager) {
+      const cached = await this.cacheManager.get<Issue>(cacheKey);
+      if (cached) {
+        this.logger.debug("Returning cached issue", { cacheKey });
+        return cached;
+      }
+    }
+
     return this.makeRequest(
       "getIssue",
       async () => {
-        const response = await this.axiosInstance.get(
+        // Fetch issue data
+        const issueResponse = await this.axiosInstance.get(
           `/repos/${owner}/${repo}/issues/${number}`,
         );
-        return this.mapIssue(response.data);
+
+        // Fetch additional metadata if requested
+        let metadata: { lastModifiedBy?: User; comments?: number } = {};
+        if (options.includeMetadata) {
+          try {
+            const [commentsResponse, eventsResponse] = await Promise.all([
+              this.axiosInstance.get(
+                `/repos/${owner}/${repo}/issues/${number}/comments`,
+              ),
+              this.axiosInstance.get(
+                `/repos/${owner}/${repo}/issues/${number}/events`,
+              ),
+            ]);
+
+            metadata = {
+              comments: commentsResponse.data.length,
+              lastModifiedBy: eventsResponse.data[0]?.actor
+                ? this.mapUser(eventsResponse.data[0].actor)
+                : undefined,
+            };
+          } catch (error) {
+            this.logger.warn("Failed to fetch issue metadata", { error });
+          }
+        }
+
+        const issue = this.mapIssue({
+          ...issueResponse.data,
+          ...metadata,
+        });
+
+        // Cache the result
+        if (this.cacheManager) {
+          await this.cacheManager.set(cacheKey, issue, 300); // Cache for 5 minutes
+        }
+
+        return issue;
       },
-      { owner, repo, number },
+      { owner, repo, number, options },
     );
   }
 
@@ -309,6 +366,7 @@ export class CodebergService implements ICodebergService {
    */
   private mapIssue(data: any): Issue {
     return {
+      // Core fields
       id: data.id,
       number: data.number,
       title: data.title,
@@ -324,6 +382,34 @@ export class CodebergService implements ICodebergService {
         color: label.color,
         description: label.description,
       })),
+
+      // Enhanced metadata
+      lastModifiedBy: data.lastModifiedBy,
+      assignees: (data.assignees || []).map(this.mapUser),
+      milestone: data.milestone
+        ? {
+            id: data.milestone.id,
+            number: data.milestone.number,
+            title: data.milestone.title,
+            description: data.milestone.description,
+            dueDate: data.milestone.due_on
+              ? new Date(data.milestone.due_on)
+              : undefined,
+            state: data.milestone.state,
+            createdAt: new Date(data.milestone.created_at),
+            updatedAt: new Date(data.milestone.updated_at),
+          }
+        : undefined,
+      comments: data.comments || 0,
+      locked: !!data.locked,
+
+      // Update tracking
+      lastUpdated: new Date(data.updated_at),
+      updateInProgress: false,
+      updateError: undefined,
+
+      // Validation
+      validationRules: [],
     };
   }
 
