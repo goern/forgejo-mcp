@@ -12,6 +12,7 @@ import { Logger } from "../logger.service.js";
 import {
   ApiError,
   CodebergConfig,
+  ICacheManager,
   IssueState,
   ValidationError,
 } from "../types.js";
@@ -53,6 +54,7 @@ describe("CodebergService", () => {
   let errorHandler: ErrorHandler;
   let logger: Logger;
   let config: CodebergConfig;
+  let cacheManager: jest.Mocked<ICacheManager>;
 
   beforeEach(() => {
     // Reset mocks
@@ -69,7 +71,21 @@ describe("CodebergService", () => {
     // Create service instances
     logger = new Logger("TestService");
     errorHandler = new ErrorHandler();
-    service = new CodebergService(config, errorHandler, logger);
+    cacheManager = {
+      get: jest
+        .fn()
+        .mockImplementation(
+          async <T>(key: string) => undefined as T | undefined,
+        ),
+      set: jest
+        .fn()
+        .mockImplementation(
+          async <T>(key: string, value: T, ttl: number) => {},
+        ),
+      delete: jest.fn().mockImplementation(async (key: string) => {}),
+      clear: jest.fn().mockImplementation(async () => {}),
+    };
+    service = new CodebergService(config, errorHandler, logger, cacheManager);
   });
 
   describe("Repository Operations", () => {
@@ -255,40 +271,128 @@ describe("CodebergService", () => {
     });
 
     describe("getIssue", () => {
-      it("should get issue successfully", async () => {
-        const mockIssue = {
+      const mockIssue = {
+        id: 1,
+        number: 1,
+        title: "Test Issue",
+        body: "Issue body",
+        state: "open",
+        html_url: "https://codeberg.org/owner/repo/issues/1",
+        created_at: "2025-01-01T00:00:00Z",
+        updated_at: "2025-01-02T00:00:00Z",
+        user: {
           id: 1,
-          number: 1,
-          title: "Test Issue",
-          body: "Issue body",
-          state: "open",
-          html_url: "https://codeberg.org/owner/repo/issues/1",
-          created_at: "2025-01-01T00:00:00Z",
-          updated_at: "2025-01-02T00:00:00Z",
-          user: {
-            id: 1,
-            login: "user",
-            avatar_url: "https://codeberg.org/avatar/1",
-            html_url: "https://codeberg.org/user",
+          login: "user",
+          avatar_url: "https://codeberg.org/avatar/1",
+          html_url: "https://codeberg.org/user",
+        },
+        labels: [],
+        assignees: [],
+        milestone: null,
+        comments: 0,
+        locked: false,
+      };
+
+      const mockComments = [
+        { id: 1, body: "Comment 1" },
+        { id: 2, body: "Comment 2" },
+      ];
+
+      const mockEvents = [
+        {
+          id: 1,
+          actor: {
+            id: 2,
+            login: "modifier",
+            avatar_url: "https://codeberg.org/avatar/2",
+            html_url: "https://codeberg.org/modifier",
           },
-          labels: [],
-        };
+        },
+      ];
 
-        mockAxios.get.mockResolvedValueOnce(createMockResponse(mockIssue));
+      it("should get issue successfully with metadata", async () => {
+        mockAxios.get
+          .mockResolvedValueOnce(createMockResponse(mockIssue))
+          .mockResolvedValueOnce(createMockResponse(mockComments))
+          .mockResolvedValueOnce(createMockResponse(mockEvents));
 
-        const result = await service.getIssue("owner", "repo", 1);
+        const result = await service.getIssue("owner", "repo", 1, {
+          includeMetadata: true,
+        });
 
         expect(mockAxios.get).toHaveBeenCalledWith(
           "/repos/owner/repo/issues/1",
         );
+        expect(mockAxios.get).toHaveBeenCalledWith(
+          "/repos/owner/repo/issues/1/comments",
+        );
+        expect(mockAxios.get).toHaveBeenCalledWith(
+          "/repos/owner/repo/issues/1/events",
+        );
+
         expect(result.title).toBe("Test Issue");
         expect(result.state).toBe(IssueState.Open);
+        expect(result.comments).toBe(2);
+        expect(result.lastModifiedBy?.login).toBe("modifier");
+      });
+
+      it("should return cached issue when available", async () => {
+        const cachedIssue = {
+          ...mockIssue,
+          title: "Cached Issue",
+        };
+
+        cacheManager.get.mockResolvedValueOnce(cachedIssue);
+
+        const result = await service.getIssue("owner", "repo", 1);
+
+        expect(cacheManager.get).toHaveBeenCalledWith("issue:owner:repo:1");
+        expect(mockAxios.get).not.toHaveBeenCalled();
+        expect(result.title).toBe("Cached Issue");
+      });
+
+      it("should force fresh data when requested", async () => {
+        mockAxios.get.mockResolvedValueOnce(createMockResponse(mockIssue));
+
+        await service.getIssue("owner", "repo", 1, { forceFresh: true });
+
+        expect(cacheManager.get).not.toHaveBeenCalled();
+        expect(mockAxios.get).toHaveBeenCalledWith(
+          "/repos/owner/repo/issues/1",
+        );
+      });
+
+      it("should cache successful responses", async () => {
+        mockAxios.get.mockResolvedValueOnce(createMockResponse(mockIssue));
+
+        await service.getIssue("owner", "repo", 1);
+
+        expect(cacheManager.set).toHaveBeenCalledWith(
+          "issue:owner:repo:1",
+          expect.objectContaining({ id: 1, title: "Test Issue" }),
+          300,
+        );
       });
 
       it("should throw ValidationError for invalid issue number", async () => {
         await expect(service.getIssue("owner", "repo", 0)).rejects.toThrow(
           ValidationError,
         );
+      });
+
+      it("should handle metadata fetch failures gracefully", async () => {
+        mockAxios.get
+          .mockResolvedValueOnce(createMockResponse(mockIssue))
+          .mockRejectedValueOnce(new Error("Failed to fetch comments"))
+          .mockRejectedValueOnce(new Error("Failed to fetch events"));
+
+        const result = await service.getIssue("owner", "repo", 1, {
+          includeMetadata: true,
+        });
+
+        expect(result.title).toBe("Test Issue");
+        expect(result.comments).toBe(0);
+        expect(result.lastModifiedBy).toBeUndefined();
       });
     });
 

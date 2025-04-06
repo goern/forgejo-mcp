@@ -1,9 +1,15 @@
 import "reflect-metadata";
 import { Container } from "inversify";
-import { ICodebergService, IErrorHandler, ILogger } from "./services/types.js";
+import {
+  ICodebergService,
+  IErrorHandler,
+  ILogger,
+  ICacheManager,
+} from "./services/types.js";
 import { CodebergService } from "./services/codeberg.service.js";
 import { ErrorHandler } from "./services/error-handler.service.js";
 import { Logger } from "./services/logger.service.js";
+import { MockCacheManager } from "./services/__tests__/mock-cache-manager.js";
 import { TYPES } from "./types/di.js";
 
 // Create and configure the container
@@ -21,6 +27,10 @@ export function createContainer(config: any): Container {
     .inSingletonScope();
   container.bind<ILogger>(TYPES.Logger).to(Logger).inSingletonScope();
   container.bind<string>(TYPES.ServiceName).toConstantValue("CodebergService");
+  container
+    .bind<ICacheManager>(TYPES.CacheManager)
+    .to(MockCacheManager)
+    .inSingletonScope();
 
   // Bind configuration
   container.bind(TYPES.Config).toConstantValue(config);
@@ -43,6 +53,10 @@ export function createTestContainer(): Container {
     .inSingletonScope();
   container.bind<ILogger>(TYPES.Logger).to(Logger).inSingletonScope();
   container.bind<string>(TYPES.ServiceName).toConstantValue("CodebergService");
+  container
+    .bind<ICacheManager>(TYPES.CacheManager)
+    .to(MockCacheManager)
+    .inSingletonScope();
 
   // Bind test configuration
   container.bind(TYPES.Config).toConstantValue({

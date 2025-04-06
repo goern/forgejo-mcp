@@ -218,7 +218,15 @@ export interface ICodebergService {
     repo: string,
     options?: ListIssueOptions,
   ): Promise<Issue[]>;
-  getIssue(owner: string, repo: string, number: number): Promise<Issue>;
+  getIssue(
+    owner: string,
+    repo: string,
+    number: number,
+    options?: {
+      includeMetadata?: boolean;
+      forceFresh?: boolean;
+    },
+  ): Promise<Issue>;
   createIssue(
     owner: string,
     repo: string,
@@ -252,6 +260,13 @@ export interface ILogger {
     error?: Error,
     context?: Record<string, unknown>,
   ): void;
+}
+
+export interface ICacheManager {
+  get<T>(key: string): Promise<T | undefined>;
+  set<T>(key: string, value: T, ttlSeconds: number): Promise<void>;
+  delete(key: string): Promise<void>;
+  clear(): Promise<void>;
 }
 
 // Response Types

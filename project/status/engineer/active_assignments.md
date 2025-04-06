@@ -6,6 +6,21 @@ None
 
 ## Completed
 
+- [x] T-015: Enhance getIssue command
+
+  - Epic: EP-002_issue_management
+  - Feature: F-001_codeberg_issue_management
+  - Priority: High
+  - Story Points: 2
+  - Started: 2025-04-06 16:49
+  - Completed: 2025-04-06 16:53
+  - Location: `/project/issues/features/F-001_codeberg_issue_management/epics/EP-002_issue_management/tasks/T-015_enhance_getissue_command/task_details.md`
+  - Deliverables:
+    - Enhanced getIssue command with metadata support
+    - Added caching with TTL and force refresh option
+    - Added comprehensive test coverage
+    - Created detailed implementation notes
+
 - [x] T-011: Analyze existing issue management code
 
   - Epic: EP-002_issue_management
@@ -14,6 +29,22 @@ None
   - Story Points: 1
   - Started: 2025-04-06 16:11
   - Location: `/project/issues/features/F-001_codeberg_issue_management/epics/EP-002_issue_management/tasks/T-011_analyze_existing_code/task_details.md`
+
+- [x] T-013: Extend Codeberg Issue Interface
+
+  - Epic: EP-002_issue_management
+  - Feature: F-001_codeberg_issue_management
+  - Priority: High
+  - Story Points: 1
+  - Started: 2025-04-06 16:36
+  - Completed: 2025-04-06 16:40
+  - Location: `/project/issues/features/F-001_codeberg_issue_management/epics/EP-002_issue_management/tasks/T-013_extend_codeberg_issue_interface/task_details.md`
+  - Deliverables:
+    - Extended Issue interface with validation and metadata support
+    - Added Milestone interface and type guards
+    - Enhanced UpdateIssueData interface
+    - Added comprehensive JSDoc documentation
+    - All tests passing
 
 - [x] T-004: Implement dependency injection container
 
