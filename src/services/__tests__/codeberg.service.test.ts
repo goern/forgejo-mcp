@@ -16,6 +16,7 @@ import {
   IssueState,
   ValidationError,
 } from "../types.js";
+import { MockCacheManager } from "./mock-cache-manager.js";
 
 // Mock axios module before creating mock instance
 jest.mock("axios");
@@ -71,20 +72,24 @@ describe("CodebergService", () => {
     // Create service instances
     logger = new Logger("TestService");
     errorHandler = new ErrorHandler();
+    const mockGet = jest.fn() as jest.MockedFunction<ICacheManager["get"]>;
+    const mockSet = jest.fn() as jest.MockedFunction<ICacheManager["set"]>;
+    const mockDelete = jest.fn() as jest.MockedFunction<
+      ICacheManager["delete"]
+    >;
+    const mockClear = jest.fn() as jest.MockedFunction<ICacheManager["clear"]>;
+
+    mockGet.mockResolvedValue(undefined);
+    mockSet.mockResolvedValue();
+    mockDelete.mockResolvedValue();
+    mockClear.mockResolvedValue();
+
     cacheManager = {
-      get: jest
-        .fn()
-        .mockImplementation(
-          async <T>(key: string) => undefined as T | undefined,
-        ),
-      set: jest
-        .fn()
-        .mockImplementation(
-          async <T>(key: string, value: T, ttl: number) => {},
-        ),
-      delete: jest.fn().mockImplementation(async (key: string) => {}),
-      clear: jest.fn().mockImplementation(async () => {}),
-    };
+      get: mockGet,
+      set: mockSet,
+      delete: mockDelete,
+      clear: mockClear,
+    } as jest.Mocked<ICacheManager>;
     service = new CodebergService(config, errorHandler, logger, cacheManager);
   });
 

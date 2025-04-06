@@ -6,6 +6,18 @@ None
 
 ## Completed
 
+- [x] BUG-002: Fix TypeScript build errors
+
+  - Priority: High
+  - Started: 2025-04-06 16:58
+  - Completed: 2025-04-06 17:03
+  - Location: `/project/issues/bugs/BUG-002_typescript_build_errors/bug_report.md`
+  - Deliverables:
+    - Fixed jest type declaration conflicts
+    - Fixed TYPES export in container.ts
+    - Fixed mock cache manager typing issues
+    - All tests passing and build successful
+
 - [x] T-015: Enhance getIssue command
 
   - Epic: EP-002_issue_management
