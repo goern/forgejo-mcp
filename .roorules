@@ -11,6 +11,7 @@
 - Update relevant documentation in /docs when modifying features
 - Keep README.md in sync with new capabilities
 - do not change or update CHANGELOG.md any time, as is automatically created
+- when you plan or architect something and document it, do not include code in the documents, use diagrams when helpful
 
 ## Code Style & Patterns
 
@@ -32,6 +33,23 @@
    - Use Tailwind CSS classes instead of inline style objects for new markup
    - VSCode CSS variables must be added to webview-ui/src/index.css before using them in Tailwind classes
    - Example: `<div className="text-md text-vscode-descriptionForeground mb-2" />` instead of style objects
+
+## Code Management
+
+If you are working on an Issue (on GitHub or Codeberg), assign it to yourself. If you want to update an issue, update it
+never create an new issue if you are update the status of an existing issue.
+
+If you you think you have achieved major
+steps, comment on the issue. If you think that the user should create a git branch or git commits inform him, and if a
+git mcp server is available create a branch or commit.
+
+Any commit message should conform to <https://www.conventionalcommits.org/en/v1.0.0-beta.4/>
+
+Assume that git local git client is configured, do not change it.
+
+## Adding a New Setting
+
+To add a new setting that persists its state, follow the steps in docs/settings.md
 
 ## Testing Standards
 
