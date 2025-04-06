@@ -4,7 +4,7 @@
 
 ### Status
 
-Task breakdown complete, ready for implementation
+Task breakdown completed and tasks ready for implementation. All tasks have detailed documentation and are properly sequenced.
 
 ### Tasks Created
 
@@ -40,3 +40,39 @@ None (foundational epic)
 - All tasks have detailed documentation in task directories
 - Tasks can be partially parallelized within their groups
 - Critical path: T-001 -> T-002 -> T-003 -> T-004
+
+## EP-002_issue_management (F-001)
+
+### Status
+
+Task breakdown in progress, MVP Phase 1 tasks created
+
+### Tasks Created (MVP Phase 1)
+
+- T-011: Analyze existing issue management code (1 point)
+- T-013: Extend CodebergIssue interface (1 point)
+- T-015: Enhance getIssue command (2 points)
+- T-016: Implement updateTitle command (2 points)
+- T-019: Update unit tests (2 points)
+
+### Total Story Points (MVP Phase 1)
+
+8 points
+
+### Dependencies
+
+EP-001_core_infrastructure must be completed first
+
+### Implementation Order
+
+1. T-011 (Analysis)
+2. T-013 (Interface)
+3. T-015 (GetIssue)
+4. T-016 (UpdateTitle)
+5. T-019 (Tests)
+
+### Notes
+
+- MVP Phase 1 focuses on core functionality
+- Additional tasks will be broken down after MVP validation
+- Tasks have detailed documentation in task directories

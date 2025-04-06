@@ -4,22 +4,6 @@
 
 ### Epics Ready for Task Breakdown
 
-#### EP-001_core_infrastructure
-
-- Priority: High (Blocking)
-- Estimation: 13 story points
-- Dependencies: None
-- Status: Ready for task breakdown
-- Location: `/project/issues/features/F-001_codeberg_issue_management/epics/EP-001_core_infrastructure/epic_details.md`
-
-#### EP-002_issue_management
-
-- Priority: High
-- Estimation: 8 story points
-- Dependencies: EP-001
-- Status: Ready for task breakdown
-- Location: `/project/issues/features/F-001_codeberg_issue_management/epics/EP-002_issue_management/epic_details.md`
-
 #### EP-003_label_management
 
 - Priority: Medium
