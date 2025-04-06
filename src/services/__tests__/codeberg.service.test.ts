@@ -315,11 +315,23 @@ describe("CodebergService", () => {
         },
       ];
 
-      it("should get issue successfully with metadata", async () => {
+      const mockMilestone = {
+        id: 1,
+        number: 1,
+        title: "v1.0",
+        description: "First release",
+        due_on: "2025-02-01T00:00:00Z",
+        state: "open",
+        created_at: "2025-01-01T00:00:00Z",
+        updated_at: "2025-01-01T00:00:00Z",
+      };
+
+      it("should get issue successfully with all metadata", async () => {
         mockAxios.get
           .mockResolvedValueOnce(createMockResponse(mockIssue))
           .mockResolvedValueOnce(createMockResponse(mockComments))
-          .mockResolvedValueOnce(createMockResponse(mockEvents));
+          .mockResolvedValueOnce(createMockResponse(mockEvents))
+          .mockResolvedValueOnce(createMockResponse(mockMilestone));
 
         const result = await service.getIssue("owner", "repo", 1, {
           includeMetadata: true,
@@ -334,17 +346,32 @@ describe("CodebergService", () => {
         expect(mockAxios.get).toHaveBeenCalledWith(
           "/repos/owner/repo/issues/1/events",
         );
+        expect(mockAxios.get).toHaveBeenCalledWith(
+          "/repos/owner/repo/issues/1/milestone",
+        );
 
         expect(result.title).toBe("Test Issue");
         expect(result.state).toBe(IssueState.Open);
         expect(result.comments).toBe(2);
         expect(result.lastModifiedBy?.login).toBe("modifier");
+        expect(result.milestone).toBeDefined();
+        expect(result.milestone?.title).toBe("v1.0");
+        expect(result.validationRules).toHaveLength(2);
+        expect(result.validationRules[0]).toEqual({
+          field: "title",
+          type: "required",
+          message: "Issue title is required",
+        });
       });
 
-      it("should return cached issue when available", async () => {
+      it("should return cached issue when available and valid", async () => {
         const cachedIssue = {
           ...mockIssue,
           title: "Cached Issue",
+          validationRules: [],
+          assignees: [],
+          lastUpdated: new Date(),
+          updateInProgress: false,
         };
 
         cacheManager.get.mockResolvedValueOnce(cachedIssue);
@@ -354,6 +381,25 @@ describe("CodebergService", () => {
         expect(cacheManager.get).toHaveBeenCalledWith("issue:owner:repo:1");
         expect(mockAxios.get).not.toHaveBeenCalled();
         expect(result.title).toBe("Cached Issue");
+      });
+
+      it("should invalidate and refetch when cached data is invalid", async () => {
+        const invalidCachedIssue = {
+          id: 1,
+          title: "Invalid Issue",
+          // Missing required fields
+        };
+
+        cacheManager.get.mockResolvedValueOnce(invalidCachedIssue);
+        mockAxios.get.mockResolvedValueOnce(createMockResponse(mockIssue));
+
+        const result = await service.getIssue("owner", "repo", 1);
+
+        expect(cacheManager.delete).toHaveBeenCalledWith("issue:owner:repo:1");
+        expect(mockAxios.get).toHaveBeenCalledWith(
+          "/repos/owner/repo/issues/1",
+        );
+        expect(result.title).toBe("Test Issue");
       });
 
       it("should force fresh data when requested", async () => {
@@ -367,15 +413,26 @@ describe("CodebergService", () => {
         );
       });
 
-      it("should cache successful responses", async () => {
-        mockAxios.get.mockResolvedValueOnce(createMockResponse(mockIssue));
+      it("should cache successful responses with state-based TTL", async () => {
+        const closedIssue = { ...mockIssue, state: "closed" };
+        mockAxios.get.mockResolvedValueOnce(createMockResponse(closedIssue));
 
         await service.getIssue("owner", "repo", 1);
 
         expect(cacheManager.set).toHaveBeenCalledWith(
           "issue:owner:repo:1",
-          expect.objectContaining({ id: 1, title: "Test Issue" }),
-          300,
+          expect.objectContaining({ id: 1, state: "closed" }),
+          3600, // 1 hour TTL for closed issues
+        );
+
+        mockAxios.get.mockResolvedValueOnce(createMockResponse(mockIssue));
+
+        await service.getIssue("owner", "repo", 2);
+
+        expect(cacheManager.set).toHaveBeenCalledWith(
+          "issue:owner:repo:2",
+          expect.objectContaining({ id: 1, state: "open" }),
+          300, // 5 minutes TTL for open issues
         );
       });
 
@@ -389,7 +446,8 @@ describe("CodebergService", () => {
         mockAxios.get
           .mockResolvedValueOnce(createMockResponse(mockIssue))
           .mockRejectedValueOnce(new Error("Failed to fetch comments"))
-          .mockRejectedValueOnce(new Error("Failed to fetch events"));
+          .mockRejectedValueOnce(new Error("Failed to fetch events"))
+          .mockRejectedValueOnce(new Error("Failed to fetch milestone"));
 
         const result = await service.getIssue("owner", "repo", 1, {
           includeMetadata: true,
@@ -398,6 +456,9 @@ describe("CodebergService", () => {
         expect(result.title).toBe("Test Issue");
         expect(result.comments).toBe(0);
         expect(result.lastModifiedBy).toBeUndefined();
+        expect(result.milestone).toBeUndefined();
+        expect(result.validationRules).toBeDefined();
+        expect(result.validationRules).toHaveLength(2);
       });
     });
 
