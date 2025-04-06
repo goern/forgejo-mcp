@@ -11,6 +11,7 @@ import { ErrorHandler } from "./services/error-handler.service.js";
 import { Logger } from "./services/logger.service.js";
 import { MockCacheManager } from "./services/__tests__/mock-cache-manager.js";
 import { TYPES } from "./types/di.js";
+export { TYPES };
 
 // Create and configure the container
 export function createContainer(config: any): Container {
