@@ -568,6 +568,144 @@ describe("CodebergService", () => {
         ).rejects.toThrow(ApiError);
       });
     });
+
+    describe("updateTitle", () => {
+      const mockIssue = {
+        id: 1,
+        number: 1,
+        title: "Original Title",
+        body: "Issue body",
+        state: "open",
+        html_url: "https://codeberg.org/owner/repo/issues/1",
+        created_at: "2025-01-01T00:00:00Z",
+        updated_at: "2025-01-02T00:00:00Z",
+        user: {
+          id: 1,
+          login: "user",
+          avatar_url: "https://codeberg.org/avatar/1",
+          html_url: "https://codeberg.org/user",
+        },
+        labels: [],
+        assignees: [],
+        comments: 0,
+        locked: false,
+      };
+
+      it("should update title successfully", async () => {
+        mockAxios.get.mockResolvedValueOnce(createMockResponse(mockIssue));
+        mockAxios.patch.mockResolvedValueOnce(
+          createMockResponse({
+            ...mockIssue,
+            title: "New Title",
+            updated_at: "2025-01-03T00:00:00Z",
+          }),
+        );
+
+        const result = await service.updateTitle(
+          "owner",
+          "repo",
+          1,
+          "New Title",
+        );
+
+        expect(mockAxios.patch).toHaveBeenCalledWith(
+          "/repos/owner/repo/issues/1",
+          { title: "New Title" },
+        );
+        expect(result.title).toBe("New Title");
+        expect(cacheManager.set).toHaveBeenCalledWith(
+          "issue:owner:repo:1",
+          expect.objectContaining({ title: "New Title" }),
+          300,
+        );
+      });
+
+      it("should handle optimistic updates", async () => {
+        mockAxios.get.mockResolvedValueOnce(createMockResponse(mockIssue));
+        mockAxios.patch.mockResolvedValueOnce(
+          createMockResponse({
+            ...mockIssue,
+            title: "New Title",
+            updated_at: "2025-01-03T00:00:00Z",
+          }),
+        );
+
+        const result = await service.updateTitle(
+          "owner",
+          "repo",
+          1,
+          "New Title",
+          {
+            optimistic: true,
+          },
+        );
+
+        // Verify optimistic update cache call
+        // Verify optimistic update cache call
+        expect(cacheManager.set).toHaveBeenCalledWith(
+          "issue:owner:repo:1",
+          expect.objectContaining({
+            title: "New Title",
+            updateInProgress: true,
+          }),
+          300,
+        );
+
+        // Verify final update cache call
+        expect(cacheManager.set).toHaveBeenLastCalledWith(
+          "issue:owner:repo:1",
+          expect.objectContaining({
+            title: "New Title",
+            updateInProgress: false,
+          }),
+          300,
+        );
+        expect(result.title).toBe("New Title");
+      });
+
+      it("should rollback optimistic update on failure", async () => {
+        mockAxios.get.mockResolvedValueOnce(createMockResponse(mockIssue));
+        const error = new AxiosError();
+        error.response = createMockResponse({ message: "Update failed" }, 500);
+
+        mockAxios.patch.mockRejectedValueOnce(error);
+
+        await expect(
+          service.updateTitle("owner", "repo", 1, "New Title", {
+            optimistic: true,
+          }),
+        ).rejects.toThrow(ApiError);
+
+        // Check rollback
+        expect(cacheManager.set).toHaveBeenLastCalledWith(
+          "issue:owner:repo:1",
+          expect.objectContaining({
+            title: "Original Title",
+            updateError: "Update failed",
+          }),
+          300,
+        );
+      });
+
+      it("should throw ValidationError for empty title", async () => {
+        await expect(
+          service.updateTitle("owner", "repo", 1, ""),
+        ).rejects.toThrow(ValidationError);
+      });
+
+      it("should throw ValidationError for title exceeding 255 characters", async () => {
+        const longTitle = "a".repeat(256);
+        await expect(
+          service.updateTitle("owner", "repo", 1, longTitle),
+        ).rejects.toThrow(ValidationError);
+      });
+
+      it("should throw ValidationError for invalid issue number", async () => {
+        await expect(
+          service.updateTitle("owner", "repo", 0, "New Title"),
+        ).rejects.toThrow(ValidationError);
+      });
+    });
   });
   describe("User Operations", () => {
     describe("getCurrentUser", () => {
