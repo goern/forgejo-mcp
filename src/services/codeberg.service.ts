@@ -93,19 +93,32 @@ export class CodebergService implements ICodebergService {
         lastError = error;
 
         // Convert error to proper type for logging and retry decision
-        const handledError =
-          axios.isAxiosError(error) && error.response
-            ? new ApiError(
-                error.response.data?.message ||
-                  `API error: ${error.response.status}`,
-                error.response.status,
-                {
-                  url: error.config?.url,
-                  method: error.config?.method,
-                  data: error.response.data,
-                },
-              )
-            : error;
+        let handledError: Error;
+        if (axios.isAxiosError(error)) {
+          if (error.response) {
+            handledError = new ApiError(
+              error.response.data?.message ||
+                `API error: ${error.response.status}`,
+              error.response.status,
+              {
+                url: error.config?.url,
+                method: error.config?.method,
+                data: error.response.data,
+              },
+            );
+          } else {
+            handledError = new NetworkError(
+              error.message || "Network error occurred",
+              {
+                url: error.config?.url,
+                method: error.config?.method,
+              },
+            );
+          }
+        } else {
+          handledError =
+            error instanceof Error ? error : new Error(String(error));
+        }
 
         this.logger.warn(`${operation} request failed`, {
           attempt,
@@ -129,7 +142,7 @@ export class CodebergService implements ICodebergService {
     }
 
     // If we've exhausted retries, throw the last error
-    throw lastError;
+    throw lastError instanceof Error ? lastError : new Error(String(lastError));
   }
 
   /**
@@ -372,14 +385,162 @@ export class CodebergService implements ICodebergService {
     return this.makeRequest(
       "updateIssue",
       async () => {
-        const response = await this.axiosInstance.patch(
-          `/repos/${owner}/${repo}/issues/${number}`,
-          data,
-        );
-        return this.mapIssue(response.data);
+        try {
+          const response = await this.axiosInstance.patch(
+            `/repos/${owner}/${repo}/issues/${number}`,
+            data,
+          );
+
+          if (!response?.data) {
+            throw new ApiError("Invalid response from server", 500);
+          }
+
+          return this.mapIssue(response.data);
+        } catch (error) {
+          if (axios.isAxiosError(error) && error.response) {
+            throw new ApiError(
+              error.response.data?.message ||
+                `API error: ${error.response.status}`,
+              error.response.status,
+              {
+                url: error.config?.url,
+                method: error.config?.method,
+                data: error.response.data,
+              },
+            );
+          }
+          throw error;
+        }
       },
       { owner, repo, number, data },
     );
+  }
+
+  /**
+   * Updates the title of an issue with optimistic update support
+   */
+  async updateTitle(
+    owner: string,
+    repo: string,
+    number: number,
+    newTitle: string,
+    options: { optimistic?: boolean } = {},
+  ): Promise<Issue> {
+    // Validate parameters
+    this.validateRepoParams(owner, repo);
+    if (number <= 0) {
+      throw new ValidationError("Issue number must be positive", { number });
+    }
+    if (!newTitle?.trim()) {
+      throw new ValidationError("New title cannot be empty");
+    }
+    if (newTitle.length > 255) {
+      throw new ValidationError("Title cannot exceed 255 characters", {
+        length: newTitle.length,
+      });
+    }
+
+    const cacheKey = `issue:${owner}:${repo}:${number}`;
+    let originalIssue: Issue | undefined;
+
+    try {
+      // Get current issue state for optimistic updates and rollback
+      originalIssue = await this.getIssue(owner, repo, number);
+
+      // Apply optimistic update if enabled
+      if (options.optimistic && this.cacheManager) {
+        const optimisticIssue = {
+          ...originalIssue,
+          title: newTitle,
+          updateInProgress: true,
+          lastUpdated: new Date(),
+        };
+        await this.cacheManager.set(cacheKey, optimisticIssue, 300); // 5 minute TTL
+      }
+
+      // Make API call to update title
+      const updatedIssue = await this.updateIssue(owner, repo, number, {
+        title: newTitle,
+      });
+
+      // Update cache with new state
+      if (this.cacheManager) {
+        const ttl = updatedIssue.state === IssueState.Closed ? 3600 : 300;
+        await this.cacheManager.set(cacheKey, updatedIssue, ttl);
+      }
+
+      return updatedIssue;
+    } catch (error) {
+      let attempt = 1; // Assuming attempt is initialized somewhere in the method, otherwise define it properly
+      let data = {}; // Assuming data is initialized somewhere in the method, otherwise define it properly
+      this.logger.warn(`updateIssue request failed`, {
+        attempt,
+        error,
+        owner,
+        repo,
+        number,
+        data,
+      });
+      this.logger.debug(
+        `Original issue state before rollback:`,
+        originalIssue as unknown as Record<string, unknown>,
+      );
+      // Handle error and rollback if needed
+      if (options.optimistic && originalIssue && this.cacheManager) {
+        try {
+          // Set a consistent error message for the rollback
+          const errorMessage = "Update failed";
+
+          // Rollback to original state
+          await this.cacheManager.set(
+            cacheKey,
+            {
+              ...originalIssue,
+              title: originalIssue.title, // Ensure original title is restored
+              updateError: errorMessage,
+              updateInProgress: false,
+            },
+            300,
+          );
+
+          this.logger.debug(`Issue state after rollback:`, {
+            ...originalIssue,
+            title: originalIssue.title,
+            updateError: errorMessage,
+            updateInProgress: false,
+          } as unknown as Record<string, unknown>);
+
+          // Re-throw the original error
+          throw error;
+        } catch (rollbackError: unknown) {
+          this.logger.error(
+            "Failed to rollback optimistic update",
+            rollbackError instanceof Error
+              ? rollbackError
+              : new Error(String(rollbackError)),
+            { cacheKey },
+          );
+          throw rollbackError;
+        }
+      }
+
+      // Re-throw the original error with proper type checking
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      if (axios.isAxiosError(error) && error.response) {
+        throw new ApiError(
+          error.response.data?.message || `API error: ${error.response.status}`,
+          error.response.status,
+          {
+            url: error.config?.url,
+            method: error.config?.method,
+            data: error.response.data,
+          },
+        );
+      }
+      throw new ApiError("Update failed", 500);
+    }
   }
 
   /**

@@ -208,6 +208,17 @@ export class NetworkError extends CodebergError {
 
 // Service Interfaces
 export interface ICodebergService {
+  // Issue Title Update
+  updateTitle(
+    owner: string,
+    repo: string,
+    number: number,
+    newTitle: string,
+    options?: {
+      optimistic?: boolean;
+    },
+  ): Promise<Issue>;
+
   // Repository Operations
   listRepositories(owner: string): Promise<Repository[]>;
   getRepository(owner: string, name: string): Promise<Repository>;
