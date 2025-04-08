@@ -1,5 +1,6 @@
 # Forgejo MCP Server
 
+[![smithery badge](https://smithery.ai/badge/@goern/forgejo-mcp)](https://smithery.ai/server/@goern/forgejo-mcp)
 This is a Model Context Protocol (MCP) server that provides tools and resources for interacting with Forgejo REST API,
 for example the one hosted at <https://codeberg.or/>.
 
@@ -15,7 +16,15 @@ for example the one hosted at <https://codeberg.or/>.
 - Enhanced Forgejo issue management commands
 
 ## Installation
+### Installing via Smithery
 
+To install forgejo-mcp for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@goern/forgejo-mcp):
+
+```bash
+npx -y @smithery/cli install @goern/forgejo-mcp --client claude
+```
+
+### Manual Installation
 1. Clone this repository
 2. Install dependencies:
 
