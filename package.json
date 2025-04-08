@@ -1,7 +1,7 @@
 {
-  "name": "mcp-codeberg",
+  "name": "forgejo-mcp",
   "version": "0.1.0",
-  "description": "This is a MCP Server able to talk to codeberg API",
+  "description": "This is a MCP Server able to talk to Forgejo API",
   "main": "build/index.js",
   "type": "module",
   "scripts": {
@@ -17,6 +17,8 @@
   },
   "keywords": [
     "mcp",
+    "modelcontextprotocol",
+    "forgejo",
     "codeberg"
   ],
   "author": "Christoph Görn <goern@b4mad.net>",

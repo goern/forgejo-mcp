@@ -1,4 +1,4 @@
-import { CodebergMappers } from "../../utils/mappers.js";
+import { ForgejoMappers } from "../../utils/mappers.js";
 import {
   InvalidRepositoryDataError,
   InvalidUserDataError,
@@ -11,10 +11,10 @@ import {
   validIssueData,
 } from "./fixtures/mappers.fixtures.js";
 
-describe("CodebergMappers", () => {
+describe("ForgejoMappers", () => {
   describe("mapRepository", () => {
     it("should map valid repository data correctly", () => {
-      const repo = CodebergMappers.mapRepository(validRepoData);
+      const repo = ForgejoMappers.mapRepository(validRepoData);
 
       expect(repo.id).toBe(399408);
       expect(repo.name).toBe("mcp-codeberg");
@@ -23,13 +23,13 @@ describe("CodebergMappers", () => {
     });
 
     it("should throw InvalidRepositoryDataError if data is null", () => {
-      expect(() => CodebergMappers.mapRepository(null)).toThrow(
+      expect(() => ForgejoMappers.mapRepository(null)).toThrow(
         InvalidRepositoryDataError,
       );
     });
 
     it("should throw InvalidRepositoryDataError if owner is missing", () => {
-      expect(() => CodebergMappers.mapRepository(repoDataMissingOwner)).toThrow(
+      expect(() => ForgejoMappers.mapRepository(repoDataMissingOwner)).toThrow(
         InvalidRepositoryDataError,
       );
     });
@@ -37,20 +37,20 @@ describe("CodebergMappers", () => {
 
   describe("mapUser", () => {
     it("should map valid user data correctly", () => {
-      const user = CodebergMappers.mapUser(validUserData);
+      const user = ForgejoMappers.mapUser(validUserData);
 
       expect(user.id).toBe(56207);
       expect(user.login).toBe("goern");
       expect(user.fullName).toBe("Christoph Görn");
     });
     it("should throw InvalidUserDataError if data is null", () => {
-      expect(() => CodebergMappers.mapUser(null)).toThrow(InvalidUserDataError);
+      expect(() => ForgejoMappers.mapUser(null)).toThrow(InvalidUserDataError);
     });
   });
 
-  describe("CodebergMappers.mapIssue (array)", () => {
+  describe("ForgejoMappers.mapIssue (array)", () => {
     it("should map an array of issue data correctly", () => {
-      const issues = validIssuesData.map(CodebergMappers.mapIssue);
+      const issues = validIssuesData.map(ForgejoMappers.mapIssue);
 
       expect(Array.isArray(issues)).toBe(true);
       expect(issues.length).toBe(validIssuesData.length);
@@ -72,9 +72,9 @@ describe("CodebergMappers", () => {
     });
   });
 
-  describe("CodebergMappers.mapIssue", () => {
+  describe("ForgejoMappers.mapIssue", () => {
     it("should map valid issue data correctly", () => {
-      const issue = CodebergMappers.mapIssue(validIssueData);
+      const issue = ForgejoMappers.mapIssue(validIssueData);
 
       expect(issue.id).toBe(1247357);
       expect(issue.number).toBe(4);

@@ -1,9 +1,9 @@
 import { describe, expect, it, jest, beforeEach } from "@jest/globals";
-import { CodebergService } from "../codeberg.service.js";
+import { ForgejoService } from "../forgejo.service.js";
 import { ErrorHandler } from "../error-handler.service.js";
 import { Logger } from "../logger.service.js";
 import {
-  CodebergConfig,
+  ForgejoConfig,
   ICacheManager,
   IssueState,
   type User,
@@ -11,11 +11,11 @@ import {
   type Repository,
 } from "../types.js";
 
-describe("CodebergService", () => {
-  let service: CodebergService;
+describe("ForgejoService", () => {
+  let service: ForgejoService;
   let errorHandler: ErrorHandler;
   let logger: Logger;
-  let config: CodebergConfig;
+  let config: ForgejoConfig;
   let cacheManager: jest.Mocked<ICacheManager>;
 
   // Mock user data that satisfies the User interface
@@ -62,7 +62,7 @@ describe("CodebergService", () => {
       clear: mockClear,
     };
 
-    service = new CodebergService(config, errorHandler, logger, cacheManager);
+    service = new ForgejoService(config, errorHandler, logger, cacheManager);
   });
 
   describe("Service Orchestration", () => {

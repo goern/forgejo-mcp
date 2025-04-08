@@ -1,9 +1,9 @@
 import { describe, expect, it, beforeEach } from "@jest/globals";
-import axios, { AxiosError } from "axios";
+import { AxiosError } from "axios";
 import { ErrorHandler } from "../error-handler.service.js";
 import {
   ApiError,
-  CodebergError,
+  ForgejoError,
   NetworkError,
   ValidationError,
 } from "../types.js";
@@ -41,7 +41,7 @@ describe("ErrorHandler", () => {
       expect(() => errorHandler.handleApiError(error)).toThrow("Not found");
     });
 
-    it("should pass through CodebergErrors", () => {
+    it("should pass through ForgejoErrors", () => {
       const error = new ValidationError("Invalid input");
 
       expect(() => errorHandler.handleApiError(error)).toThrow(ValidationError);
@@ -51,7 +51,7 @@ describe("ErrorHandler", () => {
     it("should handle unknown errors", () => {
       const error = { random: "error" };
 
-      expect(() => errorHandler.handleApiError(error)).toThrow(CodebergError);
+      expect(() => errorHandler.handleApiError(error)).toThrow(ForgejoError);
       expect(() => errorHandler.handleApiError(error)).toThrow(
         "An unexpected error occurred",
       );
@@ -59,7 +59,7 @@ describe("ErrorHandler", () => {
   });
 
   describe("handleToolError", () => {
-    it("should format CodebergError for tool response", () => {
+    it("should format ForgejoError for tool response", () => {
       const error = new ApiError("API error", 404, { path: "/test" });
       const response = errorHandler.handleToolError(error);
 

@@ -21,7 +21,7 @@ interface LogEntry {
 export class Logger implements ILogger {
   constructor(
     @inject(TYPES.ServiceName)
-    private readonly serviceName: string = "CodebergService",
+    private readonly serviceName: string = "ForgejoService",
   ) {}
 
   /**

@@ -5,7 +5,7 @@ import { ErrorHandler } from "../error-handler.service.js";
 import { Logger } from "../logger.service.js";
 import {
   ApiError,
-  CodebergConfig,
+  ForgejoConfig,
   ICacheManager,
   ValidationError,
 } from "../types.js";
@@ -32,7 +32,7 @@ describe("UserService", () => {
   let service: UserService;
   let errorHandler: ErrorHandler;
   let logger: Logger;
-  let config: CodebergConfig;
+  let config: ForgejoConfig;
   let cacheManager: jest.Mocked<ICacheManager>;
 
   beforeEach(() => {

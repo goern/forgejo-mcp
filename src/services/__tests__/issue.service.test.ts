@@ -5,13 +5,13 @@ import { ErrorHandler } from "../error-handler.service.js";
 import { Logger } from "../logger.service.js";
 import {
   ApiError,
-  CodebergConfig,
   ICacheManager,
   ValidationError,
   IssueState,
   isIssue,
   isMilestone,
   Issue,
+  ForgejoConfig,
 } from "../types.js";
 
 // Mock axios module
@@ -90,7 +90,7 @@ describe("IssueService", () => {
   let service: IssueService;
   let errorHandler: ErrorHandler;
   let logger: Logger;
-  let config: CodebergConfig;
+  let config: ForgejoConfig;
   let cacheManager: jest.Mocked<ICacheManager>;
 
   beforeEach(() => {
