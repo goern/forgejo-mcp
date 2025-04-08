@@ -1,0 +1,7 @@
+🚀 Excited to announce **Forgejo MCP Server v1.0.0**!  
+✨ Elegant & simple Model Context Protocol server for Forgejo & Codeberg  
+🔌 Now with both stdio *and* SSE server support  
+🐛 Enhanced issue management with metadata, validation & caching  
+🔓 100% open source, easy to integrate!  
+👉 Check it out: https://codeberg.org/goern/forgejo-mcp  
+#Forgejo #Codeberg #MCP #Release
