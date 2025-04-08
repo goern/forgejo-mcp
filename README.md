@@ -1,5 +1,9 @@
 # Forgejo MCP Server
 
+<div style="position: relative; float: right;">
+<img src="images/forgejo-mcp_small.png" alt="forgejo mcp server logo"/>
+</div>
+
 This is a Model Context Protocol (MCP) server that provides tools and resources for interacting with Forgejo REST API,
 for example the one hosted at <https://codeberg.or/>.
 
@@ -61,7 +65,7 @@ To use this MCP server, you need to:
 
    Then edit the `.env` file to add your Codeberg API token:
 
-   ```
+   ```bash
    CODEBERG_API_TOKEN=your_token_here
    ```
 
