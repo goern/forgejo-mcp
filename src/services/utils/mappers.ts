@@ -11,7 +11,7 @@ import type {
   Milestone,
 } from "../types.js";
 
-export class CodebergMappers {
+export class ForgejoMappers {
   static mapRepository(data: any): Repository {
     if (!data) {
       throw new InvalidRepositoryDataError("Invalid repository data", 400);
@@ -76,7 +76,7 @@ export class CodebergMappers {
       htmlUrl: data.html_url,
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at),
-      user: CodebergMappers.mapUser(data.user),
+      user: ForgejoMappers.mapUser(data.user),
       labels: (data.labels || []).map((label: any) => ({
         id: label.id,
         name: label.name,
@@ -88,9 +88,9 @@ export class CodebergMappers {
       lastModifiedBy: data.lastModifiedBy,
       assignees: (data.assignees || [])
         .filter(Boolean)
-        .map((u: any) => CodebergMappers.mapUser(u)),
+        .map((u: any) => ForgejoMappers.mapUser(u)),
       milestone: data.milestone
-        ? CodebergMappers.mapMilestone(data.milestone)
+        ? ForgejoMappers.mapMilestone(data.milestone)
         : undefined,
       comments: data.comments || 0,
       locked: !!data.locked,

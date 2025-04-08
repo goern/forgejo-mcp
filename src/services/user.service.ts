@@ -1,10 +1,10 @@
 import { injectable } from "inversify";
-import { BaseCodebergService } from "./base.service.js";
-import { CodebergMappers } from "./utils/mappers.js";
+import { BaseForgejoService } from "./base.service.js";
+import { ForgejoMappers } from "./utils/mappers.js";
 import { ValidationError, ApiError, type User } from "./types.js";
 
 @injectable()
-export class UserService extends BaseCodebergService {
+export class UserService extends BaseForgejoService {
   /**
    * Gets details about a specific user
    */
@@ -20,7 +20,7 @@ export class UserService extends BaseCodebergService {
         if (!response?.data) {
           throw new ApiError("Invalid response from server", 500);
         }
-        return CodebergMappers.mapUser(response.data);
+        return ForgejoMappers.mapUser(response.data);
       },
       { username },
     );
@@ -35,7 +35,7 @@ export class UserService extends BaseCodebergService {
       if (!response?.data) {
         throw new ApiError("Invalid response from server", 500);
       }
-      return CodebergMappers.mapUser(response.data.data || response.data);
+      return ForgejoMappers.mapUser(response.data.data || response.data);
     });
   }
 }

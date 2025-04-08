@@ -1,11 +1,11 @@
 import { describe, expect, it, jest, beforeEach } from "@jest/globals";
 import axios, { AxiosError, AxiosInstance } from "axios";
-import { BaseCodebergService } from "../base.service.js";
+import { BaseForgejoService } from "../base.service.js";
 import { ErrorHandler } from "../error-handler.service.js";
 import { Logger } from "../logger.service.js";
 import {
   ApiError,
-  CodebergConfig,
+  ForgejoConfig,
   ICacheManager,
   NetworkError,
   ValidationError,
@@ -29,7 +29,7 @@ const mockAxios = {
   (error: unknown) => error instanceof AxiosError,
 );
 
-class TestBaseService extends BaseCodebergService {
+class TestBaseService extends BaseForgejoService {
   public async testMakeRequest<T>(
     operation: string,
     request: () => Promise<T>,
@@ -43,11 +43,11 @@ class TestBaseService extends BaseCodebergService {
   }
 }
 
-describe("BaseCodebergService", () => {
+describe("BaseForgejoService", () => {
   let service: TestBaseService;
   let errorHandler: ErrorHandler;
   let logger: Logger;
-  let config: CodebergConfig;
+  let config: ForgejoConfig;
   let cacheManager: jest.Mocked<ICacheManager>;
 
   beforeEach(() => {

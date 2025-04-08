@@ -1,5 +1,5 @@
 /**
- * Type definitions for Codeberg API service layer
+ * Type definitions for Forgejo API service layer
  */
 
 // Validation Types
@@ -30,7 +30,7 @@ export interface Repository {
 }
 
 /**
- * Represents a Codeberg issue with enhanced metadata and validation support
+ * Represents a Forgejo issue with enhanced metadata and validation support
  */
 export interface Issue {
   // Core fields
@@ -205,7 +205,7 @@ export enum IssueState {
 }
 
 // Service Configuration
-export interface CodebergConfig {
+export interface ForgejoConfig {
   baseUrl: string;
   token: string;
   timeout?: number;
@@ -213,18 +213,18 @@ export interface CodebergConfig {
 }
 
 // Error Types
-export class CodebergError extends Error {
+export class ForgejoError extends Error {
   constructor(
     message: string,
     public code: string,
     public context?: unknown,
   ) {
     super(message);
-    this.name = "CodebergError";
+    this.name = "ForgejoError";
   }
 }
 
-export class ApiError extends CodebergError {
+export class ApiError extends ForgejoError {
   constructor(
     message: string,
     public statusCode: number,
@@ -257,14 +257,14 @@ export class InvalidUserDataError extends ApiError {
   }
 }
 
-export class ValidationError extends CodebergError {
+export class ValidationError extends ForgejoError {
   constructor(message: string, context?: unknown) {
     super(message, "VALIDATION_ERROR", context);
     this.name = "ValidationError";
   }
 }
 
-export class NetworkError extends CodebergError {
+export class NetworkError extends ForgejoError {
   constructor(message: string, context?: unknown) {
     super(message, "NETWORK_ERROR", context);
     this.name = "NetworkError";
@@ -272,7 +272,7 @@ export class NetworkError extends CodebergError {
 }
 
 // Service Interfaces
-export interface ICodebergService {
+export interface IForgejoService {
   // Issue Title Update
   updateTitle(
     owner: string,

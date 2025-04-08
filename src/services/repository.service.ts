@@ -1,10 +1,10 @@
 import { injectable } from "inversify";
-import { BaseCodebergService } from "./base.service.js";
-import { CodebergMappers } from "./utils/mappers.js";
+import { BaseForgejoService } from "./base.service.js";
+import { ForgejoMappers } from "./utils/mappers.js";
 import { ApiError, type Repository } from "./types.js";
 
 @injectable()
-export class RepositoryService extends BaseCodebergService {
+export class RepositoryService extends BaseForgejoService {
   /**
    * Lists repositories for a user or organization
    */
@@ -21,7 +21,7 @@ export class RepositoryService extends BaseCodebergService {
         if (!Array.isArray(response.data)) {
           throw new ApiError("Invalid response format", 500);
         }
-        return response.data.map(CodebergMappers.mapRepository);
+        return response.data.map(ForgejoMappers.mapRepository);
       },
       { owner },
     );
@@ -39,7 +39,7 @@ export class RepositoryService extends BaseCodebergService {
         const response = await this.axiosInstance.get(
           `/repos/${owner}/${name}`,
         );
-        return CodebergMappers.mapRepository(response.data);
+        return ForgejoMappers.mapRepository(response.data);
       },
       { owner, name },
     );

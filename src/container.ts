@@ -1,12 +1,12 @@
 import "reflect-metadata";
 import { Container } from "inversify";
 import {
-  ICodebergService,
+  IForgejoService,
   IErrorHandler,
   ILogger,
   ICacheManager,
 } from "./services/types.js";
-import { CodebergService } from "./services/codeberg.service.js";
+import { ForgejoService } from "./services/forgejo.service.js";
 import { ErrorHandler } from "./services/error-handler.service.js";
 import { Logger } from "./services/logger.service.js";
 import { MockCacheManager } from "./services/__tests__/mock-cache-manager.js";
@@ -19,15 +19,15 @@ export function createContainer(config: any): Container {
 
   // Bind services
   container
-    .bind<ICodebergService>(TYPES.CodebergService)
-    .to(CodebergService)
+    .bind<IForgejoService>(TYPES.ForgejoService)
+    .to(ForgejoService)
     .inSingletonScope();
   container
     .bind<IErrorHandler>(TYPES.ErrorHandler)
     .to(ErrorHandler)
     .inSingletonScope();
   container.bind<ILogger>(TYPES.Logger).to(Logger).inSingletonScope();
-  container.bind<string>(TYPES.ServiceName).toConstantValue("CodebergService");
+  container.bind<string>(TYPES.ServiceName).toConstantValue("ForgejoService");
   container
     .bind<ICacheManager>(TYPES.CacheManager)
     .to(MockCacheManager)
@@ -45,15 +45,15 @@ export function createTestContainer(): Container {
 
   // Bind mock services for testing
   container
-    .bind<ICodebergService>(TYPES.CodebergService)
-    .to(CodebergService)
+    .bind<IForgejoService>(TYPES.ForgejoService)
+    .to(ForgejoService)
     .inSingletonScope();
   container
     .bind<IErrorHandler>(TYPES.ErrorHandler)
     .to(ErrorHandler)
     .inSingletonScope();
   container.bind<ILogger>(TYPES.Logger).to(Logger).inSingletonScope();
-  container.bind<string>(TYPES.ServiceName).toConstantValue("CodebergService");
+  container.bind<string>(TYPES.ServiceName).toConstantValue("ForgejoService");
   container
     .bind<ICacheManager>(TYPES.CacheManager)
     .to(MockCacheManager)

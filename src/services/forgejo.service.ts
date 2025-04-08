@@ -1,9 +1,9 @@
 import { inject, injectable } from "inversify";
 import { TYPES } from "../types/di.js";
 import {
-  type CodebergConfig,
+  type ForgejoConfig,
   type ICacheManager,
-  type ICodebergService,
+  type IForgejoService,
   type IErrorHandler,
   type ILogger,
   type Repository,
@@ -18,17 +18,17 @@ import { IssueService } from "./issue.service.js";
 import { UserService } from "./user.service.js";
 
 /**
- * Implementation of the Codeberg API service layer.
+ * Implementation of the Forgejo API service layer.
  * Orchestrates all API operations through specialized service classes.
  */
 @injectable()
-export class CodebergService implements ICodebergService {
+export class ForgejoService implements IForgejoService {
   private readonly repositoryService: RepositoryService;
   private readonly issueService: IssueService;
   private readonly userService: UserService;
 
   constructor(
-    @inject(TYPES.Config) config: CodebergConfig,
+    @inject(TYPES.Config) config: ForgejoConfig,
     @inject(TYPES.ErrorHandler) errorHandler: IErrorHandler,
     @inject(TYPES.Logger) logger: ILogger,
     @inject(TYPES.CacheManager) cacheManager: ICacheManager,
