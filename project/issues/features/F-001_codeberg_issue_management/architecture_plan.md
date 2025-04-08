@@ -267,3 +267,49 @@ The architecture is designed to be extensible for future features:
    - ts-jest: TypeScript testing support
    - eslint: Code linting
    - prettier: Code formatting
+
+---
+
+## Enhancement: Typed Errors for Mappers & Unit Tests
+
+### Overview
+
+To improve error granularity and test coverage, we will introduce **specific typed error classes** for the data mappers in `CodebergMappers`. This enables more elegant error handling and clearer debugging, and supports robust unit testing.
+
+### Typed Error Classes
+
+- `InvalidRepositoryDataError` (extends `ApiError`, status code 400)
+- `InvalidUserDataError` (extends `ApiError`, status code 400)
+- (Optionally extendable with `InvalidIssueDataError`, `InvalidMilestoneDataError` in future)
+
+These errors replace generic `ApiError` throws within mappers, providing precise failure semantics.
+
+### Refactoring Plan
+
+- Refactor `CodebergMappers` methods:
+  - Throw `InvalidRepositoryDataError` when repository data is invalid or missing owner.
+  - Throw `InvalidUserDataError` when user data is invalid.
+- Maintain existing API surface, improving internal error specificity.
+
+### Testing Strategy
+
+- **Unit tests** (using Jest) will be added in `src/services/__tests__/mappers.test.ts`.
+- Cover:
+  - Successful mappings with valid data.
+  - Error throwing on invalid or missing data, asserting correct error class and status code.
+  - Edge cases (e.g., missing optional fields, date parsing).
+- This ensures elegant, reliable data transformation and error signaling.
+
+### Epics & Tasks
+
+- **Epic:** Typed Error Handling & Mapper Unit Tests
+  - **Task 1:** Define new typed error classes extending `ApiError`.
+  - **Task 2:** Refactor `CodebergMappers` to use these errors.
+  - **Task 3:** Implement comprehensive Jest unit tests.
+  - **Task 4:** Update relevant documentation.
+
+### Rationale
+
+This enhancement aligns with our goals of **comprehensive error handling** (see sections 89-94, 202-214) and **robust unit testing** (sections 215-233), improving maintainability and clarity.
+
+---

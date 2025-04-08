@@ -114,14 +114,38 @@ export interface UpdateIssueData {
 
 // Type Guards
 export const isIssue = (value: unknown): value is Issue => {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "id" in value &&
-    "number" in value &&
-    "title" in value &&
-    "state" in value
-  );
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    !("id" in value) ||
+    !("number" in value) ||
+    !("title" in value) ||
+    !("state" in value)
+  ) {
+    return false;
+  }
+
+  const issue = value as Record<string, unknown>;
+
+  // Validate state is a valid IssueState
+  if (!Object.values(IssueState).includes(issue.state as IssueState)) {
+    return false;
+  }
+
+  // Validate dates
+  if (
+    !(issue.createdAt instanceof Date) ||
+    !(issue.updatedAt instanceof Date)
+  ) {
+    return false;
+  }
+
+  // Validate user object
+  if (!issue.user || typeof issue.user !== "object") {
+    return false;
+  }
+
+  return true;
 };
 
 export const isValidationRule = (value: unknown): value is ValidationRule => {
@@ -135,14 +159,33 @@ export const isValidationRule = (value: unknown): value is ValidationRule => {
 };
 
 export const isMilestone = (value: unknown): value is Milestone => {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "id" in value &&
-    "number" in value &&
-    "title" in value &&
-    "state" in value
-  );
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    !("id" in value) ||
+    !("number" in value) ||
+    !("title" in value) ||
+    !("state" in value)
+  ) {
+    return false;
+  }
+
+  const milestone = value as Record<string, unknown>;
+
+  // Validate state is either "open" or "closed"
+  if (!["open", "closed"].includes(milestone.state as string)) {
+    return false;
+  }
+
+  // Validate dates
+  if (
+    (milestone.createdAt && !(milestone.createdAt instanceof Date)) ||
+    (milestone.updatedAt && !(milestone.updatedAt instanceof Date))
+  ) {
+    return false;
+  }
+
+  return true;
 };
 
 export interface ListIssueOptions {
@@ -189,6 +232,28 @@ export class ApiError extends CodebergError {
   ) {
     super(message, "API_ERROR", context);
     this.name = "ApiError";
+  }
+}
+
+export class InvalidRepositoryDataError extends ApiError {
+  constructor(
+    message = "Invalid repository data",
+    statusCode = 400,
+    context?: unknown,
+  ) {
+    super(message, statusCode, context);
+    this.name = "InvalidRepositoryDataError";
+  }
+}
+
+export class InvalidUserDataError extends ApiError {
+  constructor(
+    message = "Invalid user data",
+    statusCode = 400,
+    context?: unknown,
+  ) {
+    super(message, statusCode, context);
+    this.name = "InvalidUserDataError";
   }
 }
 
