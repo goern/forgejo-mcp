@@ -10,7 +10,11 @@
     "declaration": true,
     "sourceMap": true,
     "resolveJsonModule": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "types": ["jest", "node", "reflect-metadata"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "build"]
