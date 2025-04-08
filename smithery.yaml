@@ -1,0 +1,34 @@
+# Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
+
+startCommand:
+  type: stdio
+  configSchema:
+    # JSON Schema defining the configuration options for the MCP.
+    type: object
+    required:
+      - codebergApiToken
+    properties:
+      codebergApiToken:
+        type: string
+        description: Codeberg API token for Forgejo MCP.
+      sse:
+        type: boolean
+        default: false
+        description: Enable HTTP (SSE) mode. Defaults to false.
+      port:
+        type: number
+        default: 3000
+        description: Port for HTTP mode. Defaults to 3000.
+      host:
+        type: string
+        default: localhost
+        description: Host for HTTP mode. Defaults to 'localhost'.
+  commandFunction:
+    # A JS function that produces the CLI command based on the given config to start the MCP on stdio.
+    |-
+    (config) => { const args = []; if(config.sse) { args.push('--sse'); if(config.port) { args.push('--port', String(config.port)); } if(config.host) { args.push('--host', config.host); } } return { command: 'node', args: ['build/index.js', ...args], env: { CODEBERG_API_TOKEN: config.codebergApiToken } }; }
+  exampleConfig:
+    codebergApiToken: example-token-123
+    sse: false
+    port: 3000
+    host: localhost
