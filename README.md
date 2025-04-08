@@ -5,9 +5,13 @@ This is a Model Context Protocol (MCP) server that provides tools and resources 
 ## Features
 
 - List and get repositories
-- List and get issues
-- Create new issues
+- List, get, and create issues
 - Get user information
+- Dependency injection for modular architecture
+- Robust error handling and request processing
+- Caching layer for improved performance
+- Comprehensive unit and integration tests
+- Enhanced Codeberg issue management commands
 
 ## Installation
 
