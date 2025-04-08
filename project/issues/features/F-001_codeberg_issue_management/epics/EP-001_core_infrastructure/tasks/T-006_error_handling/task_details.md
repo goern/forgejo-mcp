@@ -15,6 +15,10 @@ Enhance error handling and implement comprehensive logging across the applicatio
 - [ ] Implement log levels and filtering
 - [ ] Add performance logging
 - [ ] Write unit tests for error handling
+- [ ] Introduce specific typed error classes (e.g., InvalidRepositoryDataError, InvalidUserDataError) extending ApiError for mappers
+  - [ ] Define new error classes extending ApiError (est. 0.5 story points)
+  - [ ] Refactor CodebergMappers to throw these errors (est. 0.5 story points)
+  - [ ] Update error handling documentation accordingly
 - [ ] Document error handling patterns
 
 ## Technical Details

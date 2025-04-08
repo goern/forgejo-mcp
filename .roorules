@@ -56,3 +56,19 @@ To add a new setting that persists its state, follow the steps in docs/settings.
 - Unit tests required for business logic
 - Integration tests for API endpoints
 - E2E tests for critical user flows
+
+## Social Media
+
+### Mastodon
+
+Wir sind auch im Fediverse auf Mastodon unter <https://bonn.social/@goern> präsent.
+
+Wenn du gefragt wirst einen neuen toot zu erstellen:
+
+- nutzen auch ein paar emojois
+- Texte für toots sollen immer auch einen Link zu relevanten Inhalten auf unserer website enthalten.
+- Toots werden in das Verzeichnis .social-media gespeichert. Toots sollen nicht laenger als 500 Zeigen sein!
+- speicher den toot so in .social-media/ das der per copy and paste gepostet werden kann
+- nachdem du einen toot gespeichert hast, prüfe ob alle enthaltenen links auch wirklich erreichbar sind, wenn nicht korrigiere die URL im toot
+
+

@@ -15,6 +15,11 @@ Update and expand unit tests to cover all refactored services, ensuring proper t
 - [ ] Test asynchronous operations
 - [ ] Document testing patterns
 - [ ] Set up test coverage reporting
+- [ ] Add unit tests for CodebergMappers covering valid mappings and typed error throwing
+  - [ ] Test mapRepository success and error cases (est. 0.3 story points)
+  - [ ] Test mapUser success and error cases (est. 0.3 story points)
+  - [ ] Test mapIssue and mapMilestone mappings (est. 0.4 story points)
+  - [ ] Cover edge cases and invalid inputs
 - [ ] Create test documentation
 
 ## Technical Details
