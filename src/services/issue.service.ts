@@ -1,7 +1,7 @@
 import { injectable } from "inversify";
 import axios from "axios";
-import { BaseCodebergService } from "./base.service.js";
-import { CodebergMappers } from "./utils/mappers.js";
+import { BaseForgejoService } from "./base.service.js";
+import { ForgejoMappers } from "./utils/mappers.js";
 import {
   ApiError,
   ValidationError,
@@ -14,7 +14,7 @@ import {
 } from "./types.js";
 
 @injectable()
-export class IssueService extends BaseCodebergService {
+export class IssueService extends BaseForgejoService {
   /**
    * Lists issues for a repository
    */
@@ -42,17 +42,17 @@ export class IssueService extends BaseCodebergService {
         });
 
         /*
-                const response = await this.axiosInstance.get(
-                    `/repos/${owner}/${repo}/issues`,
-                    { params: options },
-                );
-                console.log(response)
-                if (!response?.data) {
-                    throw new ApiError("Invalid response from server", 500);
-                }*/
+                        const response = await this.axiosInstance.get(
+                            `/repos/${owner}/${repo}/issues`,
+                            { params: options },
+                        );
+                        console.log(response)
+                        if (!response?.data) {
+                            throw new ApiError("Invalid response from server", 500);
+                        }*/
 
         return Array.isArray(issuesResponse.data)
-          ? issuesResponse.data.map(CodebergMappers.mapIssue)
+          ? issuesResponse.data.map(ForgejoMappers.mapIssue)
           : [];
       },
       { owner, repo, options },
@@ -135,10 +135,10 @@ export class IssueService extends BaseCodebergService {
             metadata = {
               comments: commentsResponse.data.length,
               lastModifiedBy: eventsResponse.data[0]?.actor
-                ? CodebergMappers.mapUser(eventsResponse.data[0].actor)
+                ? ForgejoMappers.mapUser(eventsResponse.data[0].actor)
                 : undefined,
               milestone: milestoneResponse.data
-                ? CodebergMappers.mapMilestone(milestoneResponse.data)
+                ? ForgejoMappers.mapMilestone(milestoneResponse.data)
                 : undefined,
             };
           } catch (error) {
@@ -149,7 +149,7 @@ export class IssueService extends BaseCodebergService {
           }
         }
 
-        const issue = CodebergMappers.mapIssue({
+        const issue = ForgejoMappers.mapIssue({
           ...issueResponse.data,
           ...metadata,
         });
@@ -201,7 +201,7 @@ export class IssueService extends BaseCodebergService {
           `/repos/${owner}/${repo}/issues`,
           data,
         );
-        return CodebergMappers.mapIssue(response.data);
+        return ForgejoMappers.mapIssue(response.data);
       },
       { owner, repo, data },
     );
@@ -234,7 +234,7 @@ export class IssueService extends BaseCodebergService {
             throw new ApiError("Invalid response from server", 500);
           }
 
-          return CodebergMappers.mapIssue(response.data);
+          return ForgejoMappers.mapIssue(response.data);
         } catch (error) {
           if (axios.isAxiosError(error) && error.response) {
             throw new ApiError(

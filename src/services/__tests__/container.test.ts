@@ -2,10 +2,10 @@ import "reflect-metadata";
 import { Container } from "inversify";
 import { createContainer, createTestContainer } from "../../container.js";
 import { TYPES } from "../../types/di.js";
-import { CodebergService } from "../codeberg.service.js";
+import { ForgejoService } from "../forgejo.service.js";
 import { ErrorHandler } from "../error-handler.service.js";
 import { Logger } from "../logger.service.js";
-import type { ICodebergService, IErrorHandler, ILogger } from "../types.js";
+import type { IForgejoService, IErrorHandler, ILogger } from "../types.js";
 
 describe("DI Container", () => {
   describe("createContainer", () => {
@@ -22,17 +22,17 @@ describe("DI Container", () => {
     });
 
     it("should create a container with all required bindings", () => {
-      expect(container.isBound(TYPES.CodebergService)).toBe(true);
+      expect(container.isBound(TYPES.ForgejoService)).toBe(true);
       expect(container.isBound(TYPES.ErrorHandler)).toBe(true);
       expect(container.isBound(TYPES.Logger)).toBe(true);
       expect(container.isBound(TYPES.Config)).toBe(true);
       expect(container.isBound(TYPES.ServiceName)).toBe(true);
     });
 
-    it("should resolve CodebergService as singleton", () => {
-      const service1 = container.get<ICodebergService>(TYPES.CodebergService);
-      const service2 = container.get<ICodebergService>(TYPES.CodebergService);
-      expect(service1).toBeInstanceOf(CodebergService);
+    it("should resolve ForgejoService as singleton", () => {
+      const service1 = container.get<IForgejoService>(TYPES.ForgejoService);
+      const service2 = container.get<IForgejoService>(TYPES.ForgejoService);
+      expect(service1).toBeInstanceOf(ForgejoService);
       expect(service1).toBe(service2);
     });
 
@@ -57,7 +57,7 @@ describe("DI Container", () => {
 
     it("should inject service name correctly", () => {
       const serviceName = container.get(TYPES.ServiceName);
-      expect(serviceName).toBe("CodebergService");
+      expect(serviceName).toBe("ForgejoService");
     });
   });
 
@@ -80,7 +80,7 @@ describe("DI Container", () => {
     });
 
     it("should resolve all required services", () => {
-      expect(() => container.get(TYPES.CodebergService)).not.toThrow();
+      expect(() => container.get(TYPES.ForgejoService)).not.toThrow();
       expect(() => container.get(TYPES.ErrorHandler)).not.toThrow();
       expect(() => container.get(TYPES.Logger)).not.toThrow();
     });

@@ -1,6 +1,7 @@
-# MCP Codeberg Server
+# Forgejo MCP Server
 
-This is a Model Context Protocol (MCP) server that provides tools and resources for interacting with the Codeberg.org REST API.
+This is a Model Context Protocol (MCP) server that provides tools and resources for interacting with Forgejo REST API,
+for example the one hosted at <https://codeberg.or/>.
 
 ## Features
 
@@ -11,7 +12,7 @@ This is a Model Context Protocol (MCP) server that provides tools and resources 
 - Robust error handling and request processing
 - Caching layer for improved performance
 - Comprehensive unit and integration tests
-- Enhanced Codeberg issue management commands
+- Enhanced Forgejo issue management commands
 
 ## Installation
 

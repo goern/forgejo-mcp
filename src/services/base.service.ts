@@ -5,19 +5,19 @@ import {
   ApiError,
   NetworkError,
   ValidationError,
-  type CodebergConfig,
+  type ForgejoConfig,
   type ICacheManager,
   type IErrorHandler,
   type ILogger,
 } from "./types.js";
 
 @injectable()
-export abstract class BaseCodebergService {
+export abstract class BaseForgejoService {
   protected readonly axiosInstance: AxiosInstance;
   protected readonly maxRetries: number;
 
   constructor(
-    @inject(TYPES.Config) protected readonly config: CodebergConfig,
+    @inject(TYPES.Config) protected readonly config: ForgejoConfig,
     @inject(TYPES.ErrorHandler) protected readonly errorHandler: IErrorHandler,
     @inject(TYPES.Logger) protected readonly logger: ILogger,
     @inject(TYPES.CacheManager) protected readonly cacheManager: ICacheManager,

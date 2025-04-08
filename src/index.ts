@@ -20,7 +20,7 @@ import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { createContainer } from "./container.js";
 import type {
-  ICodebergService,
+  IForgejoService,
   IErrorHandler,
   ILogger,
 } from "./services/types.js";
@@ -104,7 +104,7 @@ const isValidUserArgs = (args: any): args is { username: string } =>
 
 class CodebergServer {
   private server: Server;
-  private codebergService: ICodebergService;
+  private forgejoService: IForgejoService;
   private errorHandler: IErrorHandler;
   private logger: ILogger;
 
@@ -118,15 +118,13 @@ class CodebergServer {
     });
 
     // Get service instances
-    this.codebergService = container.get<ICodebergService>(
-      TYPES.CodebergService,
-    );
+    this.forgejoService = container.get<IForgejoService>(TYPES.ForgejoService);
     this.errorHandler = container.get<IErrorHandler>(TYPES.ErrorHandler);
     this.logger = container.get<ILogger>(TYPES.Logger);
 
     this.server = new Server(
       {
-        name: "codeberg-server",
+        name: "forgejo-mcp-server",
         version: "0.1.0",
       },
       {
@@ -156,7 +154,7 @@ class CodebergServer {
         return {
           resources: [
             {
-              uri: `codeberg://user/profile`,
+              uri: `forgejo://user/profile`,
               name: `Current user profile`,
               mimeType: "application/json",
               description: "Profile information for the authenticated user",
@@ -172,19 +170,19 @@ class CodebergServer {
       async (_, extra): Promise<ServerResult> => ({
         resourceTemplates: [
           {
-            uriTemplate: "codeberg://repos/{owner}/{repo}",
+            uriTemplate: "forgejo://repos/{owner}/{repo}",
             name: "Repository information",
             mimeType: "application/json",
             description: "Details about a specific repository",
           },
           {
-            uriTemplate: "codeberg://repos/{owner}/{repo}/issues",
+            uriTemplate: "forgejo://repos/{owner}/{repo}/issues",
             name: "Repository issues",
             mimeType: "application/json",
             description: "List of issues for a repository",
           },
           {
-            uriTemplate: "codeberg://users/{username}",
+            uriTemplate: "forgejo://users/{username}",
             name: "User information",
             mimeType: "application/json",
             description: "Details about a specific user",
@@ -201,8 +199,8 @@ class CodebergServer {
 
         try {
           // Current user profile
-          if (uri === "codeberg://user/profile") {
-            const user = await this.codebergService.getCurrentUser();
+          if (uri === "forgejo://user/profile") {
+            const user = await this.forgejoService.getCurrentUser();
             return {
               contents: [
                 {
@@ -215,10 +213,10 @@ class CodebergServer {
           }
 
           // Repository information
-          const repoMatch = uri.match(/^codeberg:\/\/repos\/([^/]+)\/([^/]+)$/);
+          const repoMatch = uri.match(/^forgejo:\/\/repos\/([^/]+)\/([^/]+)$/);
           if (repoMatch) {
             const [, owner, repo] = repoMatch;
-            const repository = await this.codebergService.getRepository(
+            const repository = await this.forgejoService.getRepository(
               owner,
               repo,
             );
@@ -235,11 +233,11 @@ class CodebergServer {
 
           // Repository issues
           const issuesMatch = uri.match(
-            /^codeberg:\/\/repos\/([^/]+)\/([^/]+)\/issues$/,
+            /^forgejo:\/\/repos\/([^/]+)\/([^/]+)\/issues$/,
           );
           if (issuesMatch) {
             const [, owner, repo] = issuesMatch;
-            const issues = await this.codebergService.listIssues(owner, repo);
+            const issues = await this.forgejoService.listIssues(owner, repo);
             return {
               contents: [
                 {
@@ -252,10 +250,10 @@ class CodebergServer {
           }
 
           // User information
-          const userMatch = uri.match(/^codeberg:\/\/users\/([^/]+)$/);
+          const userMatch = uri.match(/^forgejo:\/\/users\/([^/]+)$/);
           if (userMatch) {
             const [, username] = userMatch;
-            const user = await this.codebergService.getUser(username);
+            const user = await this.forgejoService.getUser(username);
             return {
               contents: [
                 {
@@ -428,7 +426,7 @@ class CodebergServer {
 
               const { owner } = request.params.arguments;
               const repositories =
-                await this.codebergService.listRepositories(owner);
+                await this.forgejoService.listRepositories(owner);
               return {
                 content: [
                   {
@@ -451,7 +449,7 @@ class CodebergServer {
               }
 
               const { owner, name } = request.params.arguments;
-              const repository = await this.codebergService.getRepository(
+              const repository = await this.forgejoService.getRepository(
                 owner,
                 name,
               );
@@ -474,13 +472,9 @@ class CodebergServer {
               }
 
               const { owner, repo, state } = request.params.arguments;
-              const issues = await this.codebergService.listIssues(
-                owner,
-                repo,
-                {
-                  state: state as IssueState,
-                },
-              );
+              const issues = await this.forgejoService.listIssues(owner, repo, {
+                state: state as IssueState,
+              });
               return {
                 content: [
                   {
@@ -503,7 +497,7 @@ class CodebergServer {
               }
 
               const { owner, repo, number } = request.params.arguments;
-              const issue = await this.codebergService.getIssue(
+              const issue = await this.forgejoService.getIssue(
                 owner,
                 repo,
                 number,
@@ -527,11 +521,10 @@ class CodebergServer {
               }
 
               const { owner, repo, title, body } = request.params.arguments;
-              const issue = await this.codebergService.createIssue(
-                owner,
-                repo,
-                { title, body },
-              );
+              const issue = await this.forgejoService.createIssue(owner, repo, {
+                title,
+                body,
+              });
               return {
                 content: [
                   {
@@ -551,7 +544,7 @@ class CodebergServer {
               }
 
               const { username } = request.params.arguments;
-              const user = await this.codebergService.getUser(username);
+              const user = await this.forgejoService.getUser(username);
               return {
                 content: [
                   {

@@ -2,7 +2,7 @@ import axios, { AxiosError } from "axios";
 import { injectable } from "inversify";
 import {
   ApiError,
-  CodebergError,
+  ForgejoError,
   NetworkError,
   type IErrorHandler,
   type ToolResponse,
@@ -46,14 +46,14 @@ export class ErrorHandler implements IErrorHandler {
         throw new NetworkError(error.message, { originalError: error });
       }
 
-      // Re-throw CodebergErrors as-is
-      if (error instanceof CodebergError) {
+      // Re-throw ForgejoErrors as-is
+      if (error instanceof ForgejoError) {
         throw error;
       }
     }
 
     // Unknown errors
-    throw new CodebergError("An unexpected error occurred", "UNKNOWN_ERROR", {
+    throw new ForgejoError("An unexpected error occurred", "UNKNOWN_ERROR", {
       error,
     });
   }
@@ -66,7 +66,7 @@ export class ErrorHandler implements IErrorHandler {
     let details: Record<string, unknown> = {};
 
     const formatError = (err: unknown): Record<string, unknown> => {
-      if (err instanceof CodebergError) {
+      if (err instanceof ForgejoError) {
         const result: Record<string, unknown> = {
           message: err.message,
           code: err.code,
@@ -99,7 +99,7 @@ export class ErrorHandler implements IErrorHandler {
       return value;
     };
 
-    if (error instanceof CodebergError) {
+    if (error instanceof ForgejoError) {
       message = error.message;
       details = formatError(error);
     } else if (error instanceof Error) {
@@ -132,7 +132,7 @@ export class ErrorHandler implements IErrorHandler {
    */
   shouldRetry(error: unknown): boolean {
     // Don't retry validation errors
-    if (error instanceof CodebergError && error.code === "VALIDATION_ERROR") {
+    if (error instanceof ForgejoError && error.code === "VALIDATION_ERROR") {
       return false;
     }
 
