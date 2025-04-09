@@ -35,7 +35,7 @@ export class UserService extends BaseForgejoService {
       if (!response?.data) {
         throw new ApiError("Invalid response from server", 500);
       }
-      return ForgejoMappers.mapUser(response.data.data || response.data);
+      return ForgejoMappers.mapUser(response.data);
     });
   }
 }

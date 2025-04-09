@@ -66,6 +66,7 @@ export abstract class BaseForgejoService {
         return result;
       } catch (error) {
         lastError = error;
+        this.logger.error(`${operation} error`);
 
         // Handle errors
         let handledError: Error;
@@ -137,6 +138,21 @@ export abstract class BaseForgejoService {
       }
     }
 
-    throw lastError instanceof Error ? lastError : new Error(String(lastError));
+    if (lastError instanceof ApiError) {
+      throw lastError;
+    }
+
+    this.logger.debug(`${operation} request failed`, {
+      error: lastError,
+      ...context,
+    });
+
+    const statusCode =
+      (lastError as any)?.statusCode ??
+      (lastError as any)?.response?.status ??
+      500;
+    throw new ApiError("Request failed in BaseForgejoService", statusCode, {
+      cause: lastError,
+    });
   }
 }

@@ -1,3 +1,5 @@
+## [1.1.0-alpha.4](https://codeberg.org/goern/forgejo-mcp/compare/v1.1.0-alpha.3...v1.1.0-alpha.4) (2025-04-09)
+
 ## [1.1.0-alpha.3](https://codeberg.org/goern/forgejo-mcp/compare/v1.1.0-alpha.2...v1.1.0-alpha.3) (2025-04-09)
 
 ## [1.1.0-alpha.2](https://codeberg.org/goern/forgejo-mcp/compare/v1.1.0-alpha.1...v1.1.0-alpha.2) (2025-04-09)
