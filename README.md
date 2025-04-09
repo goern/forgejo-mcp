@@ -33,6 +33,10 @@ for example the one hosted at <https://codeberg.org/>.
    npm run build
    ```
 
+4. NPM
+
+The module is also published to <https://www.npmjs.com/package/forgejo-mcp>
+
 ## Configuration
 
 To use this MCP server, you need to:
