@@ -1,3 +1,13 @@
+## [1.1.0-alpha.1](https://codeberg.org/goern/forgejo-mcp/compare/v1.0.0...v1.1.0-alpha.1) (2025-04-09)
+
+### :sparkles: Features
+
+- add a project logo ([8dac350](https://codeberg.org/goern/forgejo-mcp/commit/8dac3505d31046f23eb4de9744d888c307e9432b))
+
+### :repeat: Chore
+
+- just small refactorings ([5437bcc](https://codeberg.org/goern/forgejo-mcp/commit/5437bcce9c15741fea5df54d0df3b46a0e17b063))
+
 # Changelog
 
 ## 1.0.0 (2025-04-08)
