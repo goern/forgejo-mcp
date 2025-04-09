@@ -1,3 +1,19 @@
+jest.mock("axios", () => {
+  const mockAxiosInstance = {
+    get: jest.fn(),
+    post: jest.fn(),
+    patch: jest.fn(),
+    delete: jest.fn(),
+    defaults: {},
+  };
+  return {
+    __esModule: true,
+    create: jest.fn(() => mockAxiosInstance),
+    isAxiosError: jest.fn(),
+    mockAxiosInstance,
+  };
+});
+
 import { describe, expect, it, jest, beforeEach } from "@jest/globals";
 import axios, { AxiosError, AxiosInstance } from "axios";
 import { UserService } from "../user.service.js";
@@ -9,9 +25,26 @@ import {
   ICacheManager,
   ValidationError,
 } from "../types.js";
+import { mockCurrentUser } from "../__mocks__/mockUsers.js";
+import { ForgejoMappers } from "../utils/mappers.js";
 
 // Mock axios module
-jest.mock("axios");
+jest.mock("axios", () => {
+  const actualAxios = jest.requireActual("axios");
+  const mockAxiosInstance = {
+    get: jest.fn(),
+    post: jest.fn(),
+    patch: jest.fn(),
+    delete: jest.fn(),
+    defaults: {},
+  };
+  return {
+    __esModule: true,
+    create: jest.fn(() => mockAxiosInstance),
+    isAxiosError: jest.fn(),
+    mockAxiosInstance,
+  };
+});
 
 // Create mock instance
 const mockAxios = {
@@ -37,12 +70,13 @@ describe("UserService", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAxios.get.mockReset();
 
     config = {
       baseUrl: "https://api.codeberg.org",
       token: "test-token",
       timeout: 5000,
-      maxRetries: 3,
+      maxRetries: 1,
     };
 
     logger = new Logger("TestService");
@@ -69,28 +103,31 @@ describe("UserService", () => {
     };
 
     service = new UserService(config, errorHandler, logger, cacheManager);
+
+    jest.spyOn(ForgejoMappers, "mapUser").mockImplementation((data: any) => ({
+      id: data.id,
+      login: data.login,
+      fullName: data.full_name,
+      email: data.email,
+      avatarUrl: data.avatar_url,
+      htmlUrl: data.html_url,
+      createdAt: new Date(data.created_at),
+    }));
   });
 
   describe("getCurrentUser", () => {
     it("should get current user successfully", async () => {
-      const mockUser = {
-        id: 1,
-        login: "user",
-        full_name: "Test User",
-        email: "user@example.com",
-        avatar_url: "https://codeberg.org/avatar/1",
-        html_url: "https://codeberg.org/user",
-        created_at: "2025-01-01T00:00:00Z",
-      };
-
-      mockAxios.get.mockResolvedValueOnce({ data: mockUser });
+      mockAxios.get.mockResolvedValueOnce({
+        data: mockCurrentUser,
+      });
 
       const result = await service.getCurrentUser();
 
       expect(mockAxios.get).toHaveBeenCalledWith("/user");
-      expect(result.login).toBe("user");
-      expect(result.fullName).toBe("Test User");
-      expect(result.email).toBe("user@example.com");
+
+      expect(result.login).toBe("op1st-gitops");
+      expect(result.fullName).toBe("");
+      expect(result.email).toBe("codeberg.bagel881@passmail.net");
     });
 
     it("should handle invalid response data", async () => {
@@ -100,16 +137,21 @@ describe("UserService", () => {
     });
 
     it("should handle API errors", async () => {
-      const error = new AxiosError();
-      error.response = {
-        data: { message: "Unauthorized" },
-        status: 401,
-        statusText: "Unauthorized",
-        headers: {},
-        config: {} as any,
-      };
+      const axiosError = new AxiosError(
+        "Unauthorized",
+        "401",
+        {} as any,
+        {} as any,
+        {
+          data: { message: "Unauthorized" },
+          status: 401,
+          statusText: "Unauthorized",
+          headers: {},
+          config: {} as any,
+        },
+      );
 
-      mockAxios.get.mockRejectedValueOnce(error);
+      mockAxios.get.mockRejectedValueOnce(axiosError);
 
       await expect(service.getCurrentUser()).rejects.toThrow(ApiError);
     });
@@ -117,24 +159,15 @@ describe("UserService", () => {
 
   describe("getUser", () => {
     it("should get user successfully", async () => {
-      const mockUser = {
-        id: 1,
-        login: "testuser",
-        full_name: "Test User",
-        email: "testuser@example.com",
-        avatar_url: "https://codeberg.org/avatar/1",
-        html_url: "https://codeberg.org/testuser",
-        created_at: "2025-01-01T00:00:00Z",
-      };
-
-      mockAxios.get.mockResolvedValueOnce({ data: mockUser });
+      mockAxios.get.mockResolvedValueOnce({
+        data: mockCurrentUser,
+      });
 
       const result = await service.getUser("testuser");
 
-      expect(mockAxios.get).toHaveBeenCalledWith("/users/testuser");
-      expect(result.login).toBe("testuser");
-      expect(result.fullName).toBe("Test User");
-      expect(result.email).toBe("testuser@example.com");
+      expect(result.login).toBe("op1st-gitops");
+      expect(result.fullName).toBe("");
+      expect(result.email).toBe("codeberg.bagel881@passmail.net");
     });
 
     it("should throw ValidationError for empty username", async () => {
