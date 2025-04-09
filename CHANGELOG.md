@@ -1,3 +1,13 @@
+## [1.2.0](https://codeberg.org/goern/forgejo-mcp/compare/v1.1.0...v1.2.0) (2025-04-09)
+
+### :sparkles: Features
+
+- add smithery.ai integration ([4a46279](https://codeberg.org/goern/forgejo-mcp/commit/4a462797690f0c1b81f1ed83bed1853b7dfb1861))
+
+### :bug: Fixes
+
+- release pipeline sequence ([7ebc987](https://codeberg.org/goern/forgejo-mcp/commit/7ebc987c741cad5271eeb1be34ef82bcded2654d))
+
 ## [1.1.0](https://codeberg.org/goern/forgejo-mcp/compare/v1.0.0...v1.1.0) (2025-04-09)
 
 ### :sparkles: Features
