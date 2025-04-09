@@ -1,3 +1,21 @@
+## [1.1.0](https://codeberg.org/goern/forgejo-mcp/compare/v1.0.0...v1.1.0) (2025-04-09)
+
+### :sparkles: Features
+
+- add a project logo ([8dac350](https://codeberg.org/goern/forgejo-mcp/commit/8dac3505d31046f23eb4de9744d888c307e9432b))
+- **api:** add detailed schema for update_issue endpoint 🎯🛠️✨ ([9199474](https://codeberg.org/goern/forgejo-mcp/commit/919947445ce7dd82264d2405d55dd5ee84208b07))
+
+### :bug: Fixes
+
+- the changelog ([483f544](https://codeberg.org/goern/forgejo-mcp/commit/483f5441a585ecced82ff769fc647a96fb4fe136))
+
+### :repeat: Chore
+
+- just small refactorings ([5437bcc](https://codeberg.org/goern/forgejo-mcp/commit/5437bcce9c15741fea5df54d0df3b46a0e17b063))
+- **release:** 1.1.0-alpha.1 [skip ci] ([ef473df](https://codeberg.org/goern/forgejo-mcp/commit/ef473df089351228342382548744de781ae98a7b))
+- **release:** 1.1.0-alpha.2 [skip ci] ([458d31c](https://codeberg.org/goern/forgejo-mcp/commit/458d31cc15e29eb638381cdf619a7e2ddb275e45))
+- **release:** 1.1.0-alpha.3 [skip ci] ([c53674e](https://codeberg.org/goern/forgejo-mcp/commit/c53674e4fa83b13f3b432889e31f0fbb0dcff876))
+
 ## 1.0.0 (2025-04-08)
 
 ### :sparkles: Features
