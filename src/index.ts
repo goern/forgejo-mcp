@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import packageJson from "../package.json" with { type: "json" };
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import * as http from "http";
 import {
@@ -26,6 +27,12 @@ import type {
 } from "./services/types.js";
 import { IssueState } from "./services/types.js";
 import { TYPES } from "./container.js";
+import {
+  isValidCreateIssueArgs,
+  isValidIssueArgs,
+  isValidRepoArgs,
+  isValidUserArgs,
+} from "./types/guards.js";
 
 // Parse command line arguments
 const argv = yargs(hideBin(process.argv))
@@ -70,39 +77,7 @@ if (!API_TOKEN) {
   );
 }
 
-// Type guards for tool arguments
-const isValidRepoArgs = (args: any): args is { owner: string; name?: string } =>
-  typeof args === "object" &&
-  args !== null &&
-  typeof args.owner === "string" &&
-  (args.name === undefined || typeof args.name === "string");
-
-const isValidIssueArgs = (
-  args: any,
-): args is { owner: string; repo: string; number?: number; state?: string } =>
-  typeof args === "object" &&
-  args !== null &&
-  typeof args.owner === "string" &&
-  typeof args.repo === "string" &&
-  (args.number === undefined || typeof args.number === "number") &&
-  (args.state === undefined || typeof args.state === "string");
-
-const isValidCreateIssueArgs = (
-  args: any,
-): args is { owner: string; repo: string; title: string; body: string } =>
-  typeof args === "object" &&
-  args !== null &&
-  typeof args.owner === "string" &&
-  typeof args.repo === "string" &&
-  typeof args.title === "string" &&
-  typeof args.body === "string";
-
-const isValidUserArgs = (args: any): args is { username: string } =>
-  typeof args === "object" &&
-  args !== null &&
-  typeof args.username === "string";
-
-class CodebergServer {
+export class CodebergServer {
   private server: Server;
   private forgejoService: IForgejoService;
   private errorHandler: IErrorHandler;
@@ -125,7 +100,7 @@ class CodebergServer {
     this.server = new Server(
       {
         name: "forgejo-mcp-server",
-        version: "0.1.0",
+        version: packageJson.version,
       },
       {
         capabilities: {
@@ -151,15 +126,38 @@ class CodebergServer {
     this.server.setRequestHandler(
       ListResourcesRequestSchema,
       async (_, extra): Promise<ServerResult> => {
+        const staticResources = [
+          {
+            uri: `forgejo://user/profile`,
+            name: `Current user profile`,
+            mimeType: "application/json",
+            description: "Profile information for the authenticated user",
+          },
+          {
+            uri: `forgejo://repos/{owner}/{repo}`,
+            name: "Repository details",
+            mimeType: "application/json",
+            description:
+              "Details about a specific repository, replace {owner} and {repo} with actual values",
+          },
+          {
+            uri: `forgejo://repos/{owner}/{repo}/issues`,
+            name: "Repository issues",
+            mimeType: "application/json",
+            description:
+              "List of issues for a repository, replace {owner} and {repo}",
+          },
+          {
+            uri: `forgejo://repos/{owner}/{repo}/issues/{number}`,
+            name: "Repository issue details",
+            mimeType: "application/json",
+            description:
+              "Details of a specific issue for a repository, replace {owner}, {repo} and {number}",
+          },
+        ];
+
         return {
-          resources: [
-            {
-              uri: `forgejo://user/profile`,
-              name: `Current user profile`,
-              mimeType: "application/json",
-              description: "Profile information for the authenticated user",
-            },
-          ],
+          resources: staticResources,
         };
       },
     );
@@ -182,6 +180,12 @@ class CodebergServer {
             description: "List of issues for a repository",
           },
           {
+            uriTemplate: "forgejo://repos/{owner}/{repo}/issues/{number}",
+            name: "Repository issue details",
+            mimeType: "application/json",
+            description: "Details of a specific issue for a repository",
+          },
+          {
             uriTemplate: "forgejo://users/{username}",
             name: "User information",
             mimeType: "application/json",
@@ -198,6 +202,7 @@ class CodebergServer {
         const uri = request.params.uri;
 
         try {
+          ``;
           // Current user profile
           if (uri === "forgejo://user/profile") {
             const user = await this.forgejoService.getCurrentUser();
@@ -244,6 +249,28 @@ class CodebergServer {
                   uri,
                   mimeType: "application/json",
                   text: JSON.stringify(issues, null, 2),
+                },
+              ],
+            };
+          }
+          // Repository issue details
+          const issueMatch = uri.match(
+            /^forgejo:\/\/repos\/([^/]+)\/([^/]+)\/issues\/([0-9]+)$/,
+          );
+          if (issueMatch) {
+            const [, owner, repo, numberStr] = issueMatch;
+            const issueNumber = parseInt(numberStr, 10);
+            const issue = await this.forgejoService.getIssue(
+              owner,
+              repo,
+              issueNumber,
+            );
+            return {
+              contents: [
+                {
+                  uri,
+                  mimeType: "application/json",
+                  text: JSON.stringify(issue, null, 2),
                 },
               ],
             };
@@ -604,6 +631,8 @@ class CodebergServer {
     } else {
       // Run in stdio mode
       const transport = new StdioServerTransport();
+
+      this.logger.info(`Server running in stdio mode`);
       await this.server.connect(transport);
     }
   }

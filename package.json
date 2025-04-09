@@ -1,6 +1,6 @@
 {
   "name": "forgejo-mcp",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "This is a MCP Server able to talk to Forgejo API",
   "main": "build/index.js",
   "type": "module",
