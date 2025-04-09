@@ -119,6 +119,7 @@
                     "CHANGELOG.md"
                 ]
             }
-        ]
+        ],
+        "@semantic-release/npm"
     ]
 }
