@@ -421,6 +421,86 @@ export class CodebergServer {
             },
           },
           {
+            name: "update_issue",
+            description:
+              "Update an existing issue with new title, body, state, assignees, labels, or milestone",
+            inputSchema: {
+              type: "object",
+              properties: {
+                owner: {
+                  type: "string",
+                  description: "Repository owner",
+                },
+                repo: {
+                  type: "string",
+                  description: "Repository name",
+                },
+                issue_number: {
+                  type: "number",
+                  description: "Issue number to update",
+                },
+                title: {
+                  type: "string",
+                  description: "New title for the issue",
+                },
+                body: {
+                  type: "string",
+                  description: "New body content for the issue",
+                },
+                state: {
+                  type: "string",
+                  enum: ["open", "closed"],
+                  description: "State of the issue",
+                },
+                assignees: {
+                  type: "array",
+                  items: {
+                    type: "string",
+                  },
+                  description: "Usernames to assign to the issue",
+                },
+                labels: {
+                  type: "array",
+                  items: {
+                    type: "string",
+                  },
+                  description: "Labels to set on the issue",
+                },
+                milestone: {
+                  type: "number",
+                  description: "Milestone number to associate with the issue",
+                },
+              },
+              required: ["owner", "repo", "issue_number"],
+            },
+          },
+          {
+            name: "update_issue_title",
+            description: "Update the title of an existing issue",
+            inputSchema: {
+              type: "object",
+              properties: {
+                owner: {
+                  type: "string",
+                  description: "Repository owner",
+                },
+                repo: {
+                  type: "string",
+                  description: "Repository name",
+                },
+                issue_number: {
+                  type: "number",
+                  description: "Issue number",
+                },
+                title: {
+                  type: "string",
+                  description: "New title for the issue",
+                },
+              },
+              required: ["owner", "repo", "issue_number", "title"],
+            },
+          },
+          {
             name: "get_user",
             description: "Get details about a user",
             inputSchema: {

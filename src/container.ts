@@ -7,6 +7,7 @@ import {
   ICacheManager,
 } from "./services/types.js";
 import { ForgejoService } from "./services/forgejo.service.js";
+import { IssueService } from "./services/issue.service.js";
 import { ErrorHandler } from "./services/error-handler.service.js";
 import { Logger } from "./services/logger.service.js";
 import { MockCacheManager } from "./services/__tests__/mock-cache-manager.js";
@@ -21,6 +22,10 @@ export function createContainer(config: any): Container {
   container
     .bind<IForgejoService>(TYPES.ForgejoService)
     .to(ForgejoService)
+    .inSingletonScope();
+  container
+    .bind<IssueService>(TYPES.IssueService)
+    .to(IssueService)
     .inSingletonScope();
   container
     .bind<IErrorHandler>(TYPES.ErrorHandler)
