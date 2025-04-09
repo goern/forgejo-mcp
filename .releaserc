@@ -112,6 +112,7 @@
             }
         ],
         "@semantic-release/changelog",
+        "@semantic-release/npm",
         [
             "@semantic-release/git",
             {
@@ -121,7 +122,6 @@
                     "package-lock.json"
                 ]
             }
-        ],
-        "@semantic-release/npm"
+        ]
     ]
 }
