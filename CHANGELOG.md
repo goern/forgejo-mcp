@@ -1,3 +1,9 @@
+## [1.2.1-alpha.1](https://codeberg.org/goern/forgejo-mcp/compare/v1.2.0...v1.2.1-alpha.1) (2025-04-15)
+
+### :repeat: Chore
+
+- **deps:** pin node.js to 9bef0ef ([886c4bb](https://codeberg.org/goern/forgejo-mcp/commit/886c4bb2081297feca48483bbbf4c6882754a4f8))
+
 ## [1.2.0](https://codeberg.org/goern/forgejo-mcp/compare/v1.1.0...v1.2.0) (2025-04-09)
 
 ### :sparkles: Features
