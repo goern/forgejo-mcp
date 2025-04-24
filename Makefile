@@ -25,3 +25,7 @@ vendor:
 	@echo 'Tidying and verifying module dependencies...'
 	go mod tidy
 	go mod verify
+
+.PHONY: clean
+clean:
+	rm $(EXECUTABLE)
