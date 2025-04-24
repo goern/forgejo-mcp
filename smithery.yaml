@@ -6,9 +6,9 @@ startCommand:
     # JSON Schema defining the configuration options for the MCP.
     type: object
     required:
-      - codebergApiToken
+      - token
     properties:
-      codebergApiToken:
+      token:
         type: string
         description: Codeberg API token for Forgejo MCP.
       sse:
@@ -17,8 +17,8 @@ startCommand:
         description: Enable HTTP (SSE) mode. Defaults to false.
       port:
         type: number
-        default: 3000
-        description: Port for HTTP mode. Defaults to 3000.
+        default: 8000
+        description: Port for HTTP mode. Defaults to 8000.
       host:
         type: string
         default: localhost
@@ -28,7 +28,7 @@ startCommand:
     |-
     (config) => { const args = []; if(config.sse) { args.push('--sse'); if(config.port) { args.push('--port', String(config.port)); } if(config.host) { args.push('--host', config.host); } } return { command: 'node', args: ['build/index.js', ...args], env: { CODEBERG_API_TOKEN: config.codebergApiToken } }; }
   exampleConfig:
-    codebergApiToken: example-token-123
+    token: example-token-123
     sse: false
-    port: 3000
+    port: 3900
     host: localhost
