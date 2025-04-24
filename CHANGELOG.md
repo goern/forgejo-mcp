@@ -1,3 +1,9 @@
+## 2.0.0 (2025-04-24)                                                                                                                                                                                                           
+                                                                                                                                                                                                                                       
+### ✨  Features                                                                                                                                                                                                                       
+                                                                                                                                                                                                                                       
+    * rebase on https://codeberg.org/fraschm98/forgejo-mcp (9e8edcd (https://codeberg.org/goern/forgejo-mcp/commit/9e8edcd5514c5808798239c09579f390d350082f))
+
 ## [1.2.0](https://codeberg.org/goern/forgejo-mcp/compare/v1.1.0...v1.2.0) (2025-04-09)
 
 ### :sparkles: Features
