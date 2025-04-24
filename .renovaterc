@@ -4,51 +4,16 @@
         "config:best-practices",
         "default:automergeDigest",
         "mergeConfidence:all-badges",
-        "config:js-app",
-        ":preserveSemverRanges",
         ":rebaseStalePrs",
         ":enableVulnerabilityAlertsWithLabel('security')"
     ],
     "enabled": true,
-    "enabledManagers": ["npm", "docker-compose", "dockerfile"],
-    "automergeSchedule": ["* * * * *"],
-    "packageRules": [
-        {
-            "extends": ["monorepo:playwright"],
-            "groupName": "playwright monorepo",
-            "matchUpdateTypes": ["digest", "patch", "minor", "major"]
-        },
-        {
-            "extends": ["monorepo:react"],
-            "groupName": "react monorepo",
-            "matchUpdateTypes": ["digest", "patch", "minor", "major"]
-        },
-        {
-            "extends": ["monorepo:storybook"],
-            "groupName": "storybook monorepo",
-            "matchUpdateTypes": ["digest", "patch", "minor", "major"]
-        },
-        {
-            "extends": ["monorepo:storybook-react-native"],
-            "groupName": "storybook-react-native monorepo",
-            "matchUpdateTypes": ["digest", "patch", "minor", "major"]
-        },
-        {
-            "groupName": "tailwind",
-            "groupSlug": "tailwind",
-            "matchPackageNames": ["tailwind", "@tailwindcss/{/,}**"]
-        },
-        {
-            "matchFileNames": ["package.json"],
-            "matchDepTypes": ["dependencies"],
-            "rangeStrategy": "widen"
-        },
-        {
-            "matchDepTypes": ["devDependencies"],
-            "matchPackageNames": ["eslint", "lint", "prettier"],
-            "automerge": true,
-            "platformAutomerge": false,
-            "rangeStrategy": "auto"
-        }
+    "enabledManagers": [
+        "npm",
+        "docker-compose",
+        "dockerfile"
+    ],
+    "automergeSchedule": [
+        "* * * * *"
     ]
 }
