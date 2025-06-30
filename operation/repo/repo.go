@@ -27,6 +27,7 @@ var (
 		mcp.WithDescription("Create repository"),
 		mcp.WithString("name", mcp.Required(), mcp.Description("Name of the repository to create")),
 		mcp.WithString("description", mcp.Description("Description of the repository to create")),
+		mcp.WithString("owner", mcp.Description("Owner/organization name for the repository")),
 		mcp.WithBoolean("private", mcp.Description("Whether the repository is private")),
 		mcp.WithString("issue_labels", mcp.Description("Issue Label set to use")),
 		mcp.WithBoolean("auto_init", mcp.Description("Whether the repository should be auto-intialized?")),
@@ -81,6 +82,7 @@ func CreateRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 		return to.ErrorResult(errors.New("repository name is required"))
 	}
 	description, _ := req.Params.Arguments["description"].(string)
+	owner, _ := req.Params.Arguments["owner"].(string)
 	private, _ := req.Params.Arguments["private"].(bool)
 	issueLabels, _ := req.Params.Arguments["issue_labels"].(string)
 	autoInit, _ := req.Params.Arguments["auto_init"].(bool)
@@ -102,7 +104,13 @@ func CreateRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 		Readme:        readme,
 		DefaultBranch: defaultBranch,
 	}
-	repo, _, err := forgejo.Client().CreateRepo(opt)
+	var repo *forgejo_sdk.Repository
+	var err error
+	if owner != "" {
+		repo, _, err = forgejo.Client().CreateOrgRepo(owner, opt)
+	} else {
+		repo, _, err = forgejo.Client().CreateRepo(opt)
+	}
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("create repo err: %v", err))
 	}
