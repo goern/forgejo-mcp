@@ -1,3 +1,15 @@
+## [2.1.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.0.0...v2.1.0) (2025-07-01)
+
+### :sparkles: Features
+
+* add owner/organization support for repository creation ([8acc73f](https://codeberg.org/goern/forgejo-mcp/commit/8acc73fdcfbb9d1f265acfb69d83089110e25e06)), closes [#17](https://codeberg.org/goern/forgejo-mcp/issues/17)
+
+### :repeat: Chore
+
+* **deps:** update golang:1.24-alpine docker digest to 68932fa ([29d9359](https://codeberg.org/goern/forgejo-mcp/commit/29d93596e7c0d3a04ad00c2d4aa9dc2f69b85acc))
+* **deps:** update golang:1.24-alpine docker digest to b4f875e ([2927727](https://codeberg.org/goern/forgejo-mcp/commit/2927727951b1879fc113db34aed7c72f3470b89e))
+* **deps:** update golang:1.24-alpine docker digest to ef18ee7 ([97bff39](https://codeberg.org/goern/forgejo-mcp/commit/97bff393bd2aeabc5f6ab4f18159926488c42bf0))
+
 ## 2.0.0 (2025-04-24)                                                                                                                                                                                                           
                                                                                                                                                                                                                                        
 ### ✨  Features                                                                                                                                                                                                                       
