@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/goern-forgejo-mcp-badge.png)](https://mseep.ai/app/goern-forgejo-mcp)
+
 # Forgejo MCP Server
 
 **Forgejo MCP Server** is an integration plugin designed to connect Forgejo with Model Context Protocol (MCP) systems. This allows for seamless command execution and repository management through an MCP-compatible chat interface.
