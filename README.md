@@ -4,16 +4,13 @@
 
 ## 🚧Installation
 
-### 📥Download the official binary release
-
-You can download the official release from [here](https://forgejo.org/forgejo/forgejo-mcp/releases).
 
 ### 🔧Build from Source
 
 You can download the source code by cloning the repository using Git:
 
 ```bash
-git clone https://forgejo.org/forgejo/forgejo-mcp.git
+git clone https://codeberg.org/goern/forgejo-mcp.git
 ```
 
 Before building, make sure you have the following installed:
