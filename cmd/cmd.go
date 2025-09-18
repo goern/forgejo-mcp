@@ -70,45 +70,76 @@ func init() {
 	flagPkg.URL = urlFlag
 	if flagPkg.URL == "" {
 		flagPkg.URL = os.Getenv("FORGEJO_URL")
+		if flagPkg.URL != "" {
+			log.Debug("Using FORGEJO_URL environment variable")
+		}
 	}
 	if flagPkg.URL == "" {
 		// Fallback to deprecated GITEA_HOST with warning
 		if giteaHost := os.Getenv("GITEA_HOST"); giteaHost != "" {
-			log.Warnf("GITEA_HOST environment variable is deprecated, please use FORGEJO_URL instead")
+			log.Warn("Deprecated environment variable used",
+				log.StringField("deprecated_var", "GITEA_HOST"),
+				log.StringField("preferred_var", "FORGEJO_URL"),
+				log.StringField("migration_help", "Please update your configuration to use FORGEJO_URL"),
+			)
 			flagPkg.URL = giteaHost
 		}
 	}
 	if flagPkg.URL == "" {
-		log.Fatalf("URL is required. Please provide a Forgejo instance URL with -url flag or FORGEJO_URL environment variable")
+		log.Fatal("Missing required configuration",
+			log.StringField("missing", "url"),
+			log.StringField("help", "Provide URL with -url flag or FORGEJO_URL environment variable"),
+		)
 	}
 
 	// Validate URL has proper scheme
+	log.Debug("Validating URL configuration",
+		log.SanitizedURLField("url", flagPkg.URL),
+	)
 	if err := validateURL(flagPkg.URL); err != nil {
-		log.Fatalf("Invalid URL: %v", err)
+		log.Fatal("Invalid URL configuration",
+			log.SanitizedURLField("url", flagPkg.URL),
+			log.ErrorField(err),
+		)
 	}
 
 	flagPkg.SSEPort = ssePort
 	flagPkg.Token = token
 	if flagPkg.Token == "" {
 		flagPkg.Token = os.Getenv("FORGEJO_ACCESS_TOKEN")
+		if flagPkg.Token != "" {
+			log.Debug("Using FORGEJO_ACCESS_TOKEN environment variable")
+		}
 	}
 	if flagPkg.Token == "" {
 		// Fallback to deprecated GITEA_ACCESS_TOKEN with warning
 		if giteaToken := os.Getenv("GITEA_ACCESS_TOKEN"); giteaToken != "" {
-			log.Warnf("GITEA_ACCESS_TOKEN environment variable is deprecated, please use FORGEJO_ACCESS_TOKEN instead")
+			log.Warn("Deprecated environment variable used",
+				log.StringField("deprecated_var", "GITEA_ACCESS_TOKEN"),
+				log.StringField("preferred_var", "FORGEJO_ACCESS_TOKEN"),
+				log.StringField("migration_help", "Please update your configuration to use FORGEJO_ACCESS_TOKEN"),
+			)
 			flagPkg.Token = giteaToken
 		}
 	}
 
 	if debug {
 		flagPkg.Debug = debug
+		log.Debug("Debug mode enabled via flag")
 	}
 	if !debug {
 		flagPkg.Debug = os.Getenv("FORGEJO_DEBUG") == "true"
+		if flagPkg.Debug {
+			log.Debug("Debug mode enabled via FORGEJO_DEBUG environment variable")
+		}
 		if !flagPkg.Debug {
 			// Fallback to deprecated GITEA_DEBUG with warning
 			if os.Getenv("GITEA_DEBUG") == "true" {
-				log.Warnf("GITEA_DEBUG environment variable is deprecated, please use FORGEJO_DEBUG instead")
+				log.Warn("Deprecated environment variable used",
+					log.StringField("deprecated_var", "GITEA_DEBUG"),
+					log.StringField("preferred_var", "FORGEJO_DEBUG"),
+					log.StringField("migration_help", "Please update your configuration to use FORGEJO_DEBUG"),
+				)
 				flagPkg.Debug = true
 			}
 		}
@@ -136,7 +167,13 @@ func Execute(version string) {
 	defer log.Default().Sync()
 
 	log.Infof("Starting Forgejo MCP Server %s", version)
-	log.Infof("Configuration: url=%s, transport=%s, sse-port=%d, debug=%t", flagPkg.URL, transport, flagPkg.SSEPort, flagPkg.Debug)
+	log.Info("Server configuration loaded",
+		log.SanitizedURLField("url", flagPkg.URL),
+		log.StringField("transport", transport),
+		log.IntField("sse-port", flagPkg.SSEPort),
+		log.BoolField("debug", flagPkg.Debug),
+		log.BoolField("token_configured", flagPkg.Token != ""),
+	)
 
 	if err := operation.Run(transport, version); err != nil {
 		if err == context.Canceled {
