@@ -69,10 +69,17 @@ func init() {
 
 	flagPkg.URL = urlFlag
 	if flagPkg.URL == "" {
-		flagPkg.URL = os.Getenv("GITEA_HOST")
+		flagPkg.URL = os.Getenv("FORGEJO_URL")
 	}
 	if flagPkg.URL == "" {
-		log.Fatalf("URL is required. Please provide a Forgejo instance URL with -url flag or GITEA_HOST environment variable")
+		// Fallback to deprecated GITEA_HOST with warning
+		if giteaHost := os.Getenv("GITEA_HOST"); giteaHost != "" {
+			log.Warnf("GITEA_HOST environment variable is deprecated, please use FORGEJO_URL instead")
+			flagPkg.URL = giteaHost
+		}
+	}
+	if flagPkg.URL == "" {
+		log.Fatalf("URL is required. Please provide a Forgejo instance URL with -url flag or FORGEJO_URL environment variable")
 	}
 
 	// Validate URL has proper scheme
@@ -83,14 +90,28 @@ func init() {
 	flagPkg.SSEPort = ssePort
 	flagPkg.Token = token
 	if flagPkg.Token == "" {
-		flagPkg.Token = os.Getenv("GITEA_ACCESS_TOKEN")
+		flagPkg.Token = os.Getenv("FORGEJO_ACCESS_TOKEN")
+	}
+	if flagPkg.Token == "" {
+		// Fallback to deprecated GITEA_ACCESS_TOKEN with warning
+		if giteaToken := os.Getenv("GITEA_ACCESS_TOKEN"); giteaToken != "" {
+			log.Warnf("GITEA_ACCESS_TOKEN environment variable is deprecated, please use FORGEJO_ACCESS_TOKEN instead")
+			flagPkg.Token = giteaToken
+		}
 	}
 
 	if debug {
 		flagPkg.Debug = debug
 	}
 	if !debug {
-		flagPkg.Debug = os.Getenv("GITEA_DEBUG") == "true"
+		flagPkg.Debug = os.Getenv("FORGEJO_DEBUG") == "true"
+		if !flagPkg.Debug {
+			// Fallback to deprecated GITEA_DEBUG with warning
+			if os.Getenv("GITEA_DEBUG") == "true" {
+				log.Warnf("GITEA_DEBUG environment variable is deprecated, please use FORGEJO_DEBUG instead")
+				flagPkg.Debug = true
+			}
+		}
 	}
 }
 
