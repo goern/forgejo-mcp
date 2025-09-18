@@ -1,8 +1,8 @@
 package flag
 
 var (
-	Host    string
-	Port    int
+	URL     string
+	SSEPort int
 	Token   string
 	Version string
 

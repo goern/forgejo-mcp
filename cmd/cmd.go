@@ -3,6 +3,8 @@ package cmd
 import (
 	"context"
 	"flag"
+	"fmt"
+	"net/url"
 	"os"
 
 	"forgejo.org/forgejo/forgejo-mcp/operation"
@@ -12,8 +14,8 @@ import (
 
 var (
 	transport string
-	host      string
-	port      int
+	urlFlag   string
+	ssePort   int
 	token     string
 
 	debug bool
@@ -33,16 +35,16 @@ func init() {
 		"Transport type (stdio or sse)",
 	)
 	flag.StringVar(
-		&host,
-		"host",
-		"https://forgejo.org",
-		"Forgejo host",
+		&urlFlag,
+		"url",
+		"",
+		"Forgejo instance URL (required, must start with http:// or https://)",
 	)
 	flag.IntVar(
-		&port,
-		"port",
+		&ssePort,
+		"sse-port",
 		8080,
-		"sse port",
+		"Port for SSE transport mode",
 	)
 	flag.StringVar(
 		&token,
@@ -65,16 +67,20 @@ func init() {
 
 	flag.Parse()
 
-	flagPkg.Host = host
-	if flagPkg.Host == "" {
-		flagPkg.Host = os.Getenv("GITEA_HOST")
+	flagPkg.URL = urlFlag
+	if flagPkg.URL == "" {
+		flagPkg.URL = os.Getenv("GITEA_HOST")
 	}
-	if flagPkg.Host == "" {
-		flagPkg.Host = "https://forgejo.org"
+	if flagPkg.URL == "" {
+		log.Fatalf("URL is required. Please provide a Forgejo instance URL with -url flag or GITEA_HOST environment variable")
 	}
 
-	flagPkg.Port = port
+	// Validate URL has proper scheme
+	if err := validateURL(flagPkg.URL); err != nil {
+		log.Fatalf("Invalid URL: %v", err)
+	}
 
+	flagPkg.SSEPort = ssePort
 	flagPkg.Token = token
 	if flagPkg.Token == "" {
 		flagPkg.Token = os.Getenv("GITEA_ACCESS_TOKEN")
@@ -88,8 +94,29 @@ func init() {
 	}
 }
 
+func validateURL(urlStr string) error {
+	parsedURL, err := url.Parse(urlStr)
+	if err != nil {
+		return fmt.Errorf("invalid URL format: %w", err)
+	}
+
+	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
+		return fmt.Errorf("URL must start with http:// or https://, got: %s", parsedURL.Scheme)
+	}
+
+	if parsedURL.Host == "" {
+		return fmt.Errorf("URL must include a host")
+	}
+
+	return nil
+}
+
 func Execute(version string) {
 	defer log.Default().Sync()
+
+	log.Infof("Starting Forgejo MCP Server %s", version)
+	log.Infof("Configuration: url=%s, transport=%s, sse-port=%d, debug=%t", flagPkg.URL, transport, flagPkg.SSEPort, flagPkg.Debug)
+
 	if err := operation.Run(transport, version); err != nil {
 		if err == context.Canceled {
 			log.Info("Server shutdown due to context cancellation")
