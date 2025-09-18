@@ -46,11 +46,11 @@ To configure the MCP server for Forgejo, add the following to your MCP configura
       "command": "forgejo-mcp",
       "args": [
         "--transport", "stdio",
-        "--url", "https://forgejo.org"
+        "--url", "https://forgejo.example.org"
         // "--token", "<your personal access token>"
       ],
       "env": {
-        // "FORGEJO_URL": "https://forgejo.org",
+        // "FORGEJO_URL": "https://forgejo.example.org",
         "FORGEJO_ACCESS_TOKEN": "<your personal access token>"
       }
     }
