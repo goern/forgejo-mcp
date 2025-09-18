@@ -1,16 +1,18 @@
 {
   "mcpServers": {
     "forgejo": {
-      "command": "forgejo-mcp",
-      "args": {
-        "-t": "stdio",
-        "--host": "https://forgejo.org",
-        "--token": "<your personal access token>"
-      },
+      "command": "~/code/forgejo-mcp/forgejo-mcp",
+      "args": [
+        "--transport", "stdio",
+        "--url", "https://example.org"
+      ],
       "env": {
-        "GITEA_HOST": "https://forgejo.org",
-        "GITEA_ACCESS_TOKEN": "<your personal access token>"
-      }
+        "FORGEJO_URL": "https://example.org",
+        "FORGEJO_ACCESS_TOKEN": "<your personal access token>",
+        "FORGEJO_DEBUG": "false"
+      },
+      "disabled": false,
+      "alwaysAllow": []
     }
   }
 }
