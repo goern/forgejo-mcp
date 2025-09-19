@@ -4,16 +4,13 @@
 
 ## 🚧Installation
 
-### 📥Download the official binary release
-
-You can download the official release from [here](https://forgejo.org/forgejo/forgejo-mcp/releases).
 
 ### 🔧Build from Source
 
 You can download the source code by cloning the repository using Git:
 
 ```bash
-git clone https://forgejo.org/forgejo/forgejo-mcp.git
+git clone https://codeberg.org/goern/forgejo-mcp.git
 ```
 
 Before building, make sure you have the following installed:
@@ -48,13 +45,13 @@ To configure the MCP server for Forgejo, add the following to your MCP configura
     "forgejo": {
       "command": "forgejo-mcp",
       "args": [
-        "-t", "stdio",
-        "--host", "https://forgejo.org"
+        "--transport", "stdio",
+        "--url", "https://forgejo.example.org"
         // "--token", "<your personal access token>"
       ],
       "env": {
-        // "GITEA_HOST": "https://forgejo.org",
-        "GITEA_ACCESS_TOKEN": "<your personal access token>"
+        // "FORGEJO_URL": "https://forgejo.example.org",
+        "FORGEJO_ACCESS_TOKEN": "<your personal access token>"
       }
     }
   }
@@ -74,8 +71,13 @@ To configure the MCP server for Forgejo, add the following to your MCP configura
 ```
 
 > [!NOTE]
-> You can provide your Forgejo host and access token either as command-line arguments or environment variables.
-> Command-line arguments have the highest priority
+> You can provide your Forgejo URL and access token either as command-line arguments or environment variables.
+> Command-line arguments have the highest priority. Environment variables have been updated:
+> - Use `FORGEJO_URL` instead of the deprecated `GITEA_HOST`
+> - Use `FORGEJO_ACCESS_TOKEN` instead of the deprecated `GITEA_ACCESS_TOKEN`
+> - Use `FORGEJO_DEBUG` instead of the deprecated `GITEA_DEBUG`
+>
+> The old `GITEA_*` variables are still supported for backward compatibility but will show deprecation warnings.
 
 Once everything is set up, try typing the following in your MCP-compatible chatbox:
 
@@ -118,7 +120,7 @@ The Forgejo MCP Server supports the following tools:
 To enable debug mode, add the `-d` flag when running the Forgejo MCP Server with sse mode:
 
 ```sh
-./forgejo-mcp -t sse [--port 8080] --token <your personal access token> -d
+./forgejo-mcp --transport sse --url <forgejo-url> [--sse-port 8080] --token <your personal access token> --debug
 ```
 
 Enjoy exploring and managing your Forgejo repositories via chat!

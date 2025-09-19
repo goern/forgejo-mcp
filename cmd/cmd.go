@@ -3,6 +3,8 @@ package cmd
 import (
 	"context"
 	"flag"
+	"fmt"
+	"net/url"
 	"os"
 
 	"forgejo.org/forgejo/forgejo-mcp/operation"
@@ -12,8 +14,8 @@ import (
 
 var (
 	transport string
-	host      string
-	port      int
+	urlFlag   string
+	ssePort   int
 	token     string
 
 	debug bool
@@ -33,16 +35,16 @@ func init() {
 		"Transport type (stdio or sse)",
 	)
 	flag.StringVar(
-		&host,
-		"host",
-		"https://forgejo.org",
-		"Forgejo host",
+		&urlFlag,
+		"url",
+		"",
+		"Forgejo instance URL (required, must start with http:// or https://)",
 	)
 	flag.IntVar(
-		&port,
-		"port",
+		&ssePort,
+		"sse-port",
 		8080,
-		"sse port",
+		"Port for SSE transport mode",
 	)
 	flag.StringVar(
 		&token,
@@ -65,31 +67,114 @@ func init() {
 
 	flag.Parse()
 
-	flagPkg.Host = host
-	if flagPkg.Host == "" {
-		flagPkg.Host = os.Getenv("GITEA_HOST")
+	flagPkg.URL = urlFlag
+	if flagPkg.URL == "" {
+		flagPkg.URL = os.Getenv("FORGEJO_URL")
+		if flagPkg.URL != "" {
+			log.Debug("Using FORGEJO_URL environment variable")
+		}
 	}
-	if flagPkg.Host == "" {
-		flagPkg.Host = "https://forgejo.org"
+	if flagPkg.URL == "" {
+		// Fallback to deprecated GITEA_HOST with warning
+		if giteaHost := os.Getenv("GITEA_HOST"); giteaHost != "" {
+			log.Warn("Deprecated environment variable used",
+				log.StringField("deprecated_var", "GITEA_HOST"),
+				log.StringField("preferred_var", "FORGEJO_URL"),
+				log.StringField("migration_help", "Please update your configuration to use FORGEJO_URL"),
+			)
+			flagPkg.URL = giteaHost
+		}
+	}
+	if flagPkg.URL == "" {
+		log.Fatal("Missing required configuration",
+			log.StringField("missing", "url"),
+			log.StringField("help", "Provide URL with -url flag or FORGEJO_URL environment variable"),
+		)
 	}
 
-	flagPkg.Port = port
+	// Validate URL has proper scheme
+	log.Debug("Validating URL configuration",
+		log.SanitizedURLField("url", flagPkg.URL),
+	)
+	if err := validateURL(flagPkg.URL); err != nil {
+		log.Fatal("Invalid URL configuration",
+			log.SanitizedURLField("url", flagPkg.URL),
+			log.ErrorField(err),
+		)
+	}
 
+	flagPkg.SSEPort = ssePort
 	flagPkg.Token = token
 	if flagPkg.Token == "" {
-		flagPkg.Token = os.Getenv("GITEA_ACCESS_TOKEN")
+		flagPkg.Token = os.Getenv("FORGEJO_ACCESS_TOKEN")
+		if flagPkg.Token != "" {
+			log.Debug("Using FORGEJO_ACCESS_TOKEN environment variable")
+		}
+	}
+	if flagPkg.Token == "" {
+		// Fallback to deprecated GITEA_ACCESS_TOKEN with warning
+		if giteaToken := os.Getenv("GITEA_ACCESS_TOKEN"); giteaToken != "" {
+			log.Warn("Deprecated environment variable used",
+				log.StringField("deprecated_var", "GITEA_ACCESS_TOKEN"),
+				log.StringField("preferred_var", "FORGEJO_ACCESS_TOKEN"),
+				log.StringField("migration_help", "Please update your configuration to use FORGEJO_ACCESS_TOKEN"),
+			)
+			flagPkg.Token = giteaToken
+		}
 	}
 
 	if debug {
 		flagPkg.Debug = debug
+		log.Debug("Debug mode enabled via flag")
 	}
 	if !debug {
-		flagPkg.Debug = os.Getenv("GITEA_DEBUG") == "true"
+		flagPkg.Debug = os.Getenv("FORGEJO_DEBUG") == "true"
+		if flagPkg.Debug {
+			log.Debug("Debug mode enabled via FORGEJO_DEBUG environment variable")
+		}
+		if !flagPkg.Debug {
+			// Fallback to deprecated GITEA_DEBUG with warning
+			if os.Getenv("GITEA_DEBUG") == "true" {
+				log.Warn("Deprecated environment variable used",
+					log.StringField("deprecated_var", "GITEA_DEBUG"),
+					log.StringField("preferred_var", "FORGEJO_DEBUG"),
+					log.StringField("migration_help", "Please update your configuration to use FORGEJO_DEBUG"),
+				)
+				flagPkg.Debug = true
+			}
+		}
 	}
+}
+
+func validateURL(urlStr string) error {
+	parsedURL, err := url.Parse(urlStr)
+	if err != nil {
+		return fmt.Errorf("invalid URL format: %w", err)
+	}
+
+	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
+		return fmt.Errorf("URL must start with http:// or https://, got: %s", parsedURL.Scheme)
+	}
+
+	if parsedURL.Host == "" {
+		return fmt.Errorf("URL must include a host")
+	}
+
+	return nil
 }
 
 func Execute(version string) {
 	defer log.Default().Sync()
+
+	log.Infof("Starting Forgejo MCP Server %s", version)
+	log.Info("Server configuration loaded",
+		log.SanitizedURLField("url", flagPkg.URL),
+		log.StringField("transport", transport),
+		log.IntField("sse-port", flagPkg.SSEPort),
+		log.BoolField("debug", flagPkg.Debug),
+		log.BoolField("token_configured", flagPkg.Token != ""),
+	)
+
 	if err := operation.Run(transport, version); err != nil {
 		if err == context.Canceled {
 			log.Info("Server shutdown due to context cancellation")
