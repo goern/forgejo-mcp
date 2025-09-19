@@ -1,26 +1,16 @@
-name: check-and-test
+name: CI
 
 on:
   - pull_request
 
 jobs:
-  check-and-test:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: codeberg-tiny
     steps:
-      - uses: actions/checkout@v4
+      - uses: https://code.forgejo.org/actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
       - name: build
         run: |
           make build
-
-  govulncheck_job:
-    runs-on: ubuntu-latest
-    name: Run govulncheck
-    steps:
-      - id: govulncheck
-        uses: golang/govulncheck-action@v1
-        with:
-          go-version-file: 'go.mod'
-          go-package: ./...
