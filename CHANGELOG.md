@@ -1,3 +1,29 @@
+## [2.2.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.1.0...v2.2.0) (2025-10-07)
+
+### :sparkles: Features
+
+* deprecate GITEA_* environment variables in favor of FORGEJO_* ([d7c54ac](https://codeberg.org/goern/forgejo-mcp/commit/d7c54acae957ae0408e9e951e93e3308a1ba6630))
+* implement comprehensive MCP server logging improvements ([97fce8f](https://codeberg.org/goern/forgejo-mcp/commit/97fce8fa0beb4a713d291d810adcb500734e58e2))
+
+### :memo: Documentation
+
+* update README.md to use forgejo.example.org instead of forgejo.org ([d760b2c](https://codeberg.org/goern/forgejo-mcp/commit/d760b2c4c22fb3db48168d511d2558e2ecb10120))
+
+### :zap: Refactor
+
+* replace host/port flags with url and separate sse-port ([2d59d29](https://codeberg.org/goern/forgejo-mcp/commit/2d59d2957213de57e4dffec5dd95babf1c0d3d82))
+
+### :repeat: Chore
+
+* **deps:** update golang docker tag to v1.25 ([b0a4c71](https://codeberg.org/goern/forgejo-mcp/commit/b0a4c71a9dc13a8ac103534b43bdf2898df65a2f))
+* **deps:** update golang:1.24-alpine docker digest to c8c5f95 ([4d335c6](https://codeberg.org/goern/forgejo-mcp/commit/4d335c6c271b298c171bb55e0b145f64e2ba28b1))
+* **deps:** update golang:1.24-alpine docker digest to daae04e ([df47a38](https://codeberg.org/goern/forgejo-mcp/commit/df47a38b78319d8d34d9643bf602c52c88ea812a))
+* **deps:** update golang:1.24-alpine docker digest to ddf5200 ([fc69200](https://codeberg.org/goern/forgejo-mcp/commit/fc692001d042e9add0e3b5f73bf015e10f20684c))
+* **deps:** update golang:1.25-alpine docker digest to 2ad042d ([bcb65c4](https://codeberg.org/goern/forgejo-mcp/commit/bcb65c4907a0aed33f3ac72b4b309f30fb06c020))
+* **deps:** update golang:1.25-alpine docker digest to b6ed3fd ([cc440cf](https://codeberg.org/goern/forgejo-mcp/commit/cc440cf3135de1bdf333bb845a27f21feeb8bd81))
+* **deps:** update golang:1.25-alpine docker digest to f18a072 ([ce5dd65](https://codeberg.org/goern/forgejo-mcp/commit/ce5dd6530f285dcdc8c3444cb37b09dcc598f629))
+* remove air part from Makefile ([2bba853](https://codeberg.org/goern/forgejo-mcp/commit/2bba8531a962c06b87c921e58ee43d0e727fd397))
+
 ## [2.1.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.0.0...v2.1.0) (2025-07-01)
 
 ### :sparkles: Features
