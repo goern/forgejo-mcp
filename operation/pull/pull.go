@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"forgejo.org/forgejo/forgejo-mcp/operation/params"
 	"forgejo.org/forgejo/forgejo-mcp/pkg/forgejo"
 	"forgejo.org/forgejo/forgejo-mcp/pkg/log"
 	"forgejo.org/forgejo/forgejo-mcp/pkg/to"
@@ -22,34 +23,34 @@ const (
 var (
 	GetPullRequestByIndexTool = mcp.NewTool(
 		GetPullRequestByIndexToolName,
-		mcp.WithDescription("get pull request by index"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
-		mcp.WithNumber("index", mcp.Required(), mcp.Description("repository pull request index")),
+		mcp.WithDescription("Get pull request by index"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.PRIndex)),
 	)
 
 	ListRepoPullRequestsTool = mcp.NewTool(
 		ListRepoPullRequestsToolName,
-		mcp.WithDescription("list repo pull requests"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
-		mcp.WithString("state", mcp.Description("state of pull request. Possible values are: open, closed and all. Default is 'open'"), mcp.DefaultString("open")),
-		mcp.WithString("sort", mcp.Description("sort type of pull request. Possible values are: oldest, recentupdate, leastupdate and mostcomment. Default is 'recentupdate'")),
-		mcp.WithString("milestone", mcp.Description("ID of the milestone")),
-		mcp.WithString("labels", mcp.Description("list of label IDs")),
-		mcp.WithNumber("page", mcp.Description("page number of results to return (1-based)"), mcp.DefaultNumber(1)),
-		mcp.WithNumber("limit", mcp.Description("page size of results"), mcp.DefaultNumber(20)),
+		mcp.WithDescription("List repo pull requests"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithString("state", mcp.Description("State (open|closed|all)"), mcp.DefaultString("open")),
+		mcp.WithString("sort", mcp.Description("Sort (oldest|recentupdate|leastupdate|mostcomment)")),
+		mcp.WithString("milestone", mcp.Description(params.Milestone)),
+		mcp.WithString("labels", mcp.Description(params.Labels)),
+		mcp.WithNumber("page", mcp.Description(params.Page), mcp.DefaultNumber(1)),
+		mcp.WithNumber("limit", mcp.Description(params.Limit), mcp.DefaultNumber(20)),
 	)
 
 	CreatePullRequestTool = mcp.NewTool(
 		CreatePullRequestToolName,
-		mcp.WithDescription("create pull request"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
-		mcp.WithString("head", mcp.Required(), mcp.Description("head branch")),
-		mcp.WithString("base", mcp.Required(), mcp.Description("base branch")),
-		mcp.WithString("title", mcp.Required(), mcp.Description("pull request title")),
-		mcp.WithString("body", mcp.Description("pull request body")),
+		mcp.WithDescription("Create pull request"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithString("head", mcp.Required(), mcp.Description(params.Head)),
+		mcp.WithString("base", mcp.Required(), mcp.Description(params.Base)),
+		mcp.WithString("title", mcp.Required(), mcp.Description(params.Title)),
+		mcp.WithString("body", mcp.Description(params.Body)),
 	)
 )
 

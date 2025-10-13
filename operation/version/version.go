@@ -19,7 +19,7 @@ const (
 var (
 	GetForgejoMCPServerVersionTool = mcp.NewTool(
 		GetForgejoMCPServerVersion,
-		mcp.WithDescription("Get Forgejo MCP Server Version"),
+		mcp.WithDescription("Get MCP server version"),
 	)
 )
 

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"forgejo.org/forgejo/forgejo-mcp/operation/params"
 	"forgejo.org/forgejo/forgejo-mcp/pkg/forgejo"
 	"forgejo.org/forgejo/forgejo-mcp/pkg/log"
 	"forgejo.org/forgejo/forgejo-mcp/pkg/to"
@@ -33,108 +34,108 @@ const (
 var (
 	GetIssueByIndexTool = mcp.NewTool(
 		GetIssueByIndexToolName,
-		mcp.WithDescription("get issue by index"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
-		mcp.WithNumber("index", mcp.Required(), mcp.Description("repository issue index")),
+		mcp.WithDescription("Get issue by index"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.IssueIndex)),
 	)
 
 	ListRepoIssuesTool = mcp.NewTool(
 		ListRepoIssuesToolName,
-		mcp.WithDescription("list repo issues"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
-		mcp.WithString("state", mcp.Description("state of issue. Possible values are: open, closed and all. Default is 'open'"), mcp.DefaultString("open")),
-		mcp.WithString("type", mcp.Description("filter by type (issues / pulls) if set")),
-		mcp.WithString("milestones", mcp.Description("comma separated list of milestone names or IDs")),
-		mcp.WithString("labels", mcp.Description("comma separated list of labels")),
-		mcp.WithNumber("page", mcp.Description("page number of results to return (1-based)"), mcp.DefaultNumber(1)),
-		mcp.WithNumber("limit", mcp.Description("page size of results"), mcp.DefaultNumber(20)),
+		mcp.WithDescription("List repo issues"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithString("state", mcp.Description("State (open|closed|all)"), mcp.DefaultString("open")),
+		mcp.WithString("type", mcp.Description("Type (issues|pulls)")),
+		mcp.WithString("milestones", mcp.Description("Milestone names/IDs (comma-separated)")),
+		mcp.WithString("labels", mcp.Description("Labels (comma-separated)")),
+		mcp.WithNumber("page", mcp.Description(params.Page), mcp.DefaultNumber(1)),
+		mcp.WithNumber("limit", mcp.Description(params.Limit), mcp.DefaultNumber(20)),
 	)
 
 	CreateIssueTool = mcp.NewTool(
 		CreateIssueToolName,
-		mcp.WithDescription("create issue"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
-		mcp.WithString("title", mcp.Required(), mcp.Description("issue title")),
-		mcp.WithString("body", mcp.Description("issue body")),
+		mcp.WithDescription("Create issue"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithString("title", mcp.Required(), mcp.Description(params.Title)),
+		mcp.WithString("body", mcp.Description(params.Body)),
 	)
 
 	CreateIssueCommentTool = mcp.NewTool(
 		CreateIssueCommentToolName,
-		mcp.WithDescription("create issue comment"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
-		mcp.WithNumber("index", mcp.Required(), mcp.Description("repository issue index")),
-		mcp.WithString("body", mcp.Required(), mcp.Description("comment body")),
+		mcp.WithDescription("Create issue comment"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.Index)),
+		mcp.WithString("body", mcp.Required(), mcp.Description(params.Body)),
 	)
 
 	UpdateIssueTool = mcp.NewTool(
 		UpdateIssueToolName,
-		mcp.WithDescription("update existing issue"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
-		mcp.WithNumber("index", mcp.Required(), mcp.Description("repository issue index")),
-		mcp.WithString("title", mcp.Description("new issue title")),
-		mcp.WithString("body", mcp.Description("new issue body")),
-		mcp.WithString("assignee", mcp.Description("username of the user to assign")),
-		mcp.WithString("milestone", mcp.Description("milestone ID")),
+		mcp.WithDescription("Update issue"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.IssueIndex)),
+		mcp.WithString("title", mcp.Description(params.Title)),
+		mcp.WithString("body", mcp.Description(params.Body)),
+		mcp.WithString("assignee", mcp.Description("Assignee username")),
+		mcp.WithString("milestone", mcp.Description(params.Milestone)),
 	)
 
 	AddIssueLabelsTools = mcp.NewTool(
 		AddIssueLabelsToolName,
-		mcp.WithDescription("add labels to an issue"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
-		mcp.WithNumber("index", mcp.Required(), mcp.Description("repository issue index")),
-		mcp.WithString("labels", mcp.Required(), mcp.Description("comma separated list of labels to add")),
+		mcp.WithDescription("Add labels to issue"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.IssueIndex)),
+		mcp.WithString("labels", mcp.Required(), mcp.Description("Labels to add (comma-separated)")),
 	)
 
 	IssueStateChangeTool = mcp.NewTool(
 		IssueStateChangeToolName,
-		mcp.WithDescription("close or reopen an issue"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
-		mcp.WithNumber("index", mcp.Required(), mcp.Description("repository issue index")),
-		mcp.WithString("state", mcp.Required(), mcp.Description("new state: open or closed")),
+		mcp.WithDescription("Change issue state"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.IssueIndex)),
+		mcp.WithString("state", mcp.Required(), mcp.Description("State (open|closed)")),
 	)
 
 	ListIssueCommentsTool = mcp.NewTool(
 		ListIssueCommentsToolName,
-		mcp.WithDescription("list all comments on an issue or pull request"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
-		mcp.WithNumber("index", mcp.Required(), mcp.Description("issue or pull request index")),
-		mcp.WithString("since", mcp.Description("only comments updated after this time (RFC3339 format)")),
-		mcp.WithString("before", mcp.Description("only comments updated before this time (RFC3339 format)")),
-		mcp.WithNumber("page", mcp.Description("page number of results to return (1-based)"), mcp.DefaultNumber(1)),
-		mcp.WithNumber("limit", mcp.Description("page size of results"), mcp.DefaultNumber(20)),
+		mcp.WithDescription("List issue/PR comments"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.Index)),
+		mcp.WithString("since", mcp.Description(params.Since)),
+		mcp.WithString("before", mcp.Description(params.Before)),
+		mcp.WithNumber("page", mcp.Description(params.Page), mcp.DefaultNumber(1)),
+		mcp.WithNumber("limit", mcp.Description(params.Limit), mcp.DefaultNumber(20)),
 	)
 
 	GetIssueCommentTool = mcp.NewTool(
 		GetIssueCommentToolName,
-		mcp.WithDescription("get a specific comment by its ID"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
-		mcp.WithNumber("comment_id", mcp.Required(), mcp.Description("comment ID")),
+		mcp.WithDescription("Get comment by ID"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("comment_id", mcp.Required(), mcp.Description(params.CommentID)),
 	)
 
 	EditIssueCommentTool = mcp.NewTool(
 		EditIssueCommentToolName,
-		mcp.WithDescription("edit an existing comment on an issue or pull request"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
-		mcp.WithNumber("comment_id", mcp.Required(), mcp.Description("comment ID")),
-		mcp.WithString("body", mcp.Required(), mcp.Description("new comment body/content")),
+		mcp.WithDescription("Edit issue/PR comment"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("comment_id", mcp.Required(), mcp.Description(params.CommentID)),
+		mcp.WithString("body", mcp.Required(), mcp.Description(params.Body)),
 	)
 
 	DeleteIssueCommentTool = mcp.NewTool(
 		DeleteIssueCommentToolName,
-		mcp.WithDescription("delete a comment from an issue or pull request"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
-		mcp.WithNumber("comment_id", mcp.Required(), mcp.Description("comment ID")),
+		mcp.WithDescription("Delete issue/PR comment"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("comment_id", mcp.Required(), mcp.Description(params.CommentID)),
 	)
 )
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"forgejo.org/forgejo/forgejo-mcp/operation/params"
 	"forgejo.org/forgejo/forgejo-mcp/pkg/forgejo"
 	"forgejo.org/forgejo/forgejo-mcp/pkg/log"
 	"forgejo.org/forgejo/forgejo-mcp/pkg/to"
@@ -22,29 +23,29 @@ const (
 var (
 	SearchUsersTool = mcp.NewTool(
 		SearchUsersToolName,
-		mcp.WithDescription("search users"),
-		mcp.WithString("keyword", mcp.Description("Keyword")),
-		mcp.WithNumber("page", mcp.Description("Page"), mcp.DefaultNumber(1)),
-		mcp.WithNumber("pageSize", mcp.Description("PageSize"), mcp.DefaultNumber(100)),
+		mcp.WithDescription("Search users"),
+		mcp.WithString("keyword", mcp.Description(params.Keyword)),
+		mcp.WithNumber("page", mcp.Description(params.Page), mcp.DefaultNumber(1)),
+		mcp.WithNumber("limit", mcp.Description(params.Limit), mcp.DefaultNumber(100)),
 	)
 
 	SearchOrgTeamsTool = mcp.NewTool(
 		SearchOrgTeamsToolName,
-		mcp.WithDescription("search org teams"),
-		mcp.WithString("org", mcp.Required(), mcp.Description("Org name")),
-		mcp.WithString("keyword", mcp.Description("Keyword")),
-		mcp.WithNumber("page", mcp.Description("Page"), mcp.DefaultNumber(1)),
-		mcp.WithNumber("pageSize", mcp.Description("PageSize"), mcp.DefaultNumber(100)),
+		mcp.WithDescription("Search org teams"),
+		mcp.WithString("org", mcp.Required(), mcp.Description(params.Org)),
+		mcp.WithString("keyword", mcp.Description(params.Keyword)),
+		mcp.WithNumber("page", mcp.Description(params.Page), mcp.DefaultNumber(1)),
+		mcp.WithNumber("limit", mcp.Description(params.Limit), mcp.DefaultNumber(100)),
 	)
 
 	SearchReposTool = mcp.NewTool(
 		SearchReposToolName,
-		mcp.WithDescription("search repos"),
-		mcp.WithString("keyword", mcp.Description("keyword")),
-		mcp.WithString("sort", mcp.Description("sort"), mcp.DefaultString("updated")),
-		mcp.WithString("order", mcp.Description("order"), mcp.DefaultString("desc")),
-		mcp.WithNumber("page", mcp.Description("page"), mcp.DefaultNumber(1)),
-		mcp.WithNumber("pageSize", mcp.Description("pageSize"), mcp.DefaultNumber(100)),
+		mcp.WithDescription("Search repos"),
+		mcp.WithString("keyword", mcp.Description(params.Keyword)),
+		mcp.WithString("sort", mcp.Description(params.Sort), mcp.DefaultString("updated")),
+		mcp.WithString("order", mcp.Description(params.Order), mcp.DefaultString("desc")),
+		mcp.WithNumber("page", mcp.Description(params.Page), mcp.DefaultNumber(1)),
+		mcp.WithNumber("limit", mcp.Description(params.Limit), mcp.DefaultNumber(100)),
 	)
 )
 
@@ -103,9 +104,9 @@ func SearchReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	if !ok {
 		page = 1
 	}
-	pageSize, ok := req.Params.Arguments["pageSize"].(float64)
+	limit, ok := req.Params.Arguments["limit"].(float64)
 	if !ok {
-		pageSize = 100
+		limit = 100
 	}
 
 	// Create a proper search options structure
@@ -115,7 +116,7 @@ func SearchReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 		Order:   order,
 		ListOptions: forgejo_sdk.ListOptions{
 			Page:     int(page),
-			PageSize: int(pageSize),
+			PageSize: int(limit),
 		},
 	}
 	

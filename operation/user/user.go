@@ -20,7 +20,7 @@ const (
 var (
 	GetMyUserInfoTool = mcp.NewTool(
 		GetMyUserInfoToolName,
-		mcp.WithDescription("Get my user info"),
+		mcp.WithDescription("Get user info"),
 	)
 )
 
