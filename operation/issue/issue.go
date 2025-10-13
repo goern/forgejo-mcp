@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"forgejo.org/forgejo/forgejo-mcp/pkg/forgejo"
 	"forgejo.org/forgejo/forgejo-mcp/pkg/log"
@@ -23,6 +24,10 @@ const (
 	UpdateIssueToolName        = "update_issue"
 	AddIssueLabelsToolName     = "add_issue_labels"
 	IssueStateChangeToolName   = "issue_state_change"
+	ListIssueCommentsToolName  = "list_issue_comments"
+	GetIssueCommentToolName    = "get_issue_comment"
+	EditIssueCommentToolName   = "edit_issue_comment"
+	DeleteIssueCommentToolName = "delete_issue_comment"
 )
 
 var (
@@ -94,6 +99,43 @@ var (
 		mcp.WithNumber("index", mcp.Required(), mcp.Description("repository issue index")),
 		mcp.WithString("state", mcp.Required(), mcp.Description("new state: open or closed")),
 	)
+
+	ListIssueCommentsTool = mcp.NewTool(
+		ListIssueCommentsToolName,
+		mcp.WithDescription("list all comments on an issue or pull request"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
+		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
+		mcp.WithNumber("index", mcp.Required(), mcp.Description("issue or pull request index")),
+		mcp.WithString("since", mcp.Description("only comments updated after this time (RFC3339 format)")),
+		mcp.WithString("before", mcp.Description("only comments updated before this time (RFC3339 format)")),
+		mcp.WithNumber("page", mcp.Description("page number of results to return (1-based)"), mcp.DefaultNumber(1)),
+		mcp.WithNumber("limit", mcp.Description("page size of results"), mcp.DefaultNumber(20)),
+	)
+
+	GetIssueCommentTool = mcp.NewTool(
+		GetIssueCommentToolName,
+		mcp.WithDescription("get a specific comment by its ID"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
+		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
+		mcp.WithNumber("comment_id", mcp.Required(), mcp.Description("comment ID")),
+	)
+
+	EditIssueCommentTool = mcp.NewTool(
+		EditIssueCommentToolName,
+		mcp.WithDescription("edit an existing comment on an issue or pull request"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
+		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
+		mcp.WithNumber("comment_id", mcp.Required(), mcp.Description("comment ID")),
+		mcp.WithString("body", mcp.Required(), mcp.Description("new comment body/content")),
+	)
+
+	DeleteIssueCommentTool = mcp.NewTool(
+		DeleteIssueCommentToolName,
+		mcp.WithDescription("delete a comment from an issue or pull request"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
+		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
+		mcp.WithNumber("comment_id", mcp.Required(), mcp.Description("comment ID")),
+	)
 )
 
 func RegisterTool(s *server.MCPServer) {
@@ -104,6 +146,10 @@ func RegisterTool(s *server.MCPServer) {
 	s.AddTool(UpdateIssueTool, UpdateIssueFn)
 	s.AddTool(AddIssueLabelsTools, AddIssueLabelsFn)
 	s.AddTool(IssueStateChangeTool, IssueStateChangeFn)
+	s.AddTool(ListIssueCommentsTool, ListIssueCommentsFn)
+	s.AddTool(GetIssueCommentTool, GetIssueCommentFn)
+	s.AddTool(EditIssueCommentTool, EditIssueCommentFn)
+	s.AddTool(DeleteIssueCommentTool, DeleteIssueCommentFn)
 }
 
 func GetIssueByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -305,4 +351,93 @@ func IssueStateChangeFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 		return to.ErrorResult(fmt.Errorf("change issue state err: %v", err))
 	}
 	return to.TextResult(issue)
+}
+
+func ListIssueCommentsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called ListIssueCommentsFn")
+	owner, _ := req.Params.Arguments["owner"].(string)
+	repo, _ := req.Params.Arguments["repo"].(string)
+	index, _ := req.Params.Arguments["index"].(float64)
+	since, _ := req.Params.Arguments["since"].(string)
+	before, _ := req.Params.Arguments["before"].(string)
+	page, ok := req.Params.Arguments["page"].(float64)
+	if !ok {
+		page = 1
+	}
+	limit, ok := req.Params.Arguments["limit"].(float64)
+	if !ok {
+		limit = 20
+	}
+
+	opt := forgejo_sdk.ListIssueCommentOptions{
+		ListOptions: forgejo_sdk.ListOptions{
+			Page:     int(page),
+			PageSize: int(limit),
+		},
+	}
+
+	// Set time filters if provided
+	if since != "" {
+		sinceTime, err := time.Parse(time.RFC3339, since)
+		if err != nil {
+			return to.ErrorResult(fmt.Errorf("invalid since time format (expected RFC3339): %v", err))
+		}
+		opt.Since = sinceTime
+	}
+	if before != "" {
+		beforeTime, err := time.Parse(time.RFC3339, before)
+		if err != nil {
+			return to.ErrorResult(fmt.Errorf("invalid before time format (expected RFC3339): %v", err))
+		}
+		opt.Before = beforeTime
+	}
+
+	comments, _, err := forgejo.Client().ListIssueComments(owner, repo, int64(index), opt)
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("list issue comments err: %v", err))
+	}
+	return to.TextResult(comments)
+}
+
+func GetIssueCommentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called GetIssueCommentFn")
+	owner, _ := req.Params.Arguments["owner"].(string)
+	repo, _ := req.Params.Arguments["repo"].(string)
+	commentID, _ := req.Params.Arguments["comment_id"].(float64)
+
+	comment, _, err := forgejo.Client().GetIssueComment(owner, repo, int64(commentID))
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("get issue comment err: %v", err))
+	}
+	return to.TextResult(comment)
+}
+
+func EditIssueCommentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called EditIssueCommentFn")
+	owner, _ := req.Params.Arguments["owner"].(string)
+	repo, _ := req.Params.Arguments["repo"].(string)
+	commentID, _ := req.Params.Arguments["comment_id"].(float64)
+	body, _ := req.Params.Arguments["body"].(string)
+
+	opt := forgejo_sdk.EditIssueCommentOption{
+		Body: body,
+	}
+	comment, _, err := forgejo.Client().EditIssueComment(owner, repo, int64(commentID), opt)
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("edit issue comment err: %v", err))
+	}
+	return to.TextResult(comment)
+}
+
+func DeleteIssueCommentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called DeleteIssueCommentFn")
+	owner, _ := req.Params.Arguments["owner"].(string)
+	repo, _ := req.Params.Arguments["repo"].(string)
+	commentID, _ := req.Params.Arguments["comment_id"].(float64)
+
+	_, err := forgejo.Client().DeleteIssueComment(owner, repo, int64(commentID))
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("delete issue comment err: %v", err))
+	}
+	return to.TextResult("Delete comment success")
 }
