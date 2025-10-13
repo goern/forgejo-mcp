@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"forgejo.org/forgejo/forgejo-mcp/operation/params"
 	"forgejo.org/forgejo/forgejo-mcp/pkg/forgejo"
 	"forgejo.org/forgejo/forgejo-mcp/pkg/log"
 	"forgejo.org/forgejo/forgejo-mcp/pkg/to"
@@ -22,30 +23,30 @@ const (
 var (
 	ListWikiPagesTool = mcp.NewTool(
 		ListWikiPagesToolName,
-		mcp.WithDescription("list wiki pages"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
+		mcp.WithDescription("List wiki pages"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 	)
 
 	CreateWikiPageTool = mcp.NewTool(
 		CreateWikiPageToolName,
-		mcp.WithDescription("create a new wiki page"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
-		mcp.WithString("title", mcp.Required(), mcp.Description("wiki page title")),
-		mcp.WithString("content", mcp.Required(), mcp.Description("wiki page content")),
-		mcp.WithString("message", mcp.Description("commit message")),
+		mcp.WithDescription("Create wiki page"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithString("title", mcp.Required(), mcp.Description(params.WikiTitle)),
+		mcp.WithString("content", mcp.Required(), mcp.Description(params.WikiContent)),
+		mcp.WithString("message", mcp.Description(params.Message)),
 	)
 
 	UpdateWikiPageTool = mcp.NewTool(
 		UpdateWikiPageToolName,
-		mcp.WithDescription("update an existing wiki page"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
-		mcp.WithString("page_name", mcp.Required(), mcp.Description("name of the wiki page to update")),
-		mcp.WithString("title", mcp.Description("new wiki page title")),
-		mcp.WithString("content", mcp.Required(), mcp.Description("new wiki page content")),
-		mcp.WithString("message", mcp.Description("commit message")),
+		mcp.WithDescription("Update wiki page"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithString("page_name", mcp.Required(), mcp.Description(params.WikiPage)),
+		mcp.WithString("title", mcp.Description(params.WikiTitle)),
+		mcp.WithString("content", mcp.Required(), mcp.Description(params.WikiContent)),
+		mcp.WithString("message", mcp.Description(params.Message)),
 	)
 )
 

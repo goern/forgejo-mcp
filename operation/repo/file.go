@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"forgejo.org/forgejo/forgejo-mcp/operation/params"
 	"forgejo.org/forgejo/forgejo-mcp/pkg/forgejo"
 	"forgejo.org/forgejo/forgejo-mcp/pkg/log"
 	"forgejo.org/forgejo/forgejo-mcp/pkg/to"
@@ -22,48 +23,48 @@ const (
 var (
 	GetFileContentTool = mcp.NewTool(
 		GetFileToolName,
-		mcp.WithDescription("Get file Content and Metadata"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
-		mcp.WithString("ref", mcp.Required(), mcp.Description("ref can be branch/tag/commit")),
-		mcp.WithString("filePath", mcp.Required(), mcp.Description("file path")),
+		mcp.WithDescription("Get file content"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithString("ref", mcp.Required(), mcp.Description(params.Ref)),
+		mcp.WithString("filePath", mcp.Required(), mcp.Description(params.FilePath)),
 	)
 
 	CreateFileTool = mcp.NewTool(
 		CreateFileToolName,
 		mcp.WithDescription("Create file"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
-		mcp.WithString("filePath", mcp.Required(), mcp.Description("file path")),
-		mcp.WithString("content", mcp.Required(), mcp.Description("file content")),
-		mcp.WithString("message", mcp.Required(), mcp.Description("commit message")),
-		mcp.WithString("branch_name", mcp.Required(), mcp.Description("branch name")),
-		mcp.WithString("new_branch_name", mcp.Description("new branch name")),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithString("filePath", mcp.Required(), mcp.Description(params.FilePath)),
+		mcp.WithString("content", mcp.Required(), mcp.Description(params.Content)),
+		mcp.WithString("message", mcp.Required(), mcp.Description(params.Message)),
+		mcp.WithString("branch_name", mcp.Required(), mcp.Description(params.BranchName)),
+		mcp.WithString("new_branch_name", mcp.Description(params.NewBranchName)),
 	)
 
 	UpdateFileTool = mcp.NewTool(
 		UpdateFileToolName,
 		mcp.WithDescription("Update file"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
-		mcp.WithString("filePath", mcp.Required(), mcp.Description("file path")),
-		mcp.WithString("content", mcp.Required(), mcp.Description("file content")),
-		mcp.WithString("message", mcp.Required(), mcp.Description("commit message")),
-		mcp.WithString("branch_name", mcp.Required(), mcp.Description("branch name")),
-		mcp.WithString("sha", mcp.Required(), mcp.Description("file sha")),
-		mcp.WithString("new_branch_name", mcp.Description("new branch name")),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithString("filePath", mcp.Required(), mcp.Description(params.FilePath)),
+		mcp.WithString("content", mcp.Required(), mcp.Description(params.Content)),
+		mcp.WithString("message", mcp.Required(), mcp.Description(params.Message)),
+		mcp.WithString("branch_name", mcp.Required(), mcp.Description(params.BranchName)),
+		mcp.WithString("sha", mcp.Required(), mcp.Description(params.SHA)),
+		mcp.WithString("new_branch_name", mcp.Description(params.NewBranchName)),
 	)
 
 	DeleteFileTool = mcp.NewTool(
 		DeleteFileToolName,
 		mcp.WithDescription("Delete file"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
-		mcp.WithString("filePath", mcp.Required(), mcp.Description("file path")),
-		mcp.WithString("message", mcp.Required(), mcp.Description("commit message")),
-		mcp.WithString("branch_name", mcp.Required(), mcp.Description("branch name")),
-		mcp.WithString("sha", mcp.Required(), mcp.Description("file sha")),
-		mcp.WithString("new_branch_name", mcp.Description("new branch name")),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithString("filePath", mcp.Required(), mcp.Description(params.FilePath)),
+		mcp.WithString("message", mcp.Required(), mcp.Description(params.Message)),
+		mcp.WithString("branch_name", mcp.Required(), mcp.Description(params.BranchName)),
+		mcp.WithString("sha", mcp.Required(), mcp.Description(params.SHA)),
+		mcp.WithString("new_branch_name", mcp.Description(params.NewBranchName)),
 	)
 )
 

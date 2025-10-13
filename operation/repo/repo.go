@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2"
+	"forgejo.org/forgejo/forgejo-mcp/operation/params"
 	"forgejo.org/forgejo/forgejo-mcp/pkg/forgejo"
 	"forgejo.org/forgejo/forgejo-mcp/pkg/log"
 	"forgejo.org/forgejo/forgejo-mcp/pkg/ptr"
@@ -24,34 +25,34 @@ const (
 var (
 	CreateRepoTool = mcp.NewTool(
 		CreateRepoToolName,
-		mcp.WithDescription("Create repository"),
-		mcp.WithString("name", mcp.Required(), mcp.Description("Name of the repository to create")),
-		mcp.WithString("description", mcp.Description("Description of the repository to create")),
-		mcp.WithString("owner", mcp.Description("Owner/organization name for the repository")),
-		mcp.WithBoolean("private", mcp.Description("Whether the repository is private")),
-		mcp.WithString("issue_labels", mcp.Description("Issue Label set to use")),
-		mcp.WithBoolean("auto_init", mcp.Description("Whether the repository should be auto-intialized?")),
-		mcp.WithBoolean("template", mcp.Description("Whether the repository is template")),
-		mcp.WithString("gitignores", mcp.Description("Gitignores to use")),
-		mcp.WithString("license", mcp.Description("License to use")),
-		mcp.WithString("readme", mcp.Description("Readme of the repository to create")),
-		mcp.WithString("default_branch", mcp.Description("DefaultBranch of the repository (used when initializes and in template)")),
+		mcp.WithDescription("Create repo"),
+		mcp.WithString("name", mcp.Required(), mcp.Description("Repo name")),
+		mcp.WithString("description", mcp.Description(params.Description)),
+		mcp.WithString("owner", mcp.Description("Owner/org name")),
+		mcp.WithBoolean("private", mcp.Description(params.Private)),
+		mcp.WithString("issue_labels", mcp.Description("Issue label set")),
+		mcp.WithBoolean("auto_init", mcp.Description("Auto-initialize")),
+		mcp.WithBoolean("template", mcp.Description("Template repo")),
+		mcp.WithString("gitignores", mcp.Description("Gitignore templates")),
+		mcp.WithString("license", mcp.Description("License")),
+		mcp.WithString("readme", mcp.Description("README content")),
+		mcp.WithString("default_branch", mcp.Description("Default branch")),
 	)
 
 	ForkRepoTool = mcp.NewTool(
 		ForkRepoToolName,
-		mcp.WithDescription("Fork repository"),
-		mcp.WithString("user", mcp.Required(), mcp.Description("User name of the repository to fork")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("Repository name to fork")),
-		mcp.WithString("organization", mcp.Description("Organization name to fork")),
-		mcp.WithString("name", mcp.Description("Name of the forked repository")),
+		mcp.WithDescription("Fork repo"),
+		mcp.WithString("user", mcp.Required(), mcp.Description(params.User)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithString("organization", mcp.Description("Org name")),
+		mcp.WithString("name", mcp.Description("Fork name")),
 	)
 
 	ListMyReposTool = mcp.NewTool(
 		ListMyReposToolName,
-		mcp.WithDescription("List my repositories"),
-		mcp.WithNumber("page", mcp.Required(), mcp.Description("Page number"), mcp.DefaultNumber(1), mcp.Min(1)),
-		mcp.WithNumber("pageSize", mcp.Required(), mcp.Description("Page size number"), mcp.DefaultNumber(100), mcp.Min(1)),
+		mcp.WithDescription("List my repos"),
+		mcp.WithNumber("page", mcp.Required(), mcp.Description(params.Page), mcp.DefaultNumber(1), mcp.Min(1)),
+		mcp.WithNumber("limit", mcp.Required(), mcp.Description(params.Limit), mcp.DefaultNumber(100), mcp.Min(1)),
 	)
 )
 
@@ -154,14 +155,14 @@ func ListMyReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	if !ok {
 		page = 1
 	}
-	pageSize, ok := req.Params.Arguments["pageSize"].(float64)
+	limit, ok := req.Params.Arguments["limit"].(float64)
 	if !ok {
-		pageSize = 100
+		limit = 100
 	}
 	opt := forgejo_sdk.ListReposOptions{
 		ListOptions: forgejo_sdk.ListOptions{
 			Page:     int(page),
-			PageSize: int(pageSize),
+			PageSize: int(limit),
 		},
 	}
 	repos, _, err := forgejo.Client().ListMyRepos(opt)
