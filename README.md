@@ -107,6 +107,10 @@ The Forgejo MCP Server supports the following tools:
 |list_repo_issues|Issue|List all issues in a repository|
 |create_issue|Issue|Create a new issue|
 |create_issue_comment|Issue|Create a comment on an issue|
+|list_issue_comments|Issue|List all comments on an issue or pull request|
+|get_issue_comment|Issue|Get a specific comment by its ID|
+|edit_issue_comment|Issue|Edit an existing comment|
+|delete_issue_comment|Issue|Delete a comment|
 |get_pull_request_by_index|Pull Request|Get a pull request by its index|
 |list_repo_pull_requests|Pull Request|List all pull requests in a repository|
 |create_pull_request|Pull Request|Create a new pull request|
