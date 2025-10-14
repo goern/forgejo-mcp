@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"forgejo.org/forgejo/forgejo-mcp/operation/params"
 	"forgejo.org/forgejo/forgejo-mcp/pkg/forgejo"
 	"forgejo.org/forgejo/forgejo-mcp/pkg/log"
 	"forgejo.org/forgejo/forgejo-mcp/pkg/to"
@@ -22,27 +23,27 @@ var (
 	CreateBranchTool = mcp.NewTool(
 		CreateBranchToolName,
 		mcp.WithDescription("Create branch"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
-		mcp.WithString("branch", mcp.Required(), mcp.Description("Name of the branch to create")),
-		mcp.WithString("old_branch", mcp.Required(), mcp.Description("Name of the old branch to create from")),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithString("branch", mcp.Required(), mcp.Description(params.Branch)),
+		mcp.WithString("old_branch", mcp.Required(), mcp.Description(params.OldBranch)),
 	)
 
 	DeleteBranchTool = mcp.NewTool(
 		DeleteBranchToolName,
 		mcp.WithDescription("Delete branch"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
-		mcp.WithString("branch", mcp.Required(), mcp.Description("Name of the branch to delete")),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithString("branch", mcp.Required(), mcp.Description(params.Branch)),
 	)
 
 	ListBranchesTool = mcp.NewTool(
 		ListBranchesToolName,
 		mcp.WithDescription("List branches"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description("repository owner")),
-		mcp.WithString("repo", mcp.Required(), mcp.Description("repository name")),
-		mcp.WithNumber("page", mcp.Required(), mcp.Description("Page number"), mcp.DefaultNumber(1), mcp.Min(1)),
-		mcp.WithNumber("pageSize", mcp.Required(), mcp.Description("Page size number"), mcp.DefaultNumber(100), mcp.Min(1)),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("page", mcp.Required(), mcp.Description(params.Page), mcp.DefaultNumber(1), mcp.Min(1)),
+		mcp.WithNumber("limit", mcp.Required(), mcp.Description(params.Limit), mcp.DefaultNumber(100), mcp.Min(1)),
 	)
 )
 
@@ -97,15 +98,15 @@ func ListBranchesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 	if !ok {
 		page = 1
 	}
-	pageSize, ok := req.Params.Arguments["pageSize"].(float64)
+	limit, ok := req.Params.Arguments["limit"].(float64)
 	if !ok {
-		pageSize = 100
+		limit = 100
 	}
 
 	opt := forgejo_sdk.ListRepoBranchesOptions{
 		ListOptions: forgejo_sdk.ListOptions{
 			Page:     int(page),
-			PageSize: int(pageSize),
+			PageSize: int(limit),
 		},
 	}
 
