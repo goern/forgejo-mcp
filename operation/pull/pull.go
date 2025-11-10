@@ -3,6 +3,7 @@ package pull
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"forgejo.org/forgejo/forgejo-mcp/operation/params"
 	"forgejo.org/forgejo/forgejo-mcp/pkg/forgejo"
@@ -18,6 +19,7 @@ const (
 	GetPullRequestByIndexToolName = "get_pull_request_by_index"
 	ListRepoPullRequestsToolName  = "list_repo_pull_requests"
 	CreatePullRequestToolName     = "create_pull_request"
+	UpdatePullRequestToolName     = "update_pull_request"
 )
 
 var (
@@ -52,12 +54,26 @@ var (
 		mcp.WithString("title", mcp.Required(), mcp.Description(params.Title)),
 		mcp.WithString("body", mcp.Description(params.Body)),
 	)
+
+	UpdatePullRequestTool = mcp.NewTool(
+		UpdatePullRequestToolName,
+		mcp.WithDescription("Update pull request"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.PRIndex)),
+		mcp.WithString("title", mcp.Description(params.Title)),
+		mcp.WithString("body", mcp.Description(params.Body)),
+		mcp.WithString("base", mcp.Description(params.Base)),
+		mcp.WithString("assignee", mcp.Description("Assignee username")),
+		mcp.WithString("milestone", mcp.Description(params.Milestone)),
+	)
 )
 
 func RegisterTool(s *server.MCPServer) {
 	s.AddTool(GetPullRequestByIndexTool, GetPullRequestByIndexFn)
 	s.AddTool(ListRepoPullRequestsTool, ListRepoPullRequestsFn)
 	s.AddTool(CreatePullRequestTool, CreatePullRequestFn)
+	s.AddTool(UpdatePullRequestTool, UpdatePullRequestFn)
 }
 
 func GetPullRequestByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -133,6 +149,46 @@ func CreatePullRequestFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Cal
 	pr, _, err := forgejo.Client().CreatePullRequest(owner, repo, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("create pull request err: %v", err))
+	}
+	return to.TextResult(pr)
+}
+
+func UpdatePullRequestFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called UpdatePullRequestFn")
+	owner, _ := req.Params.Arguments["owner"].(string)
+	repo, _ := req.Params.Arguments["repo"].(string)
+	index, _ := req.Params.Arguments["index"].(float64)
+	title, _ := req.Params.Arguments["title"].(string)
+	body, _ := req.Params.Arguments["body"].(string)
+	base, _ := req.Params.Arguments["base"].(string)
+	assignee, _ := req.Params.Arguments["assignee"].(string)
+	milestone, _ := req.Params.Arguments["milestone"].(string)
+
+	opt := forgejo_sdk.EditPullRequestOption{}
+
+	if title != "" {
+		opt.Title = title
+	}
+	if body != "" {
+		opt.Body = body
+	}
+	if base != "" {
+		opt.Base = base
+	}
+	if assignee != "" {
+		opt.Assignee = assignee
+	}
+	if milestone != "" {
+		milestoneID, err := strconv.ParseInt(milestone, 10, 64)
+		if err != nil {
+			return to.ErrorResult(fmt.Errorf("invalid milestone ID: %v", err))
+		}
+		opt.Milestone = milestoneID
+	}
+
+	pr, _, err := forgejo.Client().EditPullRequest(owner, repo, int64(index), opt)
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("update pull request err: %v", err))
 	}
 	return to.TextResult(pr)
 }
