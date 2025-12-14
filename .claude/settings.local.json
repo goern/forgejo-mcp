@@ -1,0 +1,26 @@
+{
+  "includeCoAuthoredBy": false,
+  "permissions": {
+    "allow": [
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs",
+      "Bash(go doc:*)",
+      "Bash(go list:*)",
+      "WebFetch(domain:codeberg.org)",
+      "Bash(go build:*)",
+      "mcp__codeberg__get_issue_by_index",
+      "mcp__codeberg__create_issue_comment",
+      "WebSearch",
+      "WebFetch(domain:forgejo.org)",
+      "WebFetch(domain:docs.gitea.com)",
+      "WebFetch(domain:github.com)",
+      "mcp__codeberg__add_issue_labels",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "context7"
+  ]
+}

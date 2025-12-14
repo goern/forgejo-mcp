@@ -25,3 +25,4 @@ dist/
 .DS_Store
 Thumbs.db
 forgejo-mcp
+.envrc
