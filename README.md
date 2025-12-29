@@ -2,10 +2,17 @@
 
 **Forgejo MCP Server** is an integration plugin designed to connect Forgejo with Model Context Protocol (MCP) systems. This allows for seamless command execution and repository management through an MCP-compatible chat interface.
 
-## 🚧Installation
+## Installation
 
+### Install with Go (Recommended)
 
-### 🔧Build from Source
+```bash
+go install codeberg.org/goern/forgejo-mcp@latest
+```
+
+Ensure `$GOPATH/bin` (typically `~/go/bin`) is in your PATH.
+
+### Build from Source
 
 You can download the source code by cloning the repository using Git:
 

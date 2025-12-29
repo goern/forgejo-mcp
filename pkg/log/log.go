@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"forgejo.org/forgejo/forgejo-mcp/pkg/flag"
+	"codeberg.org/goern/forgejo-mcp/pkg/flag"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
