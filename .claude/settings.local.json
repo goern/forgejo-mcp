@@ -16,7 +16,14 @@
       "WebFetch(domain:github.com)",
       "mcp__codeberg__add_issue_labels",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(cat:*)",
+      "Bash(git log:*)",
+      "mcp__codeberg__list_issue_comments",
+      "Bash(go mod tidy:*)",
+      "Bash(./forgejo-mcp --help)",
+      "Bash(git push:*)",
+      "mcp__codeberg__create_pull_request"
     ]
   },
   "enableAllProjectMcpServers": true,
