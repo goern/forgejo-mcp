@@ -3,15 +3,15 @@ package operation
 import (
 	"fmt"
 
-	"forgejo.org/forgejo/forgejo-mcp/operation/issue"
-	"forgejo.org/forgejo/forgejo-mcp/operation/pull"
-	"forgejo.org/forgejo/forgejo-mcp/operation/repo"
-	"forgejo.org/forgejo/forgejo-mcp/operation/search"
-	"forgejo.org/forgejo/forgejo-mcp/operation/user"
-	"forgejo.org/forgejo/forgejo-mcp/operation/version"
-	"forgejo.org/forgejo/forgejo-mcp/pkg/flag"
-	"forgejo.org/forgejo/forgejo-mcp/pkg/forgejo"
-	"forgejo.org/forgejo/forgejo-mcp/pkg/log"
+	"codeberg.org/goern/forgejo-mcp/operation/issue"
+	"codeberg.org/goern/forgejo-mcp/operation/pull"
+	"codeberg.org/goern/forgejo-mcp/operation/repo"
+	"codeberg.org/goern/forgejo-mcp/operation/search"
+	"codeberg.org/goern/forgejo-mcp/operation/user"
+	"codeberg.org/goern/forgejo-mcp/operation/version"
+	"codeberg.org/goern/forgejo-mcp/pkg/flag"
+	"codeberg.org/goern/forgejo-mcp/pkg/forgejo"
+	"codeberg.org/goern/forgejo-mcp/pkg/log"
 
 	"github.com/mark3labs/mcp-go/server"
 )

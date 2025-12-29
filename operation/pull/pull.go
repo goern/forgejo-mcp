@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strconv"
 
-	"forgejo.org/forgejo/forgejo-mcp/operation/params"
-	"forgejo.org/forgejo/forgejo-mcp/pkg/forgejo"
-	"forgejo.org/forgejo/forgejo-mcp/pkg/log"
-	"forgejo.org/forgejo/forgejo-mcp/pkg/to"
+	"codeberg.org/goern/forgejo-mcp/operation/params"
+	"codeberg.org/goern/forgejo-mcp/pkg/forgejo"
+	"codeberg.org/goern/forgejo-mcp/pkg/log"
+	"codeberg.org/goern/forgejo-mcp/pkg/to"
 
 	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2"
 	"github.com/mark3labs/mcp-go/mcp"
