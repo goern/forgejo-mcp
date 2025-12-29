@@ -1,3 +1,13 @@
+## [2.4.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.3.0...v2.4.0) (2025-12-29)
+
+### :sparkles: Features
+
+* enable `go install` support ([cf9f6d3](https://codeberg.org/goern/forgejo-mcp/commit/cf9f6d3a5bba2f1da6970123896a1198ebef31ae)), closes [#49](https://codeberg.org/goern/forgejo-mcp/issues/49)
+
+### :repeat: Chore
+
+* reconfig gitignore ([4e657b2](https://codeberg.org/goern/forgejo-mcp/commit/4e657b2e31e6261897b9d5bd43a47a9a565b83f6))
+
 ## [2.3.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.2.0...v2.3.0) (2025-12-29)
 
 ### :sparkles: Features
