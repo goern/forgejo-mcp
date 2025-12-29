@@ -1,50 +1,44 @@
 # Forgejo MCP Server
 
-**Forgejo MCP Server** is an integration plugin designed to connect Forgejo with Model Context Protocol (MCP) systems. This allows for seamless command execution and repository management through an MCP-compatible chat interface.
+Connect your AI assistant to Forgejo repositories. Manage issues, pull requests, files, and more through natural language.
 
-## Installation
+## What It Does
 
-### Install with Go (Recommended)
+Forgejo MCP Server is an integration plugin that connects Forgejo with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) systems. Once configured, you can interact with your Forgejo repositories through any MCP-compatible AI assistant like Claude, Cursor, or VS Code extensions.
+
+**Example commands you can use:**
+- "List all my repositories"
+- "Create an issue titled 'Bug in login page'"
+- "Show me open pull requests in my-org/my-repo"
+- "Get the contents of README.md from the main branch"
+
+## Quick Start
+
+### 1. Install
+
+**Option A: Using Go (Recommended)**
 
 ```bash
-go install codeberg.org/goern/forgejo-mcp@latest
+go install codeberg.org/goern/forgejo-mcp/v2@latest
 ```
 
 Ensure `$GOPATH/bin` (typically `~/go/bin`) is in your PATH.
 
-### Build from Source
+**Option B: Download Binary**
 
-You can download the source code by cloning the repository using Git:
+Download the latest release from the [releases page](https://codeberg.org/goern/forgejo-mcp/releases).
 
-```bash
-git clone https://codeberg.org/goern/forgejo-mcp.git
-```
+### 2. Get Your Access Token
 
-Before building, make sure you have the following installed:
+1. Log into your Forgejo instance
+2. Go to **Settings** → **Applications** → **Access Tokens**
+3. Create a new token with the permissions you need (repo, issue, etc.)
 
-- make
-- Golang (Go 1.24 or later recommended)
+### 3. Configure Your AI Assistant
 
-Then run:
+Add this to your MCP configuration file:
 
-```bash
-make build
-```
-
-### 📁Add to PATH
-
-After building, copy the binary forgejo-mcp to a directory included in your system's PATH. For example:
-
-```bash
-cp forgejo-mcp /usr/local/bin/
-```
-
-## 🚀Usage
-
-This example is for Cursor, you can also use plugins in VSCode.
-To configure the MCP server for Forgejo, add the following to your MCP configuration file:
-
-- **stdio mode**
+**For stdio mode** (most common):
 
 ```json
 {
@@ -53,11 +47,9 @@ To configure the MCP server for Forgejo, add the following to your MCP configura
       "command": "forgejo-mcp",
       "args": [
         "--transport", "stdio",
-        "--url", "https://forgejo.example.org"
-        // "--token", "<your personal access token>"
+        "--url", "https://your-forgejo-instance.org"
       ],
       "env": {
-        // "FORGEJO_URL": "https://forgejo.example.org",
         "FORGEJO_ACCESS_TOKEN": "<your personal access token>"
       }
     }
@@ -65,7 +57,7 @@ To configure the MCP server for Forgejo, add the following to your MCP configura
 }
 ```
 
-- **sse mode**
+**For SSE mode** (HTTP-based):
 
 ```json
 {
@@ -77,62 +69,103 @@ To configure the MCP server for Forgejo, add the following to your MCP configura
 }
 ```
 
-> [!NOTE]
-> You can provide your Forgejo URL and access token either as command-line arguments or environment variables.
-> Command-line arguments have the highest priority. Environment variables have been updated:
-> - Use `FORGEJO_URL` instead of the deprecated `GITEA_HOST`
-> - Use `FORGEJO_ACCESS_TOKEN` instead of the deprecated `GITEA_ACCESS_TOKEN`
-> - Use `FORGEJO_DEBUG` instead of the deprecated `GITEA_DEBUG`
->
-> The old `GITEA_*` variables are still supported for backward compatibility but will show deprecation warnings.
+When using SSE mode, start the server first:
 
-Once everything is set up, try typing the following in your MCP-compatible chatbox:
-
-```text
-list all my repositories
+```bash
+forgejo-mcp --transport sse --url https://your-forgejo-instance.org --token <your-token>
 ```
 
-## ✅Available Tools
+### 4. Start Using It
 
-The Forgejo MCP Server supports the following tools:
+Open your MCP-compatible AI assistant and try:
 
-|  Tool  |  Scope  | Description  |
-|:------:|:-------:|:------------:|
-|get_my_user_info|User|Get the information of the authenticated user|
-|create_repo|Repository|Create a new repository|
-|fork_repo|Repository|Fork a repository|
-|list_my_repos|Repository|List all repositories owned by the authenticated user|
-|create_branch|Branch|Create a new branch|
-|delete_branch|Branch|Delete a branch|
-|list_branches|Branch|List all branches in a repository|
-|list_repo_commits|Commit|List all commits in a repository|
-|get_file_content|File|Get the content and metadata of a file|
-|create_file|File|Create a new file|
-|update_file|File|Update an existing file|
-|delete_file|File|Delete a file|
-|get_issue_by_index|Issue|Get an issue by its index|
-|list_repo_issues|Issue|List all issues in a repository|
-|create_issue|Issue|Create a new issue|
-|create_issue_comment|Issue|Create a comment on an issue|
-|list_issue_comments|Issue|List all comments on an issue or pull request|
-|get_issue_comment|Issue|Get a specific comment by its ID|
-|edit_issue_comment|Issue|Edit an existing comment|
-|delete_issue_comment|Issue|Delete a comment|
-|get_pull_request_by_index|Pull Request|Get a pull request by its index|
-|list_repo_pull_requests|Pull Request|List all pull requests in a repository|
-|create_pull_request|Pull Request|Create a new pull request|
-|update_pull_request|Pull Request|Update an existing pull request|
-|search_users|User|Search for users|
-|search_org_teams|Organization|Search for teams in an organization|
-|search_repos|Repository|Search for repositories|
-|get_forgejo_mcp_server_version|Server|Get the version of the Forgejo MCP Server|
-
-## 🐛Debugging
-
-To enable debug mode, add the `-d` flag when running the Forgejo MCP Server with sse mode:
-
-```sh
-./forgejo-mcp --transport sse --url <forgejo-url> [--sse-port 8080] --token <your personal access token> --debug
+```
+List all my repositories
 ```
 
-Enjoy exploring and managing your Forgejo repositories via chat!
+## Available Tools
+
+| Tool | Description |
+|------|-------------|
+| **User** | |
+| `get_my_user_info` | Get information about the authenticated user |
+| `search_users` | Search for users |
+| **Repositories** | |
+| `list_my_repos` | List all repositories you own |
+| `create_repo` | Create a new repository |
+| `fork_repo` | Fork a repository |
+| `search_repos` | Search for repositories |
+| **Branches** | |
+| `list_branches` | List all branches in a repository |
+| `create_branch` | Create a new branch |
+| `delete_branch` | Delete a branch |
+| **Files** | |
+| `get_file_content` | Get the content of a file |
+| `create_file` | Create a new file |
+| `update_file` | Update an existing file |
+| `delete_file` | Delete a file |
+| **Commits** | |
+| `list_repo_commits` | List commits in a repository |
+| **Issues** | |
+| `list_repo_issues` | List issues in a repository |
+| `get_issue_by_index` | Get a specific issue |
+| `create_issue` | Create a new issue |
+| `add_issue_labels` | Add labels to an issue |
+| `update_issue` | Update an existing issue |
+| `issue_state_change` | Open or close an issue |
+| **Comments** | |
+| `list_issue_comments` | List comments on an issue or PR |
+| `get_issue_comment` | Get a specific comment |
+| `create_issue_comment` | Add a comment to an issue or PR |
+| `edit_issue_comment` | Edit a comment |
+| `delete_issue_comment` | Delete a comment |
+| **Pull Requests** | |
+| `list_repo_pull_requests` | List pull requests in a repository |
+| `get_pull_request_by_index` | Get a specific pull request |
+| `create_pull_request` | Create a new pull request |
+| `update_pull_request` | Update an existing pull request |
+| **Organizations** | |
+| `search_org_teams` | Search for teams in an organization |
+| **Server** | |
+| `get_forgejo_mcp_server_version` | Get the MCP server version |
+
+## Configuration Options
+
+You can configure the server using command-line arguments or environment variables:
+
+| CLI Argument | Environment Variable | Description |
+|--------------|---------------------|-------------|
+| `--url` | `FORGEJO_URL` | Your Forgejo instance URL |
+| `--token` | `FORGEJO_ACCESS_TOKEN` | Your personal access token |
+| `--debug` | `FORGEJO_DEBUG` | Enable debug mode |
+| `--transport` | - | Transport mode: `stdio` or `sse` |
+| `--sse-port` | - | Port for SSE mode (default: 8080) |
+
+Command-line arguments take priority over environment variables.
+
+## Troubleshooting
+
+**Enable debug mode** to see detailed logs:
+
+```bash
+forgejo-mcp --transport sse --url <url> --token <token> --debug
+```
+
+Or set the environment variable:
+
+```bash
+export FORGEJO_DEBUG=true
+```
+
+## Getting Help
+
+- [Report issues](https://codeberg.org/goern/forgejo-mcp/issues)
+- [View source code](https://codeberg.org/goern/forgejo-mcp)
+
+## For Developers
+
+See [DEVELOPER.md](DEVELOPER.md) for build instructions, architecture overview, and contribution guidelines.
+
+## License
+
+This project is open source. See the repository for license details.
