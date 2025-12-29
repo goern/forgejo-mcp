@@ -1,7 +1,7 @@
 package main
 
 import (
-	"codeberg.org/goern/forgejo-mcp/cmd"
+	"codeberg.org/goern/forgejo-mcp/v2/cmd"
 )
 
 var (

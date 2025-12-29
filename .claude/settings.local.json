@@ -23,7 +23,8 @@
       "Bash(go mod tidy:*)",
       "Bash(./forgejo-mcp --help)",
       "Bash(git push:*)",
-      "mcp__codeberg__create_pull_request"
+      "mcp__codeberg__create_pull_request",
+      "Bash(match major version\"\n\nUpdated go.mod and all internal imports to use\ncodeberg.org/goern/forgejo-mcp/v2\nEOF\n\\)\")"
     ]
   },
   "enableAllProjectMcpServers": true,

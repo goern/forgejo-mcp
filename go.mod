@@ -1,4 +1,4 @@
-module codeberg.org/goern/forgejo-mcp
+module codeberg.org/goern/forgejo-mcp/v2
 
 go 1.24.0
 

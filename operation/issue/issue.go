@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"codeberg.org/goern/forgejo-mcp/operation/params"
-	"codeberg.org/goern/forgejo-mcp/pkg/forgejo"
-	"codeberg.org/goern/forgejo-mcp/pkg/log"
-	"codeberg.org/goern/forgejo-mcp/pkg/to"
+	"codeberg.org/goern/forgejo-mcp/v2/operation/params"
+	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
+	"codeberg.org/goern/forgejo-mcp/v2/pkg/log"
+	"codeberg.org/goern/forgejo-mcp/v2/pkg/to"
 
 	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2"
 	"github.com/mark3labs/mcp-go/mcp"

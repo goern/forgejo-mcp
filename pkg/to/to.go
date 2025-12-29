@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"codeberg.org/goern/forgejo-mcp/pkg/log"
+	"codeberg.org/goern/forgejo-mcp/v2/pkg/log"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
