@@ -6,6 +6,7 @@ gitea-mcp.exe
 # Build output
 build/
 dist/
+forgejo-mcp
 
 # Environment variables
 .env
@@ -13,6 +14,7 @@ dist/
 .env.development.local
 .env.test.local
 .env.production.local
+.envrc
 
 # IDE and editor files
 .idea/
@@ -24,5 +26,6 @@ dist/
 # OS files
 .DS_Store
 Thumbs.db
-forgejo-mcp
-.envrc
+
+# Claude Code settings
+.claude/settings.local.json
