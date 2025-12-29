@@ -1,3 +1,42 @@
+## [2.3.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.2.0...v2.3.0) (2025-12-29)
+
+### :sparkles: Features
+
+* **issue:** add comment management operations ([708392b](https://codeberg.org/goern/forgejo-mcp/commit/708392b0f4293cc73dcbecdcab90bc4bba9b656a))
+* **pull:** add update_pull_request tool ([81fb6ac](https://codeberg.org/goern/forgejo-mcp/commit/81fb6ac83147c89245ab4400395f78b975dae1d1))
+
+### :bug: Fixes
+
+* release configuration ([193029c](https://codeberg.org/goern/forgejo-mcp/commit/193029cf9ff95a0c1718b338143d7730c6a3e916))
+
+### :memo: Documentation
+
+* add projects support plan and AI agent configuration ([c98ee59](https://codeberg.org/goern/forgejo-mcp/commit/c98ee59c29a67d07a81f44e8687e8143e4bbb01f)), closes [#42](https://codeberg.org/goern/forgejo-mcp/issues/42)
+* add wiki support implementation plan ([79d13bb](https://codeberg.org/goern/forgejo-mcp/commit/79d13bbb5458b3456016f123c196fa480a0a8cc7))
+
+### :zap: Refactor
+
+* **mcp:** optimize tool definitions for token efficiency ([06d0ece](https://codeberg.org/goern/forgejo-mcp/commit/06d0ece1103b177dff6ef49115655b0e370eb376))
+
+### :repeat: Chore
+
+* **deps:** update alpine:edge docker digest to ea71a03 ([be13f1f](https://codeberg.org/goern/forgejo-mcp/commit/be13f1fa9b38c129f8d68650b8e5cca623bc595f))
+* **deps:** update golang:1.25-alpine docker digest to 06cdd34 ([f0df0a3](https://codeberg.org/goern/forgejo-mcp/commit/f0df0a371d3e734e2a6a71916570b763a74fcc67))
+* **deps:** update golang:1.25-alpine docker digest to 182059d ([c436e8a](https://codeberg.org/goern/forgejo-mcp/commit/c436e8abfc030bb2ff0eb7c6746eb0c465894949))
+* **deps:** update golang:1.25-alpine docker digest to 2611181 ([ad1add3](https://codeberg.org/goern/forgejo-mcp/commit/ad1add302b65ea57fc36c8eec2bc4a78957100de))
+* **deps:** update golang:1.25-alpine docker digest to 352f1ef ([48c9080](https://codeberg.org/goern/forgejo-mcp/commit/48c90805ef617f9f2e8f85f241bab88844e29c22))
+* **deps:** update golang:1.25-alpine docker digest to 3587db7 ([1999fd6](https://codeberg.org/goern/forgejo-mcp/commit/1999fd6566c212bc5d728c99a58518c31974f302))
+* **deps:** update golang:1.25-alpine docker digest to 6104e2b ([4f5225b](https://codeberg.org/goern/forgejo-mcp/commit/4f5225b091e40dc715f8b216cc97395060b17760))
+* **deps:** update golang:1.25-alpine docker digest to 7256733 ([da02a42](https://codeberg.org/goern/forgejo-mcp/commit/da02a426062684df4167897a5e0f6fc36328d6fe))
+* **deps:** update golang:1.25-alpine docker digest to 8280f72 ([1353798](https://codeberg.org/goern/forgejo-mcp/commit/13537983dad77d5756e160e3b62af7ccf2b2f91c))
+* **deps:** update golang:1.25-alpine docker digest to 8b6b77a ([cbbaeb9](https://codeberg.org/goern/forgejo-mcp/commit/cbbaeb95139ee185a4e01a5132db3246db9a22a5))
+* **deps:** update golang:1.25-alpine docker digest to a86c313 ([dceb9f5](https://codeberg.org/goern/forgejo-mcp/commit/dceb9f56e6a95e577eeeb0104338080b348fc910))
+* **deps:** update golang:1.25-alpine docker digest to ac09a5f ([44ab927](https://codeberg.org/goern/forgejo-mcp/commit/44ab927a296ad03e9823c12faa67a8fb695c0631))
+* **deps:** update golang:1.25-alpine docker digest to aee43c3 ([7ec667b](https://codeberg.org/goern/forgejo-mcp/commit/7ec667bf38c7b59df3effabfff823466b53c35e7))
+* **deps:** update golang:1.25-alpine docker digest to d3f0cf7 ([8d32231](https://codeberg.org/goern/forgejo-mcp/commit/8d32231338c0c9fc7370c8db8190a257c5f3a76a))
+* **deps:** update golang:1.25-alpine docker digest to ecb8038 ([c6ec90d](https://codeberg.org/goern/forgejo-mcp/commit/c6ec90d023a57e56ad56b2a48cc7c2d1d256e1de))
+* remove unused roo configuration ([4121a50](https://codeberg.org/goern/forgejo-mcp/commit/4121a50f9358e4ea3b5bb3a57e9c438fc7957769))
+
 ## [2.2.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.1.0...v2.2.0) (2025-10-07)
 
 ### :sparkles: Features
