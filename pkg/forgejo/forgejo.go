@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"codeberg.org/goern/forgejo-mcp/pkg/flag"
-	"codeberg.org/goern/forgejo-mcp/pkg/log"
+	"codeberg.org/goern/forgejo-mcp/v2/pkg/flag"
+	"codeberg.org/goern/forgejo-mcp/v2/pkg/log"
 
 	"codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2"
 )

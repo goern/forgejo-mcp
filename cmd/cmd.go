@@ -7,9 +7,9 @@ import (
 	"net/url"
 	"os"
 
-	"codeberg.org/goern/forgejo-mcp/operation"
-	flagPkg "codeberg.org/goern/forgejo-mcp/pkg/flag"
-	"codeberg.org/goern/forgejo-mcp/pkg/log"
+	"codeberg.org/goern/forgejo-mcp/v2/operation"
+	flagPkg "codeberg.org/goern/forgejo-mcp/v2/pkg/flag"
+	"codeberg.org/goern/forgejo-mcp/v2/pkg/log"
 )
 
 var (
