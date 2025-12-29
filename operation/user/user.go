@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"forgejo.org/forgejo/forgejo-mcp/pkg/forgejo"
-	"forgejo.org/forgejo/forgejo-mcp/pkg/log"
-	"forgejo.org/forgejo/forgejo-mcp/pkg/to"
+	"codeberg.org/goern/forgejo-mcp/pkg/forgejo"
+	"codeberg.org/goern/forgejo-mcp/pkg/log"
+	"codeberg.org/goern/forgejo-mcp/pkg/to"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
