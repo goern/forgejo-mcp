@@ -1,3 +1,9 @@
+## [2.4.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.4.0...v2.4.1) (2025-12-29)
+
+### :bug: Fixes
+
+* add /v2 suffix to module path for go install compatibility ([2e2604d](https://codeberg.org/goern/forgejo-mcp/commit/2e2604dd73465d57b05682775b320b544245d98e))
+
 ## [2.4.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.3.0...v2.4.0) (2025-12-29)
 
 ### :sparkles: Features
