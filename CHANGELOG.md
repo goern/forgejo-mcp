@@ -1,3 +1,14 @@
+## [2.4.2](https://codeberg.org/goern/forgejo-mcp/compare/v2.4.1...v2.4.2) (2025-12-30)
+
+### :bug: Fixes
+
+* add build tag to wiki package for Nix build compatibility ([7b7536a](https://codeberg.org/goern/forgejo-mcp/commit/7b7536a10d813cc9fac126b80b30508c1bf72d05)), closes [#47](https://codeberg.org/goern/forgejo-mcp/issues/47)
+
+### :memo: Documentation
+
+* restructure documentation for users and developers ([7e527e0](https://codeberg.org/goern/forgejo-mcp/commit/7e527e0acfe5dc7dd36079a1dae9a898139f6aa0))
+* simplify AGENTS.md and reference DEVELOPER.md ([e294aa3](https://codeberg.org/goern/forgejo-mcp/commit/e294aa316276a7af2036a91f61a128b914d50a1a))
+
 ## [2.4.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.4.0...v2.4.1) (2025-12-29)
 
 ### :bug: Fixes
