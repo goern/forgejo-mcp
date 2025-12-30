@@ -292,10 +292,17 @@ func (c *Client) DeleteWikiPage(owner, repo, pageName string) (*Response, error)
 
 ---
 
-## Temporary Workaround
+## Current Workaround
 
-Until the SDK is updated, the current `operation/wiki/wiki.go` in forgejo-mcp cannot build. Options:
+The `operation/wiki/wiki.go` file uses a Go build tag to exclude it from default builds:
 
-1. **Comment out wiki.go** - Disable wiki tools temporarily
-2. **Implement raw HTTP calls** - Similar to gitea-mcp approach (more work, but unblocks immediately)
-3. **Wait for SDK** - Cleanest approach but blocks wiki functionality
+```go
+//go:build wiki
+```
+
+This means:
+- **Default builds** (`go build ./...`) skip the wiki package entirely
+- **Nix builds** work without special configuration
+- **Wiki-enabled builds** require explicit tag: `go build -tags wiki ./...`
+
+When the upstream forgejo-sdk adds wiki support, remove the build tag and register wiki tools in `operation/operation.go`.

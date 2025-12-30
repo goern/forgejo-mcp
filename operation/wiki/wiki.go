@@ -1,3 +1,5 @@
+//go:build wiki
+
 package wiki
 
 import (
