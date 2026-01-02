@@ -32,29 +32,27 @@ var (
 
 func ListRepoCommitsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called ListRepoCommitsFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	path, ok := req.Params.Arguments["path"].(string)
-	pathStr := ""
-	if ok && path != "" {
-		pathStr = path
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
-	sha, ok := req.Params.Arguments["sha"].(string)
-	shaStr := ""
-	if ok && sha != "" {
-		shaStr = sha
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
-	page, ok := req.Params.Arguments["page"].(float64)
-	if !ok {
-		page = 1
+	path := req.GetString("path", "")
+	sha := req.GetString("sha", "")
+	page, err := req.RequireFloat("page")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
-	limit, ok := req.Params.Arguments["limit"].(float64)
-	if !ok {
-		limit = 100
+	limit, err := req.RequireFloat("limit")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
 	opt := forgejo_sdk.ListCommitOptions{
-		Path: pathStr,
-		SHA:  shaStr,
+		Path: path,
+		SHA:  sha,
 		ListOptions: forgejo_sdk.ListOptions{
 			Page:     int(page),
 			PageSize: int(limit),

@@ -70,18 +70,21 @@ var (
 
 func GetFileContentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called GetFileFn")
-	owner, ok := req.Params.Arguments["owner"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("owner is required"))
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
-	repo, ok := req.Params.Arguments["repo"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("repo is required"))
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
-	ref, _ := req.Params.Arguments["ref"].(string)
-	filePath, ok := req.Params.Arguments["filePath"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("filePath is required"))
+	ref, err := req.RequireString("ref")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	filePath, err := req.RequireString("filePath")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
 	content, _, err := forgejo.Client().GetContents(owner, repo, ref, filePath)
 	if err != nil {
@@ -92,16 +95,31 @@ func GetFileContentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 
 func CreateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called CreateFileFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	filePath, _ := req.Params.Arguments["filePath"].(string)
-	content, _ := req.Params.Arguments["content"].(string)
-	message, _ := req.Params.Arguments["message"].(string)
-	branchName, _ := req.Params.Arguments["branch_name"].(string)
-	newBranchName, ok := req.Params.Arguments["new_branch_name"].(string)
-	if !ok || newBranchName == "" {
-		newBranchName = ""
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	filePath, err := req.RequireString("filePath")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	content, err := req.RequireString("content")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	message, err := req.RequireString("message")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	branchName, err := req.RequireString("branch_name")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	newBranchName := req.GetString("new_branch_name", "")
 	opt := forgejo_sdk.CreateFileOptions{
 		FileOptions: forgejo_sdk.FileOptions{
 			Message:       message,
@@ -119,17 +137,35 @@ func CreateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 
 func UpdateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called UpdateFileFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	filePath, _ := req.Params.Arguments["filePath"].(string)
-	content, _ := req.Params.Arguments["content"].(string)
-	message, _ := req.Params.Arguments["message"].(string)
-	branchName, _ := req.Params.Arguments["branch_name"].(string)
-	sha, _ := req.Params.Arguments["sha"].(string)
-	newBranchName, ok := req.Params.Arguments["new_branch_name"].(string)
-	if !ok || newBranchName == "" {
-		newBranchName = ""
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	filePath, err := req.RequireString("filePath")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	content, err := req.RequireString("content")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	message, err := req.RequireString("message")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	branchName, err := req.RequireString("branch_name")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	sha, err := req.RequireString("sha")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	newBranchName := req.GetString("new_branch_name", "")
 	opt := forgejo_sdk.UpdateFileOptions{
 		FileOptions: forgejo_sdk.FileOptions{
 			Message:       message,
@@ -148,23 +184,29 @@ func UpdateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 
 func DeleteFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called DeleteFileFn")
-	owner, ok := req.Params.Arguments["owner"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("owner is required"))
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
-	repo, ok := req.Params.Arguments["repo"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("repo is required"))
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
-	filePath, ok := req.Params.Arguments["filePath"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("filePath is required"))
+	filePath, err := req.RequireString("filePath")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
-	message, _ := req.Params.Arguments["message"].(string)
-	branchName, _ := req.Params.Arguments["branch_name"].(string)
-	sha, ok := req.Params.Arguments["sha"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("sha is required"))
+	message, err := req.RequireString("message")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	branchName, err := req.RequireString("branch_name")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	sha, err := req.RequireString("sha")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
 	opt := forgejo_sdk.DeleteFileOptions{
 		FileOptions: forgejo_sdk.FileOptions{
@@ -173,7 +215,7 @@ func DeleteFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 		},
 		SHA: sha,
 	}
-	_, err := forgejo.Client().DeleteFile(owner, repo, filePath, opt)
+	_, err = forgejo.Client().DeleteFile(owner, repo, filePath, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("delete file err: %v", err))
 	}

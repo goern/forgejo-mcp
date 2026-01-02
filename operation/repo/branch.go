@@ -49,21 +49,24 @@ var (
 
 func CreateBranchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called CreateBranchFn")
-	owner, ok := req.Params.Arguments["owner"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("owner is required"))
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
-	repo, ok := req.Params.Arguments["repo"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("repo is required"))
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
-	branch, ok := req.Params.Arguments["branch"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("branch is required"))
+	branch, err := req.RequireString("branch")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
-	oldBranch, _ := req.Params.Arguments["old_branch"].(string)
+	oldBranch, err := req.RequireString("old_branch")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
 
-	_, _, err := forgejo.Client().CreateBranch(owner, repo, forgejo_sdk.CreateBranchOption{
+	_, _, err = forgejo.Client().CreateBranch(owner, repo, forgejo_sdk.CreateBranchOption{
 		BranchName:    branch,
 		OldBranchName: oldBranch,
 	})
@@ -76,9 +79,18 @@ func CreateBranchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 
 func DeleteBranchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called DeleteBranchFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	branch, _ := req.Params.Arguments["branch"].(string)
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	branch, err := req.RequireString("branch")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
 
 	success, _, err := forgejo.Client().DeleteRepoBranch(owner, repo, branch)
 	if err != nil {
@@ -92,15 +104,21 @@ func DeleteBranchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 
 func ListBranchesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called ListBranchesFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	page, ok := req.Params.Arguments["page"].(float64)
-	if !ok {
-		page = 1
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
-	limit, ok := req.Params.Arguments["limit"].(float64)
-	if !ok {
-		limit = 100
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	page, err := req.RequireFloat("page")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	limit, err := req.RequireFloat("limit")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
 
 	opt := forgejo_sdk.ListRepoBranchesOptions{
