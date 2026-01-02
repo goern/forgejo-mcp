@@ -29,7 +29,6 @@ const (
 	GetIssueCommentToolName    = "get_issue_comment"
 	EditIssueCommentToolName   = "edit_issue_comment"
 	DeleteIssueCommentToolName = "delete_issue_comment"
-	ListRepoLabelsToolName     = "list_repo_labels"
 )
 
 var (
@@ -138,15 +137,6 @@ var (
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithNumber("comment_id", mcp.Required(), mcp.Description(params.CommentID)),
 	)
-
-	ListRepoLabelsTool = mcp.NewTool(
-		ListRepoLabelsToolName,
-		mcp.WithDescription("List all repository labels"),
-		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
-		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
-		mcp.WithNumber("page", mcp.Description(params.Page), mcp.DefaultNumber(1)),
-		mcp.WithNumber("limit", mcp.Description(params.Limit), mcp.DefaultNumber(50)),
-	)
 )
 
 func RegisterTool(s *server.MCPServer) {
@@ -161,7 +151,6 @@ func RegisterTool(s *server.MCPServer) {
 	s.AddTool(GetIssueCommentTool, GetIssueCommentFn)
 	s.AddTool(EditIssueCommentTool, EditIssueCommentFn)
 	s.AddTool(DeleteIssueCommentTool, DeleteIssueCommentFn)
-	s.AddTool(ListRepoLabelsTool, ListRepoLabelsFn)
 }
 
 func GetIssueByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -452,31 +441,4 @@ func DeleteIssueCommentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 		return to.ErrorResult(fmt.Errorf("delete issue comment err: %v", err))
 	}
 	return to.TextResult("Delete comment success")
-}
-
-func ListRepoLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	log.Debugf("Called ListRepoLabelsFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	page, ok := req.Params.Arguments["page"].(float64)
-	if !ok {
-		page = 1
-	}
-	limit, ok := req.Params.Arguments["limit"].(float64)
-	if !ok {
-		limit = 50
-	}
-
-	opt := forgejo_sdk.ListLabelsOptions{
-		ListOptions: forgejo_sdk.ListOptions{
-			Page:     int(page),
-			PageSize: int(limit),
-		},
-	}
-
-	labels, _, err := forgejo.Client().ListRepoLabels(owner, repo, opt)
-	if err != nil {
-		return to.ErrorResult(fmt.Errorf("list repo labels err: %v", err))
-	}
-	return to.TextResult(labels)
 }

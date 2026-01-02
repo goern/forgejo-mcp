@@ -17,9 +17,10 @@ import (
 )
 
 const (
-	CreateRepoToolName  = "create_repo"
-	ForkRepoToolName    = "fork_repo"
-	ListMyReposToolName = "list_my_repos"
+	CreateRepoToolName     = "create_repo"
+	ForkRepoToolName       = "fork_repo"
+	ListMyReposToolName    = "list_my_repos"
+	ListRepoLabelsToolName = "list_repo_labels"
 )
 
 var (
@@ -54,12 +55,22 @@ var (
 		mcp.WithNumber("page", mcp.Required(), mcp.Description(params.Page), mcp.DefaultNumber(1), mcp.Min(1)),
 		mcp.WithNumber("limit", mcp.Required(), mcp.Description(params.Limit), mcp.DefaultNumber(100), mcp.Min(1)),
 	)
+
+	ListRepoLabelsTool = mcp.NewTool(
+		ListRepoLabelsToolName,
+		mcp.WithDescription("List all repository labels"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("page", mcp.Description(params.Page), mcp.DefaultNumber(1)),
+		mcp.WithNumber("limit", mcp.Description(params.Limit), mcp.DefaultNumber(50)),
+	)
 )
 
 func RegisterTool(s *server.MCPServer) {
 	s.AddTool(CreateRepoTool, CreateRepoFn)
 	s.AddTool(ForkRepoTool, ForkRepoFn)
 	s.AddTool(ListMyReposTool, ListMyReposFn)
+	s.AddTool(ListRepoLabelsTool, ListRepoLabelsFn)
 
 	// File
 	s.AddTool(GetFileContentTool, GetFileContentFn)
@@ -171,4 +182,31 @@ func ListMyReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	}
 
 	return to.TextResult(repos)
+}
+
+func ListRepoLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called ListRepoLabelsFn")
+	owner, _ := req.Params.Arguments["owner"].(string)
+	repo, _ := req.Params.Arguments["repo"].(string)
+	page, ok := req.Params.Arguments["page"].(float64)
+	if !ok {
+		page = 1
+	}
+	limit, ok := req.Params.Arguments["limit"].(float64)
+	if !ok {
+		limit = 50
+	}
+
+	opt := forgejo_sdk.ListLabelsOptions{
+		ListOptions: forgejo_sdk.ListOptions{
+			Page:     int(page),
+			PageSize: int(limit),
+		},
+	}
+
+	labels, _, err := forgejo.Client().ListRepoLabels(owner, repo, opt)
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("list repo labels err: %v", err))
+	}
+	return to.TextResult(labels)
 }

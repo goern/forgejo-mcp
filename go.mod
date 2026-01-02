@@ -4,8 +4,8 @@ go 1.24.0
 
 require (
 	codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2 v2.0.0
-	github.com/mark3labs/mcp-go v0.17.0
-	go.uber.org/zap v1.27.0
+	github.com/mark3labs/mcp-go v0.43.2
+	go.uber.org/zap v1.27.1
 )
 
 require (
