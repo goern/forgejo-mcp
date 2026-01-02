@@ -59,9 +59,4 @@ const (
 	// Misc parameters
 	Description = "Description"
 	Private     = "Private repo"
-
-	// Label parameters
-	LabelID    = "Label ID"
-	LabelName  = "Label name"
-	LabelColor = "Label color"
 )
