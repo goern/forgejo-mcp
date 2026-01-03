@@ -25,6 +25,7 @@ const (
 	UpdateIssueToolName           = "update_issue"
 	AddIssueLabelsToolName        = "add_issue_labels"
 	ReplaceIssueLabelsToolName    = "replace_issue_labels"
+	DeleteIssueLabelToolName      = "delete_issue_label"
 	IssueStateChangeToolName      = "issue_state_change"
 	ListIssueCommentsToolName     = "list_issue_comments"
 	GetIssueCommentToolName       = "get_issue_comment"
@@ -102,6 +103,15 @@ var (
 		mcp.WithString("labels", mcp.Required(), mcp.Description("Label IDs (comma-separated)")),
 	)
 
+	DeleteIssueLabelTool = mcp.NewTool(
+		DeleteIssueLabelToolName,
+		mcp.WithDescription("Remove a label from an issue"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.Index)),
+		mcp.WithNumber("id", mcp.Required(), mcp.Description("Label ID")),
+	)
+
 	IssueStateChangeTool = mcp.NewTool(
 		IssueStateChangeToolName,
 		mcp.WithDescription("Change issue state"),
@@ -157,6 +167,7 @@ func RegisterTool(s *server.MCPServer) {
 	s.AddTool(UpdateIssueTool, UpdateIssueFn)
 	s.AddTool(AddIssueLabelsTools, AddIssueLabelsFn)
 	s.AddTool(ReplaceIssueLabelsTool, ReplaceIssueLabelsFn)
+	s.AddTool(DeleteIssueLabelTool, DeleteIssueLabelFn)
 	s.AddTool(IssueStateChangeTool, IssueStateChangeFn)
 	s.AddTool(ListIssueCommentsTool, ListIssueCommentsFn)
 	s.AddTool(GetIssueCommentTool, GetIssueCommentFn)
@@ -587,6 +598,38 @@ func ReplaceIssueLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	}
 
 	// Fetch updated issue to return with new labels
+	issue, _, err := forgejo.Client().GetIssue(owner, repo, int64(index))
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("get updated issue err: %v", err))
+	}
+	return to.TextResult(issue)
+}
+
+func DeleteIssueLabelFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called DeleteIssueLabelFn")
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	index, err := req.RequireFloat("index")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	id, err := req.RequireFloat("id")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+
+	_, err = forgejo.Client().DeleteIssueLabel(owner, repo, int64(index), int64(id))
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("delete issue label err: %v", err))
+	}
+
+	// Fetch updated issue to return without the removed label
 	issue, _, err := forgejo.Client().GetIssue(owner, repo, int64(index))
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get updated issue err: %v", err))
