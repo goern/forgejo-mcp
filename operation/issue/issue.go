@@ -18,17 +18,18 @@ import (
 )
 
 const (
-	GetIssueByIndexToolName    = "get_issue_by_index"
-	ListRepoIssuesToolName     = "list_repo_issues"
-	CreateIssueToolName        = "create_issue"
-	CreateIssueCommentToolName = "create_issue_comment"
-	UpdateIssueToolName        = "update_issue"
-	AddIssueLabelsToolName     = "add_issue_labels"
-	IssueStateChangeToolName   = "issue_state_change"
-	ListIssueCommentsToolName  = "list_issue_comments"
-	GetIssueCommentToolName    = "get_issue_comment"
-	EditIssueCommentToolName   = "edit_issue_comment"
-	DeleteIssueCommentToolName = "delete_issue_comment"
+	GetIssueByIndexToolName       = "get_issue_by_index"
+	ListRepoIssuesToolName        = "list_repo_issues"
+	CreateIssueToolName           = "create_issue"
+	CreateIssueCommentToolName    = "create_issue_comment"
+	UpdateIssueToolName           = "update_issue"
+	AddIssueLabelsToolName        = "add_issue_labels"
+	ReplaceIssueLabelsToolName    = "replace_issue_labels"
+	IssueStateChangeToolName      = "issue_state_change"
+	ListIssueCommentsToolName     = "list_issue_comments"
+	GetIssueCommentToolName       = "get_issue_comment"
+	EditIssueCommentToolName      = "edit_issue_comment"
+	DeleteIssueCommentToolName    = "delete_issue_comment"
 )
 
 var (
@@ -92,6 +93,15 @@ var (
 		mcp.WithString("labels", mcp.Required(), mcp.Description("Labels to add (comma-separated)")),
 	)
 
+	ReplaceIssueLabelsTool = mcp.NewTool(
+		ReplaceIssueLabelsToolName,
+		mcp.WithDescription("Replace all labels on an issue"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.Index)),
+		mcp.WithString("labels", mcp.Required(), mcp.Description("Label IDs (comma-separated)")),
+	)
+
 	IssueStateChangeTool = mcp.NewTool(
 		IssueStateChangeToolName,
 		mcp.WithDescription("Change issue state"),
@@ -146,6 +156,7 @@ func RegisterTool(s *server.MCPServer) {
 	s.AddTool(CreateIssueCommentTool, CreateIssueCommentFn)
 	s.AddTool(UpdateIssueTool, UpdateIssueFn)
 	s.AddTool(AddIssueLabelsTools, AddIssueLabelsFn)
+	s.AddTool(ReplaceIssueLabelsTool, ReplaceIssueLabelsFn)
 	s.AddTool(IssueStateChangeTool, IssueStateChangeFn)
 	s.AddTool(ListIssueCommentsTool, ListIssueCommentsFn)
 	s.AddTool(GetIssueCommentTool, GetIssueCommentFn)
@@ -534,4 +545,51 @@ func DeleteIssueCommentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 		return to.ErrorResult(fmt.Errorf("delete issue comment err: %v", err))
 	}
 	return to.TextResult("Delete comment success")
+}
+
+func ReplaceIssueLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called ReplaceIssueLabelsFn")
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	index, err := req.RequireFloat("index")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	labels, err := req.RequireString("labels")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+
+	// Parse comma-separated label IDs
+	labelIDs := []int64{}
+	for _, labelStr := range strings.Split(labels, ",") {
+		labelStr = strings.TrimSpace(labelStr)
+		labelID, err := strconv.ParseInt(labelStr, 10, 64)
+		if err != nil {
+			return to.ErrorResult(fmt.Errorf("invalid label ID '%s': %v", labelStr, err))
+		}
+		labelIDs = append(labelIDs, labelID)
+	}
+
+	opt := forgejo_sdk.IssueLabelsOption{
+		Labels: labelIDs,
+	}
+
+	_, _, err = forgejo.Client().ReplaceIssueLabels(owner, repo, int64(index), opt)
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("replace issue labels err: %v", err))
+	}
+
+	// Fetch updated issue to return with new labels
+	issue, _, err := forgejo.Client().GetIssue(owner, repo, int64(index))
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("get updated issue err: %v", err))
+	}
+	return to.TextResult(issue)
 }
