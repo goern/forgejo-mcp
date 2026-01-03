@@ -57,8 +57,8 @@ func RegisterTool(s *server.MCPServer) {
 
 func SearchUserFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	// Create a search query for dummy implementation
-	keyword, _ := req.Params.Arguments["keyword"].(string)
-	
+	keyword := req.GetString("keyword", "")
+
 	// Create a basic search option with just a keyword
 	opt := forgejo_sdk.SearchUsersOption{
 		KeyWord: keyword,
@@ -75,13 +75,13 @@ func SearchUserFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 func SearchOrgTeamsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	// Create basic search teams options
 	log.Debugf("Called SearchOrgTeamsFn")
-	org, ok := req.Params.Arguments["org"].(string)
-	if !ok {
-		return to.ErrorResult(fmt.Errorf("org name is required"))
+	org, err := req.RequireString("org")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
 
-	keyword, _ := req.Params.Arguments["keyword"].(string)
-	
+	keyword := req.GetString("keyword", "")
+
 	// Create proper search team options
 	opt := &forgejo_sdk.SearchTeamsOptions{
 		Query: keyword,
@@ -97,17 +97,11 @@ func SearchOrgTeamsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 
 func SearchReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called SearchReposFn")
-	keyword, _ := req.Params.Arguments["keyword"].(string)
-	sort, _ := req.Params.Arguments["sort"].(string)
-	order, _ := req.Params.Arguments["order"].(string)
-	page, ok := req.Params.Arguments["page"].(float64)
-	if !ok {
-		page = 1
-	}
-	limit, ok := req.Params.Arguments["limit"].(float64)
-	if !ok {
-		limit = 100
-	}
+	keyword := req.GetString("keyword", "")
+	sort := req.GetString("sort", "updated")
+	order := req.GetString("order", "desc")
+	page := req.GetFloat("page", 1)
+	limit := req.GetFloat("limit", 100)
 
 	// Create a proper search options structure
 	opt := forgejo_sdk.SearchRepoOptions{
@@ -119,7 +113,7 @@ func SearchReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 			PageSize: int(limit),
 		},
 	}
-	
+
 	// Call search repos with proper options
 	result, _, err := forgejo.Client().SearchRepos(opt)
 	if err != nil {

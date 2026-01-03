@@ -1,3 +1,26 @@
+## [2.4.3](https://codeberg.org/goern/forgejo-mcp/compare/v2.4.2...v2.4.3) (2026-01-03)
+
+### :sparkles: Features
+
+* **repo:** implement comprehensive label management tools
+  * `list_repo_labels` - List all labels in a repository
+  * `create_label` - Create a new repository label with color and description
+  * `edit_label` - Edit existing label properties (name, color, description)
+  * `delete_label` - Delete a repository label
+* **issue:** add label manipulation tools
+  * `replace_issue_labels` - Replace all labels on an issue
+  * `delete_issue_label` - Remove a specific label from an issue
+
+### :memo: Documentation
+
+* add detailed label management documentation with examples
+* document label ID requirements (numeric IDs, not names)
+* document color format validation (#RRGGBB hex format)
+
+### :white_check_mark: Tests
+
+* add unit tests for all label management tools
+
 ## [2.4.2](https://codeberg.org/goern/forgejo-mcp/compare/v2.4.1...v2.4.2) (2025-12-30)
 
 ### :bug: Fixes

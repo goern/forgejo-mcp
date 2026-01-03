@@ -2,15 +2,14 @@ package repo
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
-	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2"
 	"codeberg.org/goern/forgejo-mcp/v2/operation/params"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/log"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/ptr"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/to"
+	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -61,6 +60,12 @@ func RegisterTool(s *server.MCPServer) {
 	s.AddTool(ForkRepoTool, ForkRepoFn)
 	s.AddTool(ListMyReposTool, ListMyReposFn)
 
+	// Labels
+	s.AddTool(ListRepoLabelsTool, ListRepoLabelsFn)
+	s.AddTool(CreateLabelTool, CreateLabelFn)
+	s.AddTool(EditLabelTool, EditLabelFn)
+	s.AddTool(DeleteLabelTool, DeleteLabelFn)
+
 	// File
 	s.AddTool(GetFileContentTool, GetFileContentFn)
 	s.AddTool(CreateFileTool, CreateFileFn)
@@ -78,20 +83,20 @@ func RegisterTool(s *server.MCPServer) {
 
 func CreateRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called CreateRepoFn")
-	name, ok := req.Params.Arguments["name"].(string)
-	if !ok {
-		return to.ErrorResult(errors.New("repository name is required"))
+	name, err := req.RequireString("name")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
-	description, _ := req.Params.Arguments["description"].(string)
-	owner, _ := req.Params.Arguments["owner"].(string)
-	private, _ := req.Params.Arguments["private"].(bool)
-	issueLabels, _ := req.Params.Arguments["issue_labels"].(string)
-	autoInit, _ := req.Params.Arguments["auto_init"].(bool)
-	template, _ := req.Params.Arguments["template"].(bool)
-	gitignores, _ := req.Params.Arguments["gitignores"].(string)
-	license, _ := req.Params.Arguments["license"].(string)
-	readme, _ := req.Params.Arguments["readme"].(string)
-	defaultBranch, _ := req.Params.Arguments["default_branch"].(string)
+	description := req.GetString("description", "")
+	owner := req.GetString("owner", "")
+	private := req.GetBool("private", false)
+	issueLabels := req.GetString("issue_labels", "")
+	autoInit := req.GetBool("auto_init", false)
+	template := req.GetBool("template", false)
+	gitignores := req.GetString("gitignores", "")
+	license := req.GetString("license", "")
+	readme := req.GetString("readme", "")
+	defaultBranch := req.GetString("default_branch", "")
 
 	opt := forgejo_sdk.CreateRepoOption{
 		Name:          name,
@@ -106,7 +111,6 @@ func CreateRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 		DefaultBranch: defaultBranch,
 	}
 	var repo *forgejo_sdk.Repository
-	var err error
 	if owner != "" {
 		repo, _, err = forgejo.Client().CreateOrgRepo(owner, opt)
 	} else {
@@ -120,29 +124,29 @@ func CreateRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 
 func ForkRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called ForkRepoFn")
-	user, ok := req.Params.Arguments["user"].(string)
-	if !ok {
-		return to.ErrorResult(errors.New("user name is required"))
+	user, err := req.RequireString("user")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
-	repo, ok := req.Params.Arguments["repo"].(string)
-	if !ok {
-		return to.ErrorResult(errors.New("repository name is required"))
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
-	organization, ok := req.Params.Arguments["organization"].(string)
+	organization := req.GetString("organization", "")
 	organizationPtr := ptr.To(organization)
-	if !ok || organization == "" {
+	if organization == "" {
 		organizationPtr = nil
 	}
-	name, ok := req.Params.Arguments["name"].(string)
+	name := req.GetString("name", "")
 	namePtr := ptr.To(name)
-	if !ok || name == "" {
+	if name == "" {
 		namePtr = nil
 	}
 	opt := forgejo_sdk.CreateForkOption{
 		Organization: organizationPtr,
 		Name:         namePtr,
 	}
-	_, _, err := forgejo.Client().CreateFork(user, repo, opt)
+	_, _, err = forgejo.Client().CreateFork(user, repo, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("fork repository error %v", err))
 	}
@@ -151,13 +155,13 @@ func ForkRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResu
 
 func ListMyReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called ListMyReposFn")
-	page, ok := req.Params.Arguments["page"].(float64)
-	if !ok {
-		page = 1
+	page, err := req.RequireFloat("page")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
-	limit, ok := req.Params.Arguments["limit"].(float64)
-	if !ok {
-		limit = 100
+	limit, err := req.RequireFloat("limit")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
 	opt := forgejo_sdk.ListReposOptions{
 		ListOptions: forgejo_sdk.ListOptions{

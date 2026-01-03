@@ -18,17 +18,19 @@ import (
 )
 
 const (
-	GetIssueByIndexToolName    = "get_issue_by_index"
-	ListRepoIssuesToolName     = "list_repo_issues"
-	CreateIssueToolName        = "create_issue"
-	CreateIssueCommentToolName = "create_issue_comment"
-	UpdateIssueToolName        = "update_issue"
-	AddIssueLabelsToolName     = "add_issue_labels"
-	IssueStateChangeToolName   = "issue_state_change"
-	ListIssueCommentsToolName  = "list_issue_comments"
-	GetIssueCommentToolName    = "get_issue_comment"
-	EditIssueCommentToolName   = "edit_issue_comment"
-	DeleteIssueCommentToolName = "delete_issue_comment"
+	GetIssueByIndexToolName       = "get_issue_by_index"
+	ListRepoIssuesToolName        = "list_repo_issues"
+	CreateIssueToolName           = "create_issue"
+	CreateIssueCommentToolName    = "create_issue_comment"
+	UpdateIssueToolName           = "update_issue"
+	AddIssueLabelsToolName        = "add_issue_labels"
+	ReplaceIssueLabelsToolName    = "replace_issue_labels"
+	DeleteIssueLabelToolName      = "delete_issue_label"
+	IssueStateChangeToolName      = "issue_state_change"
+	ListIssueCommentsToolName     = "list_issue_comments"
+	GetIssueCommentToolName       = "get_issue_comment"
+	EditIssueCommentToolName      = "edit_issue_comment"
+	DeleteIssueCommentToolName    = "delete_issue_comment"
 )
 
 var (
@@ -92,6 +94,24 @@ var (
 		mcp.WithString("labels", mcp.Required(), mcp.Description("Labels to add (comma-separated)")),
 	)
 
+	ReplaceIssueLabelsTool = mcp.NewTool(
+		ReplaceIssueLabelsToolName,
+		mcp.WithDescription("Replace all labels on an issue"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.Index)),
+		mcp.WithString("labels", mcp.Required(), mcp.Description("Label IDs (comma-separated)")),
+	)
+
+	DeleteIssueLabelTool = mcp.NewTool(
+		DeleteIssueLabelToolName,
+		mcp.WithDescription("Remove a label from an issue"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.Index)),
+		mcp.WithNumber("id", mcp.Required(), mcp.Description("Label ID")),
+	)
+
 	IssueStateChangeTool = mcp.NewTool(
 		IssueStateChangeToolName,
 		mcp.WithDescription("Change issue state"),
@@ -146,6 +166,8 @@ func RegisterTool(s *server.MCPServer) {
 	s.AddTool(CreateIssueCommentTool, CreateIssueCommentFn)
 	s.AddTool(UpdateIssueTool, UpdateIssueFn)
 	s.AddTool(AddIssueLabelsTools, AddIssueLabelsFn)
+	s.AddTool(ReplaceIssueLabelsTool, ReplaceIssueLabelsFn)
+	s.AddTool(DeleteIssueLabelTool, DeleteIssueLabelFn)
 	s.AddTool(IssueStateChangeTool, IssueStateChangeFn)
 	s.AddTool(ListIssueCommentsTool, ListIssueCommentsFn)
 	s.AddTool(GetIssueCommentTool, GetIssueCommentFn)
@@ -155,9 +177,18 @@ func RegisterTool(s *server.MCPServer) {
 
 func GetIssueByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called GetIssueByIndexFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	index, _ := req.Params.Arguments["index"].(float64)
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	index, err := req.RequireFloat("index")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
 
 	issue, _, err := forgejo.Client().GetIssue(owner, repo, int64(index))
 	if err != nil {
@@ -168,23 +199,20 @@ func GetIssueByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 
 func ListRepoIssuesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called ListRepoIssuesFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	state, ok := req.Params.Arguments["state"].(string)
-	if !ok {
-		state = "open"
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
-	issueType, _ := req.Params.Arguments["type"].(string)
-	milestones, _ := req.Params.Arguments["milestones"].(string)
-	labels, _ := req.Params.Arguments["labels"].(string)
-	page, ok := req.Params.Arguments["page"].(float64)
-	if !ok {
-		page = 1
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
-	limit, ok := req.Params.Arguments["limit"].(float64)
-	if !ok {
-		limit = 20
-	}
+	state := req.GetString("state", "open")
+	issueType := req.GetString("type", "")
+	milestones := req.GetString("milestones", "")
+	labels := req.GetString("labels", "")
+	page := req.GetFloat("page", 1)
+	limit := req.GetFloat("limit", 20)
 
 	// Create ListIssueOption according to the Forgejo API
 	opt := forgejo_sdk.ListIssueOption{
@@ -221,10 +249,19 @@ func ListRepoIssuesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 
 func CreateIssueFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called CreateIssueFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	title, _ := req.Params.Arguments["title"].(string)
-	body, _ := req.Params.Arguments["body"].(string)
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	title, err := req.RequireString("title")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	body := req.GetString("body", "")
 
 	opt := forgejo_sdk.CreateIssueOption{
 		Title: title,
@@ -239,10 +276,22 @@ func CreateIssueFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 
 func CreateIssueCommentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called CreateIssueCommentFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	index, _ := req.Params.Arguments["index"].(float64)
-	body, _ := req.Params.Arguments["body"].(string)
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	index, err := req.RequireFloat("index")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	body, err := req.RequireString("body")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
 
 	opt := forgejo_sdk.CreateIssueCommentOption{
 		Body: body,
@@ -256,16 +305,25 @@ func CreateIssueCommentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 
 func UpdateIssueFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called UpdateIssueFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	index, _ := req.Params.Arguments["index"].(float64)
-	title, _ := req.Params.Arguments["title"].(string)
-	body, _ := req.Params.Arguments["body"].(string)
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	index, err := req.RequireFloat("index")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	title := req.GetString("title", "")
+	body := req.GetString("body", "")
 	// assignee is not supported in the current SDK
-	milestone, _ := req.Params.Arguments["milestone"].(string)
+	milestone := req.GetString("milestone", "")
 
 	opt := forgejo_sdk.EditIssueOption{}
-	
+
 	// Only set fields that were provided
 	if title != "" {
 		opt.Title = title
@@ -292,16 +350,28 @@ func UpdateIssueFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 
 func AddIssueLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called AddIssueLabelsFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	index, _ := req.Params.Arguments["index"].(float64)
-	labels, _ := req.Params.Arguments["labels"].(string)
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	index, err := req.RequireFloat("index")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	labels, err := req.RequireString("labels")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
 
 	// Get the ID for each label
 	// Since we can't directly use label names, we need to fetch the IDs first
 	// This modified approach treats the labels as numeric IDs
 	labelIDs := []int64{}
-	
+
 	for _, labelStr := range strings.Split(labels, ",") {
 		labelStr = strings.TrimSpace(labelStr)
 		labelID, err := strconv.ParseInt(labelStr, 10, 64)
@@ -315,12 +385,12 @@ func AddIssueLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	opt := forgejo_sdk.IssueLabelsOption{
 		Labels: labelIDs,
 	}
-	
-	_, _, err := forgejo.Client().AddIssueLabels(owner, repo, int64(index), opt)
+
+	_, _, err = forgejo.Client().AddIssueLabels(owner, repo, int64(index), opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("add issue labels err: %v", err))
 	}
-	
+
 	// Fetch the updated issue to return it with the new labels
 	issue, _, err := forgejo.Client().GetIssue(owner, repo, int64(index))
 	if err != nil {
@@ -331,10 +401,22 @@ func AddIssueLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 
 func IssueStateChangeFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called IssueStateChangeFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	index, _ := req.Params.Arguments["index"].(float64)
-	state, _ := req.Params.Arguments["state"].(string)
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	index, err := req.RequireFloat("index")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	state, err := req.RequireString("state")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
 
 	if state != "open" && state != "closed" {
 		return to.ErrorResult(fmt.Errorf("invalid state: %s, must be 'open' or 'closed'", state))
@@ -342,7 +424,7 @@ func IssueStateChangeFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 
 	// Convert string to StateType and create pointer
 	stateType := forgejo_sdk.StateType(state)
-	
+
 	opt := forgejo_sdk.EditIssueOption{
 		State: &stateType,
 	}
@@ -356,19 +438,22 @@ func IssueStateChangeFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 
 func ListIssueCommentsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called ListIssueCommentsFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	index, _ := req.Params.Arguments["index"].(float64)
-	since, _ := req.Params.Arguments["since"].(string)
-	before, _ := req.Params.Arguments["before"].(string)
-	page, ok := req.Params.Arguments["page"].(float64)
-	if !ok {
-		page = 1
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
-	limit, ok := req.Params.Arguments["limit"].(float64)
-	if !ok {
-		limit = 20
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
+	index, err := req.RequireFloat("index")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	since := req.GetString("since", "")
+	before := req.GetString("before", "")
+	page := req.GetFloat("page", 1)
+	limit := req.GetFloat("limit", 20)
 
 	opt := forgejo_sdk.ListIssueCommentOptions{
 		ListOptions: forgejo_sdk.ListOptions{
@@ -402,9 +487,18 @@ func ListIssueCommentsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Cal
 
 func GetIssueCommentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called GetIssueCommentFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	commentID, _ := req.Params.Arguments["comment_id"].(float64)
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	commentID, err := req.RequireFloat("comment_id")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
 
 	comment, _, err := forgejo.Client().GetIssueComment(owner, repo, int64(commentID))
 	if err != nil {
@@ -415,10 +509,22 @@ func GetIssueCommentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 
 func EditIssueCommentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called EditIssueCommentFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	commentID, _ := req.Params.Arguments["comment_id"].(float64)
-	body, _ := req.Params.Arguments["body"].(string)
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	commentID, err := req.RequireFloat("comment_id")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	body, err := req.RequireString("body")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
 
 	opt := forgejo_sdk.EditIssueCommentOption{
 		Body: body,
@@ -432,13 +538,101 @@ func EditIssueCommentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 
 func DeleteIssueCommentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called DeleteIssueCommentFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	commentID, _ := req.Params.Arguments["comment_id"].(float64)
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	commentID, err := req.RequireFloat("comment_id")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
 
-	_, err := forgejo.Client().DeleteIssueComment(owner, repo, int64(commentID))
+	_, err = forgejo.Client().DeleteIssueComment(owner, repo, int64(commentID))
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("delete issue comment err: %v", err))
 	}
 	return to.TextResult("Delete comment success")
+}
+
+func ReplaceIssueLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called ReplaceIssueLabelsFn")
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	index, err := req.RequireFloat("index")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	labels, err := req.RequireString("labels")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+
+	// Parse comma-separated label IDs
+	labelIDs := []int64{}
+	for _, labelStr := range strings.Split(labels, ",") {
+		labelStr = strings.TrimSpace(labelStr)
+		labelID, err := strconv.ParseInt(labelStr, 10, 64)
+		if err != nil {
+			return to.ErrorResult(fmt.Errorf("invalid label ID '%s': %v", labelStr, err))
+		}
+		labelIDs = append(labelIDs, labelID)
+	}
+
+	opt := forgejo_sdk.IssueLabelsOption{
+		Labels: labelIDs,
+	}
+
+	_, _, err = forgejo.Client().ReplaceIssueLabels(owner, repo, int64(index), opt)
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("replace issue labels err: %v", err))
+	}
+
+	// Fetch updated issue to return with new labels
+	issue, _, err := forgejo.Client().GetIssue(owner, repo, int64(index))
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("get updated issue err: %v", err))
+	}
+	return to.TextResult(issue)
+}
+
+func DeleteIssueLabelFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called DeleteIssueLabelFn")
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	index, err := req.RequireFloat("index")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	id, err := req.RequireFloat("id")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+
+	_, err = forgejo.Client().DeleteIssueLabel(owner, repo, int64(index), int64(id))
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("delete issue label err: %v", err))
+	}
+
+	// Fetch updated issue to return without the removed label
+	issue, _, err := forgejo.Client().GetIssue(owner, repo, int64(index))
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("get updated issue err: %v", err))
+	}
+	return to.TextResult(issue)
 }

@@ -78,9 +78,18 @@ func RegisterTool(s *server.MCPServer) {
 
 func GetPullRequestByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called GetPullRequestByIndexFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	index, _ := req.Params.Arguments["index"].(float64)
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	index, err := req.RequireFloat("index")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
 
 	pr, _, err := forgejo.Client().GetPullRequest(owner, repo, int64(index))
 	if err != nil {
@@ -91,27 +100,24 @@ func GetPullRequestByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 
 func ListRepoPullRequestsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called ListRepoPullRequestsFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	state, ok := req.Params.Arguments["state"].(string)
-	if !ok {
-		state = "open"
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
-	sort, _ := req.Params.Arguments["sort"].(string)
-	page, ok := req.Params.Arguments["page"].(float64)
-	if !ok {
-		page = 1
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
 	}
-	limit, ok := req.Params.Arguments["limit"].(float64)
-	if !ok {
-		limit = 20
-	}
+	state := req.GetString("state", "open")
+	sort := req.GetString("sort", "")
+	page := req.GetFloat("page", 1)
+	limit := req.GetFloat("limit", 20)
 
 	// Convert milestone from string to int64 if provided
 	// Note: Not using milestoneID since it's not supported in the current Forgejo SDK
 
 	// Labels - not used directly in query per API, will be handled in the API call
-	
+
 	opt := forgejo_sdk.ListPullRequestsOptions{
 		State: forgejo_sdk.StateType(state),
 		Sort:  sort,
@@ -120,7 +126,7 @@ func ListRepoPullRequestsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 			PageSize: int(limit),
 		},
 	}
-	
+
 	// Only set milestone if provided and valid
 	// Note: Not using milestone as it's not supported in the current Forgejo SDK
 
@@ -133,12 +139,27 @@ func ListRepoPullRequestsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 
 func CreatePullRequestFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called CreatePullRequestFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	head, _ := req.Params.Arguments["head"].(string)
-	base, _ := req.Params.Arguments["base"].(string)
-	title, _ := req.Params.Arguments["title"].(string)
-	body, _ := req.Params.Arguments["body"].(string)
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	head, err := req.RequireString("head")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	base, err := req.RequireString("base")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	title, err := req.RequireString("title")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	body := req.GetString("body", "")
 
 	opt := forgejo_sdk.CreatePullRequestOption{
 		Head:  head,
@@ -155,14 +176,23 @@ func CreatePullRequestFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Cal
 
 func UpdatePullRequestFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called UpdatePullRequestFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	index, _ := req.Params.Arguments["index"].(float64)
-	title, _ := req.Params.Arguments["title"].(string)
-	body, _ := req.Params.Arguments["body"].(string)
-	base, _ := req.Params.Arguments["base"].(string)
-	assignee, _ := req.Params.Arguments["assignee"].(string)
-	milestone, _ := req.Params.Arguments["milestone"].(string)
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	index, err := req.RequireFloat("index")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	title := req.GetString("title", "")
+	body := req.GetString("body", "")
+	base := req.GetString("base", "")
+	assignee := req.GetString("assignee", "")
+	milestone := req.GetString("milestone", "")
 
 	opt := forgejo_sdk.EditPullRequestOption{}
 
