@@ -64,6 +64,7 @@ func RegisterTool(s *server.MCPServer) {
 	s.AddTool(ListRepoLabelsTool, ListRepoLabelsFn)
 	s.AddTool(CreateLabelTool, CreateLabelFn)
 	s.AddTool(EditLabelTool, EditLabelFn)
+	s.AddTool(DeleteLabelTool, DeleteLabelFn)
 
 	// File
 	s.AddTool(GetFileContentTool, GetFileContentFn)

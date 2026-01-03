@@ -18,6 +18,7 @@ const (
 	ListRepoLabelsToolName = "list_repo_labels"
 	CreateLabelToolName    = "create_label"
 	EditLabelToolName      = "edit_label"
+	DeleteLabelToolName    = "delete_label"
 )
 
 var (
@@ -49,6 +50,14 @@ var (
 		mcp.WithString("name", mcp.Description("New label name")),
 		mcp.WithString("color", mcp.Description("New hex color (#RRGGBB)")),
 		mcp.WithString("description", mcp.Description("New description")),
+	)
+
+	DeleteLabelTool = mcp.NewTool(
+		DeleteLabelToolName,
+		mcp.WithDescription("Delete a repository label"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("id", mcp.Required(), mcp.Description("Label ID")),
 	)
 )
 
@@ -168,4 +177,26 @@ func EditLabelFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRes
 		return to.ErrorResult(fmt.Errorf("edit label err: %v", err))
 	}
 	return to.TextResult(label)
+}
+
+func DeleteLabelFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called DeleteLabelFn")
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	id, err := req.RequireFloat("id")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+
+	_, err = forgejo.Client().DeleteLabel(owner, repo, int64(id))
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("delete label err: %v", err))
+	}
+	return to.TextResult("Delete label success")
 }
