@@ -12,12 +12,11 @@ import (
 
 	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2"
 	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/mark3labs/mcp-go/server"
 )
 
 const (
 	ListRepoLabelsToolName = "list_repo_labels"
-	CreateLabelToolName     = "create_label"
+	CreateLabelToolName    = "create_label"
 )
 
 var (
@@ -109,9 +108,4 @@ func CreateLabelFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 		return to.ErrorResult(fmt.Errorf("create label err: %v", err))
 	}
 	return to.TextResult(label)
-}
-
-func RegisterLabelTools(s *server.MCPServer) {
-	s.AddTool(ListRepoLabelsTool, ListRepoLabelsFn)
-	s.AddTool(CreateLabelTool, CreateLabelFn)
 }
