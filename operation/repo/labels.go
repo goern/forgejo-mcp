@@ -17,6 +17,7 @@ import (
 const (
 	ListRepoLabelsToolName = "list_repo_labels"
 	CreateLabelToolName    = "create_label"
+	EditLabelToolName      = "edit_label"
 )
 
 var (
@@ -37,6 +38,17 @@ var (
 		mcp.WithString("name", mcp.Required(), mcp.Description("Label name")),
 		mcp.WithString("color", mcp.Required(), mcp.Description("Hex color (#RRGGBB)")),
 		mcp.WithString("description", mcp.Description("Label description")),
+	)
+
+	EditLabelTool = mcp.NewTool(
+		EditLabelToolName,
+		mcp.WithDescription("Edit an existing label"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("id", mcp.Required(), mcp.Description("Label ID")),
+		mcp.WithString("name", mcp.Description("New label name")),
+		mcp.WithString("color", mcp.Description("New hex color (#RRGGBB)")),
+		mcp.WithString("description", mcp.Description("New description")),
 	)
 )
 
@@ -106,6 +118,54 @@ func CreateLabelFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	label, _, err := forgejo.Client().CreateLabel(owner, repo, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("create label err: %v", err))
+	}
+	return to.TextResult(label)
+}
+
+func EditLabelFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called EditLabelFn")
+	owner, err := req.RequireString("owner")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	repo, err := req.RequireString("repo")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	id, err := req.RequireFloat("id")
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	name := req.GetString("name", "")
+	color := req.GetString("color", "")
+	description := req.GetString("description", "")
+
+	// Validate at least one field is provided
+	if name == "" && color == "" && description == "" {
+		return to.ErrorResult(fmt.Errorf("at least one of name, color, or description must be provided"))
+	}
+
+	// Validate color format if provided
+	if color != "" && !isValidHexColor(color) {
+		return to.ErrorResult(fmt.Errorf("invalid color format '%s': must be #RRGGBB", color))
+	}
+
+	opt := forgejo_sdk.EditLabelOption{}
+
+	// Only set fields that were provided (use pointers)
+	if name != "" {
+		opt.Name = &name
+	}
+	if color != "" {
+		opt.Color = &color
+	}
+	if description != "" {
+		opt.Description = &description
+	}
+
+	label, _, err := forgejo.Client().EditLabel(owner, repo, int64(id), opt)
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("edit label err: %v", err))
 	}
 	return to.TextResult(label)
 }
