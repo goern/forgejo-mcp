@@ -124,6 +124,9 @@ List all my repositories
 | `get_pull_request_by_index` | Get a specific pull request |
 | `create_pull_request` | Create a new pull request |
 | `update_pull_request` | Update an existing pull request |
+| `list_pull_reviews` | List reviews for a pull request |
+| `get_pull_review` | Get a specific pull request review |
+| `list_pull_review_comments` | List comments on a pull request review |
 | **Organizations** | |
 | `search_org_teams` | Search for teams in an organization |
 | **Server** | |
