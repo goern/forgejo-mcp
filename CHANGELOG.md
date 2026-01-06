@@ -1,3 +1,13 @@
+## [2.5.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.4.2...v2.5.0) (2026-01-06)
+
+### :sparkles: Features
+
+* **pull:** add pull request reviews and review comments support ([f2ff5be](https://codeberg.org/goern/forgejo-mcp/commit/f2ff5beef584e3ffb5d2e45d07d0822fab511487))
+
+### :memo: Documentation
+
+* update README with new pull request review tools ([f0c218f](https://codeberg.org/goern/forgejo-mcp/commit/f0c218f38aa2ef1e4a85818b2faeb92f502db0ac))
+
 ## [2.4.2](https://codeberg.org/goern/forgejo-mcp/compare/v2.4.1...v2.4.2) (2025-12-30)
 
 ### :bug: Fixes
