@@ -16,10 +16,13 @@ import (
 )
 
 const (
-	GetPullRequestByIndexToolName = "get_pull_request_by_index"
-	ListRepoPullRequestsToolName  = "list_repo_pull_requests"
-	CreatePullRequestToolName     = "create_pull_request"
-	UpdatePullRequestToolName     = "update_pull_request"
+	GetPullRequestByIndexToolName  = "get_pull_request_by_index"
+	ListRepoPullRequestsToolName   = "list_repo_pull_requests"
+	CreatePullRequestToolName      = "create_pull_request"
+	UpdatePullRequestToolName      = "update_pull_request"
+	ListPullReviewsToolName        = "list_pull_reviews"
+	GetPullReviewToolName          = "get_pull_review"
+	ListPullReviewCommentsToolName = "list_pull_review_comments"
 )
 
 var (
@@ -67,6 +70,34 @@ var (
 		mcp.WithString("assignee", mcp.Description("Assignee username")),
 		mcp.WithString("milestone", mcp.Description(params.Milestone)),
 	)
+
+	ListPullReviewsTool = mcp.NewTool(
+		ListPullReviewsToolName,
+		mcp.WithDescription("List reviews for a pull request"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.PRIndex)),
+		mcp.WithNumber("page", mcp.Description(params.Page), mcp.DefaultNumber(1)),
+		mcp.WithNumber("limit", mcp.Description(params.Limit), mcp.DefaultNumber(20)),
+	)
+
+	GetPullReviewTool = mcp.NewTool(
+		GetPullReviewToolName,
+		mcp.WithDescription("Get a specific pull request review"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.PRIndex)),
+		mcp.WithNumber("id", mcp.Required(), mcp.Description("Review ID")),
+	)
+
+	ListPullReviewCommentsTool = mcp.NewTool(
+		ListPullReviewCommentsToolName,
+		mcp.WithDescription("List comments on a pull request review"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.PRIndex)),
+		mcp.WithNumber("id", mcp.Required(), mcp.Description("Review ID")),
+	)
 )
 
 func RegisterTool(s *server.MCPServer) {
@@ -74,6 +105,9 @@ func RegisterTool(s *server.MCPServer) {
 	s.AddTool(ListRepoPullRequestsTool, ListRepoPullRequestsFn)
 	s.AddTool(CreatePullRequestTool, CreatePullRequestFn)
 	s.AddTool(UpdatePullRequestTool, UpdatePullRequestFn)
+	s.AddTool(ListPullReviewsTool, ListPullReviewsFn)
+	s.AddTool(GetPullReviewTool, GetPullReviewFn)
+	s.AddTool(ListPullReviewCommentsTool, ListPullReviewCommentsFn)
 }
 
 func GetPullRequestByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -111,7 +145,7 @@ func ListRepoPullRequestsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 	// Note: Not using milestoneID since it's not supported in the current Forgejo SDK
 
 	// Labels - not used directly in query per API, will be handled in the API call
-	
+
 	opt := forgejo_sdk.ListPullRequestsOptions{
 		State: forgejo_sdk.StateType(state),
 		Sort:  sort,
@@ -120,7 +154,7 @@ func ListRepoPullRequestsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 			PageSize: int(limit),
 		},
 	}
-	
+
 	// Only set milestone if provided and valid
 	// Note: Not using milestone as it's not supported in the current Forgejo SDK
 
@@ -191,4 +225,60 @@ func UpdatePullRequestFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Cal
 		return to.ErrorResult(fmt.Errorf("update pull request err: %v", err))
 	}
 	return to.TextResult(pr)
+}
+
+func ListPullReviewsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called ListPullReviewsFn")
+	owner, _ := req.Params.Arguments["owner"].(string)
+	repo, _ := req.Params.Arguments["repo"].(string)
+	index, _ := req.Params.Arguments["index"].(float64)
+	page, ok := req.Params.Arguments["page"].(float64)
+	if !ok {
+		page = 1
+	}
+	limit, ok := req.Params.Arguments["limit"].(float64)
+	if !ok {
+		limit = 20
+	}
+
+	opt := forgejo_sdk.ListPullReviewsOptions{
+		ListOptions: forgejo_sdk.ListOptions{
+			Page:     int(page),
+			PageSize: int(limit),
+		},
+	}
+
+	reviews, _, err := forgejo.Client().ListPullReviews(owner, repo, int64(index), opt)
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("list pull reviews err: %v", err))
+	}
+	return to.TextResult(reviews)
+}
+
+func GetPullReviewFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called GetPullReviewFn")
+	owner, _ := req.Params.Arguments["owner"].(string)
+	repo, _ := req.Params.Arguments["repo"].(string)
+	index, _ := req.Params.Arguments["index"].(float64)
+	id, _ := req.Params.Arguments["id"].(float64)
+
+	review, _, err := forgejo.Client().GetPullReview(owner, repo, int64(index), int64(id))
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("get pull review err: %v", err))
+	}
+	return to.TextResult(review)
+}
+
+func ListPullReviewCommentsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called ListPullReviewCommentsFn")
+	owner, _ := req.Params.Arguments["owner"].(string)
+	repo, _ := req.Params.Arguments["repo"].(string)
+	index, _ := req.Params.Arguments["index"].(float64)
+	id, _ := req.Params.Arguments["id"].(float64)
+
+	comments, _, err := forgejo.Client().ListPullReviewComments(owner, repo, int64(index), int64(id))
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("list pull review comments err: %v", err))
+	}
+	return to.TextResult(comments)
 }
