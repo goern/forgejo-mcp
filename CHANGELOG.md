@@ -1,3 +1,9 @@
+## [2.7.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.6.1...v2.7.0) (2026-01-30)
+
+### :sparkles: Features
+
+* ✨ add write-side PR review tools ([578643c](https://codeberg.org/goern/forgejo-mcp/commit/578643ccf4e6a9875d8f24d2870de2ab88d45619)), closes [#59](https://codeberg.org/goern/forgejo-mcp/issues/59)
+
 ## [2.6.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.6.0...v2.6.1) (2026-01-30)
 
 ### :bug: Fixes
