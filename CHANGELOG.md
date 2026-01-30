@@ -1,3 +1,9 @@
+## [2.6.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.6.0...v2.6.1) (2026-01-30)
+
+### :bug: Fixes
+
+* 🐛 show module version when installed via `go install` ([c80dbfd](https://codeberg.org/goern/forgejo-mcp/commit/c80dbfd55a849bcd6c3ae38d838f9719d25199a3))
+
 ## [2.6.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.5.1...v2.6.0) (2026-01-30)
 
 ### :sparkles: Features
