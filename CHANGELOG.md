@@ -1,3 +1,21 @@
+## [2.5.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.5.0...v2.5.1) (2026-01-30)
+
+### :bug: Fixes
+
+* 🐛 adapt to mcp-go v0.43.2 breaking change in CallToolParams.Arguments ([a896e70](https://codeberg.org/goern/forgejo-mcp/commit/a896e70081067bf3261dc8e229a4292366204ecf))
+
+### :repeat: Chore
+
+* 📝 add OpenSpec proposal and design for PR review tools ([#59](https://codeberg.org/goern/forgejo-mcp/issues/59)) ([9475c00](https://codeberg.org/goern/forgejo-mcp/commit/9475c002ad402648d94a5b7e1e1a41c018b6ae1f))
+* 🚀 add OpenSpec workflow, beads issue tracker, and merge PR proposal ([b469158](https://codeberg.org/goern/forgejo-mcp/commit/b46915894402e1667b6a04fc7229af5efda03998))
+* 🚀 more claude config ([f420446](https://codeberg.org/goern/forgejo-mcp/commit/f420446dd4d1a2821b74e38437a1713475555933))
+* **deps:** update alpine:edge docker digest to 9a341ff ([63afe57](https://codeberg.org/goern/forgejo-mcp/commit/63afe574fd80d19dfc82b5bef97ad51db9be5308))
+* **deps:** update golang:1.25-alpine docker digest to 660f0b8 ([a799cb8](https://codeberg.org/goern/forgejo-mcp/commit/a799cb8e619d017582a5b5025cde09b335f19087))
+* **deps:** update golang:1.25-alpine docker digest to 98e6cff ([5379f45](https://codeberg.org/goern/forgejo-mcp/commit/5379f455a1b066729da44faa7cf8e7ab2958b4fa))
+* **deps:** update golang:1.25-alpine docker digest to 9f7db8d ([3c5b5cb](https://codeberg.org/goern/forgejo-mcp/commit/3c5b5cba298eb9ae941d2b260ce40a355291acbb))
+* **deps:** update golang:1.25-alpine docker digest to d9b2e14 ([e798735](https://codeberg.org/goern/forgejo-mcp/commit/e798735c88c8865433d0fdaccdb5ec4edf24f963))
+* **deps:** update golang:1.25-alpine docker digest to e689855 ([1d1c35b](https://codeberg.org/goern/forgejo-mcp/commit/1d1c35bb60de67d7eaea3600c0ec347944f33fc3))
+
 ## [2.5.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.4.2...v2.5.0) (2026-01-06)
 
 ### :sparkles: Features
