@@ -39,6 +39,10 @@ func RegisterTool(s *server.MCPServer) {
 	pull.RegisterTool(s)
 	log.Debug("Registered pull request tools")
 
+	// Pull Review Write Tools
+	pull.RegisterReviewTools(s)
+	log.Debug("Registered pull review write tools")
+
 	// Search Tool
 	search.RegisterTool(s)
 	log.Debug("Registered search tools")

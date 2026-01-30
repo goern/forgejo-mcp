@@ -56,6 +56,15 @@ const (
 	WikiContent = "Wiki page content"
 	WikiPage    = "Wiki page name"
 
+	// Review parameters
+	ReviewID    = "Review ID"
+	ReviewState = "Review state (APPROVED, REQUEST_CHANGES, COMMENT)"
+	ReviewBody  = "Review body/message"
+	Reviewers   = "Reviewer usernames (comma-separated)"
+	TeamReviewers = "Team reviewer names (comma-separated)"
+	DismissMessage = "Dismissal message"
+	ReviewComments = `Inline comments as JSON array, e.g. [{"path":"file.go","body":"Fix this","new_position":10}]`
+
 	// Misc parameters
 	Description = "Description"
 	Private     = "Private repo"
