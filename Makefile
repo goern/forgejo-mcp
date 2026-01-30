@@ -1,7 +1,8 @@
 GO ?= go
 EXECUTABLE := forgejo-mcp
-VERSION ?= $(shell git describe --tags --always | sed 's/-/+/' | sed 's/^v//')
-LDFLAGS := -X "main.Version=$(VERSION)"
+VERSION ?= $(shell git describe --tags --exact-match 2>/dev/null | sed 's/^v//' || git describe --tags --always | sed 's/^v//' | sed 's/-.*/+dev/')
+COMMIT ?= $(shell git rev-parse --short HEAD)
+LDFLAGS := -X "main.Version=$(VERSION)" -X "main.Commit=$(COMMIT)"
 
 .PHONY: build
 build:

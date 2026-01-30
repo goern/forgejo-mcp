@@ -22,6 +22,11 @@ var (
 )
 
 func init() {
+	// Subcommands that don't need full initialization
+	if len(os.Args) > 1 && os.Args[1] == "version" {
+		return
+	}
+
 	flag.StringVar(
 		&transport,
 		"t",
@@ -163,7 +168,12 @@ func validateURL(urlStr string) error {
 	return nil
 }
 
-func Execute(version string) {
+func Execute(version, commit string) {
+	if len(os.Args) > 1 && os.Args[1] == "version" {
+		fmt.Printf("forgejo-mcp %s (commit: %s)\n", version, commit)
+		return
+	}
+
 	defer log.Default().Sync()
 
 	log.Infof("Starting Forgejo MCP Server %s", version)
