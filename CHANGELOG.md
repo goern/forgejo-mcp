@@ -1,3 +1,13 @@
+## [2.6.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.5.1...v2.6.0) (2026-01-30)
+
+### :sparkles: Features
+
+* ✨ add version subcommand with build-time git info ([433446b](https://codeberg.org/goern/forgejo-mcp/commit/433446bfb61d95c57602341189aaf878cccaa74f))
+
+### :bug: Fixes
+
+* 🐛 use SemVer-compliant version format (-dev+commit) ([3b2bbbb](https://codeberg.org/goern/forgejo-mcp/commit/3b2bbbbef5599d8ab73cdcc566fd3473449ab2cb))
+
 ## [2.5.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.5.0...v2.5.1) (2026-01-30)
 
 ### :bug: Fixes
