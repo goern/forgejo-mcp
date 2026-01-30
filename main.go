@@ -6,8 +6,9 @@ import (
 
 var (
 	Version = "dev"
+	Commit  = "unknown"
 )
 
 func main() {
-	cmd.Execute(Version)
+	cmd.Execute(Version, Commit)
 }
