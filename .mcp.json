@@ -4,7 +4,7 @@
             "type": "http",
             "url": "https://mcp.context7.com/mcp"
         },
-        "codeberg": {
+        "local-dev": {
             "type": "stdio",
             "command": "./forgejo-mcp",
             "args": [
@@ -16,6 +16,20 @@
                 "https://codeberg.org"
             ],
             "env": {}
+        },
+        "codeberg": {
+            "type": "stdio",
+            "command": "/home/goern/go/bin/forgejo-mcp",
+            "args": [
+                "-transport",
+                "stdio",
+                "-token",
+                "${CODEBERG_ACCESS_TOKEN}",
+                "-url",
+                "https://codeberg.org"
+            ],
+            "env": {}
         }
+ 
     }
 }
