@@ -1,8 +1,8 @@
 GO ?= go
 EXECUTABLE := forgejo-mcp
-VERSION ?= $(shell git describe --tags --exact-match 2>/dev/null | sed 's/^v//' || git describe --tags --always | sed 's/^v//' | sed 's/-.*/+dev/')
 COMMIT ?= $(shell git rev-parse --short HEAD)
-LDFLAGS := -X "main.Version=$(VERSION)" -X "main.Commit=$(COMMIT)"
+VERSION ?= $(shell v=$$(git describe --tags --exact-match 2>/dev/null) && echo "$$v" | sed 's/^v//' || echo "$$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')-dev+$(COMMIT)")
+LDFLAGS := -X "main.Version=$(VERSION)"
 
 .PHONY: build
 build:
