@@ -57,7 +57,7 @@ func RegisterTool(s *server.MCPServer) {
 
 func SearchUserFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	// Create a search query for dummy implementation
-	keyword, _ := req.Params.Arguments["keyword"].(string)
+	keyword, _ := req.GetArguments()["keyword"].(string)
 	
 	// Create a basic search option with just a keyword
 	opt := forgejo_sdk.SearchUsersOption{
@@ -75,12 +75,12 @@ func SearchUserFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 func SearchOrgTeamsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	// Create basic search teams options
 	log.Debugf("Called SearchOrgTeamsFn")
-	org, ok := req.Params.Arguments["org"].(string)
+	org, ok := req.GetArguments()["org"].(string)
 	if !ok {
 		return to.ErrorResult(fmt.Errorf("org name is required"))
 	}
 
-	keyword, _ := req.Params.Arguments["keyword"].(string)
+	keyword, _ := req.GetArguments()["keyword"].(string)
 	
 	// Create proper search team options
 	opt := &forgejo_sdk.SearchTeamsOptions{
@@ -97,14 +97,14 @@ func SearchOrgTeamsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 
 func SearchReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called SearchReposFn")
-	keyword, _ := req.Params.Arguments["keyword"].(string)
-	sort, _ := req.Params.Arguments["sort"].(string)
-	order, _ := req.Params.Arguments["order"].(string)
-	page, ok := req.Params.Arguments["page"].(float64)
+	keyword, _ := req.GetArguments()["keyword"].(string)
+	sort, _ := req.GetArguments()["sort"].(string)
+	order, _ := req.GetArguments()["order"].(string)
+	page, ok := req.GetArguments()["page"].(float64)
 	if !ok {
 		page = 1
 	}
-	limit, ok := req.Params.Arguments["limit"].(float64)
+	limit, ok := req.GetArguments()["limit"].(float64)
 	if !ok {
 		limit = 100
 	}

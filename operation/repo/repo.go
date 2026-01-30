@@ -78,20 +78,20 @@ func RegisterTool(s *server.MCPServer) {
 
 func CreateRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called CreateRepoFn")
-	name, ok := req.Params.Arguments["name"].(string)
+	name, ok := req.GetArguments()["name"].(string)
 	if !ok {
 		return to.ErrorResult(errors.New("repository name is required"))
 	}
-	description, _ := req.Params.Arguments["description"].(string)
-	owner, _ := req.Params.Arguments["owner"].(string)
-	private, _ := req.Params.Arguments["private"].(bool)
-	issueLabels, _ := req.Params.Arguments["issue_labels"].(string)
-	autoInit, _ := req.Params.Arguments["auto_init"].(bool)
-	template, _ := req.Params.Arguments["template"].(bool)
-	gitignores, _ := req.Params.Arguments["gitignores"].(string)
-	license, _ := req.Params.Arguments["license"].(string)
-	readme, _ := req.Params.Arguments["readme"].(string)
-	defaultBranch, _ := req.Params.Arguments["default_branch"].(string)
+	description, _ := req.GetArguments()["description"].(string)
+	owner, _ := req.GetArguments()["owner"].(string)
+	private, _ := req.GetArguments()["private"].(bool)
+	issueLabels, _ := req.GetArguments()["issue_labels"].(string)
+	autoInit, _ := req.GetArguments()["auto_init"].(bool)
+	template, _ := req.GetArguments()["template"].(bool)
+	gitignores, _ := req.GetArguments()["gitignores"].(string)
+	license, _ := req.GetArguments()["license"].(string)
+	readme, _ := req.GetArguments()["readme"].(string)
+	defaultBranch, _ := req.GetArguments()["default_branch"].(string)
 
 	opt := forgejo_sdk.CreateRepoOption{
 		Name:          name,
@@ -120,20 +120,20 @@ func CreateRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 
 func ForkRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called ForkRepoFn")
-	user, ok := req.Params.Arguments["user"].(string)
+	user, ok := req.GetArguments()["user"].(string)
 	if !ok {
 		return to.ErrorResult(errors.New("user name is required"))
 	}
-	repo, ok := req.Params.Arguments["repo"].(string)
+	repo, ok := req.GetArguments()["repo"].(string)
 	if !ok {
 		return to.ErrorResult(errors.New("repository name is required"))
 	}
-	organization, ok := req.Params.Arguments["organization"].(string)
+	organization, ok := req.GetArguments()["organization"].(string)
 	organizationPtr := ptr.To(organization)
 	if !ok || organization == "" {
 		organizationPtr = nil
 	}
-	name, ok := req.Params.Arguments["name"].(string)
+	name, ok := req.GetArguments()["name"].(string)
 	namePtr := ptr.To(name)
 	if !ok || name == "" {
 		namePtr = nil
@@ -151,11 +151,11 @@ func ForkRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResu
 
 func ListMyReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called ListMyReposFn")
-	page, ok := req.Params.Arguments["page"].(float64)
+	page, ok := req.GetArguments()["page"].(float64)
 	if !ok {
 		page = 1
 	}
-	limit, ok := req.Params.Arguments["limit"].(float64)
+	limit, ok := req.GetArguments()["limit"].(float64)
 	if !ok {
 		limit = 100
 	}

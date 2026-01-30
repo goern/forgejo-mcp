@@ -49,19 +49,19 @@ var (
 
 func CreateBranchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called CreateBranchFn")
-	owner, ok := req.Params.Arguments["owner"].(string)
+	owner, ok := req.GetArguments()["owner"].(string)
 	if !ok {
 		return to.ErrorResult(fmt.Errorf("owner is required"))
 	}
-	repo, ok := req.Params.Arguments["repo"].(string)
+	repo, ok := req.GetArguments()["repo"].(string)
 	if !ok {
 		return to.ErrorResult(fmt.Errorf("repo is required"))
 	}
-	branch, ok := req.Params.Arguments["branch"].(string)
+	branch, ok := req.GetArguments()["branch"].(string)
 	if !ok {
 		return to.ErrorResult(fmt.Errorf("branch is required"))
 	}
-	oldBranch, _ := req.Params.Arguments["old_branch"].(string)
+	oldBranch, _ := req.GetArguments()["old_branch"].(string)
 
 	_, _, err := forgejo.Client().CreateBranch(owner, repo, forgejo_sdk.CreateBranchOption{
 		BranchName:    branch,
@@ -76,9 +76,9 @@ func CreateBranchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 
 func DeleteBranchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called DeleteBranchFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	branch, _ := req.Params.Arguments["branch"].(string)
+	owner, _ := req.GetArguments()["owner"].(string)
+	repo, _ := req.GetArguments()["repo"].(string)
+	branch, _ := req.GetArguments()["branch"].(string)
 
 	success, _, err := forgejo.Client().DeleteRepoBranch(owner, repo, branch)
 	if err != nil {
@@ -92,13 +92,13 @@ func DeleteBranchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 
 func ListBranchesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called ListBranchesFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	page, ok := req.Params.Arguments["page"].(float64)
+	owner, _ := req.GetArguments()["owner"].(string)
+	repo, _ := req.GetArguments()["repo"].(string)
+	page, ok := req.GetArguments()["page"].(float64)
 	if !ok {
 		page = 1
 	}
-	limit, ok := req.Params.Arguments["limit"].(float64)
+	limit, ok := req.GetArguments()["limit"].(float64)
 	if !ok {
 		limit = 100
 	}

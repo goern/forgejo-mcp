@@ -70,16 +70,16 @@ var (
 
 func GetFileContentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called GetFileFn")
-	owner, ok := req.Params.Arguments["owner"].(string)
+	owner, ok := req.GetArguments()["owner"].(string)
 	if !ok {
 		return to.ErrorResult(fmt.Errorf("owner is required"))
 	}
-	repo, ok := req.Params.Arguments["repo"].(string)
+	repo, ok := req.GetArguments()["repo"].(string)
 	if !ok {
 		return to.ErrorResult(fmt.Errorf("repo is required"))
 	}
-	ref, _ := req.Params.Arguments["ref"].(string)
-	filePath, ok := req.Params.Arguments["filePath"].(string)
+	ref, _ := req.GetArguments()["ref"].(string)
+	filePath, ok := req.GetArguments()["filePath"].(string)
 	if !ok {
 		return to.ErrorResult(fmt.Errorf("filePath is required"))
 	}
@@ -92,13 +92,13 @@ func GetFileContentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 
 func CreateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called CreateFileFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	filePath, _ := req.Params.Arguments["filePath"].(string)
-	content, _ := req.Params.Arguments["content"].(string)
-	message, _ := req.Params.Arguments["message"].(string)
-	branchName, _ := req.Params.Arguments["branch_name"].(string)
-	newBranchName, ok := req.Params.Arguments["new_branch_name"].(string)
+	owner, _ := req.GetArguments()["owner"].(string)
+	repo, _ := req.GetArguments()["repo"].(string)
+	filePath, _ := req.GetArguments()["filePath"].(string)
+	content, _ := req.GetArguments()["content"].(string)
+	message, _ := req.GetArguments()["message"].(string)
+	branchName, _ := req.GetArguments()["branch_name"].(string)
+	newBranchName, ok := req.GetArguments()["new_branch_name"].(string)
 	if !ok || newBranchName == "" {
 		newBranchName = ""
 	}
@@ -119,14 +119,14 @@ func CreateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 
 func UpdateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called UpdateFileFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	filePath, _ := req.Params.Arguments["filePath"].(string)
-	content, _ := req.Params.Arguments["content"].(string)
-	message, _ := req.Params.Arguments["message"].(string)
-	branchName, _ := req.Params.Arguments["branch_name"].(string)
-	sha, _ := req.Params.Arguments["sha"].(string)
-	newBranchName, ok := req.Params.Arguments["new_branch_name"].(string)
+	owner, _ := req.GetArguments()["owner"].(string)
+	repo, _ := req.GetArguments()["repo"].(string)
+	filePath, _ := req.GetArguments()["filePath"].(string)
+	content, _ := req.GetArguments()["content"].(string)
+	message, _ := req.GetArguments()["message"].(string)
+	branchName, _ := req.GetArguments()["branch_name"].(string)
+	sha, _ := req.GetArguments()["sha"].(string)
+	newBranchName, ok := req.GetArguments()["new_branch_name"].(string)
 	if !ok || newBranchName == "" {
 		newBranchName = ""
 	}
@@ -148,21 +148,21 @@ func UpdateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 
 func DeleteFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called DeleteFileFn")
-	owner, ok := req.Params.Arguments["owner"].(string)
+	owner, ok := req.GetArguments()["owner"].(string)
 	if !ok {
 		return to.ErrorResult(fmt.Errorf("owner is required"))
 	}
-	repo, ok := req.Params.Arguments["repo"].(string)
+	repo, ok := req.GetArguments()["repo"].(string)
 	if !ok {
 		return to.ErrorResult(fmt.Errorf("repo is required"))
 	}
-	filePath, ok := req.Params.Arguments["filePath"].(string)
+	filePath, ok := req.GetArguments()["filePath"].(string)
 	if !ok {
 		return to.ErrorResult(fmt.Errorf("filePath is required"))
 	}
-	message, _ := req.Params.Arguments["message"].(string)
-	branchName, _ := req.Params.Arguments["branch_name"].(string)
-	sha, ok := req.Params.Arguments["sha"].(string)
+	message, _ := req.GetArguments()["message"].(string)
+	branchName, _ := req.GetArguments()["branch_name"].(string)
+	sha, ok := req.GetArguments()["sha"].(string)
 	if !ok {
 		return to.ErrorResult(fmt.Errorf("sha is required"))
 	}

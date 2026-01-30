@@ -60,8 +60,8 @@ func RegisterTool(s *server.MCPServer) {
 
 func ListWikiPagesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called ListWikiPagesFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
+	owner, _ := req.GetArguments()["owner"].(string)
+	repo, _ := req.GetArguments()["repo"].(string)
 
 	wikiPages, _, err := forgejo.Client().ListWikiPages(owner, repo)
 	if err != nil {
@@ -72,11 +72,11 @@ func ListWikiPagesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToo
 
 func CreateWikiPageFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called CreateWikiPageFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	title, _ := req.Params.Arguments["title"].(string)
-	content, _ := req.Params.Arguments["content"].(string)
-	message, _ := req.Params.Arguments["message"].(string)
+	owner, _ := req.GetArguments()["owner"].(string)
+	repo, _ := req.GetArguments()["repo"].(string)
+	title, _ := req.GetArguments()["title"].(string)
+	content, _ := req.GetArguments()["content"].(string)
+	message, _ := req.GetArguments()["message"].(string)
 
 	// Use default commit message if not provided
 	if message == "" {
@@ -98,12 +98,12 @@ func CreateWikiPageFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 
 func UpdateWikiPageFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called UpdateWikiPageFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	pageName, _ := req.Params.Arguments["page_name"].(string)
-	title, titleProvided := req.Params.Arguments["title"].(string)
-	content, _ := req.Params.Arguments["content"].(string)
-	message, _ := req.Params.Arguments["message"].(string)
+	owner, _ := req.GetArguments()["owner"].(string)
+	repo, _ := req.GetArguments()["repo"].(string)
+	pageName, _ := req.GetArguments()["page_name"].(string)
+	title, titleProvided := req.GetArguments()["title"].(string)
+	content, _ := req.GetArguments()["content"].(string)
+	message, _ := req.GetArguments()["message"].(string)
 
 	// If title is not provided, use the current page name
 	if !titleProvided || title == "" {
