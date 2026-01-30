@@ -168,9 +168,9 @@ func validateURL(urlStr string) error {
 	return nil
 }
 
-func Execute(version, commit string) {
+func Execute(version string) {
 	if len(os.Args) > 1 && os.Args[1] == "version" {
-		fmt.Printf("forgejo-mcp %s (commit: %s)\n", version, commit)
+		fmt.Printf("forgejo-mcp %s\n", version)
 		return
 	}
 
