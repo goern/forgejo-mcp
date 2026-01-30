@@ -112,9 +112,9 @@ func RegisterTool(s *server.MCPServer) {
 
 func GetPullRequestByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called GetPullRequestByIndexFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	index, _ := req.Params.Arguments["index"].(float64)
+	owner, _ := req.GetArguments()["owner"].(string)
+	repo, _ := req.GetArguments()["repo"].(string)
+	index, _ := req.GetArguments()["index"].(float64)
 
 	pr, _, err := forgejo.Client().GetPullRequest(owner, repo, int64(index))
 	if err != nil {
@@ -125,18 +125,18 @@ func GetPullRequestByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 
 func ListRepoPullRequestsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called ListRepoPullRequestsFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	state, ok := req.Params.Arguments["state"].(string)
+	owner, _ := req.GetArguments()["owner"].(string)
+	repo, _ := req.GetArguments()["repo"].(string)
+	state, ok := req.GetArguments()["state"].(string)
 	if !ok {
 		state = "open"
 	}
-	sort, _ := req.Params.Arguments["sort"].(string)
-	page, ok := req.Params.Arguments["page"].(float64)
+	sort, _ := req.GetArguments()["sort"].(string)
+	page, ok := req.GetArguments()["page"].(float64)
 	if !ok {
 		page = 1
 	}
-	limit, ok := req.Params.Arguments["limit"].(float64)
+	limit, ok := req.GetArguments()["limit"].(float64)
 	if !ok {
 		limit = 20
 	}
@@ -167,12 +167,12 @@ func ListRepoPullRequestsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 
 func CreatePullRequestFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called CreatePullRequestFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	head, _ := req.Params.Arguments["head"].(string)
-	base, _ := req.Params.Arguments["base"].(string)
-	title, _ := req.Params.Arguments["title"].(string)
-	body, _ := req.Params.Arguments["body"].(string)
+	owner, _ := req.GetArguments()["owner"].(string)
+	repo, _ := req.GetArguments()["repo"].(string)
+	head, _ := req.GetArguments()["head"].(string)
+	base, _ := req.GetArguments()["base"].(string)
+	title, _ := req.GetArguments()["title"].(string)
+	body, _ := req.GetArguments()["body"].(string)
 
 	opt := forgejo_sdk.CreatePullRequestOption{
 		Head:  head,
@@ -189,14 +189,14 @@ func CreatePullRequestFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Cal
 
 func UpdatePullRequestFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called UpdatePullRequestFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	index, _ := req.Params.Arguments["index"].(float64)
-	title, _ := req.Params.Arguments["title"].(string)
-	body, _ := req.Params.Arguments["body"].(string)
-	base, _ := req.Params.Arguments["base"].(string)
-	assignee, _ := req.Params.Arguments["assignee"].(string)
-	milestone, _ := req.Params.Arguments["milestone"].(string)
+	owner, _ := req.GetArguments()["owner"].(string)
+	repo, _ := req.GetArguments()["repo"].(string)
+	index, _ := req.GetArguments()["index"].(float64)
+	title, _ := req.GetArguments()["title"].(string)
+	body, _ := req.GetArguments()["body"].(string)
+	base, _ := req.GetArguments()["base"].(string)
+	assignee, _ := req.GetArguments()["assignee"].(string)
+	milestone, _ := req.GetArguments()["milestone"].(string)
 
 	opt := forgejo_sdk.EditPullRequestOption{}
 
@@ -229,14 +229,14 @@ func UpdatePullRequestFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Cal
 
 func ListPullReviewsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called ListPullReviewsFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	index, _ := req.Params.Arguments["index"].(float64)
-	page, ok := req.Params.Arguments["page"].(float64)
+	owner, _ := req.GetArguments()["owner"].(string)
+	repo, _ := req.GetArguments()["repo"].(string)
+	index, _ := req.GetArguments()["index"].(float64)
+	page, ok := req.GetArguments()["page"].(float64)
 	if !ok {
 		page = 1
 	}
-	limit, ok := req.Params.Arguments["limit"].(float64)
+	limit, ok := req.GetArguments()["limit"].(float64)
 	if !ok {
 		limit = 20
 	}
@@ -257,10 +257,10 @@ func ListPullReviewsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 
 func GetPullReviewFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called GetPullReviewFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	index, _ := req.Params.Arguments["index"].(float64)
-	id, _ := req.Params.Arguments["id"].(float64)
+	owner, _ := req.GetArguments()["owner"].(string)
+	repo, _ := req.GetArguments()["repo"].(string)
+	index, _ := req.GetArguments()["index"].(float64)
+	id, _ := req.GetArguments()["id"].(float64)
 
 	review, _, err := forgejo.Client().GetPullReview(owner, repo, int64(index), int64(id))
 	if err != nil {
@@ -271,10 +271,10 @@ func GetPullReviewFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToo
 
 func ListPullReviewCommentsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called ListPullReviewCommentsFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	index, _ := req.Params.Arguments["index"].(float64)
-	id, _ := req.Params.Arguments["id"].(float64)
+	owner, _ := req.GetArguments()["owner"].(string)
+	repo, _ := req.GetArguments()["repo"].(string)
+	index, _ := req.GetArguments()["index"].(float64)
+	id, _ := req.GetArguments()["id"].(float64)
 
 	comments, _, err := forgejo.Client().ListPullReviewComments(owner, repo, int64(index), int64(id))
 	if err != nil {

@@ -32,23 +32,23 @@ var (
 
 func ListRepoCommitsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called ListRepoCommitsFn")
-	owner, _ := req.Params.Arguments["owner"].(string)
-	repo, _ := req.Params.Arguments["repo"].(string)
-	path, ok := req.Params.Arguments["path"].(string)
+	owner, _ := req.GetArguments()["owner"].(string)
+	repo, _ := req.GetArguments()["repo"].(string)
+	path, ok := req.GetArguments()["path"].(string)
 	pathStr := ""
 	if ok && path != "" {
 		pathStr = path
 	}
-	sha, ok := req.Params.Arguments["sha"].(string)
+	sha, ok := req.GetArguments()["sha"].(string)
 	shaStr := ""
 	if ok && sha != "" {
 		shaStr = sha
 	}
-	page, ok := req.Params.Arguments["page"].(float64)
+	page, ok := req.GetArguments()["page"].(float64)
 	if !ok {
 		page = 1
 	}
-	limit, ok := req.Params.Arguments["limit"].(float64)
+	limit, ok := req.GetArguments()["limit"].(float64)
 	if !ok {
 		limit = 100
 	}
