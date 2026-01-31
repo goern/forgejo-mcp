@@ -1,3 +1,13 @@
+## [2.8.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.7.0...v2.8.0) (2026-01-31)
+
+### :sparkles: Features
+
+* ✨ add merge_pull_request MCP tool ([e416a4a](https://codeberg.org/goern/forgejo-mcp/commit/e416a4a4084747b5ef60dd6ff5a891d5453401cd)), closes [#54](https://codeberg.org/goern/forgejo-mcp/issues/54)
+
+### :repeat: Chore
+
+* 📦 archive pr-review-tool openspec change ([7b3232a](https://codeberg.org/goern/forgejo-mcp/commit/7b3232a50ccbf0cd34495a1a26f6ca899ebb500c))
+
 ## [2.7.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.6.1...v2.7.0) (2026-01-30)
 
 ### :sparkles: Features
