@@ -23,6 +23,7 @@ const (
 	ListPullReviewsToolName        = "list_pull_reviews"
 	GetPullReviewToolName          = "get_pull_review"
 	ListPullReviewCommentsToolName = "list_pull_review_comments"
+	MergePullRequestToolName       = "merge_pull_request"
 )
 
 var (
@@ -98,6 +99,20 @@ var (
 		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.PRIndex)),
 		mcp.WithNumber("id", mcp.Required(), mcp.Description("Review ID")),
 	)
+
+	MergePullRequestTool = mcp.NewTool(
+		MergePullRequestToolName,
+		mcp.WithDescription("Merge a pull request"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.PRIndex)),
+		mcp.WithString("style", mcp.Required(), mcp.Description("Merge style (merge, rebase, rebase-merge, squash)")),
+		mcp.WithString("title", mcp.Description("Merge commit title")),
+		mcp.WithString("message", mcp.Description("Merge commit message")),
+		mcp.WithBoolean("delete_branch_after_merge", mcp.Description("Delete head branch after merge")),
+		mcp.WithBoolean("force_merge", mcp.Description("Force merge even if checks have not passed")),
+		mcp.WithBoolean("merge_when_checks_succeed", mcp.Description("Schedule merge for when all checks succeed")),
+	)
 )
 
 func RegisterTool(s *server.MCPServer) {
@@ -108,6 +123,7 @@ func RegisterTool(s *server.MCPServer) {
 	s.AddTool(ListPullReviewsTool, ListPullReviewsFn)
 	s.AddTool(GetPullReviewTool, GetPullReviewFn)
 	s.AddTool(ListPullReviewCommentsTool, ListPullReviewCommentsFn)
+	s.AddTool(MergePullRequestTool, MergePullRequestFn)
 }
 
 func GetPullRequestByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -267,6 +283,46 @@ func GetPullReviewFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToo
 		return to.ErrorResult(fmt.Errorf("get pull review err: %v", err))
 	}
 	return to.TextResult(review)
+}
+
+func MergePullRequestFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called MergePullRequestFn")
+	owner, _ := req.GetArguments()["owner"].(string)
+	repo, _ := req.GetArguments()["repo"].(string)
+	index, _ := req.GetArguments()["index"].(float64)
+	style, _ := req.GetArguments()["style"].(string)
+	title, _ := req.GetArguments()["title"].(string)
+	message, _ := req.GetArguments()["message"].(string)
+	deleteBranch, _ := req.GetArguments()["delete_branch_after_merge"].(bool)
+	forceMerge, _ := req.GetArguments()["force_merge"].(bool)
+	mergeWhenChecks, _ := req.GetArguments()["merge_when_checks_succeed"].(bool)
+
+	opt := forgejo_sdk.MergePullRequestOption{
+		Style:                  forgejo_sdk.MergeStyle(style),
+		DeleteBranchAfterMerge: deleteBranch,
+		ForceMerge:             forceMerge,
+		MergeWhenChecksSucceed: mergeWhenChecks,
+	}
+
+	if title != "" {
+		opt.Title = title
+	}
+	if message != "" {
+		opt.Message = message
+	}
+
+	_, _, err := forgejo.Client().MergePullRequest(owner, repo, int64(index), opt)
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("merge pull request err: %v", err))
+	}
+
+	result := "Pull request merged successfully"
+	if mergeWhenChecks {
+		result = "Pull request scheduled to merge when all checks succeed"
+	}
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{mcp.NewTextContent(result)},
+	}, nil
 }
 
 func ListPullReviewCommentsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
