@@ -1,3 +1,10 @@
+## [2.8.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.8.0...v2.8.1) (2026-02-06)
+
+### :repeat: Chore
+
+* 📦 archive merge-pull-request openspec change ([194d830](https://codeberg.org/goern/forgejo-mcp/commit/194d8303c4cdb2f8eb9a6bb8bda79204c9a79118))
+* **deps:** update golang:1.25-alpine docker digest to f4622e3 ([726e033](https://codeberg.org/goern/forgejo-mcp/commit/726e03365abf1e847b7d48c8c34ffe92cc2e217a))
+
 ## [2.8.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.7.0...v2.8.0) (2026-01-31)
 
 ### :sparkles: Features
