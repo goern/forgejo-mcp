@@ -132,6 +132,30 @@ List all my repositories
 | **Server** | |
 | `get_forgejo_mcp_server_version` | Get the MCP server version |
 
+## CLI Mode
+
+You can invoke any tool directly from the command line without running an MCP server. This is useful for shell scripts, CI/CD pipelines, and Claude Code skills.
+
+```bash
+# List all available tools (grouped by domain)
+forgejo-mcp --cli list
+
+# Invoke a tool with JSON arguments
+forgejo-mcp --cli get_issue_by_index --args '{"owner":"goern","repo":"forgejo-mcp","index":1}'
+
+# Pipe JSON arguments via stdin
+echo '{"owner":"goern","repo":"forgejo-mcp"}' | forgejo-mcp --cli list_repo_issues
+
+# Show a tool's parameters
+forgejo-mcp --cli create_issue --help
+
+# Control output format (json or text)
+forgejo-mcp --cli list --output=json
+forgejo-mcp --cli get_my_user_info --args '{}' --output=text
+```
+
+CLI mode requires the same `FORGEJO_URL` and `FORGEJO_ACCESS_TOKEN` configuration as MCP server mode. Tool results are written as JSON to stdout by default; errors go to stderr with a non-zero exit code.
+
 ## Configuration Options
 
 You can configure the server using command-line arguments or environment variables:
@@ -143,6 +167,7 @@ You can configure the server using command-line arguments or environment variabl
 | `--debug` | `FORGEJO_DEBUG` | Enable debug mode |
 | `--transport` | - | Transport mode: `stdio` or `sse` |
 | `--sse-port` | - | Port for SSE mode (default: 8080) |
+| `--cli` | - | Enter CLI mode for direct tool invocation |
 
 Command-line arguments take priority over environment variables.
 
