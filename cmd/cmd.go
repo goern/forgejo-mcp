@@ -27,6 +27,16 @@ func init() {
 		return
 	}
 
+	// CLI mode: detect --cli early, skip default flag.Parse() since CLI
+	// has its own args (tool name, --args, --output) that would confuse it.
+	// URL/token are resolved from env vars; --url/--token supported via
+	// a separate FlagSet in RunCLI.
+	cliMode = hasCLIFlag()
+	if cliMode {
+		initConfig()
+		return
+	}
+
 	flag.StringVar(
 		&transport,
 		"t",
@@ -73,6 +83,11 @@ func init() {
 	flag.Parse()
 
 	flagPkg.URL = urlFlag
+	initConfig()
+}
+
+// initConfig resolves URL, token, and debug from flags and environment variables.
+func initConfig() {
 	if flagPkg.URL == "" {
 		flagPkg.URL = os.Getenv("FORGEJO_URL")
 		if flagPkg.URL != "" {
@@ -175,6 +190,11 @@ func Execute(version string) {
 	}
 
 	defer log.Default().Sync()
+
+	if cliMode {
+		RunCLI(version)
+		return
+	}
 
 	log.Infof("Starting Forgejo MCP Server %s", version)
 	log.Info("Server configuration loaded",
