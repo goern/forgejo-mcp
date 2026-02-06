@@ -1,5 +1,5 @@
-codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2 v2.2.0 h1:HTCWpzyWQOHDWt3LzI6/d2jvUDsw/vgGRWm/8BTvcqI=
-codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2 v2.2.0/go.mod h1:ZglEEDj+qkxYUb+SQIeqGtFxQrbaMYqIOgahNKb7uxs=
+codeberg.org/redbeard/forgejo-sdk/forgejo/v2 v2.2.0 h1:taycZdbH7pXBf4lUFyN09RuA3T2IbVzEtWCvCcQs3Z4=
+codeberg.org/redbeard/forgejo-sdk/forgejo/v2 v2.2.0/go.mod h1:ZglEEDj+qkxYUb+SQIeqGtFxQrbaMYqIOgahNKb7uxs=
 github.com/42wim/httpsig v1.2.3 h1:xb0YyWhkYj57SPtfSttIobJUPJZB9as1nsfo7KWVcEs=
 github.com/42wim/httpsig v1.2.3/go.mod h1:nZq9OlYKDrUBhptd77IHx4/sZZD+IxTBADvAPI9G/EM=
 github.com/bahlo/generic-list-go v0.2.0 h1:5sz/EEAK+ls5wF+NeqDpk5+iNdMDXrh3z3nPnH1Wvgk=
