@@ -28,6 +28,13 @@ Ensure `$GOPATH/bin` (typically `~/go/bin`) is in your PATH.
 
 Download the latest release from the [releases page](https://codeberg.org/goern/forgejo-mcp/releases).
 
+For Arch Linux, use your favorite AUR helper:
+
+```bash
+yay -S forgejo-mcp      # builds from source
+yay -S forgejo-mcp-bin  # uses pre-built binary
+```
+
 ### 2. Get Your Access Token
 
 1. Log into your Forgejo instance
