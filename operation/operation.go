@@ -23,35 +23,52 @@ var (
 func RegisterTool(s *server.MCPServer) {
 	log.Info("Registering MCP tools")
 
-	// User Tool
-	user.RegisterTool(s)
-	log.Debug("Registered user tools")
-
-	// Repo Tool
-	repo.RegisterTool(s)
-	log.Debug("Registered repository tools")
-
-	// Issue Tool
-	issue.RegisterTool(s)
-	log.Debug("Registered issue tools")
-
-	// Pull Tool
-	pull.RegisterTool(s)
-	log.Debug("Registered pull request tools")
-
-	// Pull Review Write Tools
-	pull.RegisterReviewTools(s)
-	log.Debug("Registered pull review write tools")
-
-	// Search Tool
-	search.RegisterTool(s)
-	log.Debug("Registered search tools")
-
-	// Version Tool
-	version.RegisterTool(s)
-	log.Debug("Registered version tools")
+	RegisterUserTool(s)
+	RegisterRepoTool(s)
+	RegisterIssueTool(s)
+	RegisterPullTool(s)
+	RegisterPullReviewTool(s)
+	RegisterSearchTool(s)
+	RegisterVersionTool(s)
 
 	log.Info("All MCP tools registered successfully")
+}
+
+// Per-domain registration functions exposed for CLI domain grouping.
+
+func RegisterUserTool(s *server.MCPServer) {
+	user.RegisterTool(s)
+	log.Debug("Registered user tools")
+}
+
+func RegisterRepoTool(s *server.MCPServer) {
+	repo.RegisterTool(s)
+	log.Debug("Registered repository tools")
+}
+
+func RegisterIssueTool(s *server.MCPServer) {
+	issue.RegisterTool(s)
+	log.Debug("Registered issue tools")
+}
+
+func RegisterPullTool(s *server.MCPServer) {
+	pull.RegisterTool(s)
+	log.Debug("Registered pull request tools")
+}
+
+func RegisterPullReviewTool(s *server.MCPServer) {
+	pull.RegisterReviewTools(s)
+	log.Debug("Registered pull review write tools")
+}
+
+func RegisterSearchTool(s *server.MCPServer) {
+	search.RegisterTool(s)
+	log.Debug("Registered search tools")
+}
+
+func RegisterVersionTool(s *server.MCPServer) {
+	version.RegisterTool(s)
+	log.Debug("Registered version tools")
 }
 
 func Run(transport, version string) error {
