@@ -95,6 +95,15 @@ This diff is critical for:
 
 2. **Read changed file contents**: For each file from Step 5 where `status` is NOT `deleted`, call `mcp__codeberg__get_file_content` at the PR's head branch ref. Skip binary files and files larger than 100KB.
 
+## Usage Tracking
+
+Throughout Steps 8-10, track usage statistics from every subagent. After each Task tool call completes, record the `total_tokens`, `tool_uses`, and `duration_ms` from the result's `<usage>` block. Maintain a running table:
+
+| Agent | Model | Tokens | API Calls | Duration (s) |
+|-------|-------|--------|-----------|--------------|
+
+You will report this data in Step 12.
+
 ## Step 8: Summarize Changes
 
 Spawn a **Haiku** subagent to create a structured summary:
@@ -323,6 +332,25 @@ If no findings remain:
 No significant issues found. (<M> findings filtered out)
 ```
 
+### Cost Summary (always shown after findings)
+
+After the findings output, display the usage summary collected during Steps 8-10:
+
+```markdown
+### Review Cost
+
+| Agent | Model | Tokens | API Calls | Duration |
+|-------|-------|--------|-----------|----------|
+| Summarizer | haiku | <tokens> | <calls> | <dur>s |
+| Compliance | sonnet | <tokens> | <calls> | <dur>s |
+| Bug Hunter | opus | <tokens> | <calls> | <dur>s |
+| Logic/Security | opus | <tokens> | <calls> | <dur>s |
+| Confidence | sonnet | <tokens> | <calls> | <dur>s |
+| **Total** | | **<sum>** | **<sum>** | **<sum>s** |
+```
+
+Duration values should be formatted as seconds (divide `duration_ms` by 1000, round to 1 decimal).
+
 ### Post to Forgejo (unless `--dry-run` was specified)
 
 **If findings exist above threshold:**
@@ -333,7 +361,7 @@ Call `mcp__codeberg__create_pull_review` with:
 - `repo`: repository name
 - `index`: PR number
 - `state`: `COMMENT`
-- `body`: "Automated review found N issue(s) (M filtered below confidence threshold)"
+- `body`: "Automated review found N issue(s) (M filtered below confidence threshold)\n\n<details><summary>Review cost</summary>\n\nAgents: 5 | Total tokens: <sum> | API calls: <sum> | Duration: <sum>s\n</details>"
 - `comments`: JSON array where each finding becomes:
   `{"path": "<file>", "body": "[<source>] <description> (confidence: <score>)", "new_position": <line>}`
 
@@ -351,4 +379,4 @@ Call `mcp__codeberg__create_pull_review` with:
 - `repo`: repository name
 - `index`: PR number
 - `state`: `COMMENT`
-- `body`: "Automated code review complete. No significant issues found."
+- `body`: "Automated code review complete. No significant issues found.\n\n<details><summary>Review cost</summary>\n\nAgents: 5 | Total tokens: <sum> | API calls: <sum> | Duration: <sum>s\n</details>"
