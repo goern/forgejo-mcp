@@ -14,3 +14,11 @@ vendor:
 	@echo 'Tidying and verifying module dependencies...'
 	go mod tidy
 	go mod verify
+
+## container: build container image using podman
+IMAGE_NAME ?= forgejo-mcp
+IMAGE_TAG ?= $(shell git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "latest")
+
+.PHONY: container
+container:
+	podman build -t $(IMAGE_NAME):$(IMAGE_TAG) -f Containerfile .
