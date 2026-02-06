@@ -1,3 +1,14 @@
+## [2.9.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.9.0...v2.9.1) (2026-02-06)
+
+### :bug: Fixes
+
+* 🔧 remove no-op replace directive from go.mod ([5629f7b](https://codeberg.org/goern/forgejo-mcp/commit/5629f7bfcac7ca87d83f6c4c41b1e99581c6a04d)), closes [#67](https://codeberg.org/goern/forgejo-mcp/issues/67)
+
+### :repeat: Chore
+
+* 📦 archive add-global-cli-mode change, sync cli-mode spec ([d505c99](https://codeberg.org/goern/forgejo-mcp/commit/d505c99e4aea76bc52f8821153805060599629ab))
+* **deps:** update golang:1.25-alpine docker digest to f6751d8 ([36c3d6a](https://codeberg.org/goern/forgejo-mcp/commit/36c3d6aeb2a2fefd8fdf20f6d9d7270b57bdb844))
+
 ## [2.9.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.8.1...v2.9.0) (2026-02-06)
 
 ### :sparkles: Features
