@@ -1,0 +1,36 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    permissions:
+      packages: write
+      contents: write
+    runs-on: codeberg-small
+    steps:
+      # https://code.forgejo.org/actions/checkout
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          # fetch full history to allow goreleaser to generate the full changelog
+          fetch-depth: 0
+
+      # https://code.forgejo.org/actions/setup-go
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+
+      # https://github.com/goreleaser/goreleaser-action
+      - name: Run GoReleaser
+        uses: https://github.com/goreleaser/goreleaser-action@v6
+        with:
+          version: '~> v2'
+          args: release --clean --parallelism 2
+        env:
+          GORELEASER_FORCE_TOKEN: gitea
+          GITEA_TOKEN: ${{ secrets.RELEASE_TOKEN }}
