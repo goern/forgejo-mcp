@@ -365,10 +365,17 @@ Call `mcp__codeberg__create_pull_review` with:
 - `comments`: JSON array where each finding becomes:
   `{"path": "<file>", "body": "[<source>] <description> (confidence: <score>)", "new_position": <line>}`
 
-If the MCP tool is unavailable, fall back to:
+If the MCP tool is unavailable, fall back to the CLI. Because finding descriptions may contain shell metacharacters from untrusted PR content, **never embed the JSON inline**. Write it to a temp file first:
 
 ```bash
-forgejo-mcp --cli create_pull_review --args '{"owner":"...","repo":"...","index":...,"state":"COMMENT","body":"...","comments":"[...]"}'
+# 1. Build the JSON args object in a temp file
+cat > /tmp/review-args.json <<'ENDARGS'
+{"owner":"...","repo":"...","index":...,"state":"COMMENT","body":"...","comments":[...]}
+ENDARGS
+# 2. Pass via stdin to avoid shell injection
+forgejo-mcp --cli create_pull_review --args-file /tmp/review-args.json
+# 3. Clean up
+rm -f /tmp/review-args.json
 ```
 
 **If no findings above threshold:**
