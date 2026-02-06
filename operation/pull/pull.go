@@ -24,6 +24,8 @@ const (
 	GetPullReviewToolName          = "get_pull_review"
 	ListPullReviewCommentsToolName = "list_pull_review_comments"
 	MergePullRequestToolName       = "merge_pull_request"
+	ListPullRequestFilesToolName   = "list_pull_request_files"
+	GetPullRequestDiffToolName     = "get_pull_request_diff"
 )
 
 var (
@@ -100,6 +102,24 @@ var (
 		mcp.WithNumber("id", mcp.Required(), mcp.Description("Review ID")),
 	)
 
+	ListPullRequestFilesTool = mcp.NewTool(
+		ListPullRequestFilesToolName,
+		mcp.WithDescription("List changed files in a pull request"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.PRIndex)),
+		mcp.WithNumber("page", mcp.Description(params.Page), mcp.DefaultNumber(1)),
+		mcp.WithNumber("limit", mcp.Description(params.Limit), mcp.DefaultNumber(50)),
+	)
+
+	GetPullRequestDiffTool = mcp.NewTool(
+		GetPullRequestDiffToolName,
+		mcp.WithDescription("Get the diff of a pull request"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.PRIndex)),
+	)
+
 	MergePullRequestTool = mcp.NewTool(
 		MergePullRequestToolName,
 		mcp.WithDescription("Merge a pull request"),
@@ -124,6 +144,8 @@ func RegisterTool(s *server.MCPServer) {
 	s.AddTool(GetPullReviewTool, GetPullReviewFn)
 	s.AddTool(ListPullReviewCommentsTool, ListPullReviewCommentsFn)
 	s.AddTool(MergePullRequestTool, MergePullRequestFn)
+	s.AddTool(ListPullRequestFilesTool, ListPullRequestFilesFn)
+	s.AddTool(GetPullRequestDiffTool, GetPullRequestDiffFn)
 }
 
 func GetPullRequestByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -322,6 +344,49 @@ func MergePullRequestFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 	}
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{mcp.NewTextContent(result)},
+	}, nil
+}
+
+func ListPullRequestFilesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called ListPullRequestFilesFn")
+	owner, _ := req.GetArguments()["owner"].(string)
+	repo, _ := req.GetArguments()["repo"].(string)
+	index, _ := req.GetArguments()["index"].(float64)
+	page, ok := req.GetArguments()["page"].(float64)
+	if !ok {
+		page = 1
+	}
+	limit, ok := req.GetArguments()["limit"].(float64)
+	if !ok {
+		limit = 50
+	}
+
+	opt := forgejo_sdk.ListPullRequestFilesOptions{
+		ListOptions: forgejo_sdk.ListOptions{
+			Page:     int(page),
+			PageSize: int(limit),
+		},
+	}
+
+	files, _, err := forgejo.Client().ListPullRequestFiles(owner, repo, int64(index), opt)
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("list pull request files err: %v", err))
+	}
+	return to.TextResult(files)
+}
+
+func GetPullRequestDiffFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called GetPullRequestDiffFn")
+	owner, _ := req.GetArguments()["owner"].(string)
+	repo, _ := req.GetArguments()["repo"].(string)
+	index, _ := req.GetArguments()["index"].(float64)
+
+	diff, _, err := forgejo.Client().GetPullRequestDiff(owner, repo, int64(index), forgejo_sdk.PullRequestDiffOptions{})
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("get pull request diff err: %v", err))
+	}
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{mcp.NewTextContent(string(diff))},
 	}, nil
 }
 
