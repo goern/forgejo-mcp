@@ -1,3 +1,22 @@
+## [2.9.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.8.1...v2.9.0) (2026-02-06)
+
+### :sparkles: Features
+
+* ✨ add --cli mode for direct tool invocation ([c08e311](https://codeberg.org/goern/forgejo-mcp/commit/c08e311e69a5f56d6c5625de0534426bfd7ac516))
+
+### :bug: Fixes
+
+* 🐛 release workflow checkout URL and skip-ci suppression ([351e8b7](https://codeberg.org/goern/forgejo-mcp/commit/351e8b7d05663cea472a85b77273b96990d35c80))
+
+### :memo: Documentation
+
+* 📝 add CLI mode proposal (OpenSpec change) ([641b04a](https://codeberg.org/goern/forgejo-mcp/commit/641b04aed71ef06eb0658e6dcfd40f7ec59e9420))
+* 📝 add CLI mode section to README ([5e54b1c](https://codeberg.org/goern/forgejo-mcp/commit/5e54b1c5ea61eb115842fcc8f4a31fa169e7c95f))
+
+### :repeat: Chore
+
+* 🔧 switch to redbeard's forgejo-sdk fork ([14cb733](https://codeberg.org/goern/forgejo-mcp/commit/14cb7338ebf2ad1d7ef0f65b9245f88d1bdf9b88))
+
 ## [2.8.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.8.0...v2.8.1) (2026-02-06)
 
 ### :repeat: Chore
