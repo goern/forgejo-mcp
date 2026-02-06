@@ -19,10 +19,14 @@ Forgejo MCP Server is an integration plugin that connects Forgejo with [Model Co
 **Option A: Using Go (Recommended)**
 
 ```bash
-go install codeberg.org/goern/forgejo-mcp/v2@latest
+git clone https://codeberg.org/goern/forgejo-mcp.git
+cd forgejo-mcp
+go install .
 ```
 
 Ensure `$GOPATH/bin` (typically `~/go/bin`) is in your PATH.
+
+> **Note:** `go install codeberg.org/goern/forgejo-mcp/v2@latest` does not work currently. See [Known Issues](#known-issues).
 
 **Option B: Download Binary**
 
@@ -193,6 +197,10 @@ export FORGEJO_DEBUG=true
 ## For Developers
 
 See [DEVELOPER.md](DEVELOPER.md) for build instructions, architecture overview, and contribution guidelines.
+
+## Known Issues
+
+- **`go install ...@latest` fails** — The `go.mod` contains a `replace` directive (for a forked Forgejo SDK), which prevents remote `go install`. Use the clone-and-build workflow shown in [Quick Start](#quick-start) instead. Tracked in [#67](https://codeberg.org/goern/forgejo-mcp/issues/67).
 
 ## License
 
