@@ -1,3 +1,13 @@
+## [2.10.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.9.1...v2.10.0) (2026-02-10)
+
+### :sparkles: Features
+
+* ✨ add macOS (darwin) release assets ([b63aebc](https://codeberg.org/goern/forgejo-mcp/commit/b63aebcac21b5674a1dfde36e42a75cf4b5d6ce5)), closes [#70](https://codeberg.org/goern/forgejo-mcp/issues/70)
+
+### :memo: Documentation
+
+* add Arch Linux AUR installation options ([94a4370](https://codeberg.org/goern/forgejo-mcp/commit/94a437099efb476e27bd3c9cbde9233f3c722f9d))
+
 ## [2.9.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.9.0...v2.9.1) (2026-02-06)
 
 ### :bug: Fixes
