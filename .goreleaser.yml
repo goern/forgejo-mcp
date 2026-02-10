@@ -9,6 +9,7 @@ builds:
       - '-s -w -X main.BuildTag={{.Version}} -X main.BuildCommit={{.Commit}} -X main.BuildDate={{.Date}}'
     goos:
       - linux
+      - darwin
     goarch:
       - amd64
       - arm64
