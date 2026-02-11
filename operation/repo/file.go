@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 
 	"codeberg.org/goern/forgejo-mcp/v2/operation/params"
@@ -108,7 +109,7 @@ func CreateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 			BranchName:    branchName,
 			NewBranchName: newBranchName,
 		},
-		Content: content,
+		Content: base64.StdEncoding.EncodeToString([]byte(content)),
 	}
 	fileResp, _, err := forgejo.Client().CreateFile(owner, repo, filePath, opt)
 	if err != nil {
@@ -137,7 +138,7 @@ func UpdateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 			NewBranchName: newBranchName,
 		},
 		SHA:     sha,
-		Content: content,
+		Content: base64.StdEncoding.EncodeToString([]byte(content)),
 	}
 	fileResp, _, err := forgejo.Client().UpdateFile(owner, repo, filePath, opt)
 	if err != nil {

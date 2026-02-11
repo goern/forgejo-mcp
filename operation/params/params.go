@@ -27,7 +27,7 @@ const (
 
 	// File parameters
 	FilePath      = "File path"
-	Content       = "Content"
+	Content       = "Content (plain text, will be base64-encoded automatically)"
 	Message       = "Commit message"
 	BranchName    = "Branch name"
 	NewBranchName = "New branch name"
