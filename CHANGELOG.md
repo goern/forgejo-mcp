@@ -1,3 +1,13 @@
+## [2.10.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.10.0...v2.10.1) (2026-02-11)
+
+### :bug: Fixes
+
+* 🐛 base64-encode content in create_file and update_file ([#72](https://codeberg.org/goern/forgejo-mcp/issues/72)) ([593eeb8](https://codeberg.org/goern/forgejo-mcp/commit/593eeb832fbefe5d2a4d4c9fb66c1dd1a8529fc5))
+
+### :repeat: Chore
+
+* **deps:** update golang docker tag to v1.26 ([85dca17](https://codeberg.org/goern/forgejo-mcp/commit/85dca175d80f5c7275b732197c11064bbce5ddde))
+
 ## [2.10.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.9.1...v2.10.0) (2026-02-10)
 
 ### :sparkles: Features
