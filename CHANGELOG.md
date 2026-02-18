@@ -1,3 +1,18 @@
+## [2.11.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.10.1...v2.11.0) (2026-02-18)
+
+### :sparkles: Features
+
+* ✨ add --version flag (GNU standard) alongside version subcommand ([6255653](https://codeberg.org/goern/forgejo-mcp/commit/6255653c2ef3b8216df6441b527e284d8a364d7d)), closes [#73](https://codeberg.org/goern/forgejo-mcp/issues/73)
+* ✨ add Actions support (dispatch_workflow, list_workflow_runs, get_workflow_run) ([4fea365](https://codeberg.org/goern/forgejo-mcp/commit/4fea365203c90e832925f6e1c30179f47d5f5ce3)), closes [#103](https://codeberg.org/goern/forgejo-mcp/issues/103) [#60](https://codeberg.org/goern/forgejo-mcp/issues/60)
+
+### :bug: Fixes
+
+* 🐛 register actions domain in CLI tool listing ([ebe97a0](https://codeberg.org/goern/forgejo-mcp/commit/ebe97a0096c29788aef1474610613491f4071890))
+
+### :memo: Documentation
+
+* 📝 add Actions tools to README with list_workflow_runs examples ([af4636e](https://codeberg.org/goern/forgejo-mcp/commit/af4636e846868071234fa09525bf022f774be9a2))
+
 ## [2.10.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.10.0...v2.10.1) (2026-02-11)
 
 ### :bug: Fixes
