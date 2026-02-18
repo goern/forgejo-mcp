@@ -21,9 +21,20 @@ var (
 	debug bool
 )
 
+// isVersionRequest returns true for both the "version" subcommand and the
+// GNU-standard --version / -version flags.  All three forms must exit before
+// flag.Parse() runs so that --url is not required.
+func isVersionRequest() bool {
+	if len(os.Args) < 2 {
+		return false
+	}
+	arg := os.Args[1]
+	return arg == "version" || arg == "--version" || arg == "-version"
+}
+
 func init() {
-	// Subcommands that don't need full initialization
-	if len(os.Args) > 1 && os.Args[1] == "version" {
+	// Subcommands / flags that don't need full initialization
+	if isVersionRequest() {
 		return
 	}
 
@@ -184,7 +195,7 @@ func validateURL(urlStr string) error {
 }
 
 func Execute(version string) {
-	if len(os.Args) > 1 && os.Args[1] == "version" {
+	if isVersionRequest() {
 		fmt.Printf("forgejo-mcp %s\n", version)
 		return
 	}
