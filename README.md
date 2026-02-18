@@ -11,6 +11,7 @@ Forgejo MCP Server is an integration plugin that connects Forgejo with [Model Co
 - "Create an issue titled 'Bug in login page'"
 - "Show me open pull requests in my-org/my-repo"
 - "Get the contents of README.md from the main branch"
+- "Show me the latest Actions workflow runs in goern/forgejo-mcp"
 
 ## Quick Start
 
@@ -134,6 +135,10 @@ List all my repositories
 | `list_pull_reviews` | List reviews for a pull request |
 | `get_pull_review` | Get a specific pull request review |
 | `list_pull_review_comments` | List comments on a pull request review |
+| **Actions** | |
+| `dispatch_workflow` | Trigger a workflow run via `workflow_dispatch` event |
+| `list_workflow_runs` | List workflow runs with optional filtering by status, event, or SHA |
+| `get_workflow_run` | Get details of a specific workflow run by ID |
 | **Organizations** | |
 | `search_org_teams` | Search for teams in an organization |
 | **Server** | |
@@ -152,6 +157,16 @@ forgejo-mcp --cli get_issue_by_index --args '{"owner":"goern","repo":"forgejo-mc
 
 # Pipe JSON arguments via stdin
 echo '{"owner":"goern","repo":"forgejo-mcp"}' | forgejo-mcp --cli list_repo_issues
+
+# List recent workflow runs (text output)
+forgejo-mcp --cli list_workflow_runs \
+  --args '{"owner":"goern","repo":"forgejo-mcp"}' \
+  --output=text
+
+# List only failed runs
+forgejo-mcp --cli list_workflow_runs \
+  --args '{"owner":"goern","repo":"forgejo-mcp","status":"failure"}' \
+  --output=text
 
 # Show a tool's parameters
 forgejo-mcp --cli create_issue --help
