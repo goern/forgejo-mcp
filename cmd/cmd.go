@@ -32,66 +32,55 @@ func isVersionRequest() bool {
 	return arg == "version" || arg == "--version" || arg == "-version"
 }
 
-func init() {
-	// Subcommands / flags that don't need full initialization
-	if isVersionRequest() {
-		return
-	}
+// initFlags registers and parses CLI flags using a dedicated FlagSet to avoid
+// polluting the global flag.CommandLine (which breaks `go test`).
+func initFlags() {
+	fs := flag.NewFlagSet("forgejo-mcp", flag.ExitOnError)
 
-	// CLI mode: detect --cli early, skip default flag.Parse() since CLI
-	// has its own args (tool name, --args, --output) that would confuse it.
-	// URL/token are resolved from env vars; --url/--token supported via
-	// a separate FlagSet in RunCLI.
-	cliMode = hasCLIFlag()
-	if cliMode {
-		initConfig()
-		return
-	}
-
-	flag.StringVar(
+	fs.StringVar(
 		&transport,
 		"t",
 		"stdio",
 		"Transport type (stdio or sse)",
 	)
-	flag.StringVar(
+	fs.StringVar(
 		&transport,
 		"transport",
 		"stdio",
 		"Transport type (stdio or sse)",
 	)
-	flag.StringVar(
+	fs.StringVar(
 		&urlFlag,
 		"url",
 		"",
 		"Forgejo instance URL (required, must start with http:// or https://)",
 	)
-	flag.IntVar(
+	fs.IntVar(
 		&ssePort,
 		"sse-port",
 		8080,
 		"Port for SSE transport mode",
 	)
-	flag.StringVar(
+	fs.StringVar(
 		&token,
 		"token",
 		"",
 		"Your personal access token",
 	)
-	flag.BoolVar(
+	fs.BoolVar(
 		&debug,
 		"d",
 		true,
 		"debug mode",
 	)
-	flag.BoolVar(
+	fs.BoolVar(
 		&debug,
 		"debug",
 		true,
 		"debug mode",
 	)
 
-	flag.Parse()
+	fs.Parse(os.Args[1:])
 
 	flagPkg.URL = urlFlag
 	initConfig()
@@ -198,6 +187,15 @@ func Execute(version string) {
 	if isVersionRequest() {
 		fmt.Printf("forgejo-mcp %s\n", version)
 		return
+	}
+
+	// CLI mode: detect --cli early, skip default flag parsing since CLI
+	// has its own args (tool name, --args, --output) that would confuse it.
+	cliMode = hasCLIFlag()
+	if cliMode {
+		initConfig()
+	} else {
+		initFlags()
 	}
 
 	defer log.Default().Sync()

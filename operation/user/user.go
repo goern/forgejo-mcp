@@ -37,8 +37,12 @@ func GetUserInfoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	user, resp, err := forgejo.Client().GetMyUserInfo()
 	duration := time.Since(start)
 
-	// Log API call details
-	forgejo.LogAPICall(ctx, "GET", "/user", duration, resp.StatusCode, err)
+	// Log API call details — guard resp against nil (e.g. network error)
+	statusCode := 0
+	if resp != nil {
+		statusCode = resp.StatusCode
+	}
+	forgejo.LogAPICall(ctx, "GET", "/user", duration, statusCode, err)
 
 	if err != nil {
 		log.LogMCPToolError(ctx, GetMyUserInfoToolName, duration, err)
