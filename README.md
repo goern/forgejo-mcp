@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/goern-forgejo-mcp-badge.png)](https://mseep.ai/app/goern-forgejo-mcp)
+
 # Forgejo MCP Server
 
 Connect your AI assistant to Forgejo repositories. Manage issues, pull requests, files, and more through natural language.
