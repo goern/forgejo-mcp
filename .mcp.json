@@ -4,7 +4,7 @@
             "type": "http",
             "url": "https://mcp.context7.com/mcp"
         },
-        "local-dev": {
+        "codeberg-devel": {
             "type": "stdio",
             "command": "./forgejo-mcp",
             "args": [
