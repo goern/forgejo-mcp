@@ -1,3 +1,49 @@
+## [2.11.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.10.1...v2.11.0) (2026-02-18)
+
+### :sparkles: Features
+
+* ✨ add --version flag (GNU standard) alongside version subcommand ([6255653](https://codeberg.org/goern/forgejo-mcp/commit/6255653c2ef3b8216df6441b527e284d8a364d7d)), closes [#73](https://codeberg.org/goern/forgejo-mcp/issues/73)
+* ✨ add Actions support (dispatch_workflow, list_workflow_runs, get_workflow_run) ([4fea365](https://codeberg.org/goern/forgejo-mcp/commit/4fea365203c90e832925f6e1c30179f47d5f5ce3)), closes [#103](https://codeberg.org/goern/forgejo-mcp/issues/103) [#60](https://codeberg.org/goern/forgejo-mcp/issues/60)
+
+### :bug: Fixes
+
+* 🐛 register actions domain in CLI tool listing ([ebe97a0](https://codeberg.org/goern/forgejo-mcp/commit/ebe97a0096c29788aef1474610613491f4071890))
+
+### :memo: Documentation
+
+* 📝 add Actions tools to README with list_workflow_runs examples ([af4636e](https://codeberg.org/goern/forgejo-mcp/commit/af4636e846868071234fa09525bf022f774be9a2))
+
+## [2.10.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.10.0...v2.10.1) (2026-02-11)
+
+### :bug: Fixes
+
+* 🐛 base64-encode content in create_file and update_file ([#72](https://codeberg.org/goern/forgejo-mcp/issues/72)) ([593eeb8](https://codeberg.org/goern/forgejo-mcp/commit/593eeb832fbefe5d2a4d4c9fb66c1dd1a8529fc5))
+
+### :repeat: Chore
+
+* **deps:** update golang docker tag to v1.26 ([85dca17](https://codeberg.org/goern/forgejo-mcp/commit/85dca175d80f5c7275b732197c11064bbce5ddde))
+
+## [2.10.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.9.1...v2.10.0) (2026-02-10)
+
+### :sparkles: Features
+
+* ✨ add macOS (darwin) release assets ([b63aebc](https://codeberg.org/goern/forgejo-mcp/commit/b63aebcac21b5674a1dfde36e42a75cf4b5d6ce5)), closes [#70](https://codeberg.org/goern/forgejo-mcp/issues/70)
+
+### :memo: Documentation
+
+* add Arch Linux AUR installation options ([94a4370](https://codeberg.org/goern/forgejo-mcp/commit/94a437099efb476e27bd3c9cbde9233f3c722f9d))
+
+## [2.9.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.9.0...v2.9.1) (2026-02-06)
+
+### :bug: Fixes
+
+* 🔧 remove no-op replace directive from go.mod ([5629f7b](https://codeberg.org/goern/forgejo-mcp/commit/5629f7bfcac7ca87d83f6c4c41b1e99581c6a04d)), closes [#67](https://codeberg.org/goern/forgejo-mcp/issues/67)
+
+### :repeat: Chore
+
+* 📦 archive add-global-cli-mode change, sync cli-mode spec ([d505c99](https://codeberg.org/goern/forgejo-mcp/commit/d505c99e4aea76bc52f8821153805060599629ab))
+* **deps:** update golang:1.25-alpine docker digest to f6751d8 ([36c3d6a](https://codeberg.org/goern/forgejo-mcp/commit/36c3d6aeb2a2fefd8fdf20f6d9d7270b57bdb844))
+
 ## [2.9.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.8.1...v2.9.0) (2026-02-06)
 
 ### :sparkles: Features

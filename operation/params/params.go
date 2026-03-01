@@ -27,7 +27,7 @@ const (
 
 	// File parameters
 	FilePath      = "File path"
-	Content       = "Content"
+	Content       = "Content (plain text, will be base64-encoded automatically)"
 	Message       = "Commit message"
 	BranchName    = "Branch name"
 	NewBranchName = "New branch name"
@@ -64,6 +64,15 @@ const (
 	TeamReviewers = "Team reviewer names (comma-separated)"
 	DismissMessage = "Dismissal message"
 	ReviewComments = `Inline comments as JSON array, e.g. [{"path":"file.go","body":"Fix this","new_position":10}]`
+
+	// Actions parameters
+	Workflow  = "Workflow file or ID (e.g. main.yml)"
+	Inputs    = `Workflow inputs as JSON object (e.g. {"key": "value"})`
+	Event     = "Filter by event type (e.g. push, pull_request, workflow_dispatch)"
+	RunNumber = "Filter by run number"
+	HeadSHA   = "Filter by HEAD SHA"
+	RunID     = "Run ID"
+	Status    = "Filter by status (e.g. waiting, running, success, failure, cancelled)"
 
 	// Misc parameters
 	Description = "Description"
