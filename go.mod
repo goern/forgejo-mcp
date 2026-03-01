@@ -3,7 +3,7 @@ module codeberg.org/goern/forgejo-mcp/v2
 go 1.25.0
 
 require (
-	codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2 v2.2.0
+	codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2 v2.2.1-0.20260217203524-edf26081b649
 	github.com/mark3labs/mcp-go v0.43.2
 	go.uber.org/zap v1.27.1
 )
@@ -26,5 +26,3 @@ require (
 	golang.org/x/sys v0.40.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2 => codeberg.org/redbeard/forgejo-sdk/forgejo/v2 v2.2.0

@@ -8,6 +8,7 @@ import (
 	"codeberg.org/goern/forgejo-mcp/v2/operation/params"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/log"
+	"codeberg.org/goern/forgejo-mcp/v2/pkg/ptr"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/to"
 
 	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2"
@@ -242,7 +243,7 @@ func UpdatePullRequestFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Cal
 		opt.Title = title
 	}
 	if body != "" {
-		opt.Body = body
+		opt.Body = ptr.To(body)
 	}
 	if base != "" {
 		opt.Base = base
