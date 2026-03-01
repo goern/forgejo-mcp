@@ -1,3 +1,27 @@
+## [2.12.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.11.0...v2.12.0) (2026-03-01)
+
+### :sparkles: Features
+
+* ✨ add code-review skill and OpenSpec specs/tasks ([d39cb01](https://codeberg.org/goern/forgejo-mcp/commit/d39cb013813171142868f6e0ff36576554633b7a))
+* ✨ add design doc for Forgejo code review skill ([697e207](https://codeberg.org/goern/forgejo-mcp/commit/697e20794198950d08c2cd007e79adeace5e556e))
+* ✨ add OpenSpec changes for Forgejo code review integration ([03c7dc0](https://codeberg.org/goern/forgejo-mcp/commit/03c7dc09e15cb523f62d7a92b52760a6bafa4b13))
+* ✨ add usage tracking to code-review skill ([41307db](https://codeberg.org/goern/forgejo-mcp/commit/41307db405cd2d9e26fd5a17b6754a5e5e094617))
+
+### :bug: Fixes
+
+* ✨ add list_pull_request_files/get_pull_request_diff tools, rewrite code-review skill ([19f2034](https://codeberg.org/goern/forgejo-mcp/commit/19f2034bcf6eda4882807d647e3fe9960637da58))
+* 🔒️ prevent shell injection in code-review CLI fallback ([8b255f9](https://codeberg.org/goern/forgejo-mcp/commit/8b255f90b370ffaccc7ab206fd0c41ac4196c4db))
+* nil pointer deref on resp.StatusCode and flag.Parse() in init() ([dfdb995](https://codeberg.org/goern/forgejo-mcp/commit/dfdb9959fc5102783ecfb5fa75a436bdb749ce67)), closes [#76](https://codeberg.org/goern/forgejo-mcp/issues/76)
+* some local leftovers merged ([44ac633](https://codeberg.org/goern/forgejo-mcp/commit/44ac633eb353b8f2af8eba3323174dbf27c7ec85))
+
+### :memo: Documentation
+
+* 📝 document go install known issue and link to [#67](https://codeberg.org/goern/forgejo-mcp/issues/67) ([4388b47](https://codeberg.org/goern/forgejo-mcp/commit/4388b47ed3758be6f30434d594e75008a65a25f4))
+
+### :white_check_mark: Tests
+
+* add race condition reproducer for [#76](https://codeberg.org/goern/forgejo-mcp/issues/76) ([afddf59](https://codeberg.org/goern/forgejo-mcp/commit/afddf59cc451ad7e160437360ce16a86249123c5))
+
 ## [2.11.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.10.1...v2.11.0) (2026-02-18)
 
 ### :sparkles: Features
