@@ -28,7 +28,9 @@ const (
 	ListIssueCommentsToolName  = "list_issue_comments"
 	GetIssueCommentToolName    = "get_issue_comment"
 	EditIssueCommentToolName   = "edit_issue_comment"
-	DeleteIssueCommentToolName = "delete_issue_comment"
+	DeleteIssueCommentToolName  = "delete_issue_comment"
+	ListRepoMilestonesToolName  = "list_repo_milestones"
+	ListRepoLabelsToolName      = "list_repo_labels"
 )
 
 var (
@@ -137,6 +139,25 @@ var (
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithNumber("comment_id", mcp.Required(), mcp.Description(params.CommentID)),
 	)
+
+	ListRepoMilestonesTool = mcp.NewTool(
+		ListRepoMilestonesToolName,
+		mcp.WithDescription("List repository milestones"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("page", mcp.Description(params.Page), mcp.DefaultNumber(1)),
+		mcp.WithNumber("limit", mcp.Description(params.Limit), mcp.DefaultNumber(100)),
+		mcp.WithString("state", mcp.Description("Milestone state (open|closed|all)"), mcp.DefaultString("open")),
+	)
+
+	ListRepoLabelsTool = mcp.NewTool(
+		ListRepoLabelsToolName,
+		mcp.WithDescription("List repository labels"),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("page", mcp.Description(params.Page), mcp.DefaultNumber(1)),
+		mcp.WithNumber("limit", mcp.Description(params.Limit), mcp.DefaultNumber(100)),
+	)
 )
 
 func RegisterTool(s *server.MCPServer) {
@@ -151,6 +172,8 @@ func RegisterTool(s *server.MCPServer) {
 	s.AddTool(GetIssueCommentTool, GetIssueCommentFn)
 	s.AddTool(EditIssueCommentTool, EditIssueCommentFn)
 	s.AddTool(DeleteIssueCommentTool, DeleteIssueCommentFn)
+	s.AddTool(ListRepoMilestonesTool, ListRepoMilestonesFn)
+	s.AddTool(ListRepoLabelsTool, ListRepoLabelsFn)
 }
 
 func GetIssueByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -441,4 +464,62 @@ func DeleteIssueCommentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 		return to.ErrorResult(fmt.Errorf("delete issue comment err: %v", err))
 	}
 	return to.TextResult("Delete comment success")
+}
+func ListRepoMilestonesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called ListRepoMilestonesFn")
+	owner, _ := req.GetArguments()["owner"].(string)
+	repo, _ := req.GetArguments()["repo"].(string)
+	state, ok := req.GetArguments()["state"].(string)
+	if !ok || state == "" {
+		state = "open"
+	}
+	page, ok := req.GetArguments()["page"].(float64)
+	if !ok {
+		page = 1
+	}
+	limit, ok := req.GetArguments()["limit"].(float64)
+	if !ok {
+		limit = 100
+	}
+
+	opt := forgejo_sdk.ListMilestoneOption{
+		ListOptions: forgejo_sdk.ListOptions{
+			Page:     int(page),
+			PageSize: int(limit),
+		},
+		State: forgejo_sdk.StateType(state),
+	}
+
+	milestones, _, err := forgejo.Client().ListRepoMilestones(owner, repo, opt)
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("list repo milestones err: %v", err))
+	}
+	return to.TextResult(milestones)
+}
+
+func ListRepoLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called ListRepoLabelsFn")
+	owner, _ := req.GetArguments()["owner"].(string)
+	repo, _ := req.GetArguments()["repo"].(string)
+	page, ok := req.GetArguments()["page"].(float64)
+	if !ok {
+		page = 1
+	}
+	limit, ok := req.GetArguments()["limit"].(float64)
+	if !ok {
+		limit = 100
+	}
+
+	opt := forgejo_sdk.ListLabelsOptions{
+		ListOptions: forgejo_sdk.ListOptions{
+			Page:     int(page),
+			PageSize: int(limit),
+		},
+	}
+
+	labels, _, err := forgejo.Client().ListRepoLabels(owner, repo, opt)
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("list repo labels err: %v", err))
+	}
+	return to.TextResult(labels)
 }

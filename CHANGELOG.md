@@ -1,3 +1,9 @@
+## [Unreleased]
+
+### :sparkles: Features
+
+* ✨ add `list_repo_milestones` and `list_repo_labels` MCP tools for milestone/label discovery ([#80](https://codeberg.org/goern/forgejo-mcp/issues/80))
+
 ## [2.12.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.11.0...v2.12.0) (2026-03-01)
 
 ### :sparkles: Features
