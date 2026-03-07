@@ -26,6 +26,7 @@ var (
 
 func RegisterTool(s *server.MCPServer) {
 	s.AddTool(GetMyUserInfoTool, GetUserInfoFn)
+	s.AddTool(CheckNotificationsTool, CheckNotificationsFn)
 }
 
 func GetUserInfoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {

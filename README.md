@@ -101,6 +101,7 @@ List all my repositories
 |------|-------------|
 | **User** | |
 | `get_my_user_info` | Get information about the authenticated user |
+| `check_notifications` | Check and list user notifications |
 | `search_users` | Search for users |
 | **Repositories** | |
 | `list_my_repos` | List all repositories you own |
