@@ -122,9 +122,11 @@ List all my repositories
 | `list_repo_issues` | List issues in a repository |
 | `get_issue_by_index` | Get a specific issue |
 | `create_issue` | Create a new issue |
-| `add_issue_labels` | Add labels to an issue |
-| `update_issue` | Update an existing issue |
+| `add_issue_labels` | Add labels to an issue (requires numeric label IDs) |
+| `update_issue` | Update an existing issue (requires numeric milestone ID) |
 | `issue_state_change` | Open or close an issue |
+| `list_repo_milestones` | List milestones with their IDs (use with `update_issue`) |
+| `list_repo_labels` | List labels with their IDs (use with `add_issue_labels`) |
 | **Comments** | |
 | `list_issue_comments` | List comments on an issue or PR |
 | `get_issue_comment` | Get a specific comment |
