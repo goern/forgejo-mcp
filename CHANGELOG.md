@@ -1,3 +1,14 @@
+## [2.13.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.12.0...v2.13.0) (2026-03-07)
+
+### :sparkles: Features
+
+* add check_notifications tool ([f075a45](https://codeberg.org/goern/forgejo-mcp/commit/f075a45467668cb634002b8e47c22d66fde731b2))
+* add list_repo_milestones + list_repo_labels MCP tools (closes [#80](https://codeberg.org/goern/forgejo-mcp/issues/80)) ([8a87af1](https://codeberg.org/goern/forgejo-mcp/commit/8a87af15b90d91038f63a1e5eb03d021788959b9))
+
+### :repeat: Chore
+
+* **deps:** update golang:1.26-alpine docker digest to 2389ebf ([ebe684e](https://codeberg.org/goern/forgejo-mcp/commit/ebe684ebcc03859bfeac932a22cde644e4a0523d))
+
 ## [Unreleased]
 
 ### :sparkles: Features
