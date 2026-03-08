@@ -102,6 +102,11 @@ List all my repositories
 | **User** | |
 | `get_my_user_info` | Get information about the authenticated user |
 | `check_notifications` | Check and list user notifications |
+| `get_notification_thread` | Get detailed info on a single notification thread |
+| `mark_notification_read` | Mark a single notification thread as read |
+| `mark_all_notifications_read` | Acknowledge all notifications |
+| `list_repo_notifications` | Filter notifications scoped to a single repository |
+| `mark_repo_notifications_read` | Mark all notifications in a specific repo as read |
 | `search_users` | Search for users |
 | **Repositories** | |
 | `list_my_repos` | List all repositories you own |
