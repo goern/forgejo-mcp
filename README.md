@@ -236,13 +236,13 @@ See [DEVELOPER.md](DEVELOPER.md) for build instructions, architecture overview, 
 
 forgejo-mcp is shaped by everyone who files issues, writes code, reviews PRs, and pushes the project forward. Thank you all. 🙏
 
-### Human contributors
+### Code contributors
 
 | Contributor | Highlights |
 |-------------|------------|
 | [goern](https://codeberg.org/goern) (Christoph Görn) | Project creator and maintainer |
 | [mattdm](https://codeberg.org/mattdm) | Logging improvements, FORGEJO_* migration, README, URL refactor |
-| [byteflavour](https://codeberg.org/byteflavour) | `check_notifications` tool; feature request for milestone/label discovery (#80) |
+| [byteflavour](https://codeberg.org/byteflavour) | `check_notifications` + full notification management API (PR #84, #86); feature requests #80, #85 |
 | [appleboy](https://codeberg.org/appleboy) | Custom SSE port support, bug fixes |
 | [hiifong](https://codeberg.org/hiifong) | Early bug fixes and updates |
 | [Lunny Xiao](https://codeberg.org/lunny) | Early contributions |
@@ -254,13 +254,32 @@ forgejo-mcp is shaped by everyone who files issues, writes code, reviews PRs, an
 | [Massimo Fraschetti](https://codeberg.org/fraschetti) | Contributions |
 | [th](https://codeberg.org/th) | Contributions |
 
+### Community contributors
+
+Issue reporters and discussion participants who shaped the direction of the project:
+
+| Contributor | Contributions |
+|-------------|--------------|
+| [byteflavour](https://codeberg.org/byteflavour) | Filed #80 (milestone/label discovery), #85 (notification API proposal); active reviewer in discussions |
+| [choucavalier](https://codeberg.org/choucavalier) | Filed #82 (fix skill), #70 (macOS arm64 releases), #62 (binary releases & mise support) |
+| [MalcolmMielle](https://codeberg.org/MalcolmMielle) | Filed #59 (PR review tools — since implemented) |
+| [redbeard](https://codeberg.org/redbeard) | Filed #60 (Actions support — since implemented) |
+| [c6sepl6p](https://codeberg.org/c6sepl6p) | Filed #72 (base64 encoding), #54 (merge pull request — since implemented) |
+| [malik](https://codeberg.org/malik) | Filed #73 (version flag), #47 (Nix build fix) |
+| [a2800276](https://codeberg.org/a2800276) | Filed #74 (OpenAI compatibility) |
+| [simenandre](https://codeberg.org/simenandre) | Filed #49 (go install support) |
+| [BasdP](https://codeberg.org/BasdP) | Filed #42 (Projects support) |
+| [BoBeR182](https://codeberg.org/BoBeR182) | Filed #32 (wiki support) |
+| [mw75](https://codeberg.org/mw75) | Filed #17 (org support in repo creation) |
+| [fraschm98](https://codeberg.org/fraschm98) | Early issue reports |
+
 ### Cyborg contributors
 
 This project also received contributions from AI coding agents — submitted as regular PRs, reviewed by humans:
 
 | Agent | Role | Contributions |
 |-------|------|---------------|
-| [brenner-axiom](https://codeberg.org/brenner-axiom) (b4-dev, B4arena) | AI dev agent | `list_repo_milestones`, `list_repo_labels` tools (PR #83); showboat demo |
+| [brenner-axiom](https://codeberg.org/brenner-axiom) (b4-dev, B4arena) | AI dev agent | `list_repo_milestones`, `list_repo_labels` tools (PR #83); filed #76 (race condition bug); code reviews |
 | b4mad-release-bot | Release automation | Automated changelog and release tagging |
 | the #B4mad Renovate bot | Dependency updates | Automated dependency upgrades |
 
