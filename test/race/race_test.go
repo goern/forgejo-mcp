@@ -139,6 +139,15 @@ func minimalArgs(toolName string) map[string]any {
 		base["org"] = "testorg"
 		delete(base, "owner")
 		delete(base, "repo")
+	case "get_notification_thread", "mark_notification_read":
+		base["id"] = float64(1)
+		delete(base, "owner")
+		delete(base, "repo")
+	case "mark_all_notifications_read", "check_notifications":
+		delete(base, "owner")
+		delete(base, "repo")
+	case "list_repo_notifications", "mark_repo_notifications_read":
+		// needs owner + repo (already set)
 	case "get_my_user_info", "get_forgejo_version":
 		delete(base, "owner")
 		delete(base, "repo")
