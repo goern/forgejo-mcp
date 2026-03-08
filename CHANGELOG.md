@@ -1,3 +1,17 @@
+## [2.14.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.13.0...v2.14.0) (2026-03-08)
+
+### :sparkles: Features
+
+* **notifications:** implement complete notification API ([78916f6](https://codeberg.org/goern/forgejo-mcp/commit/78916f6ef1f897b2597f45a91263fc5bf59f069a))
+
+### :bug: Fixes
+
+* **notifications:** address PR [#86](https://codeberg.org/goern/forgejo-mcp/issues/86) review comments ([2e5d62b](https://codeberg.org/goern/forgejo-mcp/commit/2e5d62bdbc63f69fa5cb294ada554d1f7179ce4d))
+
+### :memo: Documentation
+
+* add Contributors section to README (intercom-fep.1) ([6819590](https://codeberg.org/goern/forgejo-mcp/commit/681959021ba4f8b979a3ae206a7d7bfa3c9569ee))
+
 ## [2.13.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.12.0...v2.13.0) (2026-03-07)
 
 ### :sparkles: Features
