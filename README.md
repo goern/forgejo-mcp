@@ -232,6 +232,41 @@ See [DEVELOPER.md](DEVELOPER.md) for build instructions, architecture overview, 
 
 - **`go install ...@latest` fails** — The `go.mod` contains a `replace` directive (for a forked Forgejo SDK), which prevents remote `go install`. Use the clone-and-build workflow shown in [Quick Start](#quick-start) instead. Tracked in [#67](https://codeberg.org/goern/forgejo-mcp/issues/67).
 
+## Contributors
+
+forgejo-mcp is shaped by everyone who files issues, writes code, reviews PRs, and pushes the project forward. Thank you all. 🙏
+
+### Human contributors
+
+| Contributor | Highlights |
+|-------------|------------|
+| [goern](https://codeberg.org/goern) (Christoph Görn) | Project creator and maintainer |
+| [mattdm](https://codeberg.org/mattdm) | Logging improvements, FORGEJO_* migration, README, URL refactor |
+| [byteflavour](https://codeberg.org/byteflavour) | `check_notifications` tool; feature request for milestone/label discovery (#80) |
+| [appleboy](https://codeberg.org/appleboy) | Custom SSE port support, bug fixes |
+| [hiifong](https://codeberg.org/hiifong) | Early bug fixes and updates |
+| [Lunny Xiao](https://codeberg.org/lunny) | Early contributions |
+| [techknowlogick](https://codeberg.org/techknowlogick) | Early contributions |
+| [yp05327](https://codeberg.org/yp05327) | Early contributions |
+| [Dax Kelson](https://codeberg.org/daxkelson) | Contributions |
+| [Guruprasad Kulkarni](https://codeberg.org/kulkarni) | Contributions |
+| [Mario Wolff](https://codeberg.org/mariowolff) | Contributions |
+| [Massimo Fraschetti](https://codeberg.org/fraschetti) | Contributions |
+| [th](https://codeberg.org/th) | Contributions |
+
+### Cyborg contributors
+
+This project also received contributions from AI coding agents — submitted as regular PRs, reviewed by humans:
+
+| Agent | Role | Contributions |
+|-------|------|---------------|
+| [brenner-axiom](https://codeberg.org/brenner-axiom) (b4-dev, B4arena) | AI dev agent | `list_repo_milestones`, `list_repo_labels` tools (PR #83); showboat demo |
+| b4mad-release-bot | Release automation | Automated changelog and release tagging |
+| the #B4mad Renovate bot | Dependency updates | Automated dependency upgrades |
+
+Want to contribute? Open an issue or pull request — all are welcome.
+
+
 ## License
 
 This project is open source. See the repository for license details.
