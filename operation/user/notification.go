@@ -107,15 +107,21 @@ func CheckNotificationsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	}
 
 	if sinceStr != "" {
-		if t, err := time.Parse(time.RFC3339, sinceStr); err == nil {
-			opt.Since = t
+		t, err := time.Parse(time.RFC3339, sinceStr)
+		if err != nil {
+			log.LogMCPToolError(ctx, CheckNotificationsToolName, time.Since(start), err)
+			return to.ErrorResult(fmt.Errorf("invalid since time format (expected RFC3339): %v", err))
 		}
+		opt.Since = t
 	}
 
 	if beforeStr != "" {
-		if t, err := time.Parse(time.RFC3339, beforeStr); err == nil {
-			opt.Before = t
+		t, err := time.Parse(time.RFC3339, beforeStr)
+		if err != nil {
+			log.LogMCPToolError(ctx, CheckNotificationsToolName, time.Since(start), err)
+			return to.ErrorResult(fmt.Errorf("invalid before time format (expected RFC3339): %v", err))
 		}
+		opt.Before = t
 	}
 
 	notifications, resp, err := forgejo.Client().ListNotifications(opt)
@@ -179,7 +185,7 @@ func MarkNotificationReadFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 		return to.ErrorResult(err)
 	}
 
-	_, resp, err := forgejo.Client().ReadNotification(int64(id))
+	thread, resp, err := forgejo.Client().ReadNotification(int64(id))
 	duration := time.Since(start)
 
 	statusCode := 0
@@ -194,7 +200,7 @@ func MarkNotificationReadFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 	}
 
 	log.LogMCPToolComplete(ctx, MarkNotificationReadToolName, duration, "Marked notification as read")
-	return to.TextResult("Notification marked as read")
+	return to.TextResult(thread)
 }
 
 func MarkAllNotificationsReadFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -204,9 +210,12 @@ func MarkAllNotificationsReadFn(ctx context.Context, req mcp.CallToolRequest) (*
 
 	opt := forgejo_sdk.MarkNotificationOptions{}
 	if lastReadAtStr, ok := req.GetArguments()["last_read_at"].(string); ok && lastReadAtStr != "" {
-		if t, err := time.Parse(time.RFC3339, lastReadAtStr); err == nil {
-			opt.LastReadAt = t
+		t, err := time.Parse(time.RFC3339, lastReadAtStr)
+		if err != nil {
+			log.LogMCPToolError(ctx, MarkAllNotificationsReadToolName, time.Since(start), err)
+			return to.ErrorResult(fmt.Errorf("invalid last_read_at time format (expected RFC3339): %v", err))
 		}
+		opt.LastReadAt = t
 	}
 
 	_, resp, err := forgejo.Client().ReadNotifications(opt)
@@ -267,15 +276,21 @@ func ListRepoNotificationsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	}
 
 	if sinceStr != "" {
-		if t, err := time.Parse(time.RFC3339, sinceStr); err == nil {
-			opt.Since = t
+		t, err := time.Parse(time.RFC3339, sinceStr)
+		if err != nil {
+			log.LogMCPToolError(ctx, ListRepoNotificationsToolName, time.Since(start), err)
+			return to.ErrorResult(fmt.Errorf("invalid since time format (expected RFC3339): %v", err))
 		}
+		opt.Since = t
 	}
 
 	if beforeStr != "" {
-		if t, err := time.Parse(time.RFC3339, beforeStr); err == nil {
-			opt.Before = t
+		t, err := time.Parse(time.RFC3339, beforeStr)
+		if err != nil {
+			log.LogMCPToolError(ctx, ListRepoNotificationsToolName, time.Since(start), err)
+			return to.ErrorResult(fmt.Errorf("invalid before time format (expected RFC3339): %v", err))
 		}
+		opt.Before = t
 	}
 
 	notifications, resp, err := forgejo.Client().ListRepoNotifications(owner, repo, opt)
@@ -311,9 +326,12 @@ func MarkRepoNotificationsReadFn(ctx context.Context, req mcp.CallToolRequest) (
 
 	opt := forgejo_sdk.MarkNotificationOptions{}
 	if lastReadAtStr, ok := req.GetArguments()["last_read_at"].(string); ok && lastReadAtStr != "" {
-		if t, err := time.Parse(time.RFC3339, lastReadAtStr); err == nil {
-			opt.LastReadAt = t
+		t, err := time.Parse(time.RFC3339, lastReadAtStr)
+		if err != nil {
+			log.LogMCPToolError(ctx, MarkRepoNotificationsReadToolName, time.Since(start), err)
+			return to.ErrorResult(fmt.Errorf("invalid last_read_at time format (expected RFC3339): %v", err))
 		}
+		opt.LastReadAt = t
 	}
 
 	_, resp, err := forgejo.Client().ReadRepoNotifications(owner, repo, opt)
