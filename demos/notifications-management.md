@@ -19,7 +19,7 @@ This completes the autonomous feedback loop without relying on web GUIs.
 Set FORGEJO_URL and FORGEJO_ACCESS_TOKEN environment variables, then invoke via the CLI.
 
 ```bash
-FORGEJO_URL=https://codeberg.org FORGEJO_ACCESS_TOKEN=dummy_token_12345 forgejo-mcp --cli list_repo_notifications --help 2>/dev/null
+FORGEJO_URL=https://codeberg.org FORGEJO_ACCESS_TOKEN=$CODEBERG_TOKEN forgejo-mcp --cli list_repo_notifications --help 2>/dev/null
 ```
 
 ```output
@@ -37,7 +37,7 @@ Parameters:
 ```
 
 ```bash
-FORGEJO_URL=https://codeberg.org FORGEJO_ACCESS_TOKEN=dummy_token_12345 forgejo-mcp --cli get_notification_thread --help 2>/dev/null
+FORGEJO_URL=https://codeberg.org FORGEJO_ACCESS_TOKEN=$CODEBERG_TOKEN forgejo-mcp --cli get_notification_thread --help 2>/dev/null
 ```
 
 ```output
