@@ -17,6 +17,7 @@ var (
 	urlFlag   string
 	ssePort   int
 	token     string
+	userAgent string
 
 	debug bool
 )
@@ -67,6 +68,12 @@ func initFlags() {
 		"",
 		"Your personal access token",
 	)
+	fs.StringVar(
+		&userAgent,
+		"user-agent",
+		"",
+		"User agent for HTTP requests (default: forgejo-mcp/<version>)",
+	)
 	fs.BoolVar(
 		&debug,
 		"d",
@@ -83,6 +90,7 @@ func initFlags() {
 	fs.Parse(os.Args[1:])
 
 	flagPkg.URL = urlFlag
+	flagPkg.UserAgent = userAgent
 	initConfig()
 }
 
@@ -143,6 +151,14 @@ func initConfig() {
 		}
 	}
 
+	// User agent - CLI flag takes precedence, then environment variable, then default
+	if flagPkg.UserAgent == "" {
+		flagPkg.UserAgent = os.Getenv("FORGEJO_USER_AGENT")
+		if flagPkg.UserAgent != "" {
+			log.Debug("Using FORGEJO_USER_AGENT environment variable")
+		}
+	}
+
 	if debug {
 		flagPkg.Debug = debug
 		log.Debug("Debug mode enabled via flag")
@@ -198,6 +214,14 @@ func Execute(version string) {
 		initFlags()
 	}
 
+	// Set default user agent if not provided via CLI or env var
+	if flagPkg.UserAgent == "" {
+		flagPkg.UserAgent = "forgejo-mcp/" + version
+		log.Debug("Using default user agent",
+			log.StringField("user_agent", flagPkg.UserAgent),
+		)
+	}
+
 	defer log.Default().Sync()
 
 	if cliMode {
@@ -212,6 +236,7 @@ func Execute(version string) {
 		log.IntField("sse-port", flagPkg.SSEPort),
 		log.BoolField("debug", flagPkg.Debug),
 		log.BoolField("token_configured", flagPkg.Token != ""),
+		log.StringField("user_agent", flagPkg.UserAgent),
 	)
 
 	if err := operation.Run(transport, version); err != nil {

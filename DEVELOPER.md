@@ -36,7 +36,9 @@ go mod tidy         # Tidy dependencies
 ./forgejo-mcp --transport sse --url <url> --token <token> --debug
 ```
 
-Environment variables: `FORGEJO_URL`, `FORGEJO_ACCESS_TOKEN`, `FORGEJO_DEBUG`
+Environment variables: `FORGEJO_URL`, `FORGEJO_ACCESS_TOKEN`, `FORGEJO_DEBUG`, `FORGEJO_USER_AGENT`
+
+CLI options: `--url`, `--token`, `--transport`, `--sse-port`, `--user-agent`
 
 ## Architecture
 
