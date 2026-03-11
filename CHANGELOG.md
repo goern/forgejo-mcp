@@ -1,3 +1,20 @@
+## [2.15.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.14.0...v2.15.0) (2026-03-11)
+
+### :sparkles: Features
+
+* add unified-notifications skill for GitHub and Codeberg ([39f3021](https://codeberg.org/goern/forgejo-mcp/commit/39f302107677a650ad6ec436f856759fe3c93c2b))
+* add user agent configuration support ([d3cb629](https://codeberg.org/goern/forgejo-mcp/commit/d3cb629db7a6fde31cc97a14e54703daa838adb4))
+* trigger 2.15.0 release ([9768a1d](https://codeberg.org/goern/forgejo-mcp/commit/9768a1d54ca5c22b44929a98deaecbcaa6642526))
+
+### :memo: Documentation
+
+* extend Contributors section with community contributors (intercom-fep.2.1) ([df8e7b9](https://codeberg.org/goern/forgejo-mcp/commit/df8e7b9698968ae15b65a393bb20e8ca448f8613))
+* update contributors with new members, fix links, and add highlights ([d4c9ebb](https://codeberg.org/goern/forgejo-mcp/commit/d4c9ebb5032b284557ecc303cad93c03eb1e9ee5))
+
+### :repeat: Chore
+
+* **release:** 2.14.0 ([26e20b3](https://codeberg.org/goern/forgejo-mcp/commit/26e20b3626c29b4fdd897de760300073fb373e3a))
+
 ## [2.14.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.13.0...v2.14.0) (2026-03-11)
 
 ### :sparkles: Features
