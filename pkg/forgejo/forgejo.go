@@ -22,7 +22,16 @@ var (
 func Client() *forgejo.Client {
 	clientOnce.Do(func() {
 		if client == nil {
-			c, err := forgejo.NewClient(flag.URL, forgejo.SetToken(flag.Token))
+			// Use configured user agent or default to forgejo-mcp/<version>
+			userAgent := flag.UserAgent
+			if userAgent == "" {
+				userAgent = "forgejo-mcp/" + flag.Version
+			}
+
+			c, err := forgejo.NewClient(flag.URL,
+				forgejo.SetToken(flag.Token),
+				forgejo.SetUserAgent(userAgent),
+			)
 			if err != nil {
 				log.Error("Failed to create Forgejo client",
 					log.SanitizedURLField("url", flag.URL),
@@ -34,12 +43,12 @@ func Client() *forgejo.Client {
 			log.Info("Successfully created Forgejo client",
 				log.SanitizedURLField("url", flag.URL),
 				log.BoolField("token_configured", flag.Token != ""),
+				log.StringField("user_agent", userAgent),
 			)
 		}
 	})
 	return client
 }
-
 
 // GetBaseURL returns the base URL of the Forgejo instance.
 func GetBaseURL() string {

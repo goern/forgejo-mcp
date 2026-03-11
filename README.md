@@ -62,7 +62,8 @@ Add this to your MCP configuration file:
         "--url", "https://your-forgejo-instance.org"
       ],
       "env": {
-        "FORGEJO_ACCESS_TOKEN": "<your personal access token>"
+        "FORGEJO_ACCESS_TOKEN": "<your personal access token>",
+        "FORGEJO_USER_AGENT": "forgejo-mcp/1.0.0"
       }
     }
   }
@@ -202,6 +203,7 @@ You can configure the server using command-line arguments or environment variabl
 | `--transport` | - | Transport mode: `stdio` or `sse` |
 | `--sse-port` | - | Port for SSE mode (default: 8080) |
 | `--cli` | - | Enter CLI mode for direct tool invocation |
+| `--user-agent` | `FORGEJO_USER_AGENT` | HTTP User-Agent header (default: `forgejo-mcp/<version>`) |
 
 Command-line arguments take priority over environment variables.
 
@@ -217,6 +219,16 @@ Or set the environment variable:
 
 ```bash
 export FORGEJO_DEBUG=true
+```
+
+**Custom User-Agent**: If your Forgejo instance or proxy blocks the default `go-http-client` user agent, set a custom one:
+
+```bash
+# Via environment variable
+export FORGEJO_USER_AGENT="forgejo-mcp/1.0.0"
+
+# Or via CLI flag
+forgejo-mcp --user-agent "forgejo-mcp/1.0.0" --transport sse --url <url> --token <token>
 ```
 
 ## Getting Help
