@@ -1,3 +1,13 @@
+## [2.15.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.15.0...v2.15.1) (2026-03-14)
+
+### :memo: Documentation
+
+* ✨ add missing contributors (Ronmi Ren, jiriks74, th, opencode) ([6fbb827](https://codeberg.org/goern/forgejo-mcp/commit/6fbb827663ebb467ea1341e7ffe10960e627e75f)), closes [#51](https://codeberg.org/goern/forgejo-mcp/issues/51)
+
+### :repeat: Chore
+
+* bump github.com/mark3labs/mcp-go from v0.43.2 to v0.44.0 ([4a18f7f](https://codeberg.org/goern/forgejo-mcp/commit/4a18f7f8bd8325565453711a6480d7b9f3629976))
+
 ## [2.15.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.14.0...v2.15.0) (2026-03-11)
 
 ### :sparkles: Features
