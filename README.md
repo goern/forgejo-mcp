@@ -253,11 +253,14 @@ forgejo-mcp is shaped by everyone who files issues, writes code, reviews PRs, an
 | Contributor | Highlights |
 |-------------|------------|
 | [goern](https://codeberg.org/goern) (Christoph Görn) | Project creator and maintainer |
+| Ronmi Ren | Co-creator; SSE/HTTP transport, issue blocking, CI/CD improvements, logo, Glama spec |
 | [twstagg](https://codeberg.org/twstagg) (Tristin Stagg) | User agent configuration support (PR #89) |
 | [mattdm](https://codeberg.org/mattdm) (Matthew Miller) | Logging improvements, FORGEJO_* migration, README, URL refactor |
 | [byteflavour](https://codeberg.org/byteflavour) | `check_notifications` + full notification management API (PR #84, #86); feature requests #80, #85 |
 | [jesterret](https://codeberg.org/jesterret) | Pull request reviews and comments support (PR #51) |
 | [appleboy](https://codeberg.org/appleboy) | Custom SSE port support, bug fixes |
+| [jiriks74](https://codeberg.org/jiriks74) | mcp-go v0.44.0 dependency update (PR #90) |
+| [th](https://codeberg.org/th) (Tomi Haapaniemi) | `update_pull_request` tool |
 | [hiifong](https://codeberg.org/hiifong) | Early bug fixes and updates |
 | [Lunny Xiao](https://codeberg.org/lunny) | Early contributions |
 | [techknowlogick](https://codeberg.org/techknowlogick) | Early contributions |
@@ -293,6 +296,7 @@ This project also received contributions from AI coding agents — submitted as 
 | Agent | Role | Contributions |
 |-------|------|---------------|
 | [brenner-axiom](https://codeberg.org/brenner-axiom) (b4-dev, B4arena) | AI dev agent | `list_repo_milestones`, `list_repo_labels` tools (PR #83); race condition fix (PR #78); contributors docs (PR #87, #88); filed #76; code reviews |
+| opencode | AI dev agent | Pull request reviews and comments support (PR #51) |
 | b4mad-release-bot | Release automation | Automated changelog and release tagging |
 | the #B4mad Renovate bot | Dependency updates | Automated dependency upgrades |
 
