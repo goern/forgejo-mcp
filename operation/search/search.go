@@ -100,12 +100,12 @@ func SearchReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	keyword, _ := req.GetArguments()["keyword"].(string)
 	sort, _ := req.GetArguments()["sort"].(string)
 	order, _ := req.GetArguments()["order"].(string)
-	page, ok := req.GetArguments()["page"].(float64)
-	if !ok {
+	page, _ := to.Float64(req.GetArguments()["page"])
+	if page == 0 {
 		page = 1
 	}
-	limit, ok := req.GetArguments()["limit"].(float64)
-	if !ok {
+	limit, _ := to.Float64(req.GetArguments()["limit"])
+	if limit == 0 {
 		limit = 100
 	}
 
