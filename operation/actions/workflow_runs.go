@@ -60,16 +60,16 @@ func ListWorkflowRunsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 	headSHA, _ := req.GetArguments()["head_sha"].(string)
 
 	var runNumber int64
-	if rn, ok := req.GetArguments()["run_number"].(float64); ok {
+	if rn, err := to.Float64(req.GetArguments()["run_number"]); err == nil {
 		runNumber = int64(rn)
 	}
 
 	page := 1
-	if p, ok := req.GetArguments()["page"].(float64); ok {
+	if p, err := to.Float64(req.GetArguments()["page"]); err == nil {
 		page = int(p)
 	}
 	limit := 30
-	if l, ok := req.GetArguments()["limit"].(float64); ok {
+	if l, err := to.Float64(req.GetArguments()["limit"]); err == nil {
 		limit = int(l)
 	}
 
@@ -126,8 +126,8 @@ func GetWorkflowRunFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	if !ok || repo == "" {
 		return to.ErrorResult(errors.New("repo is required"))
 	}
-	runIDFloat, ok := req.GetArguments()["run_id"].(float64)
-	if !ok {
+	runIDFloat, err := to.Float64(req.GetArguments()["run_id"])
+	if err != nil {
 		return to.ErrorResult(errors.New("run_id is required"))
 	}
 	runID := int64(runIDFloat)

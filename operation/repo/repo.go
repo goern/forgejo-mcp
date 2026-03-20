@@ -151,12 +151,12 @@ func ForkRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResu
 
 func ListMyReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called ListMyReposFn")
-	page, ok := req.GetArguments()["page"].(float64)
-	if !ok {
+	page, _ := to.Float64(req.GetArguments()["page"])
+	if page == 0 {
 		page = 1
 	}
-	limit, ok := req.GetArguments()["limit"].(float64)
-	if !ok {
+	limit, _ := to.Float64(req.GetArguments()["limit"])
+	if limit == 0 {
 		limit = 100
 	}
 	opt := forgejo_sdk.ListReposOptions{

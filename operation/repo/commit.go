@@ -44,11 +44,11 @@ func ListRepoCommitsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 	if ok && sha != "" {
 		shaStr = sha
 	}
-	page, ok := req.GetArguments()["page"].(float64)
+	page, _ := to.Float64(req.GetArguments()["page"])
 	if !ok {
 		page = 1
 	}
-	limit, ok := req.GetArguments()["limit"].(float64)
+	limit, _ := to.Float64(req.GetArguments()["limit"])
 	if !ok {
 		limit = 100
 	}
