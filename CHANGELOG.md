@@ -1,3 +1,21 @@
+## [2.16.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.15.1...v2.16.0) (2026-03-20)
+
+### :sparkles: Features
+
+* ✨ add organization management tools (CRUD, membership, teams) ([2c4c02c](https://codeberg.org/goern/forgejo-mcp/commit/2c4c02c332101197a8aee1603162db8841d95e0f))
+* add remove_issue_labels tool ([be758d4](https://codeberg.org/goern/forgejo-mcp/commit/be758d43739eae4d8a20e66c0389de7d932fbf36)), closes [ardi/ardi-crm#96](https://codeberg.org/ardi/ardi-crm/issues/96)
+
+### :memo: Documentation
+
+* ✨ add OpenSpec artifacts for organization management feature ([2d540a5](https://codeberg.org/goern/forgejo-mcp/commit/2d540a5b60d5e815bd6b0b823ed545790aeccd77)), closes [#92](https://codeberg.org/goern/forgejo-mcp/issues/92)
+* 📝 add showboat demo for issue label management tools ([004a2c6](https://codeberg.org/goern/forgejo-mcp/commit/004a2c611f21938afa5b96558599554ed6558a22))
+* 📝 add showboat demo for organization management tools ([cf407fd](https://codeberg.org/goern/forgejo-mcp/commit/cf407fdf27f5b0618077732c9a173d88fec8d83c))
+* 📝 update contributors with ignasgil and dmikushin ([8e93b89](https://codeberg.org/goern/forgejo-mcp/commit/8e93b89274870843451f908d5066ee1def58a988))
+
+### :repeat: Chore
+
+* 🔥 remove obsolete smithery.yaml and mcp-settings-sample.json ([b040259](https://codeberg.org/goern/forgejo-mcp/commit/b040259f8f7eabeeba2b048ab1e022ef5c0fd949))
+
 ## [2.15.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.15.0...v2.15.1) (2026-03-14)
 
 ### :memo: Documentation
