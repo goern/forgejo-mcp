@@ -94,12 +94,12 @@ func ListBranchesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 	log.Debugf("Called ListBranchesFn")
 	owner, _ := req.GetArguments()["owner"].(string)
 	repo, _ := req.GetArguments()["repo"].(string)
-	page, ok := req.GetArguments()["page"].(float64)
-	if !ok {
+	page, _ := to.Float64(req.GetArguments()["page"])
+	if page == 0 {
 		page = 1
 	}
-	limit, ok := req.GetArguments()["limit"].(float64)
-	if !ok {
+	limit, _ := to.Float64(req.GetArguments()["limit"])
+	if limit == 0 {
 		limit = 100
 	}
 

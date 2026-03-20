@@ -101,7 +101,7 @@ func CreatePullReviewFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 	log.Debugf("Called CreatePullReviewFn")
 	owner, _ := req.GetArguments()["owner"].(string)
 	repo, _ := req.GetArguments()["repo"].(string)
-	index, _ := req.GetArguments()["index"].(float64)
+	index, _ := to.Float64(req.GetArguments()["index"])
 	body, _ := req.GetArguments()["body"].(string)
 	state, _ := req.GetArguments()["state"].(string)
 	commentsJSON, _ := req.GetArguments()["comments"].(string)
@@ -130,8 +130,8 @@ func SubmitPullReviewFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 	log.Debugf("Called SubmitPullReviewFn")
 	owner, _ := req.GetArguments()["owner"].(string)
 	repo, _ := req.GetArguments()["repo"].(string)
-	index, _ := req.GetArguments()["index"].(float64)
-	id, _ := req.GetArguments()["id"].(float64)
+	index, _ := to.Float64(req.GetArguments()["index"])
+	id, _ := to.Float64(req.GetArguments()["id"])
 	body, _ := req.GetArguments()["body"].(string)
 	state, _ := req.GetArguments()["state"].(string)
 
@@ -151,8 +151,8 @@ func DismissPullReviewFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Cal
 	log.Debugf("Called DismissPullReviewFn")
 	owner, _ := req.GetArguments()["owner"].(string)
 	repo, _ := req.GetArguments()["repo"].(string)
-	index, _ := req.GetArguments()["index"].(float64)
-	id, _ := req.GetArguments()["id"].(float64)
+	index, _ := to.Float64(req.GetArguments()["index"])
+	id, _ := to.Float64(req.GetArguments()["id"])
 	message, _ := req.GetArguments()["message"].(string)
 
 	opt := forgejo_sdk.DismissPullReviewOptions{
@@ -170,8 +170,8 @@ func DeletePullReviewFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 	log.Debugf("Called DeletePullReviewFn")
 	owner, _ := req.GetArguments()["owner"].(string)
 	repo, _ := req.GetArguments()["repo"].(string)
-	index, _ := req.GetArguments()["index"].(float64)
-	id, _ := req.GetArguments()["id"].(float64)
+	index, _ := to.Float64(req.GetArguments()["index"])
+	id, _ := to.Float64(req.GetArguments()["id"])
 
 	_, err := forgejo.Client().DeletePullReview(owner, repo, int64(index), int64(id))
 	if err != nil {
@@ -184,7 +184,7 @@ func CreateReviewRequestsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 	log.Debugf("Called CreateReviewRequestsFn")
 	owner, _ := req.GetArguments()["owner"].(string)
 	repo, _ := req.GetArguments()["repo"].(string)
-	index, _ := req.GetArguments()["index"].(float64)
+	index, _ := to.Float64(req.GetArguments()["index"])
 	reviewers, _ := req.GetArguments()["reviewers"].(string)
 	teamReviewers, _ := req.GetArguments()["team_reviewers"].(string)
 
@@ -207,7 +207,7 @@ func DeleteReviewRequestsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 	log.Debugf("Called DeleteReviewRequestsFn")
 	owner, _ := req.GetArguments()["owner"].(string)
 	repo, _ := req.GetArguments()["repo"].(string)
-	index, _ := req.GetArguments()["index"].(float64)
+	index, _ := to.Float64(req.GetArguments()["index"])
 	reviewers, _ := req.GetArguments()["reviewers"].(string)
 	teamReviewers, _ := req.GetArguments()["team_reviewers"].(string)
 

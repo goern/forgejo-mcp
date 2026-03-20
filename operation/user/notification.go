@@ -86,11 +86,11 @@ func CheckNotificationsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	}
 	sinceStr, _ := req.GetArguments()["since"].(string)
 	beforeStr, _ := req.GetArguments()["before"].(string)
-	page, ok := req.GetArguments()["page"].(float64)
+	page, _ := to.Float64(req.GetArguments()["page"])
 	if !ok {
 		page = 1
 	}
-	limit, ok := req.GetArguments()["limit"].(float64)
+	limit, _ := to.Float64(req.GetArguments()["limit"])
 	if !ok {
 		limit = 20
 	}
@@ -148,8 +148,8 @@ func GetNotificationThreadFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	start := time.Now()
 	log.LogMCPToolStart(ctx, GetNotificationThreadToolName, req.GetArguments())
 
-	id, ok := req.GetArguments()["id"].(float64)
-	if !ok {
+	id, err := to.Float64(req.GetArguments()["id"])
+	if err != nil {
 		err := fmt.Errorf("id is required and must be a number")
 		log.LogMCPToolError(ctx, GetNotificationThreadToolName, time.Since(start), err)
 		return to.ErrorResult(err)
@@ -178,8 +178,8 @@ func MarkNotificationReadFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 	start := time.Now()
 	log.LogMCPToolStart(ctx, MarkNotificationReadToolName, req.GetArguments())
 
-	id, ok := req.GetArguments()["id"].(float64)
-	if !ok {
+	id, err := to.Float64(req.GetArguments()["id"])
+	if err != nil {
 		err := fmt.Errorf("id is required and must be a number")
 		log.LogMCPToolError(ctx, MarkNotificationReadToolName, time.Since(start), err)
 		return to.ErrorResult(err)
@@ -255,11 +255,11 @@ func ListRepoNotificationsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	}
 	sinceStr, _ := req.GetArguments()["since"].(string)
 	beforeStr, _ := req.GetArguments()["before"].(string)
-	page, ok := req.GetArguments()["page"].(float64)
+	page, _ := to.Float64(req.GetArguments()["page"])
 	if !ok {
 		page = 1
 	}
-	limit, ok := req.GetArguments()["limit"].(float64)
+	limit, _ := to.Float64(req.GetArguments()["limit"])
 	if !ok {
 		limit = 20
 	}
