@@ -260,6 +260,8 @@ forgejo-mcp is shaped by everyone who files issues, writes code, reviews PRs, an
 | [byteflavour](https://codeberg.org/byteflavour) | `check_notifications` + full notification management API (PR #84, #86); feature requests #80, #85 |
 | [jesterret](https://codeberg.org/jesterret) | Pull request reviews and comments support (PR #51) |
 | [appleboy](https://codeberg.org/appleboy) | Custom SSE port support, bug fixes |
+| [ignasgil](https://codeberg.org/ignasgil) | `remove_issue_labels` tool (PR #96) |
+| [dmikushin](https://codeberg.org/dmikushin) (Dmitry Mikushin) | Fix string-encoded number parameter parsing from MCP clients (PR #93) |
 | [jiriks74](https://codeberg.org/jiriks74) | mcp-go v0.44.0 dependency update (PR #90) |
 | [th](https://codeberg.org/th) (Tomi Haapaniemi) | `update_pull_request` tool |
 | [hiifong](https://codeberg.org/hiifong) | Early bug fixes and updates |
@@ -288,6 +290,7 @@ Issue reporters and discussion participants who shaped the direction of the proj
 | [simenandre](https://codeberg.org/simenandre) | Filed #49 (go install support) |
 | [BasdP](https://codeberg.org/BasdP) | Filed #42 (Projects support) |
 | [BoBeR182](https://codeberg.org/BoBeR182) | Filed #32 (wiki support) |
+| [ignasgil](https://codeberg.org/ignasgil) | Filed #95 (`remove_issue_labels` feature request) |
 | [fraschm98](https://codeberg.org/fraschm98) | Early issue reports |
 
 ### Cyborg contributors
@@ -296,7 +299,7 @@ This project also received contributions from AI coding agents — submitted as 
 
 | Agent | Role | Contributions |
 |-------|------|---------------|
-| [brenner-axiom](https://codeberg.org/brenner-axiom) (b4-dev, B4arena) | AI dev agent | `list_repo_milestones`, `list_repo_labels` tools (PR #83); race condition fix (PR #78); contributors docs (PR #87, #88); filed #76; code reviews |
+| [brenner-axiom](https://codeberg.org/brenner-axiom) (b4-dev, B4arena) | AI dev agent | Organization management tools (PR #94); showboat demos (PR #97); `list_repo_milestones`, `list_repo_labels` tools (PR #83); race condition fix (PR #78); contributors docs (PR #87, #88); filed #76; code reviews |
 | opencode | AI dev agent | Pull request reviews and comments support (PR #51) |
 | b4mad-release-bot | Release automation | Automated changelog and release tagging |
 | the #B4mad Renovate bot | Dependency updates | Automated dependency upgrades |
