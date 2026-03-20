@@ -5,6 +5,7 @@ import (
 
 	"codeberg.org/goern/forgejo-mcp/v2/operation/actions"
 	"codeberg.org/goern/forgejo-mcp/v2/operation/issue"
+	"codeberg.org/goern/forgejo-mcp/v2/operation/org"
 	"codeberg.org/goern/forgejo-mcp/v2/operation/pull"
 	"codeberg.org/goern/forgejo-mcp/v2/operation/repo"
 	"codeberg.org/goern/forgejo-mcp/v2/operation/search"
@@ -32,6 +33,7 @@ func RegisterTool(s *server.MCPServer) {
 	RegisterSearchTool(s)
 	RegisterVersionTool(s)
 	RegisterActionsTool(s)
+	RegisterOrgTool(s)
 
 	log.Info("All MCP tools registered successfully")
 }
@@ -76,6 +78,11 @@ func RegisterVersionTool(s *server.MCPServer) {
 func RegisterActionsTool(s *server.MCPServer) {
 	actions.RegisterTool(s)
 	log.Debug("Registered actions tools")
+}
+
+func RegisterOrgTool(s *server.MCPServer) {
+	org.RegisterTool(s)
+	log.Debug("Registered org tools")
 }
 
 func Run(transport, version string) error {
