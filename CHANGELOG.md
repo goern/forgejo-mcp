@@ -1,3 +1,18 @@
+## [2.16.0-beta.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.15.1...v2.16.0-beta.1) (2026-03-20)
+
+### :sparkles: Features
+
+* ✨ add organization management tools (CRUD, membership, teams) ([2c4c02c](https://codeberg.org/goern/forgejo-mcp/commit/2c4c02c332101197a8aee1603162db8841d95e0f))
+
+### :memo: Documentation
+
+* ✨ add OpenSpec artifacts for organization management feature ([2d540a5](https://codeberg.org/goern/forgejo-mcp/commit/2d540a5b60d5e815bd6b0b823ed545790aeccd77)), closes [#92](https://codeberg.org/goern/forgejo-mcp/issues/92)
+* 📝 add showboat demo for organization management tools ([cf407fd](https://codeberg.org/goern/forgejo-mcp/commit/cf407fdf27f5b0618077732c9a173d88fec8d83c))
+
+### :repeat: Chore
+
+* 🔥 remove obsolete smithery.yaml and mcp-settings-sample.json ([b040259](https://codeberg.org/goern/forgejo-mcp/commit/b040259f8f7eabeeba2b048ab1e022ef5c0fd949))
+
 ## [2.15.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.15.0...v2.15.1) (2026-03-14)
 
 ### :memo: Documentation
