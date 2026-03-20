@@ -7,6 +7,7 @@ Connect your AI assistant to Forgejo repositories. Manage issues, pull requests,
 Forgejo MCP Server is an integration plugin that connects Forgejo with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) systems. Once configured, you can interact with your Forgejo repositories through any MCP-compatible AI assistant like Claude, Cursor, or VS Code extensions.
 
 **Example commands you can use:**
+
 - "List all my repositories"
 - "Create an issue titled 'Bug in login page'"
 - "Show me open pull requests in my-org/my-repo"
@@ -319,7 +320,6 @@ This project also received contributions from AI coding agents — submitted as 
 | the #B4mad Renovate bot | Dependency updates | Automated dependency upgrades |
 
 Want to contribute? Open an issue or pull request — all are welcome.
-
 
 ## License
 
