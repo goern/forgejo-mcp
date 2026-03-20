@@ -12,6 +12,9 @@ Forgejo MCP Server is an integration plugin that connects Forgejo with [Model Co
 - "Show me open pull requests in my-org/my-repo"
 - "Get the contents of README.md from the main branch"
 - "Show me the latest Actions workflow runs in goern/forgejo-mcp"
+- "List all teams in the operate-first organization"
+
+See the [demos/](demos/) directory for live examples showing CLI and MCP stdio usage.
 
 ## Quick Start
 
@@ -153,6 +156,21 @@ List all my repositories
 | `list_workflow_runs` | List workflow runs with optional filtering by status, event, or SHA |
 | `get_workflow_run` | Get details of a specific workflow run by ID |
 | **Organizations** | |
+| `create_org` | Create a new organization |
+| `get_org` | Get organization details |
+| `list_my_orgs` | List organizations you belong to |
+| `list_user_orgs` | List organizations for a given user |
+| `edit_org` | Edit organization settings |
+| `delete_org` | Delete an organization (destructive) |
+| `list_org_members` | List members of an organization |
+| `check_org_membership` | Check if a user is a member of an organization |
+| `remove_org_member` | Remove a member from an organization |
+| `list_org_teams` | List teams in an organization |
+| `create_org_team` | Create a team in an organization |
+| `add_team_member` | Add a user to a team |
+| `remove_team_member` | Remove a user from a team |
+| `add_team_repo` | Add a repository to a team |
+| `remove_team_repo` | Remove a repository from a team |
 | `search_org_teams` | Search for teams in an organization |
 | **Server** | |
 | `get_forgejo_mcp_server_version` | Get the MCP server version |
@@ -295,7 +313,7 @@ This project also received contributions from AI coding agents — submitted as 
 
 | Agent | Role | Contributions |
 |-------|------|---------------|
-| [brenner-axiom](https://codeberg.org/brenner-axiom) (b4-dev, B4arena) | AI dev agent | `list_repo_milestones`, `list_repo_labels` tools (PR #83); race condition fix (PR #78); contributors docs (PR #87, #88); filed #76; code reviews |
+| [brenner-axiom](https://codeberg.org/brenner-axiom) (b4-dev, B4arena) | AI dev agent | Organization management tools (PR #94); `list_repo_milestones`, `list_repo_labels` tools (PR #83); race condition fix (PR #78); contributors docs (PR #87, #88); filed #76; code reviews |
 | opencode | AI dev agent | Pull request reviews and comments support (PR #51) |
 | b4mad-release-bot | Release automation | Automated changelog and release tagging |
 | the #B4mad Renovate bot | Dependency updates | Automated dependency upgrades |
