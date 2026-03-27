@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2"
+	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
 	"codeberg.org/goern/forgejo-mcp/v2/operation/params"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/log"
