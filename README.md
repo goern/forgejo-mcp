@@ -310,6 +310,8 @@ Issue reporters and discussion participants who shaped the direction of the proj
 | [BasdP](https://codeberg.org/BasdP) | Filed #42 (Projects support) |
 | [BoBeR182](https://codeberg.org/BoBeR182) | Filed #32 (wiki support) |
 | [ignasgil](https://codeberg.org/ignasgil) | Filed #95 (`remove_issue_labels` feature request) |
+| [Vokuar](https://codeberg.org/Vokuar) | Filed #99 (streamable HTTP transport support) |
+| [janbaer](https://codeberg.org/janbaer) | Filed #98 (reply to review comment) |
 | [fraschm98](https://codeberg.org/fraschm98) | Early issue reports |
 
 ### Cyborg contributors
