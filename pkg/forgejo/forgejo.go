@@ -9,7 +9,7 @@ import (
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/flag"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/log"
 
-	"codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2"
+	"codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
 )
 
 var (

@@ -3,7 +3,7 @@ package forgejo
 import (
 	"sync"
 
-	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2"
+	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
 )
 
 // SetClientForTesting overrides the singleton client for testing purposes.
