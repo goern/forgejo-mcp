@@ -16,6 +16,7 @@ var (
 	transport string
 	urlFlag   string
 	ssePort   int
+	httpPort  int
 	token     string
 	userAgent string
 
@@ -42,13 +43,13 @@ func initFlags() {
 		&transport,
 		"t",
 		"stdio",
-		"Transport type (stdio or sse)",
+		"Transport type (stdio, sse, or http)",
 	)
 	fs.StringVar(
 		&transport,
 		"transport",
 		"stdio",
-		"Transport type (stdio or sse)",
+		"Transport type (stdio, sse, or http)",
 	)
 	fs.StringVar(
 		&urlFlag,
@@ -61,6 +62,12 @@ func initFlags() {
 		"sse-port",
 		8080,
 		"Port for SSE transport mode",
+	)
+	fs.IntVar(
+		&httpPort,
+		"http-port",
+		8080,
+		"Port for streamable HTTP transport mode",
 	)
 	fs.StringVar(
 		&token,
@@ -132,6 +139,7 @@ func initConfig() {
 	}
 
 	flagPkg.SSEPort = ssePort
+	flagPkg.HTTPPort = httpPort
 	flagPkg.Token = token
 	if flagPkg.Token == "" {
 		flagPkg.Token = os.Getenv("FORGEJO_ACCESS_TOKEN")
