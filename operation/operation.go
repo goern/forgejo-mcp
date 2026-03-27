@@ -133,12 +133,29 @@ func Run(transport, version string) error {
 			return fmt.Errorf("failed to start SSE server: %w", err)
 		}
 		log.Info("MCP SSE server shutdown")
+	case "http":
+		httpServer := server.NewStreamableHTTPServer(mcpServer)
+		log.Info("Starting MCP streamable HTTP server",
+			log.IntField("port", flag.HTTPPort),
+		)
+		log.Info("MCP streamable HTTP server ready for connections",
+			log.IntField("port", flag.HTTPPort),
+			log.StringField("endpoint", fmt.Sprintf("http://localhost:%d", flag.HTTPPort)),
+		)
+		if err := httpServer.Start(fmt.Sprintf(":%d", flag.HTTPPort)); err != nil {
+			log.Error("Failed to start streamable HTTP server",
+				log.IntField("port", flag.HTTPPort),
+				log.ErrorField(err),
+			)
+			return fmt.Errorf("failed to start streamable HTTP server: %w", err)
+		}
+		log.Info("MCP streamable HTTP server shutdown")
 	default:
 		log.Error("Invalid transport configuration",
 			log.StringField("transport", transport),
-			log.StringField("valid_options", "stdio, sse"),
+			log.StringField("valid_options", "stdio, sse, http"),
 		)
-		return fmt.Errorf("invalid transport type: %s. Must be 'stdio' or 'sse'", transport)
+		return fmt.Errorf("invalid transport type: %s. Must be 'stdio', 'sse', or 'http'", transport)
 	}
 	return nil
 }
