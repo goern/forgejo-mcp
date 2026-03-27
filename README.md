@@ -70,7 +70,25 @@ Add this to your MCP configuration file:
 }
 ```
 
-**For SSE mode** (HTTP-based):
+**For streamable HTTP mode** (recommended for remote/Claude.ai):
+
+```json
+{
+  "mcpServers": {
+    "forgejo": {
+      "url": "http://localhost:8080/mcp"
+    }
+  }
+}
+```
+
+When using streamable HTTP mode, start the server first:
+
+```bash
+forgejo-mcp --transport http --url https://your-forgejo-instance.org --token <your-token>
+```
+
+**For SSE mode** (legacy HTTP-based):
 
 ```json
 {
@@ -201,8 +219,9 @@ You can configure the server using command-line arguments or environment variabl
 | `--url` | `FORGEJO_URL` | Your Forgejo instance URL |
 | `--token` | `FORGEJO_ACCESS_TOKEN` | Your personal access token |
 | `--debug` | `FORGEJO_DEBUG` | Enable debug mode |
-| `--transport` | - | Transport mode: `stdio` or `sse` |
+| `--transport` | - | Transport mode: `stdio`, `sse`, or `http` |
 | `--sse-port` | - | Port for SSE mode (default: 8080) |
+| `--http-port` | - | Port for streamable HTTP mode (default: 8080) |
 | `--cli` | - | Enter CLI mode for direct tool invocation |
 | `--user-agent` | `FORGEJO_USER_AGENT` | HTTP User-Agent header (default: `forgejo-mcp/<version>`) |
 
