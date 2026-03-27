@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2"
+	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
 	"github.com/mark3labs/mcp-go/mcp"
 )
