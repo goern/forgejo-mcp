@@ -11,7 +11,7 @@ import (
 
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
 
-	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2"
+	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
