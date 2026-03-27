@@ -1,3 +1,13 @@
+## [2.17.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.16.0...v2.17.0) (2026-03-27)
+
+### :sparkles: Features
+
+* ✨ add streamable HTTP transport support ([#99](https://codeberg.org/goern/forgejo-mcp/issues/99)) ([cee3993](https://codeberg.org/goern/forgejo-mcp/commit/cee39936c04e80baf59143296e4643f27b4b16d1))
+
+### :memo: Documentation
+
+* 📝 update contributors with Vokuar and janbaer ([885e9c0](https://codeberg.org/goern/forgejo-mcp/commit/885e9c0f7c351547b5e2cbef702b6b9354e88189))
+
 ## [2.16.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.15.1...v2.16.0) (2026-03-20)
 
 ### :sparkles: Features
