@@ -24,7 +24,7 @@
                 "-transport",
                 "stdio",
                 "-token",
-                "${CODEBERG_ACCESS_TOKEN}",
+                "${CODEBERG_TOKEN}",
                 "-url",
                 "https://codeberg.org"
             ],
