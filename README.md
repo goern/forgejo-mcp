@@ -173,6 +173,17 @@ List all my repositories
 | `get_workflow_run` | Get details of a specific workflow run by ID |
 | **Organizations** | |
 | `search_org_teams` | Search for teams in an organization |
+| **Time Tracking** | |
+| `list_issue_tracked_times` | List tracked time entries on an issue or PR |
+| `list_repo_tracked_times` | List tracked time entries across a repository |
+| `list_my_tracked_times` | List your own tracked time entries |
+| `add_issue_time` | Log time against an issue or PR (accepts seconds or duration like `15m`) |
+| `reset_issue_time` | Delete ALL tracked time entries on an issue or PR (destructive) |
+| `delete_issue_time_entry` | Delete a single tracked time entry by ID |
+| `start_issue_stopwatch` | Start a stopwatch on an issue or PR |
+| `stop_issue_stopwatch` | Stop a running stopwatch and record the elapsed time |
+| `cancel_issue_stopwatch` | Cancel a running stopwatch without recording |
+| `list_my_stopwatches` | List currently running stopwatches |
 | **Server** | |
 | `get_forgejo_mcp_server_version` | Get the MCP server version |
 
