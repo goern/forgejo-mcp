@@ -77,4 +77,12 @@ const (
 	// Misc parameters
 	Description = "Description"
 	Private     = "Private repo"
+
+	// Time tracking parameters
+	TimeID         = "Tracked time entry ID"
+	TimeSeconds    = "Time in seconds to log (positive integer). Provide exactly one of seconds or duration."
+	TimeDuration   = `Time as a duration string, e.g. "15m", "1h30m", "45s". Provide exactly one of seconds or duration.`
+	TimeCreatedAt  = "Optional RFC3339 timestamp for when the work happened (defaults to server time)"
+	TimeUserName   = "Optional username to log time on behalf of (requires admin; omit for self)"
+	TimeUserFilter = "Filter results to this username"
 )
