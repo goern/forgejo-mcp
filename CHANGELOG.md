@@ -1,3 +1,21 @@
+## [2.18.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.17.0...v2.18.0) (2026-04-21)
+
+### :sparkles: Features
+
+* ✨ add issue/PR time tracking and stopwatch tools ([e28cd91](https://codeberg.org/goern/forgejo-mcp/commit/e28cd91262b06a19193b0bc56eae8b83e7d2227d))
+
+### :memo: Documentation
+
+* 📝 add issue-attachment spec and beads issue tracking ([ae2c981](https://codeberg.org/goern/forgejo-mcp/commit/ae2c9813add8644b48e6cb108256799a9f2466c7)), closes [#106](https://codeberg.org/goern/forgejo-mcp/issues/106) [#98](https://codeberg.org/goern/forgejo-mcp/issues/98)
+* 📝 add issue/PR time tracking spec ([3d9fd1a](https://codeberg.org/goern/forgejo-mcp/commit/3d9fd1af5008e9ed8162019e0940bacb90c70c96))
+
+### :repeat: Chore
+
+* **deps:** update golang:1.26-alpine docker digest to 1fb7391 ([f5c89b5](https://codeberg.org/goern/forgejo-mcp/commit/f5c89b529fbb22c94b93c422c18ec608da2ac78e))
+* **deps:** update golang:1.26-alpine docker digest to 27f8293 ([a24ccc7](https://codeberg.org/goern/forgejo-mcp/commit/a24ccc7b6d0e6902b2afb238be7d2dbd0b6678f0))
+* **deps:** update golang:1.26-alpine docker digest to c2a1f7b ([de73b9e](https://codeberg.org/goern/forgejo-mcp/commit/de73b9e2b28e2af2a6f7e2e4d98baca4917ece71))
+* **deps:** update golang:1.26-alpine docker digest to f853308 ([9c6540c](https://codeberg.org/goern/forgejo-mcp/commit/9c6540c207ce4fb9c0d70f9b698bf22fe273dcae))
+
 ## [2.17.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.16.0...v2.17.0) (2026-03-27)
 
 ### :sparkles: Features
