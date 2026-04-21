@@ -31,3 +31,8 @@ Thumbs.db
 .claude/settings.local.json
 
 .social-media/
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
