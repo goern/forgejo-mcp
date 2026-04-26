@@ -53,6 +53,7 @@ func registerToolsWithDomains(s *server.MCPServer) {
 		{"actions", operation.RegisterActionsTool},
 		{"org", operation.RegisterOrgTool},
 		{"tracking", operation.RegisterTrackingTool},
+		{"attachment", operation.RegisterAttachmentTool},
 	}
 
 	for _, d := range domains {
