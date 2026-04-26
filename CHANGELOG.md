@@ -1,3 +1,13 @@
+## [2.19.0-alpha.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.18.0...v2.19.0-alpha.1) (2026-04-26)
+
+### :sparkles: Features
+
+* ✨ add issue & comment attachment tools (closes [#106](https://codeberg.org/goern/forgejo-mcp/issues/106)) ([03aaf58](https://codeberg.org/goern/forgejo-mcp/commit/03aaf586794fc77d7b9ad2c05ca0b4bf7347dffc))
+
+### :memo: Documentation
+
+* 📝 amend issue-attachments spec: 1 MiB cap, always include download URL ([91bc2dd](https://codeberg.org/goern/forgejo-mcp/commit/91bc2dd30afad1455cb7122d206def990c6e43e2)), closes [#2](https://codeberg.org/goern/forgejo-mcp/issues/2)
+
 ## [2.18.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.17.0...v2.18.0) (2026-04-21)
 
 ### :sparkles: Features
