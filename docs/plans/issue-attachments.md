@@ -136,19 +136,22 @@ Download handlers are the only interesting ones:
 
 ```go
 func DownloadIssueAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-    // 1. GET .../assets/{aid}  → Attachment metadata
-    // 2. If Size > MaxInlineDownloadBytes: return metadata + message
-    //    "file exceeds 10 MiB inline cap; fetch {browser_download_url} directly"
-    // 3. Otherwise: DoRaw(browser_download_url) → base64 → BlobResourceContents
-    // 4. Wrap in mcp.NewEmbeddedResource and return
+    // 1. GET .../assets/{aid}  → Attachment metadata (always returned, includes browser_download_url)
+    // 2. If Size > MaxInlineDownloadBytes: return metadata only.
+    //    Caller is expected to fetch {browser_download_url} directly via curl/Bash with the same auth token.
+    // 3. Otherwise: DoRaw(browser_download_url) → base64 → BlobResourceContents,
+    //    return alongside the metadata so the caller still sees browser_download_url.
+    // 4. Wrap bytes in mcp.NewEmbeddedResource and return with metadata.
 }
 ```
 
 Constant:
 
 ```go
-const MaxInlineDownloadBytes = 10 * 1024 * 1024 // 10 MiB; see Open Questions
+const MaxInlineDownloadBytes = 1 * 1024 * 1024 // 1 MiB
 ```
+
+Rationale for the 1 MiB cap and the always-include-URL contract: discussion on issue #106 (comments [13701827](https://codeberg.org/goern/forgejo-mcp/issues/106#issuecomment-13701827), [13703888](https://codeberg.org/goern/forgejo-mcp/issues/106#issuecomment-13703888)). For files over the cap, the LLM is expected to fall through to a direct authenticated fetch of `browser_download_url`; this avoids both context-bloat from large base64 payloads and the tmpfile-hygiene / cross-container permission problems that a `save_to_path` parameter would introduce.
 
 ### Registration
 
@@ -168,7 +171,11 @@ attachment.RegisterTool(s)
    - `GET /api/v1/repos/{o}/{r}/issues/{index}/assets` returns `[]Attachment`.
    - `POST` multipart field name is `attachment` (matches release-assets convention in SDK).
    - `PATCH` body is `{"name":"..."}` (matches SDK's `EditAttachmentOptions`).
-2. Record actual response JSON for one attachment in the `Open Questions` section if any field differs from the SDK's `Attachment` struct.
+2. **Verify private-repo auth on `browser_download_url`** *(blocks Part 3 — see Open Question #2)*:
+   - Upload a PDF to a private test repo.
+   - `curl -H "Authorization: token $TOKEN" $browser_download_url` — must return 200 with the file bytes.
+   - If it returns 401/403/redirect-to-login, the implementation must rewrite responses to substitute the API asset-content path (`GET /repos/{o}/{r}/issues/{index}/assets/{aid}` with `Accept: application/octet-stream`) for any field exposed to the client. Document the chosen URL form in the response schema.
+3. Record actual response JSON for one attachment in the `Open Questions` section if any field differs from the SDK's `Attachment` struct.
 
 ### Part 2 — `pkg/forgejo/rawhttp.go`
 
@@ -178,7 +185,7 @@ attachment.RegisterTool(s)
    - User-Agent header propagation.
    - Multipart boundary correctness (round-trip via `mime/multipart.NewReader`).
    - 2xx decode, 4xx error mapping, 404-on-list → `io.EOF`-style sentinel the caller can treat as empty.
-   - 10 MiB cap enforced by `DoRaw` (test reads response with `io.LimitReader`).
+   - 1 MiB cap enforced by `DoRaw` (test reads response with `io.LimitReader`).
 3. All tests live in `pkg/forgejo/rawhttp_test.go`; no live-API calls.
 
 ### Part 3 — `operation/attachment/attachment.go`
@@ -245,7 +252,8 @@ Both use `./forgejo-mcp --cli <tool>` invocations, match the formatting of `demo
 ## Acceptance Criteria
 
 1. `./forgejo-mcp --cli list_issue_attachments --owner goern --repo forgejo-mcp --index 106` against a Codeberg issue with a PDF returns the attachment metadata.
-2. `./forgejo-mcp --cli download_issue_attachment …` for a PDF < 10 MiB returns an `EmbeddedResource` whose `Blob` decodes to the exact bytes of the uploaded file (`sha256` match).
+2. `./forgejo-mcp --cli download_issue_attachment …` for a PDF < 1 MiB returns an `EmbeddedResource` whose `Blob` decodes to the exact bytes of the uploaded file (`sha256` match), and the response also carries `browser_download_url` in the metadata.
+2a. `./forgejo-mcp --cli download_issue_attachment …` for a file > 1 MiB returns metadata + `browser_download_url` and **no** `Blob`, and the URL is fetchable with `Authorization: token {flag.Token}` (sha256 of fetched bytes matches uploaded file).
 3. Round-trip: `create_issue_attachment` → `edit_issue_attachment` (rename) → `list_issue_attachments` shows the new name → `delete_issue_attachment` → `list_issue_attachments` no longer shows it.
 4. Same round-trip works against `*_comment_attachment` tools on an issue comment.
 5. `list_*_attachments` on an entity with zero attachments returns `[]`, not an error.
@@ -254,8 +262,8 @@ Both use `./forgejo-mcp --cli <tool>` invocations, match the formatting of `demo
 
 ## Open Questions
 
-1. **Inline size cap**: 10 MiB is a guess. Should it be configurable via a new `--max-inline-download-bytes` flag? *Deferring to follow-up; ship with the constant first.*
-2. **Authorization for `browser_download_url`**: private-repo attachments are served behind session auth on the web path. Confirm whether adding `Authorization: token …` works on the `/attachments/{uuid}` route or whether we need to resolve to the API asset-content path instead (`GET /repos/.../assets/{id}` with `Accept: application/octet-stream` may stream bytes directly — verify in Part 1).
+1. ~~**Inline size cap**: 10 MiB is a guess.~~ **Resolved**: cap is 1 MiB (see issue #106 discussion). Configurability via a `--max-inline-download-bytes` flag deferred to a follow-up issue if a real use case appears.
+2. **Authorization for `browser_download_url`** *(load-bearing — must verify in Part 1)*: private-repo attachments are served behind session auth on the web path. The "fall through to curl for files over the cap" pattern depends on `Authorization: token …` working on the `/attachments/{uuid}` route. **Verification step in Part 1**: upload a PDF to a private test repo, confirm the URL returned in `browser_download_url` returns 200 with the token attached. If it does not, the implementation must rewrite the response to point at the API asset-content path instead (`GET /repos/.../assets/{id}` with `Accept: application/octet-stream`), which is API-authenticated.
 3. **Multipart field name for comment attachments**: release assets use `attachment`; need to confirm issue/comment endpoints accept the same. Likely yes, verify in Part 1.
 4. **Exposing `updated_at` on create**: the Forgejo API documents an optional `updated_at` field in the multipart form. YAGNI for v1 — omit unless a caller needs it.
 
@@ -263,7 +271,7 @@ Both use `./forgejo-mcp --cli <tool>` invocations, match the formatting of `demo
 
 - **Low risk**: all 12 tools are additive; no existing tool changes behavior.
 - **Medium risk**: raw HTTP bypasses SDK validation. If Forgejo renames a field or changes auth semantics, attachment tools break silently while other tools keep working. Mitigated by (a) reusing `forgejo_sdk.Attachment` as the DTO so struct drift trips compile errors as soon as the SDK updates, (b) demo files serve as live-integration canaries.
-- **Low risk**: binary `EmbeddedResource` support is already used elsewhere in the mcp-go ecosystem; the 10 MiB cap bounds context-bloat blast radius.
+- **Low risk**: binary `EmbeddedResource` support is already used elsewhere in the mcp-go ecosystem; the 1 MiB cap bounds context-bloat blast radius, and over-cap responses degrade to a metadata-only payload that points at `browser_download_url`.
 
 ## Follow-ups (not in this spec)
 
