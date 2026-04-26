@@ -184,6 +184,19 @@ List all my repositories
 | `stop_issue_stopwatch` | Stop a running stopwatch and record the elapsed time |
 | `cancel_issue_stopwatch` | Cancel a running stopwatch without recording |
 | `list_my_stopwatches` | List currently running stopwatches |
+| **Attachments** | |
+| `list_issue_attachments` | List attachments on an issue or PR |
+| `get_issue_attachment` | Get metadata for a single issue/PR attachment |
+| `download_issue_attachment` | Download an issue/PR attachment (inline if < 1 MiB; metadata + URL otherwise) |
+| `create_issue_attachment` | Upload a new attachment to an issue or PR (base64 content) |
+| `edit_issue_attachment` | Rename an issue/PR attachment |
+| `delete_issue_attachment` | Delete an issue/PR attachment |
+| `list_comment_attachments` | List attachments on an issue/PR comment |
+| `get_comment_attachment` | Get metadata for a single comment attachment |
+| `download_comment_attachment` | Download a comment attachment (inline if < 1 MiB; metadata + URL otherwise) |
+| `create_comment_attachment` | Upload a new attachment to an issue/PR comment (base64 content) |
+| `edit_comment_attachment` | Rename a comment attachment |
+| `delete_comment_attachment` | Delete a comment attachment |
 | **Server** | |
 | `get_forgejo_mcp_server_version` | Get the MCP server version |
 
