@@ -334,9 +334,16 @@ func MergePullRequestFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 		opt.Message = message
 	}
 
-	_, _, err := forgejo.Client().MergePullRequest(owner, repo, int64(index), opt)
+	merged, resp, err := forgejo.Client().MergePullRequest(owner, repo, int64(index), opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("merge pull request err: %v", err))
+	}
+	if !merged && !mergeWhenChecks {
+		statusCode := 0
+		if resp != nil {
+			statusCode = resp.StatusCode
+		}
+		return to.ErrorResult(fmt.Errorf("merge pull request: server returned HTTP %d (expected 200)", statusCode))
 	}
 
 	result := "Pull request merged successfully"
