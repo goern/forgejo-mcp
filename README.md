@@ -316,6 +316,7 @@ forgejo-mcp is shaped by everyone who files issues, writes code, reviews PRs, an
 | [Guruprasad Kulkarni](https://codeberg.org/comdotlinux) | Arch Linux AUR installation docs (PR #69) |
 | [Mario Wolff](https://codeberg.org/mariowolff) | Contributions |
 | [Massimo Fraschetti](https://codeberg.org/fraschetti) | Contributions |
+| [synath](https://codeberg.org/synath) (David Paul Turley) | Repository-scoped token support via `ServerVersion` probe (PR #112); merge status-code check (PR #113) |
 
 ### Community contributors
 
@@ -337,6 +338,7 @@ Issue reporters and discussion participants who shaped the direction of the proj
 | [Vokuar](https://codeberg.org/Vokuar) | Filed #99 (streamable HTTP transport support) |
 | [janbaer](https://codeberg.org/janbaer) | Filed #98 (reply to review comment) |
 | [fraschm98](https://codeberg.org/fraschm98) | Early issue reports |
+| [heathen711](https://codeberg.org/heathen711) | Filed #106 (issue/comment attachments — since implemented); shaped the 1 MiB inline cap + `browser_download_url` fall-through design |
 
 ### Cyborg contributors
 
