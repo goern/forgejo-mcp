@@ -78,6 +78,13 @@ const (
 	Description = "Description"
 	Private     = "Private repo"
 
+	// Attachment parameters
+	AttachmentID       = "Attachment ID"
+	AttachmentName     = "New name for the attachment"
+	AttachmentContent  = "Base64-encoded file bytes to upload"
+	AttachmentFilename = `Filename to associate with the uploaded attachment (e.g. "requirements.pdf")`
+	AttachmentMIME     = "MIME type hint for uploaded file (optional; inferred from filename if omitted)"
+
 	// Time tracking parameters
 	TimeID         = "Tracked time entry ID"
 	TimeSeconds    = "Time in seconds to log (positive integer). Provide exactly one of seconds or duration."
