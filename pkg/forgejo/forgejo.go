@@ -56,7 +56,9 @@ func GetBaseURL() string {
 }
 
 // VerifyConnection attempts to get basic information to verify
-// that the client is properly connected
+// that the client is properly connected.
+// Uses the /version endpoint (no auth required) so that tokens scoped
+// only to repo/issue — e.g. organisation tokens — are not rejected.
 func VerifyConnection() error {
 	start := time.Now()
 
@@ -64,8 +66,7 @@ func VerifyConnection() error {
 		log.SanitizedURLField("url", flag.URL),
 	)
 
-	// Try to get user info as a basic connectivity test
-	user, resp, err := Client().GetMyUserInfo()
+	version, resp, err := Client().ServerVersion()
 	duration := time.Since(start)
 
 	if err != nil {
@@ -80,7 +81,7 @@ func VerifyConnection() error {
 	log.Info("Connection verification successful",
 		log.SanitizedURLField("url", flag.URL),
 		log.DurationField("duration", duration),
-		log.StringField("authenticated_user", user.UserName),
+		log.StringField("server_version", version),
 		log.IntField("response_status", resp.StatusCode),
 	)
 
@@ -93,9 +94,7 @@ func HealthCheck() error {
 
 	log.Debug("Starting health check")
 
-	// Perform a lightweight API call to check connectivity
-	// Use the same call as VerifyConnection for consistency
-	_, resp, err := Client().GetMyUserInfo()
+	version, resp, err := Client().ServerVersion()
 	duration := time.Since(start)
 
 	if err != nil {
@@ -110,6 +109,7 @@ func HealthCheck() error {
 	log.Debug("Health check successful",
 		log.SanitizedURLField("url", flag.URL),
 		log.DurationField("duration", duration),
+		log.StringField("server_version", version),
 		log.IntField("response_status", resp.StatusCode),
 	)
 
