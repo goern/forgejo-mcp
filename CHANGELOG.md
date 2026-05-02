@@ -1,3 +1,19 @@
+## [2.19.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.18.0...v2.19.0) (2026-05-02)
+
+### :sparkles: Features
+
+* add issue & comment attachment tools ([#109](https://codeberg.org/goern/forgejo-mcp/issues/109)) ([d0cfd66](https://codeberg.org/goern/forgejo-mcp/commit/d0cfd6691dedf6e1cf4ab37290630043b9c07655))
+
+### :bug: Fixes
+
+* check merged bool in MergePullRequestFn ([#113](https://codeberg.org/goern/forgejo-mcp/issues/113)) ([5326fb4](https://codeberg.org/goern/forgejo-mcp/commit/5326fb41928d0481289108ee2994b5ef1f9e237c))
+* use ServerVersion for connection check instead of GetMyUserInfo ([#112](https://codeberg.org/goern/forgejo-mcp/issues/112)) ([b427041](https://codeberg.org/goern/forgejo-mcp/commit/b42704109733a5a812da8635d16ca41f09893cd7))
+
+### :memo: Documentation
+
+* 📝 add synath and heathen711 to contributors ([db0d925](https://codeberg.org/goern/forgejo-mcp/commit/db0d925f5f95dac48cde5724b742452ae5b47a8f)), closes [#112](https://codeberg.org/goern/forgejo-mcp/issues/112) [#113](https://codeberg.org/goern/forgejo-mcp/issues/113) [#106](https://codeberg.org/goern/forgejo-mcp/issues/106)
+* 📝 amend issue-attachments spec: 1 MiB cap, always include download URL ([91bc2dd](https://codeberg.org/goern/forgejo-mcp/commit/91bc2dd30afad1455cb7122d206def990c6e43e2)), closes [#2](https://codeberg.org/goern/forgejo-mcp/issues/2)
+
 ## [2.18.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.17.0...v2.18.0) (2026-04-21)
 
 ### :sparkles: Features
