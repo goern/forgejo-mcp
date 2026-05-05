@@ -24,11 +24,12 @@ const (
 var (
 	GetFileContentTool = mcp.NewTool(
 		GetFileToolName,
-		mcp.WithDescription("Get file content"),
+		mcp.WithDescription("Get file content as plain text by default; set with_metadata=true to return the full ContentsResponse (sha, encoding, links, type, size, base64 content) instead."),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithString("ref", mcp.Required(), mcp.Description(params.Ref)),
 		mcp.WithString("filePath", mcp.Required(), mcp.Description(params.FilePath)),
+		mcp.WithBoolean("with_metadata", mcp.Description("Return the full ContentsResponse (sha, encoding, links, type, size, base64 content) instead of plain text.")),
 	)
 
 	CreateFileTool = mcp.NewTool(
@@ -84,11 +85,23 @@ func GetFileContentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	if !ok {
 		return to.ErrorResult(fmt.Errorf("filePath is required"))
 	}
-	content, _, err := forgejo.Client().GetContents(owner, repo, ref, filePath)
+	withMetadata, _ := req.GetArguments()["with_metadata"].(bool)
+
+	if withMetadata {
+		content, _, err := forgejo.Client().GetContents(owner, repo, ref, filePath)
+		if err != nil {
+			return to.ErrorResult(fmt.Errorf("get file err: %v", err))
+		}
+		return to.TextResult(content)
+	}
+
+	// Default: plain text via GetFile (SDK /raw/ endpoint, no base64).
+	// GetFile returns []byte; binary files are returned as-is without detection.
+	rawBytes, _, err := forgejo.Client().GetFile(owner, repo, ref, filePath)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get file err: %v", err))
 	}
-	return to.TextResult(content)
+	return to.TextResult(string(rawBytes))
 }
 
 func CreateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
