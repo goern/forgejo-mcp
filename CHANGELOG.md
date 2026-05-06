@@ -1,3 +1,15 @@
+## [2.20.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.19.0...v2.20.0) (2026-05-06)
+
+### :sparkles: Features
+
+* add list_repo_contents and get_repo_tree MCP tools ([8c0759d](https://codeberg.org/goern/forgejo-mcp/commit/8c0759de5b1aed5ce0482374dcb9fb80ba7d4720))
+* get_file_content returns plain text by default ([d76be68](https://codeberg.org/goern/forgejo-mcp/commit/d76be6886671e4f086d3c2965087ddc3a0c34b12))
+* name binary-file case in get_file_content description ([c2c33de](https://codeberg.org/goern/forgejo-mcp/commit/c2c33de1846354e078d7478872d6d05bb1076ef4)), closes [#116](https://codeberg.org/goern/forgejo-mcp/issues/116)
+
+### :memo: Documentation
+
+* 📝 add BrilliantKahn to contributors with first-OSS-PR note ([7f214f5](https://codeberg.org/goern/forgejo-mcp/commit/7f214f503230651f0b95d126c6c6f8ab6942f742))
+
 ## [2.19.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.18.0...v2.19.0) (2026-05-02)
 
 ### :sparkles: Features
