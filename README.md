@@ -317,6 +317,7 @@ forgejo-mcp is shaped by everyone who files issues, writes code, reviews PRs, an
 | [Mario Wolff](https://codeberg.org/mariowolff) | Contributions |
 | [Massimo Fraschetti](https://codeberg.org/fraschetti) | Contributions |
 | [synath](https://codeberg.org/synath) (David Paul Turley) | Repository-scoped token support via `ServerVersion` probe (PR #112); merge status-code check (PR #113) |
+| [BrilliantKahn](https://codeberg.org/BrilliantKahn) | `get_file_content` plain-text default (PR #116); `list_repo_contents` and `get_repo_tree` tools (PR #117). **First-ever open source contribution** — welcome aboard! 🎉 |
 
 ### Community contributors
 
