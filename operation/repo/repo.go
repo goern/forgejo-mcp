@@ -74,6 +74,10 @@ func RegisterTool(s *server.MCPServer) {
 
 	// Commit
 	s.AddTool(ListRepoCommitsTool, ListRepoCommitsFn)
+
+	// Contents / Tree
+	s.AddTool(ListRepoContentsTool, ListRepoContentsFn)
+	s.AddTool(GetRepoTreeTool, GetRepoTreeFn)
 }
 
 func CreateRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
