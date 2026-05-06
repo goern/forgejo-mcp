@@ -24,7 +24,7 @@ const (
 var (
 	GetFileContentTool = mcp.NewTool(
 		GetFileToolName,
-		mcp.WithDescription("Get file content as plain text by default; set with_metadata=true to return the full ContentsResponse (sha, encoding, links, type, size, base64 content) instead."),
+		mcp.WithDescription("Get file content as plain text by default. Set `with_metadata=true` for binary files, or when you need the SHA/encoding/links from the full `ContentsResponse` (e.g. before a follow-up `update_file` call)."),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithString("ref", mcp.Required(), mcp.Description(params.Ref)),
