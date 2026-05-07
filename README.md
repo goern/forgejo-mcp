@@ -316,7 +316,7 @@ forgejo-mcp is shaped by everyone who files issues, writes code, reviews PRs, an
 | [Guruprasad Kulkarni](https://codeberg.org/comdotlinux) | Arch Linux AUR installation docs (PR #69) |
 | [Mario Wolff](https://codeberg.org/mariowolff) | Contributions |
 | [Massimo Fraschetti](https://codeberg.org/fraschetti) | Contributions |
-| [synath](https://codeberg.org/synath) (David Paul Turley) | Repository-scoped token support via `ServerVersion` probe (PR #112); merge status-code check (PR #113) |
+| [synath](https://codeberg.org/synath) (David Paul Turley) | Repository-scoped token support via `ServerVersion` probe (PR #112); merge status-code check (PR #113); Claude Desktop Extension (.mcpb) packaging (PR #118) |
 | [BrilliantKahn](https://codeberg.org/BrilliantKahn) | `get_file_content` plain-text default (PR #116); `list_repo_contents` and `get_repo_tree` tools (PR #117). **First-ever open source contribution** — welcome aboard! 🎉 |
 
 ### Community contributors
@@ -349,6 +349,7 @@ This project also received contributions from AI coding agents — submitted as 
 |-------|------|---------------|
 | [brenner-axiom](https://codeberg.org/brenner-axiom) (b4-dev, B4arena) | AI dev agent | Organization management tools (PR #94); showboat demos (PR #97); `list_repo_milestones`, `list_repo_labels` tools (PR #83); race condition fix (PR #78); contributors docs (PR #87, #88); filed #76; code reviews |
 | opencode | AI dev agent | Pull request reviews and comments support (PR #51) |
+| claude-code | AI dev agent | `get_file_content` plain-text default and `list_repo_contents`/`get_repo_tree` tools, paired with [BrilliantKahn](https://codeberg.org/BrilliantKahn) (PR #116, #117) |
 | b4mad-release-bot | Release automation | Automated changelog and release tagging |
 | the #B4mad Renovate bot | Dependency updates | Automated dependency upgrades |
 
