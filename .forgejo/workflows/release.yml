@@ -34,3 +34,58 @@ jobs:
         env:
           GORELEASER_FORCE_TOKEN: gitea
           GITEA_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+
+      # https://code.forgejo.org/actions/setup-node
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build and attach .mcpb (Claude Desktop Extension) per platform
+        env:
+          TAG: ${{ github.ref_name }}
+          GITEA_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+
+          RELEASE_ID=$(curl -fsSL \
+            -H "Authorization: token ${GITEA_TOKEN}" \
+            "https://codeberg.org/api/v1/repos/${REPO}/releases/tags/${TAG}" \
+            | jq -r '.id')
+          if [ -z "$RELEASE_ID" ] || [ "$RELEASE_ID" = "null" ]; then
+            echo "Could not resolve release ID for tag ${TAG}" >&2
+            exit 1
+          fi
+
+          cp extension/manifest.json extension/manifest.json.orig
+          trap 'mv -f extension/manifest.json.orig extension/manifest.json 2>/dev/null || true' EXIT
+
+          for goos in linux darwin; do
+            for goarch in amd64 arm64; do
+              rm -rf extension/bin
+              mkdir -p extension/bin
+
+              BIN=$(find dist -type f -name forgejo-mcp -path "*${goos}_${goarch}*" | head -1)
+              if [ -z "$BIN" ]; then
+                echo "No binary for ${goos}_${goarch} in dist/" >&2
+                exit 1
+              fi
+              cp "$BIN" extension/bin/forgejo-mcp
+              chmod +x extension/bin/forgejo-mcp
+
+              cp extension/manifest.json.orig extension/manifest.json
+              jq --arg v "$VERSION" '.version=$v' extension/manifest.json > extension/manifest.json.tmp
+              mv extension/manifest.json.tmp extension/manifest.json
+
+              OUT="dist/forgejo-mcp_${VERSION}_${goos}_${goarch}.mcpb"
+              npx -y @anthropic-ai/mcpb pack extension/ "$OUT"
+
+              ASSET_NAME=$(basename "$OUT")
+              curl -fsSL -X POST \
+                -H "Authorization: token ${GITEA_TOKEN}" \
+                -F "attachment=@${OUT}" \
+                "https://codeberg.org/api/v1/repos/${REPO}/releases/${RELEASE_ID}/assets?name=${ASSET_NAME}"
+            done
+          done
