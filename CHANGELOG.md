@@ -1,3 +1,23 @@
+## [2.21.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.20.0...v2.21.0) (2026-05-07)
+
+### :sparkles: Features
+
+* **extension:** package as Claude Desktop Extension (.mcpb) ([998f92b](https://codeberg.org/goern/forgejo-mcp/commit/998f92b214ab8efb1a2bb7a1206b35aa4f3ca7e6))
+
+### :memo: Documentation
+
+* 📝 credit synath for .mcpb packaging and add claude-code agent ([8332e92](https://codeberg.org/goern/forgejo-mcp/commit/8332e92df862c27c3f111da13843e52c6bb3f5a6)), closes [#118](https://codeberg.org/goern/forgejo-mcp/issues/118) [116/#117](https://codeberg.org/116/forgejo-mcp/issues/117)
+
+### :repeat: CI
+
+* 🚀 build and attach .mcpb extension on tagged release ([fdc6305](https://codeberg.org/goern/forgejo-mcp/commit/fdc630558723bb53294af11b752f6e3ea5c6d0e4))
+
+### :repeat: Chore
+
+* 🔧 add mcpb and help make targets ([679d593](https://codeberg.org/goern/forgejo-mcp/commit/679d5939347dce4f9063a82acc1caee6fa310dca))
+* **deps:** update golang:1.26-alpine docker digest to 91eda97 ([cb058c3](https://codeberg.org/goern/forgejo-mcp/commit/cb058c3c8faf8a2a52c6060903c198776f4a1624))
+* **deps:** update golang:1.26-alpine docker digest to e58f92c ([13e52b5](https://codeberg.org/goern/forgejo-mcp/commit/13e52b56f30f8fb2e85467b5ee0e4b3c8630a8d2))
+
 ## [2.20.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.19.0...v2.20.0) (2026-05-06)
 
 ### :sparkles: Features
