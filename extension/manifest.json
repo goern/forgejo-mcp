@@ -1,0 +1,443 @@
+{
+  "manifest_version": "0.3",
+  "name": "forgejo-mcp",
+  "display_name": "Forgejo",
+  "version": "2.20.0",
+  "description": "Connect Claude to Codeberg/Forgejo: issues, pull requests, files, branches, labels, milestones, workflows, time tracking, and more.",
+  "long_description": "Wraps the forgejo-mcp server (https://codeberg.org/goern/forgejo-mcp) as a Claude desktop Extension. Exposes the full Forgejo REST API surface to Claude via MCP \u2014 issues, pull requests, repositories, branches, files, comments, labels, milestones, workflows (Forgejo Actions), time tracking, and attachments. Compatible with Codeberg.org out of the box; configure the URL field for self-hosted Forgejo instances.\n\nServer binary by goern (https://codeberg.org/goern/forgejo-mcp). Initial extension packaging contributed by Whetstone (https://codeberg.org/whetstone); the server binary itself is unchanged.",
+  "author": {
+    "name": "goern",
+    "url": "https://codeberg.org/goern"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://codeberg.org/goern/forgejo-mcp"
+  },
+  "homepage": "https://codeberg.org/goern/forgejo-mcp",
+  "documentation": "https://codeberg.org/goern/forgejo-mcp/src/branch/main/README.md",
+  "support": "https://codeberg.org/goern/forgejo-mcp/issues",
+  "license": "MIT",
+  "keywords": [
+    "forgejo",
+    "codeberg",
+    "git",
+    "issues",
+    "pull-requests"
+  ],
+  "server": {
+    "type": "binary",
+    "entry_point": "bin/forgejo-mcp",
+    "mcp_config": {
+      "command": "${__dirname}/bin/forgejo-mcp",
+      "args": [
+        "--transport",
+        "stdio",
+        "--url",
+        "${user_config.forgejo_url}"
+      ],
+      "env": {
+        "FORGEJO_ACCESS_TOKEN": "${user_config.access_token}"
+      }
+    }
+  },
+  "user_config": {
+    "forgejo_url": {
+      "type": "string",
+      "title": "Forgejo URL",
+      "description": "Base URL of your Forgejo instance (default: https://codeberg.org)",
+      "default": "https://codeberg.org",
+      "required": true
+    },
+    "access_token": {
+      "type": "string",
+      "title": "Access Token",
+      "description": "Personal access token from your Forgejo instance (Settings \u2192 Applications \u2192 Access Tokens).",
+      "required": true,
+      "sensitive": true
+    }
+  },
+  "tools": [
+    {
+      "name": "add_issue_labels",
+      "description": "Add labels to issue"
+    },
+    {
+      "name": "add_issue_time",
+      "description": "Log time against an issue or pull request. Provide exactly one of 'seconds' or 'duration'."
+    },
+    {
+      "name": "add_team_member",
+      "description": "Add a user to a team"
+    },
+    {
+      "name": "add_team_repo",
+      "description": "Add a repository to a team"
+    },
+    {
+      "name": "cancel_issue_stopwatch",
+      "description": "Cancel a running stopwatch without recording a tracked time entry"
+    },
+    {
+      "name": "check_notifications",
+      "description": "Check and list user notifications"
+    },
+    {
+      "name": "check_org_membership",
+      "description": "Check if a user is a member of an organization"
+    },
+    {
+      "name": "create_branch",
+      "description": "Create branch"
+    },
+    {
+      "name": "create_comment_attachment",
+      "description": "Upload a new attachment to an issue/PR comment."
+    },
+    {
+      "name": "create_file",
+      "description": "Create file"
+    },
+    {
+      "name": "create_issue",
+      "description": "Create issue"
+    },
+    {
+      "name": "create_issue_attachment",
+      "description": "Upload a new attachment to an issue or pull request."
+    },
+    {
+      "name": "create_issue_comment",
+      "description": "Create issue comment"
+    },
+    {
+      "name": "create_org",
+      "description": "Create an organization"
+    },
+    {
+      "name": "create_org_team",
+      "description": "Create a team in an organization"
+    },
+    {
+      "name": "create_pull_request",
+      "description": "Create pull request"
+    },
+    {
+      "name": "create_pull_review",
+      "description": "Create a pull request review with optional inline comments"
+    },
+    {
+      "name": "create_repo",
+      "description": "Create repo"
+    },
+    {
+      "name": "create_review_requests",
+      "description": "Request reviews from specific users or teams"
+    },
+    {
+      "name": "delete_branch",
+      "description": "Delete branch"
+    },
+    {
+      "name": "delete_comment_attachment",
+      "description": "Delete a comment attachment."
+    },
+    {
+      "name": "delete_file",
+      "description": "Delete file"
+    },
+    {
+      "name": "delete_issue_attachment",
+      "description": "Delete an issue/PR attachment."
+    },
+    {
+      "name": "delete_issue_comment",
+      "description": "Delete issue/PR comment"
+    },
+    {
+      "name": "delete_issue_time_entry",
+      "description": "Delete a single tracked time entry by its ID"
+    },
+    {
+      "name": "delete_org",
+      "description": "Delete an organization. WARNING: This is destructive and irreversible \u2014 all repos, teams, and data will be permanently r"
+    },
+    {
+      "name": "delete_pull_review",
+      "description": "Delete a pending pull request review"
+    },
+    {
+      "name": "delete_review_requests",
+      "description": "Cancel pending review requests"
+    },
+    {
+      "name": "dismiss_pull_review",
+      "description": "Dismiss a pull request review"
+    },
+    {
+      "name": "dispatch_workflow",
+      "description": "Trigger a workflow run"
+    },
+    {
+      "name": "download_comment_attachment",
+      "description": "Download a comment attachment. Files at or above the inline cap return metadata + browser_download_url only; the caller "
+    },
+    {
+      "name": "download_issue_attachment",
+      "description": "Download an issue/PR attachment. Files at or above the inline cap return metadata + browser_download_url only; the calle"
+    },
+    {
+      "name": "edit_comment_attachment",
+      "description": "Rename a comment attachment."
+    },
+    {
+      "name": "edit_issue_attachment",
+      "description": "Rename an issue/PR attachment."
+    },
+    {
+      "name": "edit_issue_comment",
+      "description": "Edit issue/PR comment"
+    },
+    {
+      "name": "edit_org",
+      "description": "Edit organization settings"
+    },
+    {
+      "name": "fork_repo",
+      "description": "Fork repo"
+    },
+    {
+      "name": "get_comment_attachment",
+      "description": "Get metadata for a single comment attachment."
+    },
+    {
+      "name": "get_file_content",
+      "description": "Get file content as plain text by default. Set `with_metadata=true` for binary files, or when you need the SHA/encoding/"
+    },
+    {
+      "name": "get_forgejo_mcp_server_version",
+      "description": "Get MCP server version"
+    },
+    {
+      "name": "get_issue_attachment",
+      "description": "Get metadata for a single issue/PR attachment."
+    },
+    {
+      "name": "get_issue_by_index",
+      "description": "Get issue by index"
+    },
+    {
+      "name": "get_issue_comment",
+      "description": "Get comment by ID"
+    },
+    {
+      "name": "get_my_user_info",
+      "description": "Get user info"
+    },
+    {
+      "name": "get_notification_thread",
+      "description": "Get detailed info on a single notification thread"
+    },
+    {
+      "name": "get_org",
+      "description": "Get organization details"
+    },
+    {
+      "name": "get_pull_request_by_index",
+      "description": "Get pull request by index"
+    },
+    {
+      "name": "get_pull_request_diff",
+      "description": "Get the diff of a pull request"
+    },
+    {
+      "name": "get_pull_review",
+      "description": "Get a specific pull request review"
+    },
+    {
+      "name": "get_repo_tree",
+      "description": "Get the Git tree of a repository. With recursive=true, returns the complete file tree in a single response (subject to t"
+    },
+    {
+      "name": "get_workflow_run",
+      "description": "Get details of a specific workflow run"
+    },
+    {
+      "name": "issue_state_change",
+      "description": "Change issue state"
+    },
+    {
+      "name": "list_branches",
+      "description": "List branches"
+    },
+    {
+      "name": "list_comment_attachments",
+      "description": "List attachments on an issue/PR comment."
+    },
+    {
+      "name": "list_issue_attachments",
+      "description": "List attachments on an issue or pull request."
+    },
+    {
+      "name": "list_issue_comments",
+      "description": "List issue/PR comments"
+    },
+    {
+      "name": "list_issue_tracked_times",
+      "description": "List tracked time entries on an issue or pull request"
+    },
+    {
+      "name": "list_my_orgs",
+      "description": "List my organizations"
+    },
+    {
+      "name": "list_my_repos",
+      "description": "List my repos"
+    },
+    {
+      "name": "list_my_stopwatches",
+      "description": "List all currently running stopwatches for the authenticated user"
+    },
+    {
+      "name": "list_my_tracked_times",
+      "description": "List tracked time entries for the authenticated user across all repositories"
+    },
+    {
+      "name": "list_org_members",
+      "description": "List members of an organization"
+    },
+    {
+      "name": "list_org_teams",
+      "description": "List teams in an organization"
+    },
+    {
+      "name": "list_pull_request_files",
+      "description": "List changed files in a pull request"
+    },
+    {
+      "name": "list_pull_review_comments",
+      "description": "List comments on a pull request review"
+    },
+    {
+      "name": "list_pull_reviews",
+      "description": "List reviews for a pull request"
+    },
+    {
+      "name": "list_repo_commits",
+      "description": "List repo commits"
+    },
+    {
+      "name": "list_repo_contents",
+      "description": "List the files and directories at a given path in a repository. Use path=\"\" to list the repository root. Returns one lev"
+    },
+    {
+      "name": "list_repo_issues",
+      "description": "List repo issues"
+    },
+    {
+      "name": "list_repo_labels",
+      "description": "List repository labels"
+    },
+    {
+      "name": "list_repo_milestones",
+      "description": "List repository milestones"
+    },
+    {
+      "name": "list_repo_notifications",
+      "description": "Filter notifications scoped to a single repository"
+    },
+    {
+      "name": "list_repo_pull_requests",
+      "description": "List repo pull requests"
+    },
+    {
+      "name": "list_repo_tracked_times",
+      "description": "List tracked time entries across all issues and PRs in a repository"
+    },
+    {
+      "name": "list_user_orgs",
+      "description": "List a user's organizations"
+    },
+    {
+      "name": "list_workflow_runs",
+      "description": "List workflow runs for a repository"
+    },
+    {
+      "name": "mark_all_notifications_read",
+      "description": "Acknowledge all notifications"
+    },
+    {
+      "name": "mark_notification_read",
+      "description": "Mark a single notification thread as read"
+    },
+    {
+      "name": "mark_repo_notifications_read",
+      "description": "Mark all notifications in a specific repo as read"
+    },
+    {
+      "name": "merge_pull_request",
+      "description": "Merge a pull request"
+    },
+    {
+      "name": "remove_issue_labels",
+      "description": "Remove labels from issue"
+    },
+    {
+      "name": "remove_org_member",
+      "description": "Remove a member from an organization"
+    },
+    {
+      "name": "remove_team_member",
+      "description": "Remove a user from a team"
+    },
+    {
+      "name": "remove_team_repo",
+      "description": "Remove a repository from a team"
+    },
+    {
+      "name": "reset_issue_time",
+      "description": "Delete ALL tracked time entries on an issue or pull request (including entries from other users). This is destructive an"
+    },
+    {
+      "name": "search_org_teams",
+      "description": "Search org teams"
+    },
+    {
+      "name": "search_repos",
+      "description": "Search repos"
+    },
+    {
+      "name": "search_users",
+      "description": "Search users"
+    },
+    {
+      "name": "start_issue_stopwatch",
+      "description": "Start a stopwatch on an issue or pull request. Only one stopwatch per issue; fails if one is already running."
+    },
+    {
+      "name": "stop_issue_stopwatch",
+      "description": "Stop a running stopwatch and record the elapsed time as a tracked time entry"
+    },
+    {
+      "name": "submit_pull_review",
+      "description": "Submit a pending pull request review"
+    },
+    {
+      "name": "update_file",
+      "description": "Update file"
+    },
+    {
+      "name": "update_issue",
+      "description": "Update issue"
+    },
+    {
+      "name": "update_pull_request",
+      "description": "Update pull request"
+    }
+  ],
+  "compatibility": {
+    "claude_desktop": ">=0.10.0",
+    "platforms": [
+      "darwin"
+    ]
+  }
+}
