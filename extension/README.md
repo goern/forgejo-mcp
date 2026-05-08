@@ -53,7 +53,7 @@ What it doesn't catch:
 
 When the binary gains or loses a tool, the manifest's `tools` array needs updating. Two paths:
 
-**Option A: regenerate from the binary.** Build the new binary, run a small one-shot script that calls `tools/list` and rewrites the array in `manifest.json`. This is what was done to seed the initial list. The script lives in commit history; reach for it (or write a fresh equivalent) when needed.
+**Option A: regenerate from the binary.** Build the new binary, then write a small one-shot script that performs the MCP handshake, calls `tools/list`, and rewrites the array in `manifest.json` from the response. `test_smoke.py` in this directory shows the same handshake and is a useful starting point.
 
 **Option B: edit by hand.** When changes are small (one or two tools), editing directly is fine. The smoke test will fail loudly if the result diverges from the binary.
 
