@@ -35,7 +35,7 @@ import sys
 import threading
 from pathlib import Path
 
-PROTOCOL_VERSION = "2024-11-05"
+PROTOCOL_VERSION = "2025-06-18"
 HANDSHAKE_TIMEOUT_SECONDS = 10
 TOOLS_LIST_TIMEOUT_SECONDS = 10
 
