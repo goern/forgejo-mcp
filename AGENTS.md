@@ -29,6 +29,10 @@ Key directories:
 2. Define tool with `mcp.NewTool()` and implement handler function
 3. Register in the domain's `RegisterTool(s *server.MCPServer)` function
 4. If new domain, import and call in `operation/operation.go`
+5. **Bound the output.** If response size depends on data (not tool
+   semantics), the tool MUST satisfy [docs/design/output-bounding.md](docs/design/output-bounding.md):
+   client-controlled bound + resumability + documented parameters. Use the
+   checklist there in the PR description.
 
 See [DEVELOPER.md](DEVELOPER.md) for complete code examples and patterns.
 
