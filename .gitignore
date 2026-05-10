@@ -36,3 +36,6 @@ Thumbs.db
 .dolt/
 *.db
 .beads-credential-key
+
+# Python bytecode cache
+__pycache__/
