@@ -1,0 +1,28 @@
+name: openspec
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "openspec/**"
+      - ".forgejo/workflows/openspec.yml"
+  pull_request:
+    paths:
+      - "openspec/**"
+      - ".forgejo/workflows/openspec.yml"
+
+jobs:
+  validate:
+    runs-on: codeberg-small
+    steps:
+      - uses: https://code.forgejo.org/actions/checkout@v6
+
+      - uses: https://code.forgejo.org/actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install openspec CLI
+        run: npm install -g @fission-ai/openspec@1.3.1
+
+      - name: Validate all changes and specs (strict)
+        run: openspec validate --all --strict --no-interactive
