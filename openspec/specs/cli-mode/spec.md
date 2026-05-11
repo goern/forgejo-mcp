@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+CLI mode lets users invoke registered MCP tools directly from the shell, without launching the MCP server. It supports scripting, ad-hoc inspection of Forgejo data, and pipelines that pass JSON between tools. The CLI surface mirrors the MCP tool catalog: every tool registered for the server is reachable from `forgejo-mcp --cli <tool-name>`.
+
+## Requirements
 
 ### Requirement: CLI mode flag bypasses MCP server
 The binary SHALL accept a `--cli` global flag that routes execution to direct tool invocation instead of starting the MCP server. When `--cli` is present, the binary MUST NOT start a stdio or SSE transport.
