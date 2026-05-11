@@ -82,7 +82,8 @@ var (
 		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.IssueIndex)),
 		mcp.WithString("title", mcp.Description(params.Title)),
 		mcp.WithString("body", mcp.Description(params.Body)),
-		mcp.WithString("assignee", mcp.Description("Assignee username")),
+		mcp.WithString("assignee", mcp.Description("Assignee username (convenience for a single user; equivalent to a one-element 'assignees')")),
+		mcp.WithString("assignees", mcp.Description("Assignee usernames (comma-separated). Overrides 'assignee' if both are set. Pass an empty string to clear all assignees.")),
 		mcp.WithString("milestone", mcp.Description(params.Milestone)),
 	)
 
@@ -295,11 +296,12 @@ func UpdateIssueFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	index, _ := to.Float64(req.GetArguments()["index"])
 	title, _ := req.GetArguments()["title"].(string)
 	body, _ := req.GetArguments()["body"].(string)
-	// assignee is not supported in the current SDK
+	assignee, _ := req.GetArguments()["assignee"].(string)
+	assigneesRaw, assigneesProvided := req.GetArguments()["assignees"].(string)
 	milestone, _ := req.GetArguments()["milestone"].(string)
 
 	opt := forgejo_sdk.EditIssueOption{}
-	
+
 	// Only set fields that were provided
 	if title != "" {
 		opt.Title = title
@@ -307,8 +309,14 @@ func UpdateIssueFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	if body != "" {
 		opt.Body = &body
 	}
-	// Note: Assignee field doesn't exist in EditIssueOption
-	// Using collaborators field would require changes to the API
+	// Assignees: 'assignees' (CSV) wins if provided; otherwise fall back to singular 'assignee'.
+	// An explicitly provided empty 'assignees' clears all assignees (sent as []).
+	switch {
+	case assigneesProvided:
+		opt.Assignees = splitCSV(assigneesRaw)
+	case assignee != "":
+		opt.Assignees = []string{assignee}
+	}
 	if milestone != "" {
 		milestoneID, err := strconv.ParseInt(milestone, 10, 64)
 		if err != nil {
@@ -560,4 +568,16 @@ func ListRepoLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		return to.ErrorResult(fmt.Errorf("list repo labels err: %v", err))
 	}
 	return to.TextResult(labels)
+}
+
+func splitCSV(s string) []string {
+	parts := strings.Split(s, ",")
+	result := make([]string, 0, len(parts))
+	for _, p := range parts {
+		trimmed := strings.TrimSpace(p)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result
 }
