@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+The merge-pull-request capability exposes Forgejo's pull-request merge operation through an MCP tool, so that LLMs and CLI callers can finalize a pull request — picking the merge style, optionally deleting the source branch, and chaining the merge to passing CI checks — without leaving the MCP surface.
+
+## Requirements
 
 ### Requirement: Merge a pull request
 The system SHALL expose a `merge_pull_request` MCP tool that merges a pull request. The tool SHALL accept owner, repo, and PR index as required parameters. The tool SHALL accept a required `style` parameter with values `merge`, `rebase`, `rebase-merge`, or `squash`. The tool SHALL accept optional parameters: `title` (merge commit title), `message` (merge commit message), `delete_branch_after_merge` (boolean), `force_merge` (boolean), and `merge_when_checks_succeed` (boolean). The tool SHALL call the Forgejo SDK `MergePullRequest` method and return a success message.

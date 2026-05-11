@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+The pr-review-write capability exposes write operations against Forgejo pull-request reviews as MCP tools, so that LLMs and CLI callers can author reviews (approve, request changes, comment), attach inline comments to specific lines, and manage review state without leaving the MCP surface.
+
+## Requirements
 
 ### Requirement: Create a pull review
 The system SHALL expose a `create_pull_review` MCP tool that creates a new review on a pull request. The tool SHALL accept owner, repo, PR index, body, and state (`APPROVED`, `REQUEST_CHANGES`, `COMMENT`) as parameters. The tool SHALL optionally accept a JSON-encoded string of inline comments, where each comment specifies a file path, body, and optionally old/new line numbers. The tool SHALL return the created review formatted via the standard response helpers.
