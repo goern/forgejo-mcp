@@ -152,7 +152,8 @@ List all my repositories
 | `update_issue` | Update an existing issue (requires numeric milestone ID) |
 | `issue_state_change` | Open or close an issue |
 | `list_repo_milestones` | List milestones with their IDs (use with `update_issue`) |
-| `list_repo_labels` | List labels with their IDs (use with `add_issue_labels`, `remove_issue_labels`) |
+| `list_repo_labels` | List labels with their IDs. Merges org-level labels for org-owned repos (set `include_org_labels=false` to opt out). Each entry carries a `scope` field (`"repo"` or `"org"`). |
+| `list_org_labels` | List organization-level labels with their IDs (use with `add_issue_labels`, `remove_issue_labels`). |
 | **Comments** | |
 | `list_issue_comments` | List comments on an issue or PR |
 | `get_issue_comment` | Get a specific comment |

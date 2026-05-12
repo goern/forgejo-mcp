@@ -3,6 +3,7 @@ package issue
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -16,6 +17,36 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
+
+// ScopedLabel wraps forgejo_sdk.Label with a scope marker so callers of
+// list_repo_labels and list_org_labels can tell repo- and org-scoped
+// labels apart in a merged response.
+type ScopedLabel struct {
+	*forgejo_sdk.Label
+	Scope string `json:"scope"`
+}
+
+// fetchOrgLabels GETs /orgs/{org}/labels via the raw-HTTP helper and
+// stamps each result with scope="org". A 404 is mapped to an empty slice
+// by DoJSONList. 401/403 surface as forgejo.ErrUnauthorized.
+func fetchOrgLabels(ctx context.Context, org string, page, limit int) ([]ScopedLabel, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 100
+	}
+	path := fmt.Sprintf("/orgs/%s/labels?page=%d&limit=%d", org, page, limit)
+	var raw []*forgejo_sdk.Label
+	if err := forgejo.DoJSONList(ctx, http.MethodGet, path, &raw); err != nil {
+		return nil, err
+	}
+	out := make([]ScopedLabel, 0, len(raw))
+	for _, l := range raw {
+		out = append(out, ScopedLabel{Label: l, Scope: "org"})
+	}
+	return out, nil
+}
 
 const (
 	GetIssueByIndexToolName    = "get_issue_by_index"
@@ -32,6 +63,7 @@ const (
 	DeleteIssueCommentToolName  = "delete_issue_comment"
 	ListRepoMilestonesToolName  = "list_repo_milestones"
 	ListRepoLabelsToolName      = "list_repo_labels"
+	ListOrgLabelsToolName       = "list_org_labels"
 )
 
 var (
@@ -163,9 +195,18 @@ var (
 
 	ListRepoLabelsTool = mcp.NewTool(
 		ListRepoLabelsToolName,
-		mcp.WithDescription("List repository labels"),
+		mcp.WithDescription("List repository labels. When the owner is an organization and include_org_labels is true (default), org-level labels are merged into the response. Each label carries a scope field of \"repo\" or \"org\"."),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
+		mcp.WithNumber("page", mcp.Description(params.Page), mcp.DefaultNumber(1)),
+		mcp.WithNumber("limit", mcp.Description(params.Limit), mcp.DefaultNumber(100)),
+		mcp.WithBoolean("include_org_labels", mcp.Description("Merge org-level labels into the response when the owner is an organization. Default true."), mcp.DefaultBool(true)),
+	)
+
+	ListOrgLabelsTool = mcp.NewTool(
+		ListOrgLabelsToolName,
+		mcp.WithDescription("List organization-level labels. Each label carries a scope field of \"org\"."),
+		mcp.WithString("org", mcp.Required(), mcp.Description("Organization name")),
 		mcp.WithNumber("page", mcp.Description(params.Page), mcp.DefaultNumber(1)),
 		mcp.WithNumber("limit", mcp.Description(params.Limit), mcp.DefaultNumber(100)),
 	)
@@ -186,6 +227,7 @@ func RegisterTool(s *server.MCPServer) {
 	s.AddTool(DeleteIssueCommentTool, DeleteIssueCommentFn)
 	s.AddTool(ListRepoMilestonesTool, ListRepoMilestonesFn)
 	s.AddTool(ListRepoLabelsTool, ListRepoLabelsFn)
+	s.AddTool(ListOrgLabelsTool, ListOrgLabelsFn)
 }
 
 func GetIssueByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -545,15 +587,20 @@ func ListRepoMilestonesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 
 func ListRepoLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called ListRepoLabelsFn")
-	owner, _ := req.GetArguments()["owner"].(string)
-	repo, _ := req.GetArguments()["repo"].(string)
-	page, _ := to.Float64(req.GetArguments()["page"])
+	args := req.GetArguments()
+	owner, _ := args["owner"].(string)
+	repo, _ := args["repo"].(string)
+	page, _ := to.Float64(args["page"])
 	if page == 0 {
 		page = 1
 	}
-	limit, _ := to.Float64(req.GetArguments()["limit"])
+	limit, _ := to.Float64(args["limit"])
 	if limit == 0 {
 		limit = 100
+	}
+	includeOrg := true
+	if v, ok := args["include_org_labels"].(bool); ok {
+		includeOrg = v
 	}
 
 	opt := forgejo_sdk.ListLabelsOptions{
@@ -563,9 +610,42 @@ func ListRepoLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		},
 	}
 
-	labels, _, err := forgejo.Client().ListRepoLabels(owner, repo, opt)
+	repoLabels, _, err := forgejo.Client().ListRepoLabels(owner, repo, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list repo labels err: %v", err))
+	}
+	merged := make([]ScopedLabel, 0, len(repoLabels))
+	for _, l := range repoLabels {
+		merged = append(merged, ScopedLabel{Label: l, Scope: "repo"})
+	}
+
+	if includeOrg {
+		orgLabels, oerr := fetchOrgLabels(ctx, owner, int(page), int(limit))
+		if oerr != nil {
+			return to.ErrorResult(fmt.Errorf("list org labels err: %v", oerr))
+		}
+		merged = append(merged, orgLabels...)
+	}
+
+	return to.TextResult(merged)
+}
+
+func ListOrgLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called ListOrgLabelsFn")
+	args := req.GetArguments()
+	org, _ := args["org"].(string)
+	page, _ := to.Float64(args["page"])
+	if page == 0 {
+		page = 1
+	}
+	limit, _ := to.Float64(args["limit"])
+	if limit == 0 {
+		limit = 100
+	}
+
+	labels, err := fetchOrgLabels(ctx, org, int(page), int(limit))
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("list org labels err: %v", err))
 	}
 	return to.TextResult(labels)
 }
