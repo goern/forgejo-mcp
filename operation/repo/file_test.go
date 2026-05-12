@@ -238,6 +238,160 @@ func TestGetFileContentFn_WithMetadataReturnsContentsResponse(t *testing.T) {
 	}
 }
 
+// fileContentText pulls the plain-text payload out of the
+// {"Result":"..."} wrapper that to.TextResult emits, so range
+// assertions can compare raw line content.
+func fileContentText(t *testing.T, result *mcp.CallToolResult) string {
+	t.Helper()
+	text := result.Content[0].(mcp.TextContent).Text
+	var wrapper struct{ Result string }
+	if err := json.Unmarshal([]byte(text), &wrapper); err != nil {
+		t.Fatalf("response is not valid JSON: %v\n  got: %q", err, text)
+	}
+	return wrapper.Result
+}
+
+func TestGetFileContentFn_LineRange_InRange(t *testing.T) {
+	body := "one\ntwo\nthree\nfour\nfive\n"
+	srv := setupRawMockServer(t, body, http.StatusOK)
+	defer srv.Close()
+
+	req := newCallToolRequest(map[string]interface{}{
+		"owner": "o", "repo": "r", "ref": "main", "filePath": "f.txt",
+		"start_line": float64(2), "end_line": float64(4),
+	})
+	result, err := GetFileContentFn(context.Background(), req)
+	if err != nil || result.IsError {
+		t.Fatalf("err=%v isError=%v", err, result != nil && result.IsError)
+	}
+	if got, want := fileContentText(t, result), "two\nthree\nfour"; got != want {
+		t.Errorf("range 2-4 mismatch:\n  got:  %q\n  want: %q", got, want)
+	}
+}
+
+func TestGetFileContentFn_LineRange_StartOmittedDefaultsToOne(t *testing.T) {
+	body := "one\ntwo\nthree\nfour"
+	srv := setupRawMockServer(t, body, http.StatusOK)
+	defer srv.Close()
+
+	req := newCallToolRequest(map[string]interface{}{
+		"owner": "o", "repo": "r", "ref": "main", "filePath": "f.txt",
+		"end_line": float64(2),
+	})
+	result, _ := GetFileContentFn(context.Background(), req)
+	if got, want := fileContentText(t, result), "one\ntwo"; got != want {
+		t.Errorf("end-only mismatch:\n  got:  %q\n  want: %q", got, want)
+	}
+}
+
+func TestGetFileContentFn_LineRange_EndOmittedDefaultsToCount(t *testing.T) {
+	body := "one\ntwo\nthree\nfour"
+	srv := setupRawMockServer(t, body, http.StatusOK)
+	defer srv.Close()
+
+	req := newCallToolRequest(map[string]interface{}{
+		"owner": "o", "repo": "r", "ref": "main", "filePath": "f.txt",
+		"start_line": float64(3),
+	})
+	result, _ := GetFileContentFn(context.Background(), req)
+	if got, want := fileContentText(t, result), "three\nfour"; got != want {
+		t.Errorf("start-only mismatch:\n  got:  %q\n  want: %q", got, want)
+	}
+}
+
+func TestGetFileContentFn_LineRange_EndBeyondClamps(t *testing.T) {
+	body := "one\ntwo\nthree"
+	srv := setupRawMockServer(t, body, http.StatusOK)
+	defer srv.Close()
+
+	req := newCallToolRequest(map[string]interface{}{
+		"owner": "o", "repo": "r", "ref": "main", "filePath": "f.txt",
+		"start_line": float64(2), "end_line": float64(999),
+	})
+	result, err := GetFileContentFn(context.Background(), req)
+	if err != nil || result.IsError {
+		t.Fatalf("err=%v isError=%v", err, result != nil && result.IsError)
+	}
+	if got, want := fileContentText(t, result), "two\nthree"; got != want {
+		t.Errorf("clamped range mismatch:\n  got:  %q\n  want: %q", got, want)
+	}
+}
+
+func TestGetFileContentFn_LineRange_StartBelowOneClamps(t *testing.T) {
+	body := "one\ntwo\nthree"
+	srv := setupRawMockServer(t, body, http.StatusOK)
+	defer srv.Close()
+
+	req := newCallToolRequest(map[string]interface{}{
+		"owner": "o", "repo": "r", "ref": "main", "filePath": "f.txt",
+		"start_line": float64(-5), "end_line": float64(2),
+	})
+	result, _ := GetFileContentFn(context.Background(), req)
+	if got, want := fileContentText(t, result), "one\ntwo"; got != want {
+		t.Errorf("start clamp mismatch:\n  got:  %q\n  want: %q", got, want)
+	}
+}
+
+func TestGetFileContentFn_LineRange_InvertedAfterClamping(t *testing.T) {
+	body := "one\ntwo\nthree"
+	srv := setupRawMockServer(t, body, http.StatusOK)
+	defer srv.Close()
+
+	req := newCallToolRequest(map[string]interface{}{
+		"owner": "o", "repo": "r", "ref": "main", "filePath": "f.txt",
+		"start_line": float64(20), "end_line": float64(10),
+	})
+	_, err := GetFileContentFn(context.Background(), req)
+	if err == nil {
+		t.Fatal("expected error on inverted range")
+	}
+}
+
+func TestGetFileContentFn_LineRange_BothOmittedReturnsFull(t *testing.T) {
+	body := "one\ntwo\nthree\n"
+	srv := setupRawMockServer(t, body, http.StatusOK)
+	defer srv.Close()
+
+	req := newCallToolRequest(map[string]interface{}{
+		"owner": "o", "repo": "r", "ref": "main", "filePath": "f.txt",
+	})
+	result, _ := GetFileContentFn(context.Background(), req)
+	if got := fileContentText(t, result); got != body {
+		t.Errorf("expected full body, got %q want %q", got, body)
+	}
+}
+
+func TestGetFileContentFn_LineRange_IgnoredWithMetadata(t *testing.T) {
+	// with_metadata=true takes the GetContents branch and must not apply
+	// start_line/end_line — the response carries base64 content whose
+	// semantics line-slicing would break.
+	srv := setupContentsResponseMockServer(t)
+	defer srv.Close()
+
+	req := newCallToolRequest(map[string]interface{}{
+		"owner": "o", "repo": "r", "ref": "main", "filePath": "README.md",
+		"with_metadata": true,
+		"start_line":    float64(5), "end_line": float64(10),
+	})
+	result, err := GetFileContentFn(context.Background(), req)
+	if err != nil || result.IsError {
+		t.Fatalf("err=%v isError=%v", err, result != nil && result.IsError)
+	}
+	text := result.Content[0].(mcp.TextContent).Text
+	if !contains(text, `"sha":"abc123"`) {
+		t.Fatalf("expected ContentsResponse with sha when with_metadata=true, got %q", text)
+	}
+}
+
+func contains(haystack, needle string) bool {
+	for i := 0; i+len(needle) <= len(haystack); i++ {
+		if haystack[i:i+len(needle)] == needle {
+			return true
+		}
+	}
+	return false
+}
+
 func TestGetFileContentFn_DefaultIsPlainText(t *testing.T) {
 	// Omitting with_metadata must behave the same as with_metadata=false (plain text default).
 	plainText := "package main\n\nfunc main() {}\n"

@@ -137,7 +137,7 @@ List all my repositories
 | `create_branch` | Create a new branch |
 | `delete_branch` | Delete a branch |
 | **Files** | |
-| `get_file_content` | Get the content of a file |
+| `get_file_content` | Get the content of a file. Optional `start_line`/`end_line` request a 1-indexed inclusive line range (clamps to file extent; ignored when `with_metadata=true`). |
 | `create_file` | Create a new file |
 | `update_file` | Update an existing file |
 | `delete_file` | Delete a file |
@@ -168,6 +168,10 @@ List all my repositories
 | `list_pull_reviews` | List reviews for a pull request |
 | `get_pull_review` | Get a specific pull request review |
 | `list_pull_review_comments` | List comments on a pull request review |
+| `list_pull_request_files` | List changed files in a pull request (paginated). Use the returned filenames as the `file_path` argument to `get_pull_request_diff`. |
+| `get_pull_request_diff` | Get the unified diff of a pull request. Optional `file_path` returns only that file's hunks (matches on either pre- or post-rename path). |
+| `merge_pull_request` | Merge a pull request (style: merge/rebase/rebase-merge/squash; optional title/message/delete-branch/force-merge/wait-for-checks). |
+| `create_pull_review` | Create a review on a pull request (state: APPROVED/REQUEST_CHANGES/COMMENT) with optional inline comments. |
 | **Actions** | |
 | `dispatch_workflow` | Trigger a workflow run via `workflow_dispatch` event |
 | `list_workflow_runs` | List workflow runs with optional filtering by status, event, or SHA |

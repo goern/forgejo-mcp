@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"codeberg.org/goern/forgejo-mcp/v2/operation/params"
+	"codeberg.org/goern/forgejo-mcp/v2/pkg/diff"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/log"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/ptr"
@@ -115,10 +116,11 @@ var (
 
 	GetPullRequestDiffTool = mcp.NewTool(
 		GetPullRequestDiffToolName,
-		mcp.WithDescription("Get the diff of a pull request"),
+		mcp.WithDescription("Get the unified diff of a pull request. Pass an optional file_path to receive only the hunks for that file (match is exact on either the pre- or post-rename path). Use list_pull_request_files first to discover the file paths in the PR."),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.PRIndex)),
+		mcp.WithString("file_path", mcp.Description("Optional. Return only the diff section for this file (matched on the diff --git boundary). Omit for the full diff.")),
 	)
 
 	MergePullRequestTool = mcp.NewTool(
@@ -385,16 +387,27 @@ func ListPullRequestFilesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 
 func GetPullRequestDiffFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called GetPullRequestDiffFn")
-	owner, _ := req.GetArguments()["owner"].(string)
-	repo, _ := req.GetArguments()["repo"].(string)
-	index, _ := to.Float64(req.GetArguments()["index"])
+	args := req.GetArguments()
+	owner, _ := args["owner"].(string)
+	repo, _ := args["repo"].(string)
+	index, _ := to.Float64(args["index"])
+	filePath, _ := args["file_path"].(string)
 
-	diff, _, err := forgejo.Client().GetPullRequestDiff(owner, repo, int64(index), forgejo_sdk.PullRequestDiffOptions{})
+	diffBytes, _, err := forgejo.Client().GetPullRequestDiff(owner, repo, int64(index), forgejo_sdk.PullRequestDiffOptions{})
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get pull request diff err: %v", err))
 	}
+
+	body := string(diffBytes)
+	if filePath != "" {
+		slice, found := diff.FileSlice(body, filePath)
+		if !found {
+			return to.ErrorResult(fmt.Errorf("file_path %q not found in pull request diff", filePath))
+		}
+		body = slice
+	}
 	return &mcp.CallToolResult{
-		Content: []mcp.Content{mcp.NewTextContent(string(diff))},
+		Content: []mcp.Content{mcp.NewTextContent(body)},
 	}, nil
 }
 

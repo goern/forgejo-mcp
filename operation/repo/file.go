@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"strings"
 
 	"codeberg.org/goern/forgejo-mcp/v2/operation/params"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
@@ -24,12 +25,14 @@ const (
 var (
 	GetFileContentTool = mcp.NewTool(
 		GetFileToolName,
-		mcp.WithDescription("Get file content as plain text by default. Set `with_metadata=true` for binary files, or when you need the SHA/encoding/links from the full `ContentsResponse` (e.g. before a follow-up `update_file` call)."),
+		mcp.WithDescription("Get file content as plain text by default. Set `with_metadata=true` for binary files, or when you need the SHA/encoding/links from the full `ContentsResponse` (e.g. before a follow-up `update_file` call). Optional `start_line` and `end_line` request a 1-indexed inclusive line range; out-of-range values clamp to the file extent. Range parameters are ignored when `with_metadata=true`."),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithString("ref", mcp.Required(), mcp.Description(params.Ref)),
 		mcp.WithString("filePath", mcp.Required(), mcp.Description(params.FilePath)),
 		mcp.WithBoolean("with_metadata", mcp.Description("Return the full ContentsResponse (sha, encoding, links, type, size, base64 content) instead of plain text.")),
+		mcp.WithNumber("start_line", mcp.Description("Optional 1-indexed first line of the slice (inclusive). Defaults to 1 when only end_line is set.")),
+		mcp.WithNumber("end_line", mcp.Description("Optional 1-indexed last line of the slice (inclusive). Defaults to the file's last line when only start_line is set.")),
 	)
 
 	CreateFileTool = mcp.NewTool(
@@ -72,20 +75,21 @@ var (
 
 func GetFileContentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called GetFileFn")
-	owner, ok := req.GetArguments()["owner"].(string)
+	args := req.GetArguments()
+	owner, ok := args["owner"].(string)
 	if !ok {
 		return to.ErrorResult(fmt.Errorf("owner is required"))
 	}
-	repo, ok := req.GetArguments()["repo"].(string)
+	repo, ok := args["repo"].(string)
 	if !ok {
 		return to.ErrorResult(fmt.Errorf("repo is required"))
 	}
-	ref, _ := req.GetArguments()["ref"].(string)
-	filePath, ok := req.GetArguments()["filePath"].(string)
+	ref, _ := args["ref"].(string)
+	filePath, ok := args["filePath"].(string)
 	if !ok {
 		return to.ErrorResult(fmt.Errorf("filePath is required"))
 	}
-	withMetadata, _ := req.GetArguments()["with_metadata"].(bool)
+	withMetadata, _ := args["with_metadata"].(bool)
 
 	if withMetadata {
 		content, _, err := forgejo.Client().GetContents(owner, repo, ref, filePath)
@@ -101,7 +105,42 @@ func GetFileContentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get file err: %v", err))
 	}
-	return to.TextResult(string(rawBytes))
+
+	startF, _ := to.Float64(args["start_line"])
+	endF, _ := to.Float64(args["end_line"])
+	if startF == 0 && endF == 0 {
+		return to.TextResult(string(rawBytes))
+	}
+
+	sliced, err := sliceLines(string(rawBytes), int(startF), int(endF))
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	return to.TextResult(sliced)
+}
+
+// sliceLines returns the 1-indexed inclusive [start, end] line range
+// of content. start=0 means "from line 1"; end=0 means "to the last
+// line". Out-of-range values clamp; an inverted range after clamping
+// is reported as an error.
+func sliceLines(content string, start, end int) (string, error) {
+	lines := strings.Split(content, "\n")
+	count := len(lines)
+
+	if start <= 0 {
+		start = 1
+	}
+	if end <= 0 {
+		end = count
+	}
+	if end > count {
+		end = count
+	}
+	if start > end {
+		return "", fmt.Errorf("start_line (%d) is after end_line (%d) for a file with %d lines", start, end, count)
+	}
+
+	return strings.Join(lines[start-1:end], "\n"), nil
 }
 
 func CreateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
