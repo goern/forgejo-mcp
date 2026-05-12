@@ -1,0 +1,18 @@
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+condition = "AND"
+paths = ['''(?i).*\.ya?ml$''']
+regexes = ['''^Ag[a-zA-Z0-9+/]{500,}={0,2}$''']
+
+[[allowlists]]
+description = "Historical commits with rotated credentials; pre-existing residue, not in current main."
+commits = [
+  "0eac698f002763f5b0b862fc1f919f6d4e4e259d",
+  "17cf298ea16665599627fe765db6b60766eb9851",
+  "86351a10cee44caf36979984f42196964189314d",
+]
