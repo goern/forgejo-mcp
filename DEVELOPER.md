@@ -58,6 +58,7 @@ main.go → cmd/cmd.go (CLI parsing) → operation/operation.go (tool registrati
 | `operation/` | MCP tool definitions and handlers, organized by domain |
 | `operation/issue/` | Issue-related tools |
 | `operation/pull/` | Pull request tools |
+| `operation/release/` | Release and release-attachment tools |
 | `operation/repo/` | Repository and branch tools |
 | `operation/search/` | Search tools (users, repos, teams) |
 | `operation/user/` | User info tools |
