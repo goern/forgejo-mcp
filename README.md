@@ -293,6 +293,12 @@ forgejo-mcp --user-agent "forgejo-mcp/1.0.0" --transport sse --url <url> --token
 - [Report issues](https://codeberg.org/goern/forgejo-mcp/issues)
 - [View source code](https://codeberg.org/goern/forgejo-mcp)
 
+This repository is also mirrored on [Radicle](https://radicle.xyz/) — a peer-to-peer code collaboration network. Clone via:
+
+```bash
+rad clone rad:z4PdPpsH9iJQcWfqTbxpFcWaZ9zPL
+```
+
 ## For Developers
 
 See [DEVELOPER.md](DEVELOPER.md) for build instructions, architecture overview, and contribution guidelines.
