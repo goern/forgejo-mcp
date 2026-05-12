@@ -1,0 +1,60 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: on-push-to-main-openspec
+  annotations:
+    pipelinesascode.tekton.dev/on-event: "[push]"
+    pipelinesascode.tekton.dev/on-target-branch: "[main]"
+    pipelinesascode.tekton.dev/on-cel-expression: |
+      event == "push" && target_branch == "main" && (
+        files.all.exists(f, f.startsWith('openspec/')) ||
+        files.all.exists(f, f == '.tekton/on-pull-request-openspec.yaml') ||
+        files.all.exists(f, f == '.tekton/on-push-to-main-openspec.yaml') ||
+        files.all.exists(f, f == '.tekton/tasks/openspec-validate.yaml')
+      )
+    pipelinesascode.tekton.dev/task: "[git-clone, .tekton/tasks/openspec-validate.yaml]"
+    pipelinesascode.tekton.dev/max-keep-runs: "5"
+    pipelinesascode.tekton.dev/cancel-in-progress: "true"
+spec:
+  params:
+    - name: repo_url
+      value: "{{ repo_url }}"
+    - name: revision
+      value: "{{ revision }}"
+  pipelineSpec:
+    params:
+      - name: repo_url
+      - name: revision
+    workspaces:
+      - name: source
+    tasks:
+      - name: fetch-source
+        taskRef:
+          name: git-clone
+        workspaces:
+          - name: output
+            workspace: source
+        params:
+          - name: url
+            value: $(params.repo_url)
+          - name: revision
+            value: $(params.revision)
+
+      - name: validate
+        taskRef:
+          name: openspec-validate
+        runAfter:
+          - fetch-source
+        workspaces:
+          - name: source
+            workspace: source
+
+  workspaces:
+    - name: source
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 1Gi
