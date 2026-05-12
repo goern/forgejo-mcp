@@ -202,6 +202,21 @@ List all my repositories
 | `create_comment_attachment` | Upload a new attachment to an issue/PR comment (base64 content) |
 | `edit_comment_attachment` | Rename a comment attachment |
 | `delete_comment_attachment` | Delete a comment attachment |
+| **Releases** | |
+| `list_releases` | List releases for a repository (page/limit + client-side `state` filter: all/draft/prerelease/published) |
+| `get_release_by_id` | Get a release by numeric ID |
+| `get_release_by_tag` | Get a release by tag name |
+| `get_latest_release` | Get the latest non-draft, non-prerelease release |
+| `create_release` | Create a new release (pass `target_commitish` to also create the tag) |
+| `edit_release` | Update fields of an existing release (only supplied fields are sent) |
+| `delete_release` | Delete a release by numeric ID — destructive |
+| `delete_release_by_tag` | Delete a release by tag name — destructive, verify tag |
+| `list_release_attachments` | List attachments on a release (response fetched in full, sliced client-side) |
+| `get_release_attachment` | Get metadata for a single release attachment |
+| `download_release_attachment` | Download a release attachment (inline if < 1 MiB; metadata + URL otherwise) |
+| `create_release_attachment` | Upload a new attachment to a release (base64 content) |
+| `edit_release_attachment` | Rename a release attachment |
+| `delete_release_attachment` | Delete a release attachment — destructive |
 | **Server** | |
 | `get_forgejo_mcp_server_version` | Get the MCP server version |
 

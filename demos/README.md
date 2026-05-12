@@ -70,7 +70,17 @@ edit, delete — for both surfaces.
 attached log file before reasoning about it; an agent writing a release
 note needs to attach a generated changelog to the release comment.
 
-### 3. Time tracking
+### 3. Releases
+
+Tag-anchored release records and their binary assets. CRUD on releases (with a client-side `state` filter and `target_commitish` for new tags) plus the full attachment lifecycle on each release.
+
+| Demo | Tools | What it shows |
+|------|-------|---------------|
+| [release-management.md](release-management.md) | 14 tools — 8 release + 6 release-attachment | Read flow against `goern/forgejo-mcp` (list/latest/by-tag/state filter/list assets/over-cap download) plus the parameter surface for the write tools and the autonomous "draft notes for the next tag" workflow |
+
+**Use case.** A release-housekeeping agent that reads `get_latest_release`, summarises the commit log since `published_at` into Markdown notes, drafts the next release with `create_release`, optionally uploads built binaries with `create_release_attachment`, and waits for a human to flip `draft=false` via `edit_release`.
+
+### 4. Time tracking
 
 Forgejo carries a per-issue tracked-time ledger and a live stopwatch.
 Two demos split read/write of the ledger from the stopwatch transitions,
@@ -86,7 +96,7 @@ they actually spent without having to compute deltas themselves —
 start the stopwatch when work begins, stop it when work ends, let
 Forgejo do the math.
 
-### 4. Notifications
+### 5. Notifications
 
 Two demos: the lightweight "what's new" check, and the full
 notification-management API for marking read, fetching threads, and
@@ -101,7 +111,7 @@ clearing inboxes.
 N notifications across M repos" and can clear them as it processes
 each one.
 
-### 5. Organization management
+### 6. Organization management
 
 | Demo | Tools | What it shows |
 |------|-------|---------------|
@@ -111,7 +121,7 @@ each one.
 team, attach repos, all from a single agent transcript with no
 web-UI clicks.
 
-### 6. Code review (bounded I/O)
+### 7. Code review (bounded I/O)
 
 | Demo | Tools | What it shows |
 |------|-------|---------------|
@@ -127,7 +137,7 @@ This is the user-facing half of the architectural rule in
 every data-proportional response in this server must be bounded by
 the caller. Expect future tools to follow the same pattern.
 
-### 7. Transport / infrastructure
+### 8. Transport / infrastructure
 
 | Demo | Feature | What it shows |
 |------|---------|---------------|
@@ -146,12 +156,14 @@ agent workflows compose across them:
 
 - **Autonomous issue triage.** §1 (discover labels) → read issue
   body → §2 (fetch attachments if any) → §1 (apply labels) →
-  §3 (start stopwatch if the agent will keep working on it).
-- **Code review.** §6 (per-file diff slices + per-range file reads)
+  §4 (start stopwatch if the agent will keep working on it).
+- **Code review.** §7 (per-file diff slices + per-range file reads)
   → review-write tools (covered in the top-level README, not yet in a
   dedicated demo) → merge.
-- **Release housekeeping.** §4 (process notifications) → §1 (close
-  milestones) → §5 (rotate team membership if needed).
+- **Release housekeeping.** §3 (draft notes via `get_latest_release` +
+  commit log, then `create_release` with `draft=true`) → §5 (process
+  notifications on the new release) → §6 (rotate team membership if
+  needed).
 
 ## Conventions
 

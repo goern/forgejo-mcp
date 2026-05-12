@@ -8,6 +8,7 @@ import (
 	"codeberg.org/goern/forgejo-mcp/v2/operation/issue"
 	"codeberg.org/goern/forgejo-mcp/v2/operation/org"
 	"codeberg.org/goern/forgejo-mcp/v2/operation/pull"
+	"codeberg.org/goern/forgejo-mcp/v2/operation/release"
 	"codeberg.org/goern/forgejo-mcp/v2/operation/repo"
 	"codeberg.org/goern/forgejo-mcp/v2/operation/search"
 	"codeberg.org/goern/forgejo-mcp/v2/operation/tracking"
@@ -38,6 +39,7 @@ func RegisterTool(s *server.MCPServer) {
 	RegisterOrgTool(s)
 	RegisterTrackingTool(s)
 	RegisterAttachmentTool(s)
+	RegisterReleaseTool(s)
 
 	log.Info("All MCP tools registered successfully")
 }
@@ -97,6 +99,11 @@ func RegisterTrackingTool(s *server.MCPServer) {
 func RegisterAttachmentTool(s *server.MCPServer) {
 	attachment.RegisterTool(s)
 	log.Debug("Registered attachment tools")
+}
+
+func RegisterReleaseTool(s *server.MCPServer) {
+	release.RegisterTool(s)
+	log.Debug("Registered release tools")
 }
 
 func Run(transport, version string) error {

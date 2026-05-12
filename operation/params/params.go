@@ -85,6 +85,15 @@ const (
 	AttachmentFilename = `Filename to associate with the uploaded attachment (e.g. "requirements.pdf")`
 	AttachmentMIME     = "MIME type hint for uploaded file (optional; inferred from filename if omitted)"
 
+	// Release parameters
+	ReleaseID              = "Release ID"
+	ReleaseTag             = "Existing release tag name"
+	ReleaseTagName         = "Tag name for the release (created if it does not exist)"
+	ReleaseTargetCommitish = "Branch or commit SHA the tag points at (only used when the tag does not yet exist)"
+	ReleaseDraft           = "Whether the release is a draft"
+	ReleasePrerelease      = "Whether the release is a prerelease"
+	ReleaseState           = "Filter by state: all|draft|prerelease|published. Filter is applied client-side after pagination, so result size may be smaller than limit."
+
 	// Time tracking parameters
 	TimeID         = "Tracked time entry ID"
 	TimeSeconds    = "Time in seconds to log (positive integer). Provide exactly one of seconds or duration."
