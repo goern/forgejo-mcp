@@ -205,6 +205,14 @@ List all my repositories
 | **Server** | |
 | `get_forgejo_mcp_server_version` | Get the MCP server version |
 
+## Demos
+
+End-to-end, copy-pasteable walkthroughs of the tools above — grouped by
+topic (labels, attachments, time tracking, notifications, orgs, bounded
+I/O code review, transport) — live in [demos/](demos/README.md). Each
+demo pairs real `./forgejo-mcp --cli` invocations with the output they
+produced against `codeberg.org`.
+
 ## CLI Mode
 
 You can invoke any tool directly from the command line without running an MCP server. This is useful for shell scripts, CI/CD pipelines, and Claude Code skills.
