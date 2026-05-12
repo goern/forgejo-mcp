@@ -1,3 +1,49 @@
+## [2.22.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.21.0...v2.22.0) (2026-05-12)
+
+### :sparkles: Features
+
+* add list_org_labels + merge org labels in list_repo_labels ([#130](https://codeberg.org/goern/forgejo-mcp/issues/130)) ([8862e83](https://codeberg.org/goern/forgejo-mcp/commit/8862e839138d33b5e1d80648e52b31617e0babc8)), closes [#125](https://codeberg.org/goern/forgejo-mcp/issues/125)
+* bounded responses for get_pull_request_diff + get_file_content ([#131](https://codeberg.org/goern/forgejo-mcp/issues/131)) ([4cebe0b](https://codeberg.org/goern/forgejo-mcp/commit/4cebe0b0fd9cb31b0a1d935786cc96d9ed63a29b)), closes [#124](https://codeberg.org/goern/forgejo-mcp/issues/124)
+
+### :bug: Fixes
+
+* 🐛 send assignees array in update_issue ([6291213](https://codeberg.org/goern/forgejo-mcp/commit/62912136638dd7b2c6f0a6581a25da300d04b6b4)), closes [goern/forgejo-mcp#128](https://codeberg.org/goern/forgejo-mcp/issues/128)
+
+### :memo: Documentation
+
+* 📝 add openspec change for releases support ([#127](https://codeberg.org/goern/forgejo-mcp/issues/127)) ([d0bab23](https://codeberg.org/goern/forgejo-mcp/commit/d0bab236ba5ae03b6cf238a5f9f1f6fa8cde1fc6))
+* 📝 add Purpose+Requirements headers to cli-mode spec ([23db899](https://codeberg.org/goern/forgejo-mcp/commit/23db89942529935bec24e8ae290ab608cc468195))
+* 📝 add Purpose+Requirements headers to PR specs ([c8a7883](https://codeberg.org/goern/forgejo-mcp/commit/c8a7883f9424d99a52435aa13af8144d6e14cabb))
+* 📝 add spec deltas to forgejo-action-code-review change ([a83a033](https://codeberg.org/goern/forgejo-mcp/commit/a83a03361d98eb743323c7cbcd2beeba614cc7e5))
+* 📝 codify output-bounding rule for MCP tools ([1412cbe](https://codeberg.org/goern/forgejo-mcp/commit/1412cbe15ff9b464fc61cda451c85f0e117c48d8)), closes [#124](https://codeberg.org/goern/forgejo-mcp/issues/124) [#124](https://codeberg.org/goern/forgejo-mcp/issues/124)
+* **extension:** address review feedback on [#118](https://codeberg.org/goern/forgejo-mcp/issues/118) ([a88c2a3](https://codeberg.org/goern/forgejo-mcp/commit/a88c2a325c337a15eb5e1001db4b4983085850f5))
+
+### :zap: Refactor
+
+* ♻️ rename openspec Tekton PipelineRuns ([85a8f4f](https://codeberg.org/goern/forgejo-mcp/commit/85a8f4fee401f60d16224aea673109bcd498a356))
+
+### :repeat: CI
+
+* 🚀 add openspec validate workflow ([1f6b256](https://codeberg.org/goern/forgejo-mcp/commit/1f6b256cfcb42e01e04d15e47aed81b774e6e554))
+* 🚀 migrate CI from Forgejo Actions to op1st Tekton ([ae35a30](https://codeberg.org/goern/forgejo-mcp/commit/ae35a303a8c872b91f19fa6c6a6451777358aa6b))
+* 🚀 migrate openspec validate from Forgejo Actions to op1st Tekton ([fbd1203](https://codeberg.org/goern/forgejo-mcp/commit/fbd1203e63e86fc3a1fb8dd09e32a0bd0f064e7b))
+
+### :repeat: Chore
+
+* 🔧 close beads forgejo-mcp-43k (Tekton CI migration) ([0be622d](https://codeberg.org/goern/forgejo-mcp/commit/0be622df177d909ff24d684cc234436dca87428c))
+* 🔧 close forgejo-mcp-efo in beads tracker ([616c1ce](https://codeberg.org/goern/forgejo-mcp/commit/616c1ce1b4b3dec95967794d83a05b98c140ee82))
+* 🔧 close forgejo-mcp-fdx (openspec Tekton migration) ([a385896](https://codeberg.org/goern/forgejo-mcp/commit/a385896d19447ceeddc24f80d080dd9da2ab3c6a))
+* 🔧 ignore __pycache__ and add codeberg-issue-triage skill ([64b6a54](https://codeberg.org/goern/forgejo-mcp/commit/64b6a5443bdaeac126da45ef9c3958657829bffb))
+* 🔧 link forgejo-mcp-43k bead to Codeberg [#133](https://codeberg.org/goern/forgejo-mcp/issues/133) ([6adda88](https://codeberg.org/goern/forgejo-mcp/commit/6adda88201be1693e2475c93cd64c67a0da8fbb8))
+* 🔧 note PR [#130](https://codeberg.org/goern/forgejo-mcp/issues/130) merge in forgejo-mcp-7ch bead ([c0a8b20](https://codeberg.org/goern/forgejo-mcp/commit/c0a8b20d5465891d97f7f3b6340cb52156d7951b))
+* 🔧 retest PaC after PAT scope fix ([59da82c](https://codeberg.org/goern/forgejo-mcp/commit/59da82c70ae7b89a8323150103e1f6bb7b71aff3))
+* 🔧 retrigger PaC after PAT scope expansion ([a27df63](https://codeberg.org/goern/forgejo-mcp/commit/a27df637dcb5605333ad7c90b37b94ab436e0311))
+* 🔧 retrigger PaC after webhook install ([2f496b4](https://codeberg.org/goern/forgejo-mcp/commit/2f496b499e3f1865e2e38cb6f8d48999c74cbbfb))
+* 🔧 retrigger to confirm openspec PaC status flake is transient ([0e36348](https://codeberg.org/goern/forgejo-mcp/commit/0e36348640e9e0ba1a6ef312478c14d03581527e))
+* 🔧 slim opsx to core 4 commands (apply/archive/explore/propose) ([7e718f5](https://codeberg.org/goern/forgejo-mcp/commit/7e718f509407d82e75326a25e034d52f538b46b5))
+* 🔧 track add-bounded-text-responses follow-up in beads ([602ecaa](https://codeberg.org/goern/forgejo-mcp/commit/602ecaa070d131df8f07fbb054bd3c353ed91441)), closes [#124](https://codeberg.org/goern/forgejo-mcp/issues/124)
+* 🔧 track follow-up bd issues from [#127](https://codeberg.org/goern/forgejo-mcp/issues/127) release-spec work ([0e53c51](https://codeberg.org/goern/forgejo-mcp/commit/0e53c511c64f8f6e48bc878d6a9f7ab02c7ea848)), closes [#129](https://codeberg.org/goern/forgejo-mcp/issues/129)
+
 ## [2.21.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.20.0...v2.21.0) (2026-05-07)
 
 ### :sparkles: Features
