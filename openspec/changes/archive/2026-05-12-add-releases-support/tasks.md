@@ -44,12 +44,12 @@
 
 - [x] 7.1 Add a "Releases" row group to the tools table in `README.md`, listing all 14 new tools with one-line descriptions.
 - [x] 7.2 Mention the `release` domain in `DEVELOPER.md` wherever existing domains are enumerated as examples.
-- [ ] 7.3 Cross-link the new tools from the issue #127 close comment (the PR body already does this). _Deferred: happens at PR-merge / issue-close time._
+- [x] 7.3 Cross-link the new tools from the issue #127 close comment (the PR body already does this). _Done: PR #134 body `Closes #127`; merge auto-closed the issue with the cross-reference._
 
 ## 8. Verification
 
 - [x] 8.1 `make build` succeeds.
 - [x] 8.2 `make vendor` is a no-op (no go.mod changes).
 - [x] 8.3 `openspec validate add-releases-support` passes (already does after specs phase; re-confirm after tasks complete).
-- [ ] 8.4 Manual smoke against `goern/forgejo-mcp` on Codeberg using the built binary: list_releases → get_latest_release → get_release_by_tag → list_release_attachments. Read-only sequence is safe to run against the real repo. _Pending: requires live Codeberg credentials._
-- [ ] 8.5 Update bd issue `forgejo-mcp-0ep` notes with smoke-test outcome; close once PR merged. _Pending: after smoke + merge._
+- [x] 8.4 Manual smoke against `goern/forgejo-mcp` on Codeberg using the built binary: list_releases → get_latest_release → get_release_by_tag → list_release_attachments. Read-only sequence is safe to run against the real repo. _Done: captured in `demos/release-management.md` against live Codeberg data; also covered download_release_attachment over-cap path._
+- [x] 8.5 Update bd issue `forgejo-mcp-0ep` notes with smoke-test outcome; close once PR merged. _Done: closed via `bd close forgejo-mcp-0ep` after PR #134 merge._
