@@ -1,15 +1,15 @@
 apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
-  name: on-push-to-main-openspec
+  name: openspec-validate-push
   annotations:
     pipelinesascode.tekton.dev/on-event: "[push]"
     pipelinesascode.tekton.dev/on-target-branch: "[main]"
     pipelinesascode.tekton.dev/on-cel-expression: |
       event == "push" && target_branch == "main" && (
         files.all.exists(f, f.startsWith('openspec/')) ||
-        files.all.exists(f, f == '.tekton/on-pull-request-openspec.yaml') ||
-        files.all.exists(f, f == '.tekton/on-push-to-main-openspec.yaml') ||
+        files.all.exists(f, f == '.tekton/openspec-validate-pr.yaml') ||
+        files.all.exists(f, f == '.tekton/openspec-validate-push.yaml') ||
         files.all.exists(f, f == '.tekton/tasks/openspec-validate.yaml')
       )
     pipelinesascode.tekton.dev/task: "[git-clone, .tekton/tasks/openspec-validate.yaml]"
