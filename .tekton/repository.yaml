@@ -1,0 +1,19 @@
+apiVersion: pipelinesascode.tekton.dev/v1alpha1
+kind: Repository
+metadata:
+  name: codeberg-org-goern-forgejo-mcp
+  namespace: op1st-pipelines
+spec:
+  url: https://codeberg.org/goern/forgejo-mcp
+  git_provider:
+    url: https://codeberg.org
+    # Reuses the per-repo PAT secret originally created for
+    # codeberg-runner-openshift. The underlying Codeberg token must carry
+    # read:repository + write:repository.status scope on goern/forgejo-mcp.
+    secret:
+      name: codeberg-runner-openshift-pac
+      key: provider.token
+    # Webhook secret is shared at org level by op1st-pipelines.
+    webhook_secret:
+      name: codeberg-org-op1st-pipelines
+      key: webhook.secret

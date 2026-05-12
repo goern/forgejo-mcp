@@ -1,0 +1,47 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: go-ci
+  annotations:
+    tekton.dev/displayName: "go build + test"
+spec:
+  params:
+    - name: GO_IMAGE
+      description: Container image carrying the Go toolchain.
+      type: string
+      default: docker.io/library/golang:1.25
+  workspaces:
+    - name: source
+      mountPath: /workspace/src
+  steps:
+    - name: build
+      image: $(params.GO_IMAGE)
+      workingDir: $(workspaces.source.path)
+      env:
+        - name: GOFLAGS
+          value: "-buildvcs=false"
+        - name: GOCACHE
+          value: /workspace/src/.gocache
+        - name: GOMODCACHE
+          value: /workspace/src/.gomodcache
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        git config --global --add safe.directory "$(workspaces.source.path)"
+        go version
+        make build
+    - name: test
+      image: $(params.GO_IMAGE)
+      workingDir: $(workspaces.source.path)
+      env:
+        - name: GOFLAGS
+          value: "-buildvcs=false"
+        - name: GOCACHE
+          value: /workspace/src/.gocache
+        - name: GOMODCACHE
+          value: /workspace/src/.gomodcache
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        git config --global --add safe.directory "$(workspaces.source.path)"
+        go test ./...
