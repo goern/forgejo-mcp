@@ -1,0 +1,52 @@
+name: c4-spike-ephemeral-token-fork-pr
+
+# C4 spike: does ${{ secrets.GITEA_TOKEN }} with permissions.pull-requests=write
+# work for create_pull_review on a fork PR under pull_request_target?
+#
+# Does NOT invoke Claude Code or Anthropic API. Pure Forgejo API test.
+
+on:
+  pull_request_target:
+    types: [opened, synchronize]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  attempt-create-pull-review:
+    runs-on: codeberg-small
+    steps:
+      - name: Echo context
+        run: |
+          echo "Repo: ${{ github.repository }}"
+          echo "PR number: ${{ github.event.pull_request.number }}"
+          echo "PR head repo: ${{ github.event.pull_request.head.repo.full_name }}"
+          echo "PR base repo: ${{ github.event.pull_request.base.repo.full_name }}"
+          echo "Is fork: ${{ github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name }}"
+
+      - name: Attempt create_pull_review with ephemeral GITEA_TOKEN
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -e
+          STATUS=$(curl -sS -o /tmp/resp.json -w "%{http_code}" -X POST \
+            -H "Authorization: token ${GITEA_TOKEN}" \
+            -H "Content-Type: application/json" \
+            "https://codeberg.org/api/v1/repos/${REPO}/pulls/${PR}/reviews" \
+            -d '{"body":"C4 spike: ephemeral GITEA_TOKEN test review","event":"COMMENT"}')
+          echo "HTTP status: $STATUS"
+          echo "Response body:"
+          cat /tmp/resp.json
+          echo ""
+          if [ "$STATUS" = "200" ] || [ "$STATUS" = "201" ]; then
+            echo "RESULT: ephemeral token PERMITTED create_pull_review on this PR"
+            echo "C4_OUTCOME=success" >> "$GITHUB_OUTPUT" 2>/dev/null || true
+            exit 0
+          else
+            echo "RESULT: ephemeral token REJECTED create_pull_review (HTTP $STATUS)"
+            echo "C4_OUTCOME=rejected" >> "$GITHUB_OUTPUT" 2>/dev/null || true
+            exit 1
+          fi

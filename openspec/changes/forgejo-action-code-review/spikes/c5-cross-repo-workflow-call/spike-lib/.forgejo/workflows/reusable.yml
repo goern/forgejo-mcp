@@ -1,0 +1,51 @@
+name: c5-reusable-spike
+
+# C5 spike (library side): a reusable workflow consumers can call via
+# `uses: <owner>/spike-lib/.forgejo/workflows/reusable.yml@<tag>`.
+# Tests whether Forgejo Actions honor cross-repo workflow_call, secrets: inherit,
+# tag resolution, and propagated event context.
+
+on:
+  workflow_call:
+    inputs:
+      who:
+        description: "Name to greet"
+        type: string
+        default: "world"
+      forgejo_mcp_version:
+        description: "forgejo-mcp version to install (for realism)"
+        type: string
+        default: "v0.0.0"
+    secrets:
+      SPIKE_SECRET:
+        description: "Test secret to verify secrets: inherit"
+        required: true
+
+jobs:
+  hello-from-library:
+    runs-on: codeberg-small
+    steps:
+      - name: Print inputs
+        run: |
+          echo "Hello ${{ inputs.who }}"
+          echo "forgejo_mcp_version: ${{ inputs.forgejo_mcp_version }}"
+
+      - name: Print event context (verify propagation)
+        run: |
+          echo "github.event_name: ${{ github.event_name }}"
+          echo "github.repository: ${{ github.repository }}"
+          echo "github.ref: ${{ github.ref }}"
+          echo "PR number (if any): ${{ github.event.pull_request.number }}"
+          echo "PR base ref (if any): ${{ github.event.pull_request.base.ref }}"
+
+      - name: Verify SPIKE_SECRET reached the called workflow
+        env:
+          S: ${{ secrets.SPIKE_SECRET }}
+        run: |
+          if [ -n "$S" ]; then
+            echo "RESULT: SPIKE_SECRET is set in the called workflow"
+            echo "  length: ${#S}"
+          else
+            echo "RESULT: SPIKE_SECRET is empty/missing in the called workflow"
+            exit 1
+          fi

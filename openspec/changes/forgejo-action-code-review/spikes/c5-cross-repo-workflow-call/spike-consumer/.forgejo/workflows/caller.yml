@@ -1,0 +1,22 @@
+name: c5-consumer-caller
+
+# C5 spike (consumer side): caller workflow that references the reusable
+# workflow in goern/spike-lib via cross-repo `uses:` syntax.
+#
+# Replace `goern/spike-lib` and `@v0.0.1` with the actual published location
+# and tag of the library repo when running the spike.
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  push:
+    branches: [main]
+
+jobs:
+  call-library:
+    uses: goern/spike-lib/.forgejo/workflows/reusable.yml@v0.0.1
+    secrets:
+      SPIKE_SECRET: ${{ secrets.SPIKE_SECRET }}
+    with:
+      who: "consumer"
+      forgejo_mcp_version: "v0.0.0"

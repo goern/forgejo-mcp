@@ -1,0 +1,11 @@
+{"ts":"2026-05-12T15:14:51Z","phase":"any","event":"turn.start","input":"Battle-test proposal and design"}
+{"ts":"2026-05-12T15:14:56Z","phase":"any","event":"agent.spawned","kind":"battle-test","count":"2"}
+{"ts":"2026-05-12T19:53:21Z","phase":"authoring","event":"artifact.added","ref":"battle-test.md"}
+{"ts":"2026-05-12T19:53:21Z","phase":"any","event":"turn.end","output":"Battle-test complete; see battle-test.md"}
+{"ts":"2026-05-13T06:07:00Z","phase":"authoring","event":"artifact.added","ref":"proposal.md (patched: C1, C7, C9)"}
+{"ts":"2026-05-13T06:07:00Z","phase":"authoring","event":"artifact.added","ref":"design.md (patched: D2 subsection, D6 rewrite, D7 stalemate marker, D9 split, D10 row+rationale, Risks rename+expand, new D11, new D12)"}
+{"ts":"2026-05-13T06:07:00Z","phase":"authoring","event":"artifact.added","ref":"spec.md (patched: 2 new scenarios for distribution paths, --dry-run requirement, PR# pass scenario, max_turns rewrite + cost_usd scenario, scope warning scenario, NEW Dedup contract requirement, NEW Allowed tools requirement, NEW Base-only checkout requirement, Fork-PR clarification)"}
+{"ts":"2026-05-13T06:08:41Z","phase":"authoring","event":"artifact.added","ref":"spikes/c4-ephemeral-token-fork-pr/"}
+{"ts":"2026-05-13T06:08:41Z","phase":"authoring","event":"artifact.added","ref":"spikes/c5-cross-repo-workflow-call/"}
+{"ts":"2026-05-13T06:33:31Z","phase":"authoring","event":"artifact.added","ref":"C4 spike resolved (D2+D7 validated); design.md D7 + spec.md fork-PR scenario updated with evidence"}
+{"ts":"2026-05-13T06:33:31Z","phase":"any","event":"turn.end","output":"Battle-test wrapped: 7 patches applied, C4 spike resolved, C5 spike deferred to forgejo-mcp-33k, cleanup tracked in forgejo-mcp-p0y"}
