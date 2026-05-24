@@ -1,0 +1,3 @@
+creation_rules:
+  - encrypted_regex: '^(data|stringData|tls)$'
+    pgp: "04DAFCD9470A962A2F272984E5EB0DA32F3372AC, 8A07D816280A983BBC35E85C280DB66A3E8C012E"

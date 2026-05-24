@@ -16,12 +16,12 @@ import (
 )
 
 type capturedReq struct {
-	method  string
-	path    string
-	auth    string
-	ua      string
-	ctype   string
-	body    []byte
+	method string
+	path   string
+	auth   string
+	ua     string
+	ctype  string
+	body   []byte
 }
 
 func newCaptureServer(t *testing.T, handler func(w http.ResponseWriter, r *http.Request, c *capturedReq)) (*httptest.Server, *capturedReq) {
