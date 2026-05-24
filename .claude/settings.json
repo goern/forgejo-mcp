@@ -1,26 +1,29 @@
 {
-  "hooks": {
-    "PreCompact": [
-      {
-        "hooks": [
-          {
-            "command": "bd prime",
-            "type": "command"
-          }
+    "env": {
+        "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+    },
+    "hooks": {
+        "PreCompact": [
+            {
+                "hooks": [
+                    {
+                        "command": "bd prime",
+                        "type": "command"
+                    }
+                ],
+                "matcher": ""
+            }
         ],
-        "matcher": ""
-      }
-    ],
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "command": "bd prime",
-            "type": "command"
-          }
-        ],
-        "matcher": ""
-      }
-    ]
-  }
+        "SessionStart": [
+            {
+                "hooks": [
+                    {
+                        "command": "bd prime",
+                        "type": "command"
+                    }
+                ],
+                "matcher": ""
+            }
+        ]
+    }
 }
