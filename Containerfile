@@ -1,6 +1,6 @@
-FROM golang:1.26-alpine@sha256:91eda9776261207ea25fd06b5b7fed8d397dd2c0a283e77f2ab6e91bfa71079d AS build
+FROM registry.access.redhat.com/hi/go:1.25.10-builder@sha256:21068a8473d5d5808c76569492328fcd9764706468b5b2e42a14a794e6f35daa AS build
 
-RUN apk --no-cache add make
+RUN dnf install -y make git && dnf clean all
 
 WORKDIR /app
 
@@ -9,14 +9,12 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux make
+RUN CGO_ENABLED=0 GOOS=linux make build
 
-FROM alpine:edge@sha256:9a341ff2287c54b86425cbee0141114d811ae69d88a36019087be6d896cef241
+FROM registry.access.redhat.com/hi/core-runtime:2.42@sha256:9666b5aad217d503660028879a72d4a500fbcbff89fcad5d1974e029eb5df4d3
 
 WORKDIR /app
 
 COPY --from=build /app/forgejo-mcp .
-
-RUN apk --no-cache add ca-certificates tzdata
 
 ENTRYPOINT ["/app/forgejo-mcp"]
