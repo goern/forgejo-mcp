@@ -16,16 +16,16 @@ import (
 )
 
 const (
-	ListIssueTrackedTimesToolName  = "list_issue_tracked_times"
-	ListRepoTrackedTimesToolName   = "list_repo_tracked_times"
-	ListMyTrackedTimesToolName     = "list_my_tracked_times"
-	AddIssueTimeToolName           = "add_issue_time"
-	ResetIssueTimeToolName         = "reset_issue_time"
-	DeleteIssueTimeEntryToolName   = "delete_issue_time_entry"
-	StartIssueStopwatchToolName    = "start_issue_stopwatch"
-	StopIssueStopwatchToolName     = "stop_issue_stopwatch"
-	CancelIssueStopwatchToolName   = "cancel_issue_stopwatch"
-	ListMyStopwatchesToolName      = "list_my_stopwatches"
+	ListIssueTrackedTimesToolName = "list_issue_tracked_times"
+	ListRepoTrackedTimesToolName  = "list_repo_tracked_times"
+	ListMyTrackedTimesToolName    = "list_my_tracked_times"
+	AddIssueTimeToolName          = "add_issue_time"
+	ResetIssueTimeToolName        = "reset_issue_time"
+	DeleteIssueTimeEntryToolName  = "delete_issue_time_entry"
+	StartIssueStopwatchToolName   = "start_issue_stopwatch"
+	StopIssueStopwatchToolName    = "stop_issue_stopwatch"
+	CancelIssueStopwatchToolName  = "cancel_issue_stopwatch"
+	ListMyStopwatchesToolName     = "list_my_stopwatches"
 
 	indexDescIssueOrPR = "Issue or pull request index (Forgejo shares index namespace between the two)"
 )

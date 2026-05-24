@@ -5,22 +5,22 @@ import (
 	"errors"
 	"fmt"
 
-	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
 	"codeberg.org/goern/forgejo-mcp/v2/operation/params"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/log"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/to"
+	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
 
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
 const (
-	ListOrgTeamsToolName    = "list_org_teams"
-	CreateOrgTeamToolName   = "create_org_team"
-	AddTeamMemberToolName   = "add_team_member"
+	ListOrgTeamsToolName     = "list_org_teams"
+	CreateOrgTeamToolName    = "create_org_team"
+	AddTeamMemberToolName    = "add_team_member"
 	RemoveTeamMemberToolName = "remove_team_member"
-	AddTeamRepoToolName     = "add_team_repo"
-	RemoveTeamRepoToolName  = "remove_team_repo"
+	AddTeamRepoToolName      = "add_team_repo"
+	RemoveTeamRepoToolName   = "remove_team_repo"
 )
 
 var (

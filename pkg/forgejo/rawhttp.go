@@ -26,8 +26,8 @@ const MaxInlineDownloadBytes = 1 * 1024 * 1024
 
 // Error sentinels callers can match with errors.Is.
 var (
-	ErrUnauthorized = errors.New("unauthorized")
-	ErrNotFound     = errors.New("not found")
+	ErrUnauthorized    = errors.New("unauthorized")
+	ErrNotFound        = errors.New("not found")
 	ErrPayloadTooLarge = errors.New("payload exceeds inline cap")
 )
 

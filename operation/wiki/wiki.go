@@ -17,9 +17,9 @@ import (
 )
 
 const (
-	ListWikiPagesToolName   = "list_wiki_pages"
-	CreateWikiPageToolName  = "create_wiki_page"
-	UpdateWikiPageToolName  = "update_wiki_page"
+	ListWikiPagesToolName  = "list_wiki_pages"
+	CreateWikiPageToolName = "create_wiki_page"
+	UpdateWikiPageToolName = "update_wiki_page"
 )
 
 var (

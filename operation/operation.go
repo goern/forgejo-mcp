@@ -185,7 +185,6 @@ func testConnection() error {
 	return forgejo.VerifyConnection()
 }
 
-
 func newMCPServer(version string) *server.MCPServer {
 	return server.NewMCPServer(
 		"Forgejo MCP Server",

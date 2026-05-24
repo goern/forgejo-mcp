@@ -58,7 +58,7 @@ func RegisterTool(s *server.MCPServer) {
 func SearchUserFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	// Create a search query for dummy implementation
 	keyword, _ := req.GetArguments()["keyword"].(string)
-	
+
 	// Create a basic search option with just a keyword
 	opt := forgejo_sdk.SearchUsersOption{
 		KeyWord: keyword,
@@ -81,7 +81,7 @@ func SearchOrgTeamsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	}
 
 	keyword, _ := req.GetArguments()["keyword"].(string)
-	
+
 	// Create proper search team options
 	opt := &forgejo_sdk.SearchTeamsOptions{
 		Query: keyword,
@@ -119,7 +119,7 @@ func SearchReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 			PageSize: int(limit),
 		},
 	}
-	
+
 	// Call search repos with proper options
 	result, _, err := forgejo.Client().SearchRepos(opt)
 	if err != nil {

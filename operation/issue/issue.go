@@ -54,16 +54,16 @@ const (
 	CreateIssueToolName        = "create_issue"
 	CreateIssueCommentToolName = "create_issue_comment"
 	UpdateIssueToolName        = "update_issue"
-	AddIssueLabelsToolName      = "add_issue_labels"
-	RemoveIssueLabelsToolName   = "remove_issue_labels"
+	AddIssueLabelsToolName     = "add_issue_labels"
+	RemoveIssueLabelsToolName  = "remove_issue_labels"
 	IssueStateChangeToolName   = "issue_state_change"
 	ListIssueCommentsToolName  = "list_issue_comments"
 	GetIssueCommentToolName    = "get_issue_comment"
 	EditIssueCommentToolName   = "edit_issue_comment"
-	DeleteIssueCommentToolName  = "delete_issue_comment"
-	ListRepoMilestonesToolName  = "list_repo_milestones"
-	ListRepoLabelsToolName      = "list_repo_labels"
-	ListOrgLabelsToolName       = "list_org_labels"
+	DeleteIssueCommentToolName = "delete_issue_comment"
+	ListRepoMilestonesToolName = "list_repo_milestones"
+	ListRepoLabelsToolName     = "list_repo_labels"
+	ListOrgLabelsToolName      = "list_org_labels"
 )
 
 var (
@@ -385,7 +385,7 @@ func AddIssueLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	// Since we can't directly use label names, we need to fetch the IDs first
 	// This modified approach treats the labels as numeric IDs
 	labelIDs := []int64{}
-	
+
 	for _, labelStr := range strings.Split(labels, ",") {
 		labelStr = strings.TrimSpace(labelStr)
 		labelID, err := strconv.ParseInt(labelStr, 10, 64)
@@ -399,12 +399,12 @@ func AddIssueLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	opt := forgejo_sdk.IssueLabelsOption{
 		Labels: labelIDs,
 	}
-	
+
 	_, _, err := forgejo.Client().AddIssueLabels(owner, repo, int64(index), opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("add issue labels err: %v", err))
 	}
-	
+
 	// Fetch the updated issue to return it with the new labels
 	issue, _, err := forgejo.Client().GetIssue(owner, repo, int64(index))
 	if err != nil {
@@ -453,7 +453,7 @@ func IssueStateChangeFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 
 	// Convert string to StateType and create pointer
 	stateType := forgejo_sdk.StateType(state)
-	
+
 	opt := forgejo_sdk.EditIssueOption{
 		State: &stateType,
 	}

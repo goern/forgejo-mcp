@@ -17,12 +17,12 @@ import (
 )
 
 const (
-	CreatePullReviewToolName      = "create_pull_review"
-	SubmitPullReviewToolName      = "submit_pull_review"
-	DismissPullReviewToolName     = "dismiss_pull_review"
-	DeletePullReviewToolName      = "delete_pull_review"
-	CreateReviewRequestsToolName  = "create_review_requests"
-	DeleteReviewRequestsToolName  = "delete_review_requests"
+	CreatePullReviewToolName     = "create_pull_review"
+	SubmitPullReviewToolName     = "submit_pull_review"
+	DismissPullReviewToolName    = "dismiss_pull_review"
+	DeletePullReviewToolName     = "delete_pull_review"
+	CreateReviewRequestsToolName = "create_review_requests"
+	DeleteReviewRequestsToolName = "delete_review_requests"
 )
 
 var (
