@@ -1,0 +1,85 @@
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Cancel superseded runs for the same ref.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  GOTOOLCHAIN: local
+  GOFLAGS: "-buildvcs=false"
+
+jobs:
+  go-ci:
+    name: build + lint + race-test + vuln-scan
+    runs-on: codeberg-small
+    timeout-minutes: 15
+    steps:
+      # https://code.forgejo.org/actions/checkout
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      # https://code.forgejo.org/actions/setup-go
+      # Built-in module + build cache keyed on go.sum; no separate actions/cache needed.
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Print Go version
+        run: go version
+
+      - name: Build
+        run: make build
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: gofmt -l
+        run: |
+          unformatted="$(gofmt -l . || true)"
+          if [ -n "$unformatted" ]; then
+            echo "::error::Files not gofmt'd:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: go mod tidy drift
+        run: |
+          cp go.mod go.mod.pre
+          cp go.sum go.sum.pre
+          go mod tidy
+          if ! diff -u go.mod.pre go.mod || ! diff -u go.sum.pre go.sum; then
+            echo "::error::go.mod / go.sum drift. Run 'go mod tidy' locally and commit."
+            exit 1
+          fi
+          rm -f go.mod.pre go.sum.pre
+
+      # https://github.com/golangci/golangci-lint-action
+      # warn-only first pass — flip continue-on-error to false after baseline cleanup.
+      - name: golangci-lint (warn-only)
+        uses: https://github.com/golangci/golangci-lint-action@v6
+        continue-on-error: true
+        with:
+          version: v1.64
+          args: --timeout=5m
+
+      - name: Race-detector tests
+        run: go test -race -shuffle=on -count=1 ./...
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: govulncheck
+        run: |
+          "$(go env GOPATH)/bin/govulncheck" ./...
