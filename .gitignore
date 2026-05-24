@@ -41,3 +41,11 @@ Thumbs.db
 __pycache__/
 worktrees/
 .claude/scheduled_tasks.lock
+
+# Secrets — defense-in-depth. Only SOPS-encrypted manifests (*.enc.yaml) and
+# the cosign public key (intended to be committed) are allowed through.
+secrets/*
+!secrets/.gitkeep
+!secrets/*.enc.yaml
+!secrets/*.enc.yml
+!secrets/cosign.pub
