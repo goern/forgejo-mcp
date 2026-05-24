@@ -3,45 +3,116 @@ kind: Task
 metadata:
   name: go-ci
   annotations:
-    tekton.dev/displayName: "go build + test"
+    tekton.dev/displayName: "go build + lint + race-test + vuln-scan"
 spec:
   params:
     - name: GO_IMAGE
       description: Container image carrying the Go toolchain.
       type: string
       default: docker.io/library/golang:1.25
+    - name: GOLANGCI_LINT_IMAGE
+      description: golangci-lint image (must be Go-version compatible with GO_IMAGE).
+      type: string
+      default: docker.io/golangci/golangci-lint:v1.64-alpine
+    - name: GOVULNCHECK_VERSION
+      description: govulncheck CLI version to install via 'go install'.
+      type: string
+      default: latest
+    - name: LINT_REQUIRED
+      description: |
+        If "true", lint findings fail the build. If "false", lint runs but its
+        exit code is ignored (warn-only). Flip to "true" after baseline cleanup.
+      type: string
+      default: "false"
   workspaces:
     - name: source
       mountPath: /workspace/src
+  stepTemplate:
+    workingDir: $(workspaces.source.path)
+    env:
+      - name: GOFLAGS
+        value: "-buildvcs=false"
+      - name: GOCACHE
+        value: /workspace/src/.gocache
+      - name: GOMODCACHE
+        value: /workspace/src/.gomodcache
+      - name: GOTOOLCHAIN
+        value: local
   steps:
     - name: build
       image: $(params.GO_IMAGE)
-      workingDir: $(workspaces.source.path)
-      env:
-        - name: GOFLAGS
-          value: "-buildvcs=false"
-        - name: GOCACHE
-          value: /workspace/src/.gocache
-        - name: GOMODCACHE
-          value: /workspace/src/.gomodcache
       script: |
         #!/usr/bin/env bash
         set -euo pipefail
         git config --global --add safe.directory "$(workspaces.source.path)"
         go version
         make build
-    - name: test
+
+    - name: vet
       image: $(params.GO_IMAGE)
-      workingDir: $(workspaces.source.path)
-      env:
-        - name: GOFLAGS
-          value: "-buildvcs=false"
-        - name: GOCACHE
-          value: /workspace/src/.gocache
-        - name: GOMODCACHE
-          value: /workspace/src/.gomodcache
       script: |
         #!/usr/bin/env bash
         set -euo pipefail
         git config --global --add safe.directory "$(workspaces.source.path)"
-        go test ./...
+        go vet ./...
+
+    - name: gofmt-check
+      image: $(params.GO_IMAGE)
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        git config --global --add safe.directory "$(workspaces.source.path)"
+        unformatted="$(gofmt -l . | grep -v '^\.gocache/' | grep -v '^\.gomodcache/' || true)"
+        if [ -n "$unformatted" ]; then
+          echo "Files not gofmt'd:" >&2
+          echo "$unformatted" >&2
+          exit 1
+        fi
+
+    - name: mod-tidy-check
+      image: $(params.GO_IMAGE)
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        git config --global --add safe.directory "$(workspaces.source.path)"
+        cp go.mod go.mod.pre
+        cp go.sum go.sum.pre
+        go mod tidy
+        if ! diff -u go.mod.pre go.mod || ! diff -u go.sum.pre go.sum; then
+          echo "go.mod / go.sum drift detected. Run 'go mod tidy' locally." >&2
+          mv go.mod.pre go.mod
+          mv go.sum.pre go.sum
+          exit 1
+        fi
+        rm -f go.mod.pre go.sum.pre
+
+    - name: lint
+      image: $(params.GOLANGCI_LINT_IMAGE)
+      script: |
+        #!/bin/sh
+        set -eu
+        git config --global --add safe.directory "$(workspaces.source.path)"
+        golangci-lint version
+        if [ "$(params.LINT_REQUIRED)" = "true" ]; then
+          golangci-lint run --timeout=5m ./...
+        else
+          golangci-lint run --timeout=5m ./... || \
+            echo "::warning::golangci-lint findings present (LINT_REQUIRED=false)"
+        fi
+
+    - name: test-race
+      image: $(params.GO_IMAGE)
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        git config --global --add safe.directory "$(workspaces.source.path)"
+        go test -race -shuffle=on -count=1 ./...
+
+    - name: govulncheck
+      image: $(params.GO_IMAGE)
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        git config --global --add safe.directory "$(workspaces.source.path)"
+        go install "golang.org/x/vuln/cmd/govulncheck@$(params.GOVULNCHECK_VERSION)"
+        "$(go env GOPATH)/bin/govulncheck" ./...
