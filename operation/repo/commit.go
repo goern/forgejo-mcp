@@ -60,7 +60,11 @@ func ListRepoCommitsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 			PageSize: int(limit),
 		},
 	}
-	commits, _, err := forgejo.Client(ctx).ListRepoCommits(owner, repo, opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	commits, _, err := client.ListRepoCommits(owner, repo, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list repo commits error: %v", err))
 	}

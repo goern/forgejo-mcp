@@ -109,6 +109,25 @@ func RegisterReleaseTool(s *server.MCPServer) {
 	log.Debug("Registered release tools")
 }
 
+func extractToken(auth string) string {
+	if auth == "" {
+		return ""
+	}
+	parts := strings.SplitN(auth, " ", 2)
+	if len(parts) == 2 {
+		scheme := strings.ToLower(parts[0])
+		if scheme == "token" || scheme == "bearer" {
+			return parts[1]
+		}
+		return ""
+	}
+	// Minimalist fallback for bare tokens (no spaces allowed)
+	if !strings.Contains(auth, " ") {
+		return auth
+	}
+	return ""
+}
+
 func Run(transport, version string) error {
 	flag.Version = version
 	mcpServer = newMCPServer(version)
@@ -142,15 +161,8 @@ func Run(transport, version string) error {
 		log.Info("MCP stdio server shutdown")
 	case "sse":
 		sseServer := server.NewSSEServer(mcpServer, server.WithSSEContextFunc(func(ctx context.Context, r *http.Request) context.Context {
-			auth := r.Header.Get("Authorization")
-			if strings.HasPrefix(auth, "token ") {
-				return forgejo.WithToken(ctx, strings.TrimPrefix(auth, "token "))
-			}
-			if strings.HasPrefix(auth, "Bearer ") {
-				return forgejo.WithToken(ctx, strings.TrimPrefix(auth, "Bearer "))
-			}
-			if auth != "" && !strings.Contains(auth, " ") {
-				return forgejo.WithToken(ctx, auth)
+			if token := extractToken(r.Header.Get("Authorization")); token != "" {
+				return forgejo.WithToken(ctx, token)
 			}
 			return ctx
 		}))
@@ -171,15 +183,8 @@ func Run(transport, version string) error {
 		log.Info("MCP SSE server shutdown")
 	case "http":
 		httpServer := server.NewStreamableHTTPServer(mcpServer, server.WithHTTPContextFunc(func(ctx context.Context, r *http.Request) context.Context {
-			auth := r.Header.Get("Authorization")
-			if strings.HasPrefix(auth, "token ") {
-				return forgejo.WithToken(ctx, strings.TrimPrefix(auth, "token "))
-			}
-			if strings.HasPrefix(auth, "Bearer ") {
-				return forgejo.WithToken(ctx, strings.TrimPrefix(auth, "Bearer "))
-			}
-			if auth != "" && !strings.Contains(auth, " ") {
-				return forgejo.WithToken(ctx, auth)
+			if token := extractToken(r.Header.Get("Authorization")); token != "" {
+				return forgejo.WithToken(ctx, token)
 			}
 			return ctx
 		}))
@@ -211,7 +216,6 @@ func Run(transport, version string) error {
 func testConnection() error {
 	return forgejo.VerifyConnection()
 }
-
 
 func newMCPServer(version string) *server.MCPServer {
 	return server.NewMCPServer(

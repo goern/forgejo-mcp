@@ -131,3 +131,5 @@ The server supports the following `Authorization` header formats:
 - `Authorization: token <token>` (Forgejo/Gitea style)
 - `Authorization: Bearer <token>` (Standard OAuth2 style)
 - `Authorization: <token>` (Minimalist style)
+
+Note: The schemes (`token` and `Bearer`) are matched case-insensitively (e.g., `bearer`, `Bearer`, `BEARER` all work).

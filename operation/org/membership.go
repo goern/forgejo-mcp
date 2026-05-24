@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 
-	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
 	"codeberg.org/goern/forgejo-mcp/v2/operation/params"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/log"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/to"
+	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
 
 	"github.com/mark3labs/mcp-go/mcp"
 )
@@ -65,7 +65,11 @@ func ListOrgMembersFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 			PageSize: int(limit),
 		},
 	}
-	members, _, err := forgejo.Client(ctx).ListOrgMembership(orgName, opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	members, _, err := client.ListOrgMembership(orgName, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list org members err: %v", err))
 	}
@@ -83,7 +87,11 @@ func CheckOrgMembershipFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 		return to.ErrorResult(errors.New("username is required"))
 	}
 
-	isMember, _, err := forgejo.Client(ctx).CheckOrgMembership(orgName, user)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	isMember, _, err := client.CheckOrgMembership(orgName, user)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("check org membership err: %v", err))
 	}
@@ -105,7 +113,11 @@ func RemoveOrgMemberFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 		return to.ErrorResult(errors.New("username is required"))
 	}
 
-	_, err := forgejo.Client(ctx).DeleteOrgMembership(orgName, user)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	_, err = client.DeleteOrgMembership(orgName, user)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("remove org member err: %v", err))
 	}

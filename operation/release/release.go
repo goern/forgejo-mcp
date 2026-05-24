@@ -243,7 +243,11 @@ func ListReleasesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 			PageSize: int(limit),
 		},
 	}
-	rels, _, err := forgejo.Client(ctx).ListReleases(owner, repo, opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	rels, _, err := client.ListReleases(owner, repo, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list releases err: %v", err))
 	}
@@ -290,7 +294,11 @@ func GetReleaseByIDFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("release_id: %v", err))
 	}
-	rel, _, err := forgejo.Client(ctx).GetRelease(owner, repo, int64(rid))
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	rel, _, err := client.GetRelease(owner, repo, int64(rid))
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get release err: %v", err))
 	}
@@ -306,7 +314,11 @@ func GetReleaseByTagFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 	if tag == "" {
 		return to.ErrorResult(fmt.Errorf("tag is required"))
 	}
-	rel, _, err := forgejo.Client(ctx).GetReleaseByTag(owner, repo, tag)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	rel, _, err := client.GetReleaseByTag(owner, repo, tag)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get release by tag err: %v", err))
 	}
@@ -318,7 +330,11 @@ func GetLatestReleaseFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 	args := req.GetArguments()
 	owner, _ := args["owner"].(string)
 	repo, _ := args["repo"].(string)
-	rel, _, err := forgejo.Client(ctx).GetLatestRelease(owner, repo)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	rel, _, err := client.GetLatestRelease(owner, repo)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get latest release err: %v", err))
 	}
@@ -354,7 +370,11 @@ func CreateReleaseFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToo
 		IsDraft:      draft,
 		IsPrerelease: prerelease,
 	}
-	rel, _, err := forgejo.Client(ctx).CreateRelease(owner, repo, opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	rel, _, err := client.CreateRelease(owner, repo, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("create release err: %v", err))
 	}
@@ -391,7 +411,11 @@ func EditReleaseFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 		opt.IsPrerelease = &v
 	}
 
-	rel, _, err := forgejo.Client(ctx).EditRelease(owner, repo, int64(rid), opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	rel, _, err := client.EditRelease(owner, repo, int64(rid), opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("edit release err: %v", err))
 	}
@@ -407,7 +431,11 @@ func DeleteReleaseFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToo
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("release_id: %v", err))
 	}
-	if _, err := forgejo.Client(ctx).DeleteRelease(owner, repo, int64(rid)); err != nil {
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	if _, err = client.DeleteRelease(owner, repo, int64(rid)); err != nil {
 		return to.ErrorResult(fmt.Errorf("delete release err: %v", err))
 	}
 	return to.TextResult(map[string]string{"status": "deleted"})
@@ -422,7 +450,11 @@ func DeleteReleaseByTagFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	if tag == "" {
 		return to.ErrorResult(fmt.Errorf("tag is required"))
 	}
-	if _, err := forgejo.Client(ctx).DeleteReleaseByTag(owner, repo, tag); err != nil {
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	if _, err = client.DeleteReleaseByTag(owner, repo, tag); err != nil {
 		return to.ErrorResult(fmt.Errorf("delete release by tag err: %v", err))
 	}
 	return to.TextResult(map[string]string{"status": "deleted"})
@@ -448,7 +480,11 @@ func ListReleaseAttachmentsFn(ctx context.Context, req mcp.CallToolRequest) (*mc
 		limit = 20
 	}
 
-	all, _, err := forgejo.Client(ctx).ListReleaseAttachments(owner, repo, int64(rid))
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	all, _, err := client.ListReleaseAttachments(owner, repo, int64(rid))
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list release attachments err: %v", err))
 	}
@@ -487,7 +523,11 @@ func GetReleaseAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("attachment_id: %v", err))
 	}
-	att, _, err := forgejo.Client(ctx).GetReleaseAttachment(owner, repo, int64(rid), int64(aid))
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	att, _, err := client.GetReleaseAttachment(owner, repo, int64(rid), int64(aid))
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get release attachment err: %v", err))
 	}
@@ -507,7 +547,11 @@ func DownloadReleaseAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("attachment_id: %v", err))
 	}
-	att, _, err := forgejo.Client(ctx).GetReleaseAttachment(owner, repo, int64(rid), int64(aid))
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	att, _, err := client.GetReleaseAttachment(owner, repo, int64(rid), int64(aid))
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("download release attachment (metadata) err: %v", err))
 	}
@@ -538,7 +582,11 @@ func CreateReleaseAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*m
 		return to.ErrorResult(fmt.Errorf("content must be base64-encoded: %v", err))
 	}
 
-	att, _, err := forgejo.Client(ctx).CreateReleaseAttachment(owner, repo, int64(rid), bytes.NewReader(raw), filename)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	att, _, err := client.CreateReleaseAttachment(owner, repo, int64(rid), bytes.NewReader(raw), filename)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("create release attachment err: %v", err))
 	}
@@ -562,7 +610,11 @@ func EditReleaseAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	if name == "" {
 		return to.ErrorResult(fmt.Errorf("name is required"))
 	}
-	att, _, err := forgejo.Client(ctx).EditReleaseAttachment(owner, repo, int64(rid), int64(aid), forgejo_sdk.EditAttachmentOptions{Name: name})
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	att, _, err := client.EditReleaseAttachment(owner, repo, int64(rid), int64(aid), forgejo_sdk.EditAttachmentOptions{Name: name})
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("edit release attachment err: %v", err))
 	}
@@ -582,7 +634,11 @@ func DeleteReleaseAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*m
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("attachment_id: %v", err))
 	}
-	if _, err := forgejo.Client(ctx).DeleteReleaseAttachment(owner, repo, int64(rid), int64(aid)); err != nil {
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	if _, err = client.DeleteReleaseAttachment(owner, repo, int64(rid), int64(aid)); err != nil {
 		return to.ErrorResult(fmt.Errorf("delete release attachment err: %v", err))
 	}
 	return to.TextResult(map[string]string{"status": "deleted"})

@@ -77,7 +77,7 @@ func setup(t *testing.T) {
 		flagPkg.Debug = false
 
 		// Force the forgejo client singleton to initialize against our fake server.
-		_ = forgejo.Client(context.Background())
+		_, _ = forgejo.Client(context.Background())
 
 		mcpSrv = server.NewMCPServer("forgejo-mcp", "test", server.WithLogging())
 		operation.RegisterTool(mcpSrv)

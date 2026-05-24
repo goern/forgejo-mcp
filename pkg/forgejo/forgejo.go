@@ -31,7 +31,7 @@ func WithToken(ctx context.Context, token string) context.Context {
 // Client returns a Forgejo client configured to connect to a Forgejo instance.
 // If a token is found in the context, a new ephemeral client is returned.
 // Otherwise, the shared singleton client is used.
-func Client(ctx context.Context) *forgejo.Client {
+func Client(ctx context.Context) (*forgejo.Client, error) {
 	token, ok := ctx.Value(TokenContextKey).(string)
 	if ok && token != "" {
 		// Use configured user agent or default to forgejo-mcp/<version>
@@ -49,10 +49,9 @@ func Client(ctx context.Context) *forgejo.Client {
 				log.SanitizedURLField("url", flag.URL),
 				log.ErrorField(err),
 			)
-			// Fallback to singleton if ephemeral creation fails
-		} else {
-			return c
+			return nil, fmt.Errorf("create ephemeral client: %w", err)
 		}
+		return c, nil
 	}
 
 	clientOnce.Do(func() {
@@ -72,6 +71,8 @@ func Client(ctx context.Context) *forgejo.Client {
 					log.SanitizedURLField("url", flag.URL),
 					log.ErrorField(err),
 				)
+				// We still fatal here because if the singleton can't be created at startup,
+				// the server is useless in stdio mode.
 				log.Fatalf("create forgejo client err: %v", err)
 			}
 			client = c
@@ -82,7 +83,7 @@ func Client(ctx context.Context) *forgejo.Client {
 			)
 		}
 	})
-	return client
+	return client, nil
 }
 
 // GetBaseURL returns the base URL of the Forgejo instance.
@@ -101,7 +102,11 @@ func VerifyConnection() error {
 		log.SanitizedURLField("url", flag.URL),
 	)
 
-	version, resp, err := Client(context.Background()).ServerVersion()
+	client, err := Client(context.Background())
+	if err != nil {
+		return err
+	}
+	version, resp, err := client.ServerVersion()
 	duration := time.Since(start)
 
 	if err != nil {
@@ -129,7 +134,11 @@ func HealthCheck() error {
 
 	log.Debug("Starting health check")
 
-	version, resp, err := Client(context.Background()).ServerVersion()
+	client, err := Client(context.Background())
+	if err != nil {
+		return err
+	}
+	version, resp, err := client.ServerVersion()
 	duration := time.Since(start)
 
 	if err != nil {

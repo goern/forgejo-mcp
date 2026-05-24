@@ -58,14 +58,18 @@ func RegisterTool(s *server.MCPServer) {
 func SearchUserFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	// Create a search query for dummy implementation
 	keyword, _ := req.GetArguments()["keyword"].(string)
-	
+
 	// Create a basic search option with just a keyword
 	opt := forgejo_sdk.SearchUsersOption{
 		KeyWord: keyword,
 	}
 
 	// Use the correct options type for searching
-	result, _, err := forgejo.Client(ctx).SearchUsers(opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	result, _, err := client.SearchUsers(opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("search user err: %v", err))
 	}
@@ -81,14 +85,18 @@ func SearchOrgTeamsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	}
 
 	keyword, _ := req.GetArguments()["keyword"].(string)
-	
+
 	// Create proper search team options
 	opt := &forgejo_sdk.SearchTeamsOptions{
 		Query: keyword,
 	}
 
 	// Use the proper options type for search
-	result, _, err := forgejo.Client(ctx).SearchOrgTeams(org, opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	result, _, err := client.SearchOrgTeams(org, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("search org teams err: %v", err))
 	}
@@ -119,9 +127,13 @@ func SearchReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 			PageSize: int(limit),
 		},
 	}
-	
+
 	// Call search repos with proper options
-	result, _, err := forgejo.Client(ctx).SearchRepos(opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	result, _, err := client.SearchRepos(opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("search repos err: %v", err))
 	}

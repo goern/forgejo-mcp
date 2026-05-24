@@ -99,6 +99,7 @@ You can run a single centralized `forgejo-mcp` instance and let each client prov
 2. Clients include their specific token in each request:
    - `Authorization: token <token>` (Forgejo style)
    - `Authorization: Bearer <token>` (OAuth2/MCP style)
+   - Note: The scheme (`token` or `Bearer`) is case-insensitive.
 
 See [demos/multi-tenant-http.md](demos/multi-tenant-http.md) for a copy-pasteable walkthrough.
 

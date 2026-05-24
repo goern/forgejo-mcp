@@ -5,12 +5,12 @@ import (
 	"errors"
 	"fmt"
 
-	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
 	"codeberg.org/goern/forgejo-mcp/v2/operation/params"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/log"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/ptr"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/to"
+	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -111,10 +111,19 @@ func CreateRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 	}
 	var repo *forgejo_sdk.Repository
 	var err error
+	var client *forgejo_sdk.Client
 	if owner != "" {
-		repo, _, err = forgejo.Client(ctx).CreateOrgRepo(owner, opt)
+		client, err = forgejo.Client(ctx)
+		if err != nil {
+			return to.ErrorResult(err)
+		}
+		repo, _, err = client.CreateOrgRepo(owner, opt)
 	} else {
-		repo, _, err = forgejo.Client(ctx).CreateRepo(opt)
+		client, err = forgejo.Client(ctx)
+		if err != nil {
+			return to.ErrorResult(err)
+		}
+		repo, _, err = client.CreateRepo(opt)
 	}
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("create repo err: %v", err))
@@ -146,7 +155,11 @@ func ForkRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResu
 		Organization: organizationPtr,
 		Name:         namePtr,
 	}
-	_, _, err := forgejo.Client(ctx).CreateFork(user, repo, opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	_, _, err = client.CreateFork(user, repo, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("fork repository error %v", err))
 	}
@@ -169,7 +182,11 @@ func ListMyReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 			PageSize: int(limit),
 		},
 	}
-	repos, _, err := forgejo.Client(ctx).ListMyRepos(opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	repos, _, err := client.ListMyRepos(opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list my repositories error: %v", err))
 	}

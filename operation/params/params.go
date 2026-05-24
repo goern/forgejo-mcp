@@ -9,21 +9,21 @@ const (
 	Repo  = "Repository name"
 
 	// Issue/PR parameters
-	Index        = "Issue/PR index"
-	IssueIndex   = "Issue index"
-	PRIndex      = "PR index"
-	CommentID    = "Comment ID"
-	Body         = "Content body"
-	Title        = "Title"
-	State        = "State"
-	Labels       = "Label IDs"
-	Milestone    = "Milestone ID"
+	Index      = "Issue/PR index"
+	IssueIndex = "Issue index"
+	PRIndex    = "PR index"
+	CommentID  = "Comment ID"
+	Body       = "Content body"
+	Title      = "Title"
+	State      = "State"
+	Labels     = "Label IDs"
+	Milestone  = "Milestone ID"
 
 	// Branch parameters
-	Branch       = "Branch name"
-	OldBranch    = "Source branch"
-	Head         = "Head branch"
-	Base         = "Base branch"
+	Branch    = "Branch name"
+	OldBranch = "Source branch"
+	Head      = "Head branch"
+	Base      = "Base branch"
 
 	// File parameters
 	FilePath      = "File path"
@@ -57,11 +57,11 @@ const (
 	WikiPage    = "Wiki page name"
 
 	// Review parameters
-	ReviewID    = "Review ID"
-	ReviewState = "Review state (APPROVED, REQUEST_CHANGES, COMMENT)"
-	ReviewBody  = "Review body/message"
-	Reviewers   = "Reviewer usernames (comma-separated)"
-	TeamReviewers = "Team reviewer names (comma-separated)"
+	ReviewID       = "Review ID"
+	ReviewState    = "Review state (APPROVED, REQUEST_CHANGES, COMMENT)"
+	ReviewBody     = "Review body/message"
+	Reviewers      = "Reviewer usernames (comma-separated)"
+	TeamReviewers  = "Team reviewer names (comma-separated)"
 	DismissMessage = "Dismissal message"
 	ReviewComments = `Inline comments as JSON array, e.g. [{"path":"file.go","body":"Fix this","new_position":10}]`
 

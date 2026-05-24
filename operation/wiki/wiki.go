@@ -17,9 +17,9 @@ import (
 )
 
 const (
-	ListWikiPagesToolName   = "list_wiki_pages"
-	CreateWikiPageToolName  = "create_wiki_page"
-	UpdateWikiPageToolName  = "update_wiki_page"
+	ListWikiPagesToolName  = "list_wiki_pages"
+	CreateWikiPageToolName = "create_wiki_page"
+	UpdateWikiPageToolName = "update_wiki_page"
 )
 
 var (
@@ -63,7 +63,11 @@ func ListWikiPagesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToo
 	owner, _ := req.GetArguments()["owner"].(string)
 	repo, _ := req.GetArguments()["repo"].(string)
 
-	wikiPages, _, err := forgejo.Client(ctx).ListWikiPages(owner, repo)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	wikiPages, _, err := client.ListWikiPages(owner, repo)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list wiki pages err: %v", err))
 	}
@@ -89,7 +93,11 @@ func CreateWikiPageFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		Message: message,
 	}
 
-	wikiPage, _, err := forgejo.Client(ctx).CreateWikiPage(owner, repo, opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	wikiPage, _, err := client.CreateWikiPage(owner, repo, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("create wiki page err: %v", err))
 	}
@@ -121,7 +129,11 @@ func UpdateWikiPageFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		Message: message,
 	}
 
-	wikiPage, _, err := forgejo.Client(ctx).EditWikiPage(owner, repo, pageName, opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	wikiPage, _, err := client.EditWikiPage(owner, repo, pageName, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("update wiki page err: %v", err))
 	}

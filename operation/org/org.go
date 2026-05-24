@@ -5,23 +5,23 @@ import (
 	"errors"
 	"fmt"
 
-	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
 	"codeberg.org/goern/forgejo-mcp/v2/operation/params"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/log"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/to"
+	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
 
 const (
-	CreateOrgToolName   = "create_org"
-	GetOrgToolName      = "get_org"
-	ListMyOrgsToolName  = "list_my_orgs"
+	CreateOrgToolName    = "create_org"
+	GetOrgToolName       = "get_org"
+	ListMyOrgsToolName   = "list_my_orgs"
 	ListUserOrgsToolName = "list_user_orgs"
-	EditOrgToolName     = "edit_org"
-	DeleteOrgToolName   = "delete_org"
+	EditOrgToolName      = "edit_org"
+	DeleteOrgToolName    = "delete_org"
 )
 
 var (
@@ -123,7 +123,11 @@ func CreateOrgFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRes
 		opt.Visibility = forgejo_sdk.VisibleType(v)
 	}
 
-	org, _, err := forgejo.Client(ctx).CreateOrg(opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	org, _, err := client.CreateOrg(opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("create org err: %v", err))
 	}
@@ -137,7 +141,11 @@ func GetOrgFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult
 		return to.ErrorResult(errors.New("organization name is required"))
 	}
 
-	org, _, err := forgejo.Client(ctx).GetOrg(orgName)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	org, _, err := client.GetOrg(orgName)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get org err: %v", err))
 	}
@@ -161,7 +169,11 @@ func ListMyOrgsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 			PageSize: int(limit),
 		},
 	}
-	orgs, _, err := forgejo.Client(ctx).ListMyOrgs(opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	orgs, _, err := client.ListMyOrgs(opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list my orgs err: %v", err))
 	}
@@ -189,7 +201,11 @@ func ListUserOrgsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 			PageSize: int(limit),
 		},
 	}
-	orgs, _, err := forgejo.Client(ctx).ListUserOrgs(user, opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	orgs, _, err := client.ListUserOrgs(user, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list user orgs err: %v", err))
 	}
@@ -220,13 +236,17 @@ func EditOrgFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResul
 		opt.Visibility = forgejo_sdk.VisibleType(v)
 	}
 
-	_, err := forgejo.Client(ctx).EditOrg(orgName, opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	_, err = client.EditOrg(orgName, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("edit org err: %v", err))
 	}
 
 	// Fetch updated org to return
-	org, _, err := forgejo.Client(ctx).GetOrg(orgName)
+	org, _, err := client.GetOrg(orgName)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get updated org err: %v", err))
 	}
@@ -240,7 +260,11 @@ func DeleteOrgFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRes
 		return to.ErrorResult(errors.New("organization name is required"))
 	}
 
-	_, err := forgejo.Client(ctx).DeleteOrg(orgName)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	_, err = client.DeleteOrg(orgName)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("delete org err: %v", err))
 	}
