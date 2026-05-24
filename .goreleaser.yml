@@ -26,7 +26,22 @@ archives:
       - LICENSE
       - README.md
 checksum:
-  disable: true
+  name_template: '{{ .ProjectName }}_{{ .Version }}_checksums.txt'
+  algorithm: sha256
+
+# One CycloneDX SBOM per archive via syft. syft must be on PATH; the release
+# workflow installs it before goreleaser runs.
+sboms:
+  - id: archives
+    artifacts: archive
+    documents:
+      - '{{ .ArtifactName }}.sbom.cdx.json'
+    cmd: syft
+    args:
+      - scan
+      - '$artifact'
+      - --output
+      - 'cyclonedx-json=$document'
 
 gitea_urls:
   api: https://codeberg.org/api/v1
