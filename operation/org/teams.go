@@ -95,7 +95,7 @@ func ListOrgTeamsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 			PageSize: int(limit),
 		},
 	}
-	teams, _, err := forgejo.Client().ListOrgTeams(orgName, opt)
+	teams, _, err := forgejo.Client(ctx).ListOrgTeams(orgName, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list org teams err: %v", err))
 	}
@@ -132,7 +132,7 @@ func CreateOrgTeamFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToo
 		opt.IncludesAllRepositories = v
 	}
 
-	team, _, err := forgejo.Client().CreateTeam(orgName, opt)
+	team, _, err := forgejo.Client(ctx).CreateTeam(orgName, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("create org team err: %v", err))
 	}
@@ -151,7 +151,7 @@ func AddTeamMemberFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToo
 		return to.ErrorResult(errors.New("username is required"))
 	}
 
-	_, err := forgejo.Client().AddTeamMember(teamID, user)
+	_, err := forgejo.Client(ctx).AddTeamMember(teamID, user)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("add team member err: %v", err))
 	}
@@ -170,7 +170,7 @@ func RemoveTeamMemberFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 		return to.ErrorResult(errors.New("username is required"))
 	}
 
-	_, err := forgejo.Client().RemoveTeamMember(teamID, user)
+	_, err := forgejo.Client(ctx).RemoveTeamMember(teamID, user)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("remove team member err: %v", err))
 	}
@@ -193,7 +193,7 @@ func AddTeamRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 		return to.ErrorResult(errors.New("repository name is required"))
 	}
 
-	_, err := forgejo.Client().AddTeamRepository(teamID, orgName, repo)
+	_, err := forgejo.Client(ctx).AddTeamRepository(teamID, orgName, repo)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("add team repo err: %v", err))
 	}
@@ -216,7 +216,7 @@ func RemoveTeamRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		return to.ErrorResult(errors.New("repository name is required"))
 	}
 
-	_, err := forgejo.Client().RemoveTeamRepository(teamID, orgName, repo)
+	_, err := forgejo.Client(ctx).RemoveTeamRepository(teamID, orgName, repo)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("remove team repo err: %v", err))
 	}

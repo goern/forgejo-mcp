@@ -236,7 +236,7 @@ func GetIssueByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 	repo, _ := req.GetArguments()["repo"].(string)
 	index, _ := to.Float64(req.GetArguments()["index"])
 
-	issue, _, err := forgejo.Client().GetIssue(owner, repo, int64(index))
+	issue, _, err := forgejo.Client(ctx).GetIssue(owner, repo, int64(index))
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get issue err: %v", err))
 	}
@@ -289,7 +289,7 @@ func ListRepoIssuesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		opt.Labels = strings.Split(labels, ",")
 	}
 
-	issues, _, err := forgejo.Client().ListRepoIssues(owner, repo, opt)
+	issues, _, err := forgejo.Client(ctx).ListRepoIssues(owner, repo, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get issues list err: %v", err))
 	}
@@ -307,7 +307,7 @@ func CreateIssueFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 		Title: title,
 		Body:  body,
 	}
-	issue, _, err := forgejo.Client().CreateIssue(owner, repo, opt)
+	issue, _, err := forgejo.Client(ctx).CreateIssue(owner, repo, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("create issue err: %v", err))
 	}
@@ -324,7 +324,7 @@ func CreateIssueCommentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	opt := forgejo_sdk.CreateIssueCommentOption{
 		Body: body,
 	}
-	comment, _, err := forgejo.Client().CreateIssueComment(owner, repo, int64(index), opt)
+	comment, _, err := forgejo.Client(ctx).CreateIssueComment(owner, repo, int64(index), opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("create issue comment err: %v", err))
 	}
@@ -367,7 +367,7 @@ func UpdateIssueFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 		opt.Milestone = &milestoneID
 	}
 
-	issue, _, err := forgejo.Client().EditIssue(owner, repo, int64(index), opt)
+	issue, _, err := forgejo.Client(ctx).EditIssue(owner, repo, int64(index), opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("update issue err: %v", err))
 	}
@@ -400,13 +400,13 @@ func AddIssueLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		Labels: labelIDs,
 	}
 	
-	_, _, err := forgejo.Client().AddIssueLabels(owner, repo, int64(index), opt)
+	_, _, err := forgejo.Client(ctx).AddIssueLabels(owner, repo, int64(index), opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("add issue labels err: %v", err))
 	}
 	
 	// Fetch the updated issue to return it with the new labels
-	issue, _, err := forgejo.Client().GetIssue(owner, repo, int64(index))
+	issue, _, err := forgejo.Client(ctx).GetIssue(owner, repo, int64(index))
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get updated issue err: %v", err))
 	}
@@ -426,14 +426,14 @@ func RemoveIssueLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Cal
 		if err != nil {
 			return to.ErrorResult(fmt.Errorf("invalid label ID '%s': %v - labels must be numeric IDs", labelStr, err))
 		}
-		_, err = forgejo.Client().DeleteIssueLabel(owner, repo, int64(index), labelID)
+		_, err = forgejo.Client(ctx).DeleteIssueLabel(owner, repo, int64(index), labelID)
 		if err != nil {
 			return to.ErrorResult(fmt.Errorf("remove issue label err: %v", err))
 		}
 	}
 
 	// Fetch the updated issue to return it with the updated labels
-	issue, _, err := forgejo.Client().GetIssue(owner, repo, int64(index))
+	issue, _, err := forgejo.Client(ctx).GetIssue(owner, repo, int64(index))
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get updated issue err: %v", err))
 	}
@@ -458,7 +458,7 @@ func IssueStateChangeFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 		State: &stateType,
 	}
 
-	issue, _, err := forgejo.Client().EditIssue(owner, repo, int64(index), opt)
+	issue, _, err := forgejo.Client(ctx).EditIssue(owner, repo, int64(index), opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("change issue state err: %v", err))
 	}
@@ -504,7 +504,7 @@ func ListIssueCommentsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Cal
 		opt.Before = beforeTime
 	}
 
-	comments, _, err := forgejo.Client().ListIssueComments(owner, repo, int64(index), opt)
+	comments, _, err := forgejo.Client(ctx).ListIssueComments(owner, repo, int64(index), opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list issue comments err: %v", err))
 	}
@@ -517,7 +517,7 @@ func GetIssueCommentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 	repo, _ := req.GetArguments()["repo"].(string)
 	commentID, _ := to.Float64(req.GetArguments()["comment_id"])
 
-	comment, _, err := forgejo.Client().GetIssueComment(owner, repo, int64(commentID))
+	comment, _, err := forgejo.Client(ctx).GetIssueComment(owner, repo, int64(commentID))
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get issue comment err: %v", err))
 	}
@@ -534,7 +534,7 @@ func EditIssueCommentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 	opt := forgejo_sdk.EditIssueCommentOption{
 		Body: body,
 	}
-	comment, _, err := forgejo.Client().EditIssueComment(owner, repo, int64(commentID), opt)
+	comment, _, err := forgejo.Client(ctx).EditIssueComment(owner, repo, int64(commentID), opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("edit issue comment err: %v", err))
 	}
@@ -547,7 +547,7 @@ func DeleteIssueCommentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	repo, _ := req.GetArguments()["repo"].(string)
 	commentID, _ := to.Float64(req.GetArguments()["comment_id"])
 
-	_, err := forgejo.Client().DeleteIssueComment(owner, repo, int64(commentID))
+	_, err := forgejo.Client(ctx).DeleteIssueComment(owner, repo, int64(commentID))
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("delete issue comment err: %v", err))
 	}
@@ -578,7 +578,7 @@ func ListRepoMilestonesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 		State: forgejo_sdk.StateType(state),
 	}
 
-	milestones, _, err := forgejo.Client().ListRepoMilestones(owner, repo, opt)
+	milestones, _, err := forgejo.Client(ctx).ListRepoMilestones(owner, repo, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list repo milestones err: %v", err))
 	}
@@ -610,7 +610,7 @@ func ListRepoLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		},
 	}
 
-	repoLabels, _, err := forgejo.Client().ListRepoLabels(owner, repo, opt)
+	repoLabels, _, err := forgejo.Client(ctx).ListRepoLabels(owner, repo, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list repo labels err: %v", err))
 	}

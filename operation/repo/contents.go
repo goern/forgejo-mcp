@@ -53,7 +53,7 @@ func ListRepoContentsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 	ref, _ := req.GetArguments()["ref"].(string)
 	path, _ := req.GetArguments()["path"].(string)
 
-	contents, _, err := forgejo.Client().ListContents(owner, repo, ref, path)
+	contents, _, err := forgejo.Client(ctx).ListContents(owner, repo, ref, path)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list repo contents err: %v", err))
 	}
@@ -91,7 +91,7 @@ func GetRepoTreeFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 			PageSize: int(limit),
 		},
 	}
-	tree, _, err := forgejo.Client().GetTrees(owner, repo, ref, opt)
+	tree, _, err := forgejo.Client(ctx).GetTrees(owner, repo, ref, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get repo tree err: %v", err))
 	}

@@ -1,7 +1,10 @@
 package operation
 
 import (
+	"context"
 	"fmt"
+	"net/http"
+	"strings"
 
 	"codeberg.org/goern/forgejo-mcp/v2/operation/actions"
 	"codeberg.org/goern/forgejo-mcp/v2/operation/attachment"
@@ -138,7 +141,19 @@ func Run(transport, version string) error {
 		}
 		log.Info("MCP stdio server shutdown")
 	case "sse":
-		sseServer := server.NewSSEServer(mcpServer)
+		sseServer := server.NewSSEServer(mcpServer, server.WithSSEContextFunc(func(ctx context.Context, r *http.Request) context.Context {
+			auth := r.Header.Get("Authorization")
+			if strings.HasPrefix(auth, "token ") {
+				return forgejo.WithToken(ctx, strings.TrimPrefix(auth, "token "))
+			}
+			if strings.HasPrefix(auth, "Bearer ") {
+				return forgejo.WithToken(ctx, strings.TrimPrefix(auth, "Bearer "))
+			}
+			if auth != "" && !strings.Contains(auth, " ") {
+				return forgejo.WithToken(ctx, auth)
+			}
+			return ctx
+		}))
 		log.Info("Starting MCP SSE server",
 			log.IntField("port", flag.SSEPort),
 		)
@@ -155,7 +170,19 @@ func Run(transport, version string) error {
 		}
 		log.Info("MCP SSE server shutdown")
 	case "http":
-		httpServer := server.NewStreamableHTTPServer(mcpServer)
+		httpServer := server.NewStreamableHTTPServer(mcpServer, server.WithHTTPContextFunc(func(ctx context.Context, r *http.Request) context.Context {
+			auth := r.Header.Get("Authorization")
+			if strings.HasPrefix(auth, "token ") {
+				return forgejo.WithToken(ctx, strings.TrimPrefix(auth, "token "))
+			}
+			if strings.HasPrefix(auth, "Bearer ") {
+				return forgejo.WithToken(ctx, strings.TrimPrefix(auth, "Bearer "))
+			}
+			if auth != "" && !strings.Contains(auth, " ") {
+				return forgejo.WithToken(ctx, auth)
+			}
+			return ctx
+		}))
 		log.Info("Starting MCP streamable HTTP server",
 			log.IntField("port", flag.HTTPPort),
 		)

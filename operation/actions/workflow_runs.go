@@ -84,7 +84,7 @@ func ListWorkflowRunsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 		HeadSHA:   headSHA,
 	}
 
-	client := forgejo.Client()
+	client := forgejo.Client(ctx)
 	resp, _, err := client.ListRepoActionRuns(owner, repo, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("failed to list workflow runs: %w", err))
@@ -135,7 +135,7 @@ func GetWorkflowRunFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		return to.ErrorResult(errors.New("run_id must be a positive integer"))
 	}
 
-	client := forgejo.Client()
+	client := forgejo.Client(ctx)
 	run, _, err := client.GetRepoActionRun(owner, repo, runID)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("failed to get workflow run: %w", err))

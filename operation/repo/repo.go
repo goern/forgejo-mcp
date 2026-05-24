@@ -112,9 +112,9 @@ func CreateRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 	var repo *forgejo_sdk.Repository
 	var err error
 	if owner != "" {
-		repo, _, err = forgejo.Client().CreateOrgRepo(owner, opt)
+		repo, _, err = forgejo.Client(ctx).CreateOrgRepo(owner, opt)
 	} else {
-		repo, _, err = forgejo.Client().CreateRepo(opt)
+		repo, _, err = forgejo.Client(ctx).CreateRepo(opt)
 	}
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("create repo err: %v", err))
@@ -146,7 +146,7 @@ func ForkRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResu
 		Organization: organizationPtr,
 		Name:         namePtr,
 	}
-	_, _, err := forgejo.Client().CreateFork(user, repo, opt)
+	_, _, err := forgejo.Client(ctx).CreateFork(user, repo, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("fork repository error %v", err))
 	}
@@ -169,7 +169,7 @@ func ListMyReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 			PageSize: int(limit),
 		},
 	}
-	repos, _, err := forgejo.Client().ListMyRepos(opt)
+	repos, _, err := forgejo.Client(ctx).ListMyRepos(opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list my repositories error: %v", err))
 	}

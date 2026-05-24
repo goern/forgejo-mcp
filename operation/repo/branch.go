@@ -63,7 +63,7 @@ func CreateBranchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 	}
 	oldBranch, _ := req.GetArguments()["old_branch"].(string)
 
-	_, _, err := forgejo.Client().CreateBranch(owner, repo, forgejo_sdk.CreateBranchOption{
+	_, _, err := forgejo.Client(ctx).CreateBranch(owner, repo, forgejo_sdk.CreateBranchOption{
 		BranchName:    branch,
 		OldBranchName: oldBranch,
 	})
@@ -80,7 +80,7 @@ func DeleteBranchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 	repo, _ := req.GetArguments()["repo"].(string)
 	branch, _ := req.GetArguments()["branch"].(string)
 
-	success, _, err := forgejo.Client().DeleteRepoBranch(owner, repo, branch)
+	success, _, err := forgejo.Client(ctx).DeleteRepoBranch(owner, repo, branch)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("delete branch err: %v", err))
 	}
@@ -110,7 +110,7 @@ func ListBranchesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 		},
 	}
 
-	branches, _, err := forgejo.Client().ListRepoBranches(owner, repo, opt)
+	branches, _, err := forgejo.Client(ctx).ListRepoBranches(owner, repo, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list branches err: %v", err))
 	}

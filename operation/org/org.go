@@ -123,7 +123,7 @@ func CreateOrgFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRes
 		opt.Visibility = forgejo_sdk.VisibleType(v)
 	}
 
-	org, _, err := forgejo.Client().CreateOrg(opt)
+	org, _, err := forgejo.Client(ctx).CreateOrg(opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("create org err: %v", err))
 	}
@@ -137,7 +137,7 @@ func GetOrgFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult
 		return to.ErrorResult(errors.New("organization name is required"))
 	}
 
-	org, _, err := forgejo.Client().GetOrg(orgName)
+	org, _, err := forgejo.Client(ctx).GetOrg(orgName)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get org err: %v", err))
 	}
@@ -161,7 +161,7 @@ func ListMyOrgsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 			PageSize: int(limit),
 		},
 	}
-	orgs, _, err := forgejo.Client().ListMyOrgs(opt)
+	orgs, _, err := forgejo.Client(ctx).ListMyOrgs(opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list my orgs err: %v", err))
 	}
@@ -189,7 +189,7 @@ func ListUserOrgsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 			PageSize: int(limit),
 		},
 	}
-	orgs, _, err := forgejo.Client().ListUserOrgs(user, opt)
+	orgs, _, err := forgejo.Client(ctx).ListUserOrgs(user, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list user orgs err: %v", err))
 	}
@@ -220,13 +220,13 @@ func EditOrgFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResul
 		opt.Visibility = forgejo_sdk.VisibleType(v)
 	}
 
-	_, err := forgejo.Client().EditOrg(orgName, opt)
+	_, err := forgejo.Client(ctx).EditOrg(orgName, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("edit org err: %v", err))
 	}
 
 	// Fetch updated org to return
-	org, _, err := forgejo.Client().GetOrg(orgName)
+	org, _, err := forgejo.Client(ctx).GetOrg(orgName)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get updated org err: %v", err))
 	}
@@ -240,7 +240,7 @@ func DeleteOrgFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRes
 		return to.ErrorResult(errors.New("organization name is required"))
 	}
 
-	_, err := forgejo.Client().DeleteOrg(orgName)
+	_, err := forgejo.Client(ctx).DeleteOrg(orgName)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("delete org err: %v", err))
 	}

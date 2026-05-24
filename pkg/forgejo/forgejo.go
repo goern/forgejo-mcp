@@ -17,9 +17,44 @@ var (
 	clientOnce sync.Once
 )
 
-// Client returns a Forgejo client configured to connect to a Forgejo instance
-// We use the standard Forgejo SDK to ensure API compatibility
-func Client() *forgejo.Client {
+type contextKey string
+
+const (
+	TokenContextKey contextKey = "forgejo-token"
+)
+
+// WithToken adds a Forgejo token to the context.
+func WithToken(ctx context.Context, token string) context.Context {
+	return context.WithValue(ctx, TokenContextKey, token)
+}
+
+// Client returns a Forgejo client configured to connect to a Forgejo instance.
+// If a token is found in the context, a new ephemeral client is returned.
+// Otherwise, the shared singleton client is used.
+func Client(ctx context.Context) *forgejo.Client {
+	token, ok := ctx.Value(TokenContextKey).(string)
+	if ok && token != "" {
+		// Use configured user agent or default to forgejo-mcp/<version>
+		userAgent := flag.UserAgent
+		if userAgent == "" {
+			userAgent = "forgejo-mcp/" + flag.Version
+		}
+
+		c, err := forgejo.NewClient(flag.URL,
+			forgejo.SetToken(token),
+			forgejo.SetUserAgent(userAgent),
+		)
+		if err != nil {
+			log.ErrorCtx(ctx, "Failed to create ephemeral Forgejo client",
+				log.SanitizedURLField("url", flag.URL),
+				log.ErrorField(err),
+			)
+			// Fallback to singleton if ephemeral creation fails
+		} else {
+			return c
+		}
+	}
+
 	clientOnce.Do(func() {
 		if client == nil {
 			// Use configured user agent or default to forgejo-mcp/<version>
@@ -66,7 +101,7 @@ func VerifyConnection() error {
 		log.SanitizedURLField("url", flag.URL),
 	)
 
-	version, resp, err := Client().ServerVersion()
+	version, resp, err := Client(context.Background()).ServerVersion()
 	duration := time.Since(start)
 
 	if err != nil {
@@ -94,7 +129,7 @@ func HealthCheck() error {
 
 	log.Debug("Starting health check")
 
-	version, resp, err := Client().ServerVersion()
+	version, resp, err := Client(context.Background()).ServerVersion()
 	duration := time.Since(start)
 
 	if err != nil {

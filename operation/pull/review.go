@@ -119,7 +119,7 @@ func CreatePullReviewFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 		opt.Comments = comments
 	}
 
-	review, _, err := forgejo.Client().CreatePullReview(owner, repo, int64(index), opt)
+	review, _, err := forgejo.Client(ctx).CreatePullReview(owner, repo, int64(index), opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("create pull review err: %v", err))
 	}
@@ -140,7 +140,7 @@ func SubmitPullReviewFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 		Body:  body,
 	}
 
-	review, _, err := forgejo.Client().SubmitPullReview(owner, repo, int64(index), int64(id), opt)
+	review, _, err := forgejo.Client(ctx).SubmitPullReview(owner, repo, int64(index), int64(id), opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("submit pull review err: %v", err))
 	}
@@ -159,7 +159,7 @@ func DismissPullReviewFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Cal
 		Message: message,
 	}
 
-	_, err := forgejo.Client().DismissPullReview(owner, repo, int64(index), int64(id), opt)
+	_, err := forgejo.Client(ctx).DismissPullReview(owner, repo, int64(index), int64(id), opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("dismiss pull review err: %v", err))
 	}
@@ -173,7 +173,7 @@ func DeletePullReviewFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 	index, _ := to.Float64(req.GetArguments()["index"])
 	id, _ := to.Float64(req.GetArguments()["id"])
 
-	_, err := forgejo.Client().DeletePullReview(owner, repo, int64(index), int64(id))
+	_, err := forgejo.Client(ctx).DeletePullReview(owner, repo, int64(index), int64(id))
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("delete pull review err: %v", err))
 	}
@@ -196,7 +196,7 @@ func CreateReviewRequestsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 		opt.TeamReviewers = splitCSV(teamReviewers)
 	}
 
-	_, err := forgejo.Client().CreateReviewRequests(owner, repo, int64(index), opt)
+	_, err := forgejo.Client(ctx).CreateReviewRequests(owner, repo, int64(index), opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("create review requests err: %v", err))
 	}
@@ -219,7 +219,7 @@ func DeleteReviewRequestsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 		opt.TeamReviewers = splitCSV(teamReviewers)
 	}
 
-	_, err := forgejo.Client().DeleteReviewRequests(owner, repo, int64(index), opt)
+	_, err := forgejo.Client(ctx).DeleteReviewRequests(owner, repo, int64(index), opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("delete review requests err: %v", err))
 	}

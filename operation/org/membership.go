@@ -65,7 +65,7 @@ func ListOrgMembersFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 			PageSize: int(limit),
 		},
 	}
-	members, _, err := forgejo.Client().ListOrgMembership(orgName, opt)
+	members, _, err := forgejo.Client(ctx).ListOrgMembership(orgName, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list org members err: %v", err))
 	}
@@ -83,7 +83,7 @@ func CheckOrgMembershipFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 		return to.ErrorResult(errors.New("username is required"))
 	}
 
-	isMember, _, err := forgejo.Client().CheckOrgMembership(orgName, user)
+	isMember, _, err := forgejo.Client(ctx).CheckOrgMembership(orgName, user)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("check org membership err: %v", err))
 	}
@@ -105,7 +105,7 @@ func RemoveOrgMemberFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 		return to.ErrorResult(errors.New("username is required"))
 	}
 
-	_, err := forgejo.Client().DeleteOrgMembership(orgName, user)
+	_, err := forgejo.Client(ctx).DeleteOrgMembership(orgName, user)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("remove org member err: %v", err))
 	}
