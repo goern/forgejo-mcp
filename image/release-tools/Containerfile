@@ -38,31 +38,32 @@ RUN GOBIN=/usr/local/bin go install golang.org/x/vuln/cmd/govulncheck@${GOVULNCH
 # Avoids go install re-resolving the transitive dep graph from proxy.golang.org each build.
 # Expected SHA256 is recorded in VERSIONS.md; update both together on version bumps.
 RUN set -ex \
-    && curl -sSfLo /tmp/goreleaser.tar.gz \
+    && curl -sSfLo /tmp/goreleaser_Linux_x86_64.tar.gz \
        "https://github.com/goreleaser/goreleaser/releases/download/${GORELEASER_VERSION}/goreleaser_Linux_x86_64.tar.gz" \
     && curl -sSfLo /tmp/goreleaser-checksums.txt \
        "https://github.com/goreleaser/goreleaser/releases/download/${GORELEASER_VERSION}/checksums.txt" \
     && echo "${GORELEASER_SHA256}  goreleaser_Linux_x86_64.tar.gz" > /tmp/goreleaser-expected.txt \
     && cd /tmp && sha256sum -c goreleaser-expected.txt \
     && grep " goreleaser_Linux_x86_64.tar.gz$" /tmp/goreleaser-checksums.txt | sha256sum -c - \
-    && tar -xzf /tmp/goreleaser.tar.gz -C /usr/local/bin goreleaser \
+    && tar -xzf /tmp/goreleaser_Linux_x86_64.tar.gz -C /usr/local/bin goreleaser \
     && chmod +x /usr/local/bin/goreleaser \
-    && rm /tmp/goreleaser.tar.gz /tmp/goreleaser-checksums.txt /tmp/goreleaser-expected.txt
+    && rm /tmp/goreleaser_Linux_x86_64.tar.gz /tmp/goreleaser-checksums.txt /tmp/goreleaser-expected.txt
 
 # syft: download prebuilt tarball + SHA256-verify against publisher checksums.
 # Replaces piped install.sh (no integrity control) with explicit checksum verification.
 # Expected SHA256 is recorded in VERSIONS.md; update both together on version bumps.
 RUN set -ex \
-    && curl -sSfLo /tmp/syft.tar.gz \
-       "https://github.com/anchore/syft/releases/download/${SYFT_VERSION}/syft_${SYFT_VERSION#v}_linux_amd64.tar.gz" \
+    && SYFT_VER="${SYFT_VERSION#v}" \
+    && curl -sSfLo "/tmp/syft_${SYFT_VER}_linux_amd64.tar.gz" \
+       "https://github.com/anchore/syft/releases/download/${SYFT_VERSION}/syft_${SYFT_VER}_linux_amd64.tar.gz" \
     && curl -sSfLo /tmp/syft-checksums.txt \
-       "https://github.com/anchore/syft/releases/download/${SYFT_VERSION}/syft_${SYFT_VERSION#v}_checksums.txt" \
-    && echo "${SYFT_SHA256}  syft_${SYFT_VERSION#v}_linux_amd64.tar.gz" > /tmp/syft-expected.txt \
+       "https://github.com/anchore/syft/releases/download/${SYFT_VERSION}/syft_${SYFT_VER}_checksums.txt" \
+    && echo "${SYFT_SHA256}  syft_${SYFT_VER}_linux_amd64.tar.gz" > /tmp/syft-expected.txt \
     && cd /tmp && sha256sum -c syft-expected.txt \
-    && grep " syft_${SYFT_VERSION#v}_linux_amd64.tar.gz$" /tmp/syft-checksums.txt | sha256sum -c - \
-    && tar -xzf /tmp/syft.tar.gz -C /usr/local/bin syft \
+    && grep " syft_${SYFT_VER}_linux_amd64.tar.gz$" /tmp/syft-checksums.txt | sha256sum -c - \
+    && tar -xzf "/tmp/syft_${SYFT_VER}_linux_amd64.tar.gz" -C /usr/local/bin syft \
     && chmod +x /usr/local/bin/syft \
-    && rm /tmp/syft.tar.gz /tmp/syft-checksums.txt /tmp/syft-expected.txt
+    && rm "/tmp/syft_${SYFT_VER}_linux_amd64.tar.gz" /tmp/syft-checksums.txt /tmp/syft-expected.txt
 
 # cosign: curl prebuilt linux/amd64 binary + verify against release checksum manifest.
 # Download to /tmp/cosign-linux-amd64 so sha256sum -c can find the file by its original
