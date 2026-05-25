@@ -74,7 +74,7 @@ jobs:
             exit 1
           fi
           chmod +x "$BIN"
-          BANNER=$("$BIN" --help 2>&1 | head -1 || true)
+          BANNER=$("$BIN" version 2>&1 | head -1 || true)
           echo "Banner: $BANNER"
           if ! echo "$BANNER" | grep -qE "^forgejo-mcp ${VERSION}([+-]|$)"; then
             echo "::error::Smoke-test failed: banner '$BANNER' does not match expected version '${VERSION}'" >&2
