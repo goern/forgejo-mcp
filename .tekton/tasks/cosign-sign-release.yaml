@@ -7,7 +7,7 @@ metadata:
 spec:
   description: |
     Signs the GoReleaser-produced `checksums.txt` with cosign (key from the
-    `cosign-release-key` Secret) and uploads the resulting `.sig` as a
+    `cosign-signing-key` Secret) and uploads the resulting `.sig` as a
     release asset. Signing the checksum file covers all archives + SBOMs
     transitively via the checksum chain.
 
@@ -15,11 +15,9 @@ spec:
     behavior of .forgejo/workflows/release.yml so releases continue to ship
     if signing infrastructure is unavailable.
 
-    Provisioning the Secret in op1st-pipelines:
-      oc -n op1st-pipelines create secret generic cosign-release-key \
-        --from-file=cosign.key=cosign.key \
-        --from-literal=cosign.password='<password>' \
-        --from-file=cosign.pub=cosign.pub
+    The `cosign-signing-key` Secret is provisioned in op1st-pipelines
+    upstream of this Task (typically via the op1st-gitops repo + emberstack
+    reflector). Expected keys: cosign.key, cosign.password, cosign.pub.
   params:
     - name: COSIGN_IMAGE
       description: Container image carrying the cosign CLI.
@@ -51,13 +49,13 @@ spec:
         - name: COSIGN_PRIVATE_KEY
           valueFrom:
             secretKeyRef:
-              name: cosign-release-key
+              name: cosign-signing-key
               key: cosign.key
               optional: true
         - name: COSIGN_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: cosign-release-key
+              name: cosign-signing-key
               key: cosign.password
               optional: true
       script: |
@@ -90,7 +88,7 @@ spec:
         - name: GITEA_TOKEN
           valueFrom:
             secretKeyRef:
-              name: forgejo-release-token
+              name: op1st-release-token
               key: token
       script: |
         #!/usr/bin/env bash

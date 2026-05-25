@@ -9,21 +9,32 @@ common failure modes.
 
 The pipeline runs in the `op1st-pipelines` OpenShift namespace, which
 already hosts the PR + push CI pipelines via the
-`codeberg-org-goern-forgejo-mcp` `Repository` CR. Two additional Secrets
-are required before the first release tag:
+`codeberg-org-goern-forgejo-mcp` `Repository` CR.
+
+Both required Secrets are already present (verified 2026-05-25):
 
 ```bash
-oc -n op1st-pipelines create secret generic forgejo-release-token \
-  --from-literal=token='<codeberg-pat-with-write-repository>'
-
-oc -n op1st-pipelines create secret generic cosign-release-key \
-  --from-file=cosign.key=cosign.key \
-  --from-literal=cosign.password='<cosign-password>' \
-  --from-file=cosign.pub=cosign.pub
+oc -n op1st-pipelines get secret op1st-release-token cosign-signing-key
+# NAME                  TYPE     DATA   AGE
+# op1st-release-token   Opaque   2      …
+# cosign-signing-key    Opaque   3      …
 ```
 
-If `cosign-release-key` is omitted, the pipeline still completes — the
-signing step warns and skips, matching `.forgejo/workflows/release.yml`.
+- `op1st-release-token` is mirrored from `op1st-gitops/op1st-release-token`
+  via the emberstack reflector. Do **not** rotate it here — rotate in
+  `op1st-gitops` and the reflector propagates.
+- `cosign-signing-key` carries `cosign.key`, `cosign.password`,
+  `cosign.pub`. Referenced as `optional: true` — if removed the pipeline
+  still completes, unsigned, matching `.forgejo/workflows/release.yml`.
+
+Operator must confirm **once** (cluster-side inspection cannot validate
+this):
+
+- `op1st-release-token.token` has Codeberg scope `write:repository` on
+  `goern/forgejo-mcp` (asset upload + release publish).
+- `cosign-signing-key.cosign.pub` content matches the bytes at
+  `secrets/cosign.pub` in this repo (otherwise downstream
+  `cosign verify-blob` fails).
 
 The PaC `Repository` CR does not need changes: it scopes by repo URL,
 not by PipelineRun, so the new release pipeline is picked up
@@ -116,11 +127,10 @@ Symptom: warning `COSIGN_PRIVATE_KEY not set; skipping signature step.`
 Cause: the Secret key name does not match `cosign.key`/`cosign.password`,
 or the Secret is in a different namespace.
 
-Verify:
+Verify (keys only — never decode values):
 
 ```bash
-oc -n op1st-pipelines get secret cosign-release-key -o json \
-  | jq '.data | keys'
+oc -n op1st-pipelines get secret cosign-signing-key -o jsonpath='{.data}' | jq 'keys'
 ```
 
 Expected: `["cosign.key", "cosign.password", "cosign.pub"]`.

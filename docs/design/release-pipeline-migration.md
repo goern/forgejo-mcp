@@ -87,32 +87,44 @@ canonical one.
 
 ## Secrets
 
-Required in the `op1st-pipelines` namespace:
+Required in the `op1st-pipelines` namespace. Both already exist
+(provisioned upstream — see "Source of truth" below):
 
-| Secret               | Keys                                       | Purpose                                            |
-|----------------------|--------------------------------------------|----------------------------------------------------|
-| `forgejo-release-token` | `token`                                  | Codeberg PAT with `write:repository` for asset upload + GoReleaser publish |
-| `cosign-release-key` | `cosign.key`, `cosign.password`, `cosign.pub` | Cosign keypair for `sign-blob` of `checksums.txt` |
+| Secret                | Type    | Keys                                       | Used by                                             |
+|-----------------------|---------|--------------------------------------------|-----------------------------------------------------|
+| `op1st-release-token` | Opaque  | `token`, `username`                        | GoReleaser publish + Codeberg release asset uploads |
+| `cosign-signing-key`  | Opaque  | `cosign.key`, `cosign.password`, `cosign.pub` | `sign-blob` of `checksums.txt`                   |
 
-Provisioning commands (run by an op1st-pipelines admin):
+### Source of truth
 
-```bash
-# Forgejo PAT — reuses the token already configured for the Codeberg-runner
-# integration if it carries write:repository.
-oc -n op1st-pipelines create secret generic forgejo-release-token \
-  --from-literal=token='<codeberg-pat>'
+Neither Secret is created directly in `op1st-pipelines`:
 
-# Cosign keypair — generate with `cosign generate-key-pair` if not present;
-# commit cosign.pub to the repo (already done for the Forgejo workflow).
-oc -n op1st-pipelines create secret generic cosign-release-key \
-  --from-file=cosign.key=cosign.key \
-  --from-literal=cosign.password='<password>' \
-  --from-file=cosign.pub=cosign.pub
-```
+- `op1st-release-token` is auto-mirrored from `op1st-gitops/op1st-release-token`
+  via the [emberstack reflector](https://github.com/emberstack/kubernetes-reflector).
+  Rotation happens once in `op1st-gitops`; the reflector propagates to every
+  consuming namespace within ~seconds.
+- `cosign-signing-key` is provisioned alongside Tekton Chains tooling
+  (matches the `signing-secret` shape used by Chains, with `cosign.key`,
+  `cosign.password`, `cosign.pub` keys).
 
-The `cosign-release-key` Secret is referenced with `optional: true` in
-the Task — if it is absent the pipeline still completes, just unsigned,
-matching the Forgejo workflow's fail-open behavior.
+The pipeline references `cosign-signing-key` with `optional: true` — if
+absent, the signing step warns and exits 0, matching
+`.forgejo/workflows/release.yml`'s fail-open behavior.
+
+### Operator-confirmable preconditions
+
+These cannot be validated from inside the cluster (token scopes are not
+visible from `oc get secret`). Operator must confirm once on Codeberg UI:
+
+- The PAT stored in `op1st-release-token.token` carries
+  `write:repository` on `goern/forgejo-mcp` (covers release publish +
+  asset upload). Read-only PaC tokens like `codeberg-runner-openshift-pac`
+  do **not** suffice.
+- The PAT identity (e.g. `b4mad-release-bot`) is whoever should appear as
+  release author in the Codeberg UI.
+- `cosign-signing-key.cosign.pub` matches `secrets/cosign.pub` committed
+  to the repo. Mismatch means `cosign verify-blob` failures for every
+  downstream user following the README "Verifying Releases" chapter.
 
 ## Trigger semantics
 

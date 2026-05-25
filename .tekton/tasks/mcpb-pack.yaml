@@ -53,7 +53,7 @@ spec:
         - name: GITEA_TOKEN
           valueFrom:
             secretKeyRef:
-              name: forgejo-release-token
+              name: op1st-release-token
               key: token
       script: |
         #!/usr/bin/env bash
