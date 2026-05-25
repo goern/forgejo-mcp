@@ -1,3 +1,13 @@
+## [2.24.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.24.0...v2.24.1) (2026-05-25)
+
+### :bug: Fixes
+
+* **ci:** 🐛 collapse goreleaser Task install+run into single step ([94b2c89](https://codeberg.org/goern/forgejo-mcp/commit/94b2c89a040499316dc1947fd7ca12538f7cffa3))
+
+### :repeat: Chore
+
+* 🗂️ beads jsonl post-[#153](https://codeberg.org/goern/forgejo-mcp/issues/153) merge ([1858753](https://codeberg.org/goern/forgejo-mcp/commit/1858753435480cf3726577f0ee5d8f8b9ca9d240))
+
 ## [2.24.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.23.1...v2.24.0) (2026-05-25)
 
 ### :sparkles: Features
