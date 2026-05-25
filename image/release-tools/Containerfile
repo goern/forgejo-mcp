@@ -7,7 +7,9 @@
 ARG HI_GO_TAG=latest-builder
 ARG HI_GO_DIGEST=sha256:d8c8b702b8a54150e8fdca86753f581d98c551ab8a3fd429886d4ddd4e949894
 ARG SYFT_VERSION=v1.44.0
+ARG SYFT_SHA256=0e91737aee2b5baf1d255b959630194a302335d848ff97bb07921eb6205b5f5a
 ARG GORELEASER_VERSION=v2.16.0
+ARG GORELEASER_SHA256=eaae05b5eba07533bd0f06846b68c808399504784df00c62eb219541fc04e5e2
 ARG COSIGN_VERSION=v3.0.6
 ARG GOVULNCHECK_VERSION=latest
 ARG MCPB_VERSION=2.1.2
@@ -19,7 +21,9 @@ ARG MCPB_VERSION=2.1.2
 FROM registry.access.redhat.com/hi/go:${HI_GO_TAG}@${HI_GO_DIGEST} AS tools-builder
 
 ARG SYFT_VERSION
+ARG SYFT_SHA256
 ARG GORELEASER_VERSION
+ARG GORELEASER_SHA256
 ARG COSIGN_VERSION
 ARG GOVULNCHECK_VERSION
 ARG MCPB_VERSION
@@ -27,15 +31,38 @@ ARG MCPB_VERSION
 # Install build-time deps: tar+gzip+xz for syft install.sh archive extraction; curl for binary fetches
 RUN dnf install -y nodejs npm curl ca-certificates tar gzip xz && dnf clean all
 
-# goreleaser: install via go install from pinned tag
-RUN GOBIN=/usr/local/bin go install github.com/goreleaser/goreleaser/v2@${GORELEASER_VERSION}
-
 # govulncheck: install via go install (Go module proxy + sumdb integrity)
 RUN GOBIN=/usr/local/bin go install golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}
 
-# syft: install via official install script at the pinned release tag
-RUN curl -sSfL "https://raw.githubusercontent.com/anchore/syft/${SYFT_VERSION}/install.sh" \
-    | sh -s -- -b /usr/local/bin ${SYFT_VERSION}
+# goreleaser: download prebuilt tarball + SHA256-verify against publisher checksums.txt.
+# Avoids go install re-resolving the transitive dep graph from proxy.golang.org each build.
+# Expected SHA256 is recorded in VERSIONS.md; update both together on version bumps.
+RUN set -ex \
+    && curl -sSfLo /tmp/goreleaser.tar.gz \
+       "https://github.com/goreleaser/goreleaser/releases/download/${GORELEASER_VERSION}/goreleaser_Linux_x86_64.tar.gz" \
+    && curl -sSfLo /tmp/goreleaser-checksums.txt \
+       "https://github.com/goreleaser/goreleaser/releases/download/${GORELEASER_VERSION}/checksums.txt" \
+    && echo "${GORELEASER_SHA256}  goreleaser_Linux_x86_64.tar.gz" > /tmp/goreleaser-expected.txt \
+    && cd /tmp && sha256sum -c goreleaser-expected.txt \
+    && grep " goreleaser_Linux_x86_64.tar.gz$" /tmp/goreleaser-checksums.txt | sha256sum -c - \
+    && tar -xzf /tmp/goreleaser.tar.gz -C /usr/local/bin goreleaser \
+    && chmod +x /usr/local/bin/goreleaser \
+    && rm /tmp/goreleaser.tar.gz /tmp/goreleaser-checksums.txt /tmp/goreleaser-expected.txt
+
+# syft: download prebuilt tarball + SHA256-verify against publisher checksums.
+# Replaces piped install.sh (no integrity control) with explicit checksum verification.
+# Expected SHA256 is recorded in VERSIONS.md; update both together on version bumps.
+RUN set -ex \
+    && curl -sSfLo /tmp/syft.tar.gz \
+       "https://github.com/anchore/syft/releases/download/${SYFT_VERSION}/syft_${SYFT_VERSION#v}_linux_amd64.tar.gz" \
+    && curl -sSfLo /tmp/syft-checksums.txt \
+       "https://github.com/anchore/syft/releases/download/${SYFT_VERSION}/syft_${SYFT_VERSION#v}_checksums.txt" \
+    && echo "${SYFT_SHA256}  syft_${SYFT_VERSION#v}_linux_amd64.tar.gz" > /tmp/syft-expected.txt \
+    && cd /tmp && sha256sum -c syft-expected.txt \
+    && grep " syft_${SYFT_VERSION#v}_linux_amd64.tar.gz$" /tmp/syft-checksums.txt | sha256sum -c - \
+    && tar -xzf /tmp/syft.tar.gz -C /usr/local/bin syft \
+    && chmod +x /usr/local/bin/syft \
+    && rm /tmp/syft.tar.gz /tmp/syft-checksums.txt /tmp/syft-expected.txt
 
 # cosign: curl prebuilt linux/amd64 binary + verify against release checksum manifest.
 # Download to /tmp/cosign-linux-amd64 so sha256sum -c can find the file by its original

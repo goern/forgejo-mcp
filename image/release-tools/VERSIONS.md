@@ -13,12 +13,12 @@ Go version shipped: `1.26.3` (from image label `org.opencontainers.image.version
 
 ## Tools Installed via Build Stage (compiled/fetched)
 
-| Tool | Version | Source | Notes |
-|---|---|---|---|
-| `syft` | `v1.44.0` | curl install script from anchore releases | Binary at `/usr/local/bin/syft` |
-| `goreleaser` | `v2.16.0` | `go install github.com/goreleaser/goreleaser/v2@v2.16.0` | Binary at `/usr/local/bin/goreleaser` |
-| `cosign` | `v3.0.6` | curl prebuilt linux/amd64 binary from sigstore releases | Binary at `/usr/local/bin/cosign` |
-| `govulncheck` | `latest` | `go install golang.org/x/vuln/cmd/govulncheck@latest` | Binary at `/usr/local/bin/govulncheck`; Renovate tracks `golang.org/x/vuln` |
+| Tool | Version | Source | SHA256 (linux/amd64 tarball) | Notes |
+|---|---|---|---|---|
+| `syft` | `v1.44.0` | prebuilt `syft_1.44.0_linux_amd64.tar.gz` from anchore releases | `0e91737aee2b5baf1d255b959630194a302335d848ff97bb07921eb6205b5f5a` | Verified against `syft_1.44.0_checksums.txt`. Binary at `/usr/local/bin/syft`. Update `SYFT_SHA256` ARG in Containerfile on bump. |
+| `goreleaser` | `v2.16.0` | prebuilt `goreleaser_Linux_x86_64.tar.gz` from goreleaser releases | `eaae05b5eba07533bd0f06846b68c808399504784df00c62eb219541fc04e5e2` | Verified against `checksums.txt`. Binary at `/usr/local/bin/goreleaser`. Update `GORELEASER_SHA256` ARG in Containerfile on bump. |
+| `cosign` | `v3.0.6` | prebuilt `cosign-linux-amd64` from sigstore releases | see `cosign_checksums.txt` (runtime-fetched) | SHA256 verified at build time against cosign_checksums.txt. Binary at `/usr/local/bin/cosign`. |
+| `govulncheck` | `latest` | `go install golang.org/x/vuln/cmd/govulncheck@latest` | n/a (go sumdb integrity) | Binary at `/usr/local/bin/govulncheck`; Renovate tracks `golang.org/x/vuln` |
 
 ## Tools Installed via dnf (final stage)
 
