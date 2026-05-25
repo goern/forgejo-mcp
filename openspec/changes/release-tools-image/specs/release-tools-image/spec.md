@@ -11,9 +11,13 @@ No file under any other path SHALL be added, modified, or deleted by this capabi
 
 #### Scenario: Lift-out to separate project
 
-- **WHEN** a maintainer copies `image/release-tools/` and `.tekton/release-tools/` to a new repository
-- **AND** updates the registry path in `.tekton/release-tools/on-tag-publish.yaml`
-- **AND** registers the new repository as a PaC `Repository` CR in the same op1st-pipelines namespace
+The lift is NOT a one-step `git mv`. The full operator procedure is:
+
+- **WHEN** a maintainer `git mv`s `image/release-tools/` and `.tekton/release-tools/` to a new repository
+- **AND** registers the new repository as a PaC `Repository` CR in the `op1st-pipelines` namespace (separate manifest in `op1st-emea-b4mad`)
+- **AND** ensures the new namespace has read access to `cosign-signing-key` — either by keeping PipelineRuns in `op1st-pipelines` itself, or by extending the emberstack reflector ruleset to mirror the Secret into the new namespace
+- **AND** updates the registry path string in `on-tag-publish.yaml` (if the new project ships to a different registry)
+- **AND** edits ADR cross-references in this source repo's `docs/design/release-pipeline-migration.md` to point at the new location
 - **THEN** the build and publish pipelines SHALL function unchanged, producing the same signed image at the new registry path
 
 #### Scenario: Forgejo-mcp Go change does not touch image tree
@@ -38,7 +42,7 @@ Substituting a different base image (e.g. `docker.io/library/golang`, `chainguar
 #### Scenario: Image declares its Hummingbird lineage
 
 - **WHEN** `podman inspect <image-ref>` is invoked
-- **THEN** `LABEL org.opencontainers.image.base.name` SHALL contain `registry.access.redhat.com/hi/go`
+- **THEN** `LABEL org.opencontainers.image.base.name` SHALL equal the exact pinned Hummingbird tag recorded in `VERSIONS.md` (e.g. `registry.access.redhat.com/hi/go:1.25-builder`), not merely contain a substring — substring matching can be faked by a malicious base swap that retains the original label string
 
 ### Requirement: Bundled tools with pinned versions
 
@@ -68,11 +72,22 @@ The Containerfile MUST include a final-stage `RUN` step that exercises each tool
 - **WHEN** `podman run --rm --network=none <image-ref> sh -c 'npx -y @anthropic-ai/mcpb --version'`
 - **THEN** the command SHALL exit 0 (npm cache prewarmed in build stage)
 
+#### Scenario: @anthropic-ai/mcpb installs from a pinned lockfile, not from the live npm registry
+
+The build stage SHALL install `@anthropic-ai/mcpb` via `npm ci --ignore-scripts` against a committed `image/release-tools/npm/package-lock.json` that pins the package and every transitive dependency by integrity hash. The tarball SHA256 SHALL also be recorded in `VERSIONS.md` so a manual integrity check can be performed without running npm.
+
+- **WHEN** an attacker publishes a malicious new version of `@anthropic-ai/mcpb` (or any of its transitive deps) to the npm registry
+- **AND** the image is rebuilt from the same git revision
+- **THEN** the build SHALL produce an image bit-identical to the previous build, because `npm ci` resolves only what the lockfile records
+- **AND** uplift to the new package version SHALL require an explicit commit that updates the lockfile (Renovate-managed, human-reviewed)
+
 ### Requirement: Image is cosign-signed at publish time
 
 The tag-publish pipeline SHALL sign the published image manifest with cosign using the `cosign-signing-key` Secret in the `op1st-pipelines` namespace. The signature SHALL be attached to the image registry such that `cosign verify --key <public-key-url> <image-ref>` succeeds for any consumer.
 
 The public key URL referenced in the README SHALL be identical to the URL referenced for forgejo-mcp release artifact verification (single source of truth).
+
+**Signing posture diverges from the forgejo-mcp release pipeline.** The release pipeline mounts `cosign-signing-key` with `optional: true` (fail-open: unsigned release still ships if the Secret is absent). The image-publish pipeline mounts the same Secret with `optional: false` (fail-closed: missing key → Failed PipelineRun → image not advertised). Rationale: an unsigned release-tools image is a supply-chain regression because downstream Tasks execute its contents with signing-key access; an unsigned `checksums.txt` for a forgejo-mcp release is a UX regression only. The asymmetry is intentional and recorded in the ADR addendum.
 
 #### Scenario: Published image verifies against the documented key
 
@@ -86,6 +101,14 @@ The public key URL referenced in the README SHALL be identical to the URL refere
 - **THEN** the PipelineRun status SHALL be Failed
 - **AND** the image SHALL NOT be advertised to consumers via tag promotion
 
+#### Scenario: Sign-fail does not leave an unsigned tag in the registry (TOCTOU)
+
+The publish pipeline SHALL push to the registry by digest only (no human-readable tag) BEFORE the cosign-sign Step. The human-readable `vMAJOR.MINOR.PATCH` tag SHALL be promoted (via `crane tag` or equivalent) ONLY after cosign-sign succeeds. Registry tag mutability SHOULD be disabled.
+
+- **WHEN** the publish pipeline pushes a manifest by digest and the subsequent cosign-sign Step fails
+- **THEN** no `vMAJOR.MINOR.PATCH` tag SHALL resolve to that digest in the registry
+- **AND** the previous good `vMAJOR.MINOR.PATCH` (if any) SHALL still resolve to its prior signed digest
+
 ### Requirement: SBOM attached as registry artifact
 
 The publish pipeline SHALL emit a CycloneDX SBOM via `syft <image-ref>` and attach it to the published image manifest. Consumers SHALL be able to retrieve the SBOM via `cosign download sbom <image-ref>` or via the OCI referrers API.
@@ -97,13 +120,15 @@ The publish pipeline SHALL emit a CycloneDX SBOM via `syft <image-ref>` and atta
 
 ### Requirement: PR build pipeline CEL-gated to release-tools paths
 
-The PaC PipelineRun at `.tekton/release-tools/on-pull-request-build.yaml` SHALL include an `on-cel-expression` annotation that restricts execution to PRs whose changed file set is bounded by `^(image/release-tools/|\.tekton/release-tools/).*`.
+The PaC PipelineRun at `.tekton/release-tools/on-pull-request-build.yaml` SHALL include an `on-cel-expression` annotation that fires when ANY changed file matches `^(image/release-tools/|\.tekton/release-tools/).*`. The expression SHALL use `files.any.exists`, NOT `files.all.exists` — the latter requires every changed file to match, so a hybrid PR (image change + unrelated typo fix) would silently fail to fire the build.
+
+Isolation (image-tree changes MUST NOT be mixed with Go code changes in the same PR) is enforced by code review, not by the CEL gate. The CEL stays permissive about firing the build.
 
 #### Scenario: PR touching forgejo-mcp Go code does not fire image build
 
 - **WHEN** a PR modifies `operation/issues/create.go`
 - **AND** does not modify any file under `image/release-tools/` or `.tekton/release-tools/`
-- **THEN** no `on-pull-request-build` PipelineRun SHALL appear in `op1st-pipelines` for that PR
+- **THEN** no `on-pull-request-build` PipelineRun SHALL appear in `op1st-pipelines` for that PR — observed via `tkn pr list -n op1st-pipelines` filtered by repository and PR commit SHA, expected to return zero matching runs
 
 #### Scenario: PR touching the Containerfile fires the image build
 

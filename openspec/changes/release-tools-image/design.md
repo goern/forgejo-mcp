@@ -44,12 +44,12 @@ Final stage: `hi/go:<ver>-builder` + `dnf install nodejs npm jq curl ca-certific
 
 PaC supports `pipelinesascode.tekton.dev/on-cel-expression`. Two gates:
 
-**PR build pipeline** — runs when any file under `image/release-tools/` or `.tekton/release-tools/` changes:
+**PR build pipeline** — runs when ANY changed file is under `image/release-tools/` or `.tekton/release-tools/`. Uses `files.any.exists`, not `files.all.exists`: the latter requires EVERY changed file to match (so a hybrid PR adding a typo fix elsewhere would silently fail the gate). Isolation (no Go-file changes alongside image-tree changes) is enforced by review, not by CEL — CEL stays permissive about firing the build.
 
 ```yaml
 pipelinesascode.tekton.dev/on-cel-expression: |
   event == "pull_request" && target_branch == "main" &&
-  files.all.exists(p, p.matches("^(image/release-tools/|\\.tekton/release-tools/).*"))
+  files.any.exists(p, p.matches("^(image/release-tools/|\\.tekton/release-tools/).*"))
 ```
 
 **Tag publish pipeline** — runs only on tags scoped to release-tools:
@@ -69,7 +69,17 @@ Working assumption: `quay.io/operate-first/release-tools:vX.Y.Z` (plus `:latest`
 
 Tag scheme: `release-tools/vMAJOR.MINOR.PATCH`. The `release-tools/` prefix is what the tag-publish pipeline matches on; same repo can carry both `v2.24.x` (forgejo-mcp) and `release-tools/v1.0.0` (image) without ambiguity.
 
-Versioning policy: semver of the image itself, NOT the embedded Go version. A Go bump from 1.25 → 1.26 is a MAJOR (consumer rebuilds). A goreleaser patch bump is a PATCH.
+**Versioning policy — image-API semver, not bundled-tool semver:**
+
+| Bump | Triggers |
+|---|---|
+| MAJOR | base image swap (Hummingbird → other), removed bundled tool, removed/moved binary path (`/usr/local/bin/X`), breaking CLI change in any bundled tool, shell removed from final stage |
+| MINOR | new bundled tool added, Hummingbird base MINOR bump, Go version bump within the same Go major, bundled tool MINOR bump (e.g. goreleaser v2.6 → v2.7) |
+| PATCH | bundled tool PATCH bumps, security backports, image rebuild with no observable contract change |
+
+Rationale: consumers are Tekton Tasks that pin by tag (or digest), not Go code linking a library. The image's "interface" is the set of bundled tools at known paths with stable CLI contracts — Go's own compatibility guarantee makes Go minor bumps invisible to the goreleaser CLI. Treating Go bumps as MAJOR would convert routine Renovate PRs into ADR paperwork events and defeat the point of automation. MAJOR is reserved for actual interface breaks.
+
+Consumers wanting maximum stability SHOULD pin by digest or by full `vMAJOR.MINOR.PATCH`. The README documents this recommendation.
 
 ### D5: Signing
 
@@ -108,3 +118,8 @@ This change does not migrate existing release Tasks. It produces an image and it
 - Final registry path: `quay.io/operate-first/release-tools`, `ghcr.io/operate-first/...`, or `codeberg.org/operate-first/...`? Maintainer decision.
 - Should the image also bake in `tkn` CLI for emergency operator use? Defer — adds 15 MB; can be a follow-up.
 - Multi-arch (arm64) — defer until Hummingbird publishes `hi/go:arm64` and a buildah-with-qemu Task exists in op1st-pipelines.
+- **Hummingbird base health monitoring** — what cadence for tracking `hi/go` tag lag vs upstream Go releases? What second-source mirror if Red Hat pulls a tag? Track in a separate ops-runbook change once we have one CVE-cycle of operational data. (forgejo-mcp-bd-A6L6)
+- **Tighten pinning** — `go install` for goreleaser does not pin transitive deps; curl-fetched syft/cosign binaries lack SHA256 verify. Separate follow-up change to vendor goreleaser source + SHA256-verify all curl downloads. (forgejo-mcp-bd-L2)
+- **Key-split** — release-tools image signing currently reuses `cosign-signing-key` (also used by release artifact signing). A compromised release-tools image could sign attacker binaries with the same key. Split into two keypairs (one per scope) once op1st-pipelines can provision the second secret. (forgejo-mcp-bd-L4)
+- **SLSA provenance via Tekton Chains** — Chains is deployed in op1st-pipelines but the publish pipeline does not consume its in-toto attestations. Follow-up change to publish SLSA v1.0 provenance as an OCI referrer alongside the cosign signature. (forgejo-mcp-bd-L5)
+- **CVE rescan cadence between Renovate bumps** — Renovate handles version bumps but does not surface CVEs landing between bumps. Wire `grype` (or `trivy`) into a scheduled PipelineRun against the published image and open issues on findings. (forgejo-mcp-bd-L6)
