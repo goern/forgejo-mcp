@@ -9,6 +9,20 @@ condition = "AND"
 paths = ['''(?i).*\.ya?ml$''']
 regexes = ['''^Ag[a-zA-Z0-9+/]{500,}={0,2}$''']
 
+[[rules]]
+id = "curl-auth-header"
+
+[[rules.allowlists]]
+description = "Placeholder tokens in demo docs"
+condition = "AND"
+paths = ['''demos/.*\.md$''']
+regexes = [
+  '''(?i)^invalid[-_]?token$''',
+  '''(?i)^placeholder[-_]?token$''',
+  '''(?i)^changeme$''',
+  '''(?i)^your[-_](api[-_])?token[-_]here$''',
+]
+
 [[allowlists]]
 description = "Historical commits with rotated credentials; pre-existing residue, not in current main."
 commits = [
