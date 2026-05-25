@@ -306,6 +306,119 @@ You can configure the server using command-line arguments or environment variabl
 
 Command-line arguments take priority over environment variables.
 
+## Verifying Releases
+
+Release archives are accompanied by a `checksums.txt` file and an optional
+`checksums.txt.sig` produced by [cosign](https://github.com/sigstore/cosign)
+with the project's release keypair. Verifying both files lets you confirm
+that the binary you downloaded was built by the project's release pipeline
+and has not been tampered with in transit.
+
+> **Heads up:** cosign signing was introduced mid-2026. Tags released
+> before signing was wired up ship without a `.sig` file — verification
+> applies from `v2.23.x` onward only, and only when the
+> `COSIGN_PRIVATE_KEY` secret was configured at release time.
+
+### 1. Install cosign
+
+Follow the upstream
+[cosign installation guide](https://docs.sigstore.dev/cosign/system_config/installation/)
+for your platform. Quick paths:
+
+```bash
+# Linux/macOS — pinned binary
+COSIGN_VERSION=v2.4.1
+curl -sSfL -o /usr/local/bin/cosign \
+  "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-linux-amd64"
+chmod +x /usr/local/bin/cosign
+
+# macOS via Homebrew
+brew install cosign
+
+# Arch Linux
+sudo pacman -S cosign
+```
+
+Confirm:
+
+```bash
+cosign version
+```
+
+### 2. Fetch the public key
+
+The verifying public key lives in this repository at
+[`secrets/cosign.pub`](secrets/cosign.pub). Two ways to fetch it:
+
+**Branch-tip (live, follows future key rotations):**
+
+```bash
+curl -sSfLO https://codeberg.org/goern/forgejo-mcp/raw/branch/main/secrets/cosign.pub
+```
+
+**Commit-pinned (tamper-evident, recommended for CI/scripts):**
+
+```bash
+curl -sSfL -o cosign.pub \
+  https://codeberg.org/goern/forgejo-mcp/raw/commit/791ef6d30a12c5143b2df6cc5255c257d80a79b6/secrets/cosign.pub
+```
+
+The commit-pinned permalink hashes its content into the URL — if anyone
+ever rewrites the file at that commit, your download fails or mismatches.
+Pin to the latest commit that you trust before adopting the key in
+automation.
+
+### 3. Download the release artifacts
+
+Pick the tag you installed (e.g. `v2.23.1`) and grab the checksum file,
+its signature, and the binary archive:
+
+```bash
+TAG=v2.23.1
+VERSION="${TAG#v}"
+BASE="https://codeberg.org/goern/forgejo-mcp/releases/download/${TAG}"
+
+curl -sSfLO "${BASE}/forgejo-mcp_${VERSION}_checksums.txt"
+curl -sSfLO "${BASE}/forgejo-mcp_${VERSION}_checksums.txt.sig"
+curl -sSfLO "${BASE}/forgejo-mcp_${VERSION}_linux_amd64.tar.gz"   # adjust os/arch
+```
+
+### 4. Verify the signature, then the checksum
+
+Cosign verifies that `checksums.txt` was signed by the holder of the
+private key matching `cosign.pub`. Once the checksum file is trusted, a
+plain `sha256sum -c` check confirms the archive's integrity.
+
+```bash
+# Verify checksums.txt against the signature.
+cosign verify-blob \
+  --key cosign.pub \
+  --signature "forgejo-mcp_${VERSION}_checksums.txt.sig" \
+  "forgejo-mcp_${VERSION}_checksums.txt"
+# Expected: "Verified OK"
+
+# Verify the downloaded archive against the (now-trusted) checksums.
+sha256sum --ignore-missing -c "forgejo-mcp_${VERSION}_checksums.txt"
+# Expected: "<archive>: OK"
+```
+
+The checksum chain transitively covers the SBOMs and other per-archive
+assets — verifying `checksums.txt` once is sufficient for everything
+listed inside it.
+
+### Troubleshooting verification
+
+- **`Error: no matching signatures`** — the `.sig` file is from a
+  different release, or `cosign.pub` is the wrong key. Re-download both
+  from the same tag.
+- **`Error: cannot read file: checksums.txt.sig`** — release predates
+  cosign signing, or signing was skipped that run because the secret was
+  unset. Fall back to the checksum-only check (`sha256sum -c`), which
+  still detects in-transit corruption but not tampering.
+- **Mismatch between `cosign.pub` and the signature** — confirm you
+  fetched the public key from a commit that includes the key in use at
+  the time of the release. If in doubt, fetch from `branch/main`.
+
 ## Troubleshooting
 
 **Enable debug mode** to see detailed logs:

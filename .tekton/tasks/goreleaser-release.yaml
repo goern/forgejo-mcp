@@ -1,0 +1,110 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: goreleaser-release
+  annotations:
+    tekton.dev/displayName: "goreleaser release + syft SBOMs + smoke-test"
+spec:
+  description: |
+    Runs `goreleaser release` against the tagged HEAD, producing platform
+    archives, per-archive CycloneDX SBOMs (via syft), and checksums. After
+    publish, boots the freshly-built linux/amd64 binary and verifies its
+    version banner matches the tag. Mirrors the GoReleaser + smoke-test
+    steps from .forgejo/workflows/release.yml.
+
+    Outputs land in `dist/` on the source workspace so downstream Tasks
+    (cosign-sign-release, mcpb-pack) can attach them to the Codeberg
+    release without rebuilding.
+  params:
+    - name: GO_IMAGE
+      description: Container image carrying the Go toolchain.
+      type: string
+      default: docker.io/library/golang:1.25
+    - name: SYFT_VERSION
+      description: anchore/syft version used by goreleaser sboms section.
+      type: string
+      default: v1.18.1
+    - name: GORELEASER_VERSION
+      description: goreleaser CLI version installed via `go install`.
+      type: string
+      default: v2.6.1
+    - name: TAG
+      description: Tag ref name (e.g. v2.24.0). Must match a git tag on HEAD.
+      type: string
+  workspaces:
+    - name: source
+      mountPath: /workspace/src
+  stepTemplate:
+    workingDir: $(workspaces.source.path)
+    env:
+      - name: GOFLAGS
+        value: "-buildvcs=false"
+      - name: GOCACHE
+        value: /workspace/src/.gocache
+      - name: GOMODCACHE
+        value: /workspace/src/.gomodcache
+      - name: GOTOOLCHAIN
+        value: local
+  steps:
+    - name: install-syft
+      image: $(params.GO_IMAGE)
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        # syft generates the per-archive CycloneDX SBOMs referenced in
+        # .goreleaser.yml's sboms: section. Install before GoReleaser.
+        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
+          | sh -s -- -b /usr/local/bin "$(params.SYFT_VERSION)"
+        syft version
+
+    - name: install-goreleaser
+      image: $(params.GO_IMAGE)
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        go install "github.com/goreleaser/goreleaser/v2@$(params.GORELEASER_VERSION)"
+        cp "$(go env GOPATH)/bin/goreleaser" /usr/local/bin/goreleaser
+        goreleaser --version
+
+    - name: release
+      image: $(params.GO_IMAGE)
+      env:
+        - name: GORELEASER_FORCE_TOKEN
+          value: gitea
+        - name: GITEA_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: op1st-release-token
+              key: token
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        git config --global --add safe.directory "$(workspaces.source.path)"
+        # GoReleaser needs full history for changelog generation. PaC
+        # git-clone defaults to a shallow checkout; deepen here.
+        git fetch --unshallow || true
+        git fetch --tags --force
+        goreleaser release --clean --parallelism 2
+
+    - name: smoke-test
+      image: $(params.GO_IMAGE)
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        # Boot the freshly-built linux/amd64 binary and verify the version
+        # banner contains the tag. Catches LDFLAGS-injection regressions and
+        # dead binaries before the .mcpb packaging step ships them to users.
+        TAG="$(params.TAG)"
+        VERSION="${TAG#v}"
+        BIN=$(find dist -type f -name forgejo-mcp -path "*linux_amd64*" | head -1)
+        if [ -z "$BIN" ]; then
+          echo "ERROR: No linux/amd64 binary found in dist/" >&2
+          exit 1
+        fi
+        chmod +x "$BIN"
+        BANNER=$("$BIN" version 2>&1 | head -1 || true)
+        echo "Banner: $BANNER"
+        if ! echo "$BANNER" | grep -qE "^forgejo-mcp ${VERSION}([+-]|$)"; then
+          echo "ERROR: Smoke-test failed: banner '$BANNER' does not match expected version '${VERSION}'" >&2
+          exit 1
+        fi

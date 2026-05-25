@@ -1,0 +1,107 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: mcpb-pack
+  annotations:
+    tekton.dev/displayName: "build .mcpb Claude Desktop Extension per platform"
+spec:
+  description: |
+    Packs the GoReleaser-produced binaries into platform-specific .mcpb
+    (Claude Desktop Extension) bundles, one per (goos, goarch) pair, and
+    attaches each to the Codeberg release. Mirrors the final step of
+    .forgejo/workflows/release.yml.
+
+    The extension/manifest.json is rewritten in place with the release
+    version before each pack, then restored from a backup on exit.
+
+    Requires npx (Node 22+) and the @anthropic-ai/mcpb package, pulled at
+    runtime via `npx -y`.
+  params:
+    - name: NODE_IMAGE
+      description: Container image carrying Node + npx.
+      type: string
+      default: docker.io/library/node:22-bookworm
+    - name: TOOLS_IMAGE
+      description: Image carrying jq + curl for Codeberg API calls.
+      type: string
+      default: docker.io/library/node:22-bookworm
+    - name: TAG
+      description: Tag ref name (e.g. v2.24.0).
+      type: string
+    - name: REPO
+      description: Repo slug owner/name (e.g. goern/forgejo-mcp).
+      type: string
+    - name: CODEBERG_API
+      description: Codeberg API base URL.
+      type: string
+      default: https://codeberg.org/api/v1
+    - name: PLATFORMS
+      description: |
+        Space-separated list of `goos/goarch` pairs to pack. Default
+        matches the .forgejo workflow.
+      type: string
+      default: "linux/amd64 linux/arm64 darwin/amd64 darwin/arm64"
+  workspaces:
+    - name: source
+      mountPath: /workspace/src
+  stepTemplate:
+    workingDir: $(workspaces.source.path)
+  steps:
+    - name: pack-and-upload
+      image: $(params.NODE_IMAGE)
+      env:
+        - name: GITEA_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: op1st-release-token
+              key: token
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        # node:22-bookworm already ships jq + curl.
+        command -v jq >/dev/null || (apt-get update && apt-get install -y --no-install-recommends jq curl)
+
+        TAG="$(params.TAG)"
+        VERSION="${TAG#v}"
+        REPO="$(params.REPO)"
+        API="$(params.CODEBERG_API)"
+
+        RELEASE_ID=$(curl -fsSL \
+          -H "Authorization: token ${GITEA_TOKEN}" \
+          "${API}/repos/${REPO}/releases/tags/${TAG}" \
+          | jq -r '.id')
+        if [ -z "$RELEASE_ID" ] || [ "$RELEASE_ID" = "null" ]; then
+          echo "ERROR: Could not resolve release ID for tag ${TAG}" >&2
+          exit 1
+        fi
+
+        cp extension/manifest.json extension/manifest.json.orig
+        trap 'mv -f extension/manifest.json.orig extension/manifest.json 2>/dev/null || true' EXIT
+
+        for pair in $(params.PLATFORMS); do
+          goos="${pair%/*}"
+          goarch="${pair#*/}"
+          rm -rf extension/bin
+          mkdir -p extension/bin
+
+          BIN=$(find dist -type f -name forgejo-mcp -path "*${goos}_${goarch}*" | head -1)
+          if [ -z "$BIN" ]; then
+            echo "ERROR: No binary for ${goos}_${goarch} in dist/" >&2
+            exit 1
+          fi
+          cp "$BIN" extension/bin/forgejo-mcp
+          chmod +x extension/bin/forgejo-mcp
+
+          cp extension/manifest.json.orig extension/manifest.json
+          jq --arg v "$VERSION" '.version=$v' extension/manifest.json > extension/manifest.json.tmp
+          mv extension/manifest.json.tmp extension/manifest.json
+
+          OUT="dist/forgejo-mcp_${VERSION}_${goos}_${goarch}.mcpb"
+          npx -y @anthropic-ai/mcpb pack extension/ "$OUT"
+
+          ASSET_NAME=$(basename "$OUT")
+          curl -fsSL -X POST \
+            -H "Authorization: token ${GITEA_TOKEN}" \
+            -F "attachment=@${OUT}" \
+            "${API}/repos/${REPO}/releases/${RELEASE_ID}/assets?name=${ASSET_NAME}"
+        done

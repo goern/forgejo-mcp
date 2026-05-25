@@ -1,0 +1,121 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: on-tag-push-release
+  annotations:
+    # PipelinesAsCode: trigger on tag pushes matching v* refs.
+    # `on-target-branch` is overloaded to match refs/tags/* as well as
+    # refs/heads/* when on-event is "push" — PaC resolves the ref via
+    # the underlying provider payload (Codeberg/Forgejo).
+    pipelinesascode.tekton.dev/on-event: "[push]"
+    pipelinesascode.tekton.dev/on-target-branch: "[refs/tags/v*]"
+    pipelinesascode.tekton.dev/task: "[git-clone, .tekton/tasks/goreleaser-release.yaml, .tekton/tasks/cosign-sign-release.yaml, .tekton/tasks/mcpb-pack.yaml]"
+    pipelinesascode.tekton.dev/max-keep-runs: "10"
+    # Releases are not cancellable — let in-flight runs finish even if
+    # another tag arrives.
+    pipelinesascode.tekton.dev/cancel-in-progress: "false"
+spec:
+  params:
+    - name: repo_url
+      value: "{{ repo_url }}"
+    - name: revision
+      value: "{{ revision }}"
+    - name: target_branch
+      value: "{{ target_branch }}"
+  pipelineSpec:
+    params:
+      - name: repo_url
+      - name: revision
+      - name: target_branch
+        description: |
+          PaC passes the matched ref here (e.g. refs/tags/v2.24.0). Stripped
+          to the bare tag name (v2.24.0) for downstream tasks.
+    workspaces:
+      - name: source
+    tasks:
+      - name: fetch-source
+        taskRef:
+          name: git-clone
+        workspaces:
+          - name: output
+            workspace: source
+        params:
+          - name: url
+            value: $(params.repo_url)
+          - name: revision
+            value: $(params.revision)
+
+      - name: resolve-tag
+        runAfter:
+          - fetch-source
+        params:
+          - name: target_branch
+            value: $(params.target_branch)
+        taskSpec:
+          params:
+            - name: target_branch
+          results:
+            - name: tag
+              description: Bare tag name (e.g. v2.24.0).
+          steps:
+            - name: resolve
+              image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+              script: |
+                #!/usr/bin/env sh
+                set -eu
+                TAG="$(params.target_branch)"
+                TAG="${TAG#refs/tags/}"
+                echo "Resolved tag: $TAG"
+                printf '%s' "$TAG" > "$(results.tag.path)"
+
+      - name: goreleaser
+        runAfter:
+          - resolve-tag
+        taskRef:
+          name: goreleaser-release
+        workspaces:
+          - name: source
+            workspace: source
+        params:
+          - name: TAG
+            value: $(tasks.resolve-tag.results.tag)
+
+      - name: cosign-sign
+        runAfter:
+          - goreleaser
+        taskRef:
+          name: cosign-sign-release
+        workspaces:
+          - name: source
+            workspace: source
+        params:
+          - name: TAG
+            value: $(tasks.resolve-tag.results.tag)
+          - name: REPO
+            value: goern/forgejo-mcp
+
+      - name: mcpb-pack
+        runAfter:
+          - goreleaser
+        taskRef:
+          name: mcpb-pack
+        workspaces:
+          - name: source
+            workspace: source
+        params:
+          - name: TAG
+            value: $(tasks.resolve-tag.results.tag)
+          - name: REPO
+            value: goern/forgejo-mcp
+
+  workspaces:
+    - name: source
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              # Release builds need ~6× CI: cross-compiled binaries +
+              # SBOMs + checksums + .mcpb bundles per platform.
+              storage: 8Gi
