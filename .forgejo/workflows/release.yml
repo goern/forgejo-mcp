@@ -1,9 +1,15 @@
 name: release
 
+# Soft-disabled 2026-05-25 (bead forgejo-mcp-n85): the op1st Tekton release
+# pipeline (.tekton/on-tag-push-release.yaml, PR #150) is now the primary
+# release path on tag push. This workflow stays in tree as a manual
+# fallback — re-enable by restoring `push: { tags: ['v*'] }`, or trigger
+# ad-hoc via Codeberg UI -> Actions -> Run workflow.
+# Full removal is deferred to forgejo-mcp-gdz, after two consecutive
+# successful Tekton releases satisfy the cutover criteria in
+# docs/design/release-pipeline-migration.md.
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
 
 jobs:
   release:
