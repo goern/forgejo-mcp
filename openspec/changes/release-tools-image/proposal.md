@@ -25,7 +25,7 @@ Per the maintainer's direction, the image source SHALL be **structurally isolate
 
 - **New Tekton release pipeline** at `.tekton/release-tools/on-tag-publish.yaml`:
   - PaC trigger on push of tags matching `refs/tags/release-tools/v*`. CEL-gated to that tag prefix.
-  - Builds the image, signs with cosign, pushes to a registry path coordinated with op1st-emea-b4mad maintainers (working assumption: `quay.io/operate-first/release-tools:vX.Y.Z`).
+  - Builds the image, signs with cosign, pushes to a registry path coordinated with op1st-emea-b4mad maintainers (working assumption: `codeberg.org/operate-first/release-tools:vX.Y.Z`).
   - Publishes SBOM + signature as registry artifacts.
 
 - **No changes to forgejo-mcp release pipeline in this change.** A follow-up change (`release-pipeline-use-release-tools-image`, not in this proposal) rewrites `.tekton/tasks/goreleaser-release.yaml`, `cosign-sign-release.yaml`, and `mcpb-pack.yaml` to reference the published image and drop the runtime installs + `/tmp` GOCACHE workaround.
@@ -44,7 +44,7 @@ None in this change. The existing release Tasks continue to install tools at run
 
 - **Code**: new tree `image/release-tools/{Containerfile,README.md,VERSIONS.md,renovate.json}`. New tree `.tekton/release-tools/{on-pull-request-build.yaml,on-tag-publish.yaml,tasks/}`. No edits to `operation/`, `pkg/`, or `main.go`.
 - **CI surface**: two additional PaC PipelineRuns registered against the same `codeberg-org-goern-forgejo-mcp` `Repository` CR. CEL gating ensures they remain dormant on Go-only PRs.
-- **External services**: registry push permission needed on the target registry (working assumption `quay.io/operate-first/release-tools`). Cosign signing reuses the existing `cosign-signing-key` Secret.
+- **External services**: registry push permission needed on the target registry (working assumption `codeberg.org/operate-first/release-tools`). Cosign signing reuses the existing `cosign-signing-key` Secret.
 - **Docs**: README points to the published image as the canonical tooling for reproducing a release locally. ADR `docs/design/release-pipeline-migration.md` gets an addendum noting the image as the dependency for hard cutover.
 - **Movability**: every path introduced lives under `image/release-tools/` or `.tekton/release-tools/`. Lifting to a separate project = `git mv` of those two trees + updating the registry path and PaC `Repository` CR. No code coupling.
 - **Out of scope** (deferred): rewriting the consuming Tekton Tasks (next change); image hardening beyond Hummingbird's defaults; multi-arch image (amd64-only first cut); Konflux integration.

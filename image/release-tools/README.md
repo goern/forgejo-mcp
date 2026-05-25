@@ -27,9 +27,9 @@ The published OCI tag is `vMAJOR.MINOR.PATCH` at the agreed registry.
 ## Pulling the Image
 
 ```bash
-podman pull quay.io/operate-first/release-tools:v1.0.0
+podman pull codeberg.org/operate-first/release-tools:v1.0.0
 # or by digest (preferred for reproducibility):
-podman pull quay.io/operate-first/release-tools@sha256:<digest>
+podman pull codeberg.org/operate-first/release-tools@sha256:<digest>
 ```
 
 Consumers SHOULD pin by full `vMAJOR.MINOR.PATCH` tag or by digest for maximum stability.
@@ -43,23 +43,23 @@ release verification guide.
 ```bash
 cosign verify \
   --key https://raw.githubusercontent.com/operate-first/common/main/cosign.pub \
-  quay.io/operate-first/release-tools:v1.0.0
+  codeberg.org/operate-first/release-tools:v1.0.0
 ```
 
-Expected output: `Verification for quay.io/operate-first/release-tools:v1.0.0 -- The following checks were performed on each of these signatures: ...`
+Expected output: `Verification for codeberg.org/operate-first/release-tools:v1.0.0 -- The following checks were performed on each of these signatures: ...`
 
 ## Running Locally
 
 ```bash
 # Run all tools version check
-podman run --rm quay.io/operate-first/release-tools:v1.0.0 \
+podman run --rm codeberg.org/operate-first/release-tools:v1.0.0 \
   sh -c 'go version && syft version && goreleaser --version && cosign version && jq --version && curl --version && node --version'
 
 # Run goreleaser in release mode
 podman run --rm \
   -v $(pwd):/workspace:z \
   -w /workspace \
-  quay.io/operate-first/release-tools:v1.0.0 \
+  codeberg.org/operate-first/release-tools:v1.0.0 \
   goreleaser release --clean
 ```
 

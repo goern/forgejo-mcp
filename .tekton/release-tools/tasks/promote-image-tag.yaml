@@ -11,11 +11,11 @@ spec:
     the human-readable vMAJOR.MINOR.PATCH tag written to the registry.
     Prior to this step, only the digest reference exists in the registry.
 
-    # TBD — coordinate with op1st-emea-b4mad maintainers before merge
-    # Registry: quay.io/operate-first/release-tools
+    # Path A (decided 2026-05-25): codeberg.org/operate-first/release-tools
+    # Registry: codeberg.org/operate-first/release-tools
   params:
     - name: IMAGE_REPO_DIGEST
-      description: Full digest reference (e.g. quay.io/operate-first/release-tools@sha256:abc123).
+      description: Full digest reference (e.g. codeberg.org/operate-first/release-tools@sha256:abc123).
       type: string
     - name: TAG
       description: Human-readable tag to promote to (e.g. v1.0.0).
@@ -23,17 +23,17 @@ spec:
     - name: REGISTRY_IMAGE
       description: |
         Registry image path without tag.
-        # TBD — coordinate with op1st-emea-b4mad maintainers before merge
-        # Working assumption: quay.io/operate-first/release-tools
+        # Path A (decided 2026-05-25): codeberg.org/operate-first/release-tools
+        # Working assumption: codeberg.org/operate-first/release-tools
       type: string
-      default: "quay.io/operate-first/release-tools"
+      default: "codeberg.org/operate-first/release-tools"
   workspaces:
     - name: registry-credentials
       mountPath: /workspace/registry-creds
       optional: false
   results:
     - name: IMAGE_REF
-      description: Full tagged reference (e.g. quay.io/operate-first/release-tools:v1.0.0).
+      description: Full tagged reference (e.g. codeberg.org/operate-first/release-tools:v1.0.0).
   steps:
     - name: promote-tag
       image: quay.io/skopeo/stable:latest

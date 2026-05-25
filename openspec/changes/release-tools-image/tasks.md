@@ -31,7 +31,7 @@
   - `on-target-branch: "[refs/tags/release-tools/v*]"`
   - `on-cel-expression: target_branch.matches("^refs/tags/release-tools/v.*")` (belt-and-suspenders for older PaC)
 - [ ] 4.2 Pipeline tasks (push-by-digest-first to avoid the TOCTOU advertisement window): `fetch-source` → `resolve-tag` (strips `refs/tags/release-tools/` prefix → bare semver) → `build` (buildah build, no push) → `push-by-digest` (buildah push to registry, manifest only, NO human-readable tag) → `cosign-sign-by-digest` (uses `cosign-signing-key` Secret with `optional: false`) → `attach-sbom` (syft + cosign attach by digest) → `promote-tag` (crane tag or buildah manifest push: only now does `vMAJOR.MINOR.PATCH` resolve to the signed digest). Registry SHOULD be configured for immutable tags.
-- [ ] 4.3 Operator coordination: confirm registry path (`quay.io/operate-first/release-tools` working assumption) + write credentials with op1st-pipelines admin. Document required Secret + push permissions in pipeline file header comment.
+- [ ] 4.3 Operator coordination: confirm registry path (`codeberg.org/operate-first/release-tools` working assumption) + write credentials with op1st-pipelines admin. Document required Secret + push permissions in pipeline file header comment.
 
 ## 5. Local validation harness
 

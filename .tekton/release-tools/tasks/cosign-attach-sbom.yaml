@@ -10,26 +10,90 @@ spec:
     manifest using cosign attach sbom (OCI referrers). Consumers can retrieve
     the SBOM via `cosign download sbom <image-ref>` or the OCI referrers API.
 
-    # TBD — coordinate with op1st-emea-b4mad maintainers before merge
-    # Registry: quay.io/operate-first/release-tools
+    Registry: codeberg.org/operate-first/release-tools (Path A — reuses
+    codeberg-pusher Secret in op1st-pipelines for both push and attach).
+
+    Image choice: ubi9-minimal + curl-installed syft + cosign (NOT the
+    release-tools image itself). Same reasoning as cosign-sign-image-by-digest:
+    avoids circular reference at v1.0.0, has shell, install-then-run pattern.
   params:
     - name: IMAGE_REPO_DIGEST
-      description: Full digest reference to attach SBOM to (e.g. quay.io/operate-first/release-tools@sha256:abc123).
+      description: Full digest reference to attach SBOM to (e.g. codeberg.org/operate-first/release-tools@sha256:abc123).
       type: string
+    - name: SYFT_VERSION
+      description: syft CLI version pinned for this Task.
+      type: string
+      default: v1.18.1
+    - name: COSIGN_VERSION
+      description: cosign CLI version pinned for this Task.
+      type: string
+      default: v2.4.1
   workspaces:
     - name: source
       mountPath: /workspace/source
+    - name: registry-credentials
+      mountPath: /workspace/registry-creds
+      optional: false
+      description: |
+        Dockerconfigjson Secret with write auth on the release-tools registry
+        path. cosign attach sbom pushes the SBOM as an OCI referrer object;
+        needs the same write auth as push-image-by-digest.
+  volumes:
+    - name: cosign-signing-key
+      secret:
+        secretName: cosign-signing-key
+        optional: false
   results:
     - name: SBOM_DIGEST
       description: sha256 digest of the attached SBOM artifact.
   steps:
-    - name: generate-sbom
-      image: quay.io/operate-first/release-tools:latest
-      # TBD — replace :latest with pinned digest once image is published
+    - name: generate-and-attach-sbom
+      image: registry.access.redhat.com/ubi9/ubi-minimal:latest
       workingDir: $(workspaces.source.path)
+      volumeMounts:
+        - name: cosign-signing-key
+          mountPath: /workspace/cosign-key
+          readOnly: true
+      env:
+        - name: COSIGN_KEY_PATH
+          value: /workspace/cosign-key/cosign.key
+        - name: COSIGN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: cosign-signing-key
+              key: cosign.password
+              optional: false
+        - name: REGISTRY_AUTH_FILE
+          value: /workspace/registry-creds/.dockerconfigjson
       script: |
-        #!/usr/bin/env bash
-        set -euo pipefail
+        #!/usr/bin/env sh
+        set -eu
+
+        microdnf install -y curl tar gzip >/dev/null 2>&1 || \
+          (rpm -q curl tar gzip >/dev/null 2>&1) || \
+          dnf install -y curl tar gzip
+
+        # Install syft.
+        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
+          | sh -s -- -b /usr/local/bin "$(params.SYFT_VERSION)"
+        syft version
+
+        # Install cosign.
+        curl -sSfL -o /usr/local/bin/cosign \
+          "https://github.com/sigstore/cosign/releases/download/$(params.COSIGN_VERSION)/cosign-linux-amd64"
+        chmod +x /usr/local/bin/cosign
+        cosign version
+
+        # Registry auth file fallback (.dockerconfigjson vs config.json).
+        if [ ! -f "${REGISTRY_AUTH_FILE}" ]; then
+          REGISTRY_AUTH_FILE=/workspace/registry-creds/config.json
+        fi
+        if [ ! -f "${REGISTRY_AUTH_FILE}" ]; then
+          echo "ERROR: no registry auth file found in /workspace/registry-creds/" >&2
+          ls -la /workspace/registry-creds/ >&2
+          exit 1
+        fi
+        export REGISTRY_AUTH_FILE
 
         IMAGE_REF="$(params.IMAGE_REPO_DIGEST)"
         SBOM_FILE="$(workspaces.source.path)/release-tools-sbom.cdx.json"
@@ -37,17 +101,6 @@ spec:
         echo "Generating CycloneDX SBOM for ${IMAGE_REF}..."
         syft "${IMAGE_REF}" --output cyclonedx-json="${SBOM_FILE}"
         echo "SBOM written to ${SBOM_FILE}"
-
-    - name: attach-sbom
-      image: quay.io/operate-first/release-tools:latest
-      # TBD — replace :latest with pinned digest once image is published
-      workingDir: $(workspaces.source.path)
-      script: |
-        #!/usr/bin/env bash
-        set -euo pipefail
-
-        IMAGE_REF="$(params.IMAGE_REPO_DIGEST)"
-        SBOM_FILE="$(workspaces.source.path)/release-tools-sbom.cdx.json"
 
         echo "Attaching SBOM to ${IMAGE_REF}..."
         cosign attach sbom \

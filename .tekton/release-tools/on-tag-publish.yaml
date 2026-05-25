@@ -22,11 +22,14 @@ metadata:
     # with a pushed digest but without a cosign signature is a bad state.
     pipelinesascode.tekton.dev/cancel-in-progress: "false"
     # Operator coordination notes:
-    # TBD — confirm registry path (quay.io/operate-first/release-tools) +
-    # write credentials with op1st-pipelines admin before merging.
-    # Required Secret: cosign-signing-key (optional: false — fail-closed).
-    # Required workspace: registry-push-credentials (dockerconfigjson for
-    # push access to quay.io/operate-first/release-tools).
+    # Registry: codeberg.org/operate-first/release-tools (Path A — reuse
+    # codeberg-pusher dockerconfigjson Secret already in op1st-pipelines).
+    # Required Secrets in op1st-pipelines:
+    #   - codeberg-pusher       (dockerconfigjson — push auth, Path A)
+    #   - cosign-signing-key    (cosign.key/cosign.password — optional: false, fail-closed)
+    # Before first publish: confirm the PAT inside codeberg-pusher has
+    # write:package scope AND the credential user holds maintainer/owner
+    # role on the operate-first org (verifiable only via Codeberg UI).
 spec:
   params:
     - name: repo_url
@@ -35,6 +38,13 @@ spec:
       value: "{{ revision }}"
     - name: target_branch
       value: "{{ target_branch }}"
+    # Bootstrap exception for v1.0.0 (D4 in design.md). Operator manually
+    # edits this PipelineRun and sets value: "true" for the first publish.
+    # Default "false" = fail-closed signing per A3. Subsequent releases
+    # MUST run with "false" — bootstrap is single-use; a dedicated bead
+    # tracks restoring signing on release-tools/v1.0.1+.
+    - name: SKIP_SIGN
+      value: "false"
   pipelineSpec:
     params:
       - name: repo_url
@@ -43,13 +53,18 @@ spec:
         description: |
           Full ref passed by PaC (e.g. refs/tags/release-tools/v1.0.0).
           Stripped to bare semver (e.g. v1.0.0) by resolve-tag step.
+      - name: SKIP_SIGN
+        description: |
+          Bootstrap-only opt-out for cosign signing. "true" skips cosign-sign
+          and attach-sbom Tasks. Default "false" = fail-closed signing.
+        default: "false"
     workspaces:
       - name: source
       - name: registry-credentials
         description: |
           Kubernetes Secret containing .dockerconfigjson or config.json with
-          push credentials for quay.io/operate-first/release-tools.
-          # TBD — coordinate with op1st-emea-b4mad maintainers before merge
+          push credentials for codeberg.org/operate-first/release-tools.
+          # Path A (decided 2026-05-25): codeberg.org/operate-first/release-tools
     tasks:
       - name: fetch-source
         taskRef:
@@ -102,18 +117,29 @@ spec:
         params:
           - name: IMAGE
             value: "release-tools:$(tasks.resolve-tag.results.tag)"
-          # TBD — coordinate with op1st-emea-b4mad maintainers before merge
+          # Path A (decided 2026-05-25): codeberg.org/operate-first/release-tools
           - name: REGISTRY_IMAGE
-            value: "quay.io/operate-first/release-tools"
+            value: "codeberg.org/operate-first/release-tools"
 
-      # A3 fail-closed: cosign-signing-key secret is optional: false in the
-      # task definition. If the Secret is absent, this step fails, and no
-      # human-readable tag is ever promoted.
+      # A3 fail-closed (default): cosign-signing-key secret is optional: false
+      # in the task definition. If the Secret is absent, this step fails, and
+      # no human-readable tag is ever promoted.
+      # cosign sign pushes the signature object to the registry; needs
+      # write auth same as push-by-digest.
+      # Bootstrap (D4): when SKIP_SIGN=true (v1.0.0 one-time exception),
+      # this task is skipped via `when:` clause; promote-tag still runs.
       - name: cosign-sign
         runAfter:
           - push-by-digest
+        when:
+          - input: "$(params.SKIP_SIGN)"
+            operator: notin
+            values: ["true"]
         taskRef:
           name: release-tools-cosign-sign-image-by-digest
+        workspaces:
+          - name: registry-credentials
+            workspace: registry-credentials
         params:
           - name: IMAGE_REPO_DIGEST
             value: $(tasks.push-by-digest.results.IMAGE_REPO_DIGEST)
@@ -121,18 +147,30 @@ spec:
       - name: attach-sbom
         runAfter:
           - cosign-sign
+        when:
+          - input: "$(params.SKIP_SIGN)"
+            operator: notin
+            values: ["true"]
         taskRef:
           name: release-tools-cosign-attach-sbom
         workspaces:
           - name: source
             workspace: source
+          - name: registry-credentials
+            workspace: registry-credentials
         params:
           - name: IMAGE_REPO_DIGEST
             value: $(tasks.push-by-digest.results.IMAGE_REPO_DIGEST)
 
-      # L1 TOCTOU fix: promote human-readable tag ONLY after sign + SBOM succeed.
+      # L1 TOCTOU fix: promote human-readable tag ONLY after sign + SBOM
+      # succeed. When SKIP_SIGN=true, cosign-sign + attach-sbom are skipped;
+      # promote-tag still runs after push-by-digest. The "after" list includes
+      # both signing tasks — Tekton treats skipped tasks as satisfied for
+      # downstream runAfter, so dependency order holds either way.
       - name: promote-tag
         runAfter:
+          - push-by-digest
+          - cosign-sign
           - attach-sbom
         taskRef:
           name: release-tools-promote-image-tag
@@ -144,9 +182,9 @@ spec:
             value: $(tasks.push-by-digest.results.IMAGE_REPO_DIGEST)
           - name: TAG
             value: $(tasks.resolve-tag.results.tag)
-          # TBD — coordinate with op1st-emea-b4mad maintainers before merge
+          # Path A (decided 2026-05-25): codeberg.org/operate-first/release-tools
           - name: REGISTRY_IMAGE
-            value: "quay.io/operate-first/release-tools"
+            value: "codeberg.org/operate-first/release-tools"
 
   workspaces:
     - name: source
@@ -160,7 +198,12 @@ spec:
               storage: 10Gi
     - name: registry-credentials
       secret:
-        # TBD — coordinate with op1st-emea-b4mad maintainers before merge
-        # Secret must contain .dockerconfigjson or config.json with push
-        # access to quay.io/operate-first/release-tools.
-        secretName: release-tools-registry-push-credentials
+        # Path A (decided 2026-05-25): reuse the existing codeberg-pusher
+        # dockerconfigjson Secret in op1st-pipelines. Auth covers codeberg.org;
+        # for push to codeberg.org/operate-first/release-tools to succeed, the
+        # underlying Codeberg PAT must carry `write:package` scope AND the
+        # credential user must hold maintainer/owner role on the operate-first
+        # org. Operator confirms these out-of-band (cluster cannot validate).
+        # See docs/design/release-pipeline-migration.md and the runbook for
+        # rotation procedure.
+        secretName: codeberg-pusher

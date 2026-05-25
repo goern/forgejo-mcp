@@ -6,7 +6,8 @@ metadata:
     tekton.dev/displayName: "cosign sign release-tools image manifest by digest"
 spec:
   description: |
-    Signs the image manifest identified by digest using cosign.
+    Signs the image manifest identified by digest using cosign. Pushes the
+    signature object to the registry alongside the image.
 
     A3 asymmetry (intentional, per spec):
       - This task mounts cosign-signing-key with optional: false (fail-closed).
@@ -15,10 +16,34 @@ spec:
       - The forgejo-mcp release pipeline uses optional: true (fail-open).
         The asymmetry is intentional: an unsigned release-tools image is a
         supply-chain regression; an unsigned checksums.txt is a UX regression only.
+
+    Image choice: uses ubi9-minimal + curl-installed cosign rather than the
+    release-tools image itself. Reasons:
+      1. Avoids circular reference at v1.0.0 (the image being built does not
+         yet exist when this task runs the first time).
+      2. ubi9-minimal has /bin/sh so Tekton script: blocks execute.
+      3. Single-step install pattern (proven in
+         .tekton/tasks/goreleaser-release.yaml after the v2.24.x lessons).
+
+    cosign needs registry write auth to push the signature object. Mounts the
+    same registry-credentials workspace as push-image-by-digest /
+    promote-image-tag.
   params:
     - name: IMAGE_REPO_DIGEST
-      description: Full digest reference (e.g. quay.io/operate-first/release-tools@sha256:abc123).
+      description: Full digest reference (e.g. codeberg.org/operate-first/release-tools@sha256:abc123).
       type: string
+    - name: COSIGN_VERSION
+      description: cosign CLI version pinned for this Task.
+      type: string
+      default: v2.4.1
+  workspaces:
+    - name: registry-credentials
+      mountPath: /workspace/registry-creds
+      optional: false
+      description: |
+        Dockerconfigjson Secret with write auth on the release-tools registry
+        path. Reuses codeberg-pusher Secret in op1st-pipelines (Path A
+        decision — see docs/design.md D4).
   volumes:
     - name: cosign-signing-key
       secret:
@@ -28,9 +53,7 @@ spec:
         optional: false
   steps:
     - name: sign
-      image: quay.io/operate-first/release-tools:latest
-      # TBD — coordinate with op1st-emea-b4mad maintainers before merge
-      # Once the image is published, replace :latest with a pinned digest.
+      image: registry.access.redhat.com/ubi9/ubi-minimal:latest
       volumeMounts:
         - name: cosign-signing-key
           mountPath: /workspace/cosign-key
@@ -42,11 +65,36 @@ spec:
           valueFrom:
             secretKeyRef:
               name: cosign-signing-key
-              key: password
+              # Real Secret has keys: cosign.key, cosign.password, cosign.pub
+              # (verified by inspection on nostromo op1st-pipelines namespace).
+              key: cosign.password
               optional: false
+        - name: REGISTRY_AUTH_FILE
+          value: /workspace/registry-creds/.dockerconfigjson
       script: |
-        #!/usr/bin/env bash
-        set -euo pipefail
+        #!/usr/bin/env sh
+        set -eu
+
+        # Install cosign inline. Pinned to COSIGN_VERSION param.
+        # microdnf for ubi9-minimal, dnf for ubi9.
+        microdnf install -y curl tar gzip >/dev/null 2>&1 || \
+          (rpm -q curl tar gzip >/dev/null 2>&1) || \
+          dnf install -y curl tar gzip
+        curl -sSfL -o /usr/local/bin/cosign \
+          "https://github.com/sigstore/cosign/releases/download/$(params.COSIGN_VERSION)/cosign-linux-amd64"
+        chmod +x /usr/local/bin/cosign
+        cosign version
+
+        # Some registries publish config.json instead of .dockerconfigjson.
+        if [ ! -f "${REGISTRY_AUTH_FILE}" ]; then
+          REGISTRY_AUTH_FILE=/workspace/registry-creds/config.json
+        fi
+        if [ ! -f "${REGISTRY_AUTH_FILE}" ]; then
+          echo "ERROR: no registry auth file found in /workspace/registry-creds/" >&2
+          ls -la /workspace/registry-creds/ >&2
+          exit 1
+        fi
+        export REGISTRY_AUTH_FILE
 
         IMAGE_DIGEST_REF="$(params.IMAGE_REPO_DIGEST)"
         echo "Signing: ${IMAGE_DIGEST_REF}"

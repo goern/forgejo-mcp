@@ -65,7 +65,9 @@ This separation is load-bearing for isolation. A regular `v*` tag (forgejo-mcp r
 
 ### D4: Registry path and tag scheme
 
-Working assumption: `quay.io/operate-first/release-tools:vX.Y.Z` (plus `:latest` floating for non-prod). Final path coordinated with op1st-emea-b4mad maintainers before publish pipeline lands.
+**Decided 2026-05-25 (Path A):** `codeberg.org/operate-first/release-tools:vX.Y.Z` (plus `:latest` floating for non-prod). Codeberg packages registry — same trust realm as the source repo, avoids a separate quay/ghcr auth domain. Push credentials reuse the existing `codeberg-pusher` dockerconfigjson Secret in `op1st-pipelines`. Operator confirms (out-of-band, on Codeberg UI) that the underlying PAT carries `write:package` scope AND the credential user holds maintainer/owner role on the `operate-first` org. Cluster-side inspection of the Secret shows `auths` covering `codeberg.org` and `codeberg.org/goern` — sufficient for hostname-matched push.
+
+**Bootstrap exception for v1.0.0 (acceptable):** the first publish run MAY skip cosign signing via a `SKIP_SIGN=true` PipelineRun param. Rationale: chicken-egg-style unknowns the first time the publish pipeline runs end-to-end (cosign-signing-key Secret shape match, registry signature-object write path) are easier to debug if signing isn't blocking. The pipeline default is `SKIP_SIGN=false` (fail-closed per A3). The bootstrap exception is single-use, recorded in the runbook, and tracked by a dedicated bead so signing is restored on the next release.
 
 Tag scheme: `release-tools/vMAJOR.MINOR.PATCH`. The `release-tools/` prefix is what the tag-publish pipeline matches on; same repo can carry both `v2.24.x` (forgejo-mcp) and `release-tools/v1.0.0` (image) without ambiguity.
 
@@ -115,7 +117,7 @@ This change does not migrate existing release Tasks. It produces an image and it
 
 ## Open Questions
 
-- Final registry path: `quay.io/operate-first/release-tools`, `ghcr.io/operate-first/...`, or `codeberg.org/operate-first/...`? Maintainer decision.
+- Final registry path: `codeberg.org/operate-first/release-tools`, `ghcr.io/operate-first/...`, or `codeberg.org/operate-first/...`? Maintainer decision.
 - Should the image also bake in `tkn` CLI for emergency operator use? Defer — adds 15 MB; can be a follow-up.
 - Multi-arch (arm64) — defer until Hummingbird publishes `hi/go:arm64` and a buildah-with-qemu Task exists in op1st-pipelines.
 - **Hummingbird base health monitoring** — what cadence for tracking `hi/go` tag lag vs upstream Go releases? What second-source mirror if Red Hat pulls a tag? Track in a separate ops-runbook change once we have one CVE-cycle of operational data. (forgejo-mcp-bd-A6L6)

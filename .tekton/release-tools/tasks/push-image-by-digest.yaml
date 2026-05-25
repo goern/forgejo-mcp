@@ -6,8 +6,8 @@ metadata:
     tekton.dev/displayName: "push release-tools image to registry by digest (no tag)"
 spec:
   description: |
-    # TBD — coordinate with op1st-emea-b4mad maintainers before merge
-    # Registry: quay.io/operate-first/release-tools
+    # Path A (decided 2026-05-25): codeberg.org/operate-first/release-tools
+    # Registry: codeberg.org/operate-first/release-tools
     #
     # L1 TOCTOU fix: push manifest by digest ONLY here. The human-readable
     # vMAJOR.MINOR.PATCH tag is promoted AFTER cosign-sign succeeds (T9).
@@ -17,16 +17,16 @@ spec:
       description: |
         Local image tag to push (e.g. release-tools:build-tmp). Must already
         exist in the buildah store in the workspace.
-        # TBD — coordinate with op1st-emea-b4mad maintainers before merge
-        # Registry path working assumption: quay.io/operate-first/release-tools
+        # Path A (decided 2026-05-25): codeberg.org/operate-first/release-tools
+        # Registry path working assumption: codeberg.org/operate-first/release-tools
       type: string
     - name: REGISTRY_IMAGE
       description: |
-        Full registry path without tag (e.g. quay.io/operate-first/release-tools).
-        # TBD — coordinate with op1st-emea-b4mad maintainers before merge
-        # Working assumption: quay.io/operate-first/release-tools
+        Full registry path without tag (e.g. codeberg.org/operate-first/release-tools).
+        # Path A (decided 2026-05-25): codeberg.org/operate-first/release-tools
+        # Working assumption: codeberg.org/operate-first/release-tools
       type: string
-      default: "quay.io/operate-first/release-tools"
+      default: "codeberg.org/operate-first/release-tools"
     - name: STORAGE_DRIVER
       description: buildah storage driver.
       type: string
@@ -41,7 +41,7 @@ spec:
     - name: IMAGE_DIGEST
       description: sha256 digest of the pushed manifest (e.g. sha256:abc123...).
     - name: IMAGE_REPO_DIGEST
-      description: Full digest reference (e.g. quay.io/operate-first/release-tools@sha256:abc123).
+      description: Full digest reference (e.g. codeberg.org/operate-first/release-tools@sha256:abc123).
   steps:
     - name: push-by-digest
       image: quay.io/buildah/stable:latest
