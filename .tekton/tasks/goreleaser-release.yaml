@@ -15,19 +15,16 @@ spec:
     Outputs land in `dist/` on the source workspace so downstream Tasks
     (cosign-sign-release, mcpb-pack) can attach them to the Codeberg
     release without rebuilding.
+
+    All tools (go, goreleaser, syft) are pre-baked into RELEASE_TOOLS_IMAGE.
+    No runtime installs.
   params:
-    - name: GO_IMAGE
-      description: Container image carrying the Go toolchain.
+    - name: RELEASE_TOOLS_IMAGE
+      description: |
+        Pre-built release-tools image containing go, goreleaser, syft, cosign,
+        govulncheck, node, npm, jq, curl, mcpb, and openspec.
       type: string
-      default: docker.io/library/golang:1.25
-    - name: SYFT_VERSION
-      description: anchore/syft version used by goreleaser sboms section.
-      type: string
-      default: v1.18.1
-    - name: GORELEASER_VERSION
-      description: goreleaser CLI version installed via `go install`.
-      type: string
-      default: v2.6.1
+      default: codeberg.org/operate-first/release-tools:latest
     - name: TAG
       description: Tag ref name (e.g. v2.24.0). Must match a git tag on HEAD.
       type: string
@@ -51,16 +48,8 @@ spec:
       - name: GOTOOLCHAIN
         value: local
   steps:
-    # Install syft + goreleaser AND run `goreleaser release` in a single
-    # Step. Tekton Step containers in a Pod share the workspace volume but
-    # NOT /usr/local/bin/ — tools installed in one Step disappear before
-    # the next Step starts. Splitting install from run was the cause of
-    # the v2.24.0 failure (exit 127, "goreleaser: command not found").
-    # Proper fix: a prebuilt release-tools image, tracked in
-    # forgejo-mcp-1b4. This collapsed Step is the workaround until that
-    # image exists.
     - name: release
-      image: $(params.GO_IMAGE)
+      image: $(params.RELEASE_TOOLS_IMAGE)
       env:
         - name: GORELEASER_FORCE_TOKEN
           value: gitea
@@ -73,16 +62,6 @@ spec:
         #!/usr/bin/env bash
         set -euo pipefail
 
-        # syft generates the per-archive CycloneDX SBOMs referenced in
-        # .goreleaser.yml's sboms: section.
-        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
-          | sh -s -- -b /usr/local/bin "$(params.SYFT_VERSION)"
-        syft version
-
-        go install "github.com/goreleaser/goreleaser/v2@$(params.GORELEASER_VERSION)"
-        cp "$(go env GOPATH)/bin/goreleaser" /usr/local/bin/goreleaser
-        goreleaser --version
-
         git config --global --add safe.directory "$(workspaces.source.path)"
         # GoReleaser needs full history for changelog generation. PaC
         # git-clone defaults to a shallow checkout; deepen here.
@@ -92,7 +71,7 @@ spec:
         goreleaser release --clean --parallelism 2
 
     - name: smoke-test
-      image: $(params.GO_IMAGE)
+      image: $(params.RELEASE_TOOLS_IMAGE)
       script: |
         #!/usr/bin/env bash
         set -euo pipefail

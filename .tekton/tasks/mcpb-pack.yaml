@@ -14,17 +14,15 @@ spec:
     The extension/manifest.json is rewritten in place with the release
     version before each pack, then restored from a backup on exit.
 
-    Requires npx (Node 22+) and the @anthropic-ai/mcpb package, pulled at
-    runtime via `npx -y`.
+    All tools (mcpb, jq, curl) are pre-baked into RELEASE_TOOLS_IMAGE.
+    No runtime installs.
   params:
-    - name: NODE_IMAGE
-      description: Container image carrying Node + npx.
+    - name: RELEASE_TOOLS_IMAGE
+      description: |
+        Pre-built release-tools image containing go, goreleaser, syft, cosign,
+        govulncheck, node, npm, jq, curl, mcpb, and openspec.
       type: string
-      default: docker.io/library/node:22-bookworm
-    - name: TOOLS_IMAGE
-      description: Image carrying jq + curl for Codeberg API calls.
-      type: string
-      default: docker.io/library/node:22-bookworm
+      default: codeberg.org/operate-first/release-tools:latest
     - name: TAG
       description: Tag ref name (e.g. v2.24.0).
       type: string
@@ -48,7 +46,7 @@ spec:
     workingDir: $(workspaces.source.path)
   steps:
     - name: pack-and-upload
-      image: $(params.NODE_IMAGE)
+      image: $(params.RELEASE_TOOLS_IMAGE)
       env:
         - name: GITEA_TOKEN
           valueFrom:
@@ -58,8 +56,6 @@ spec:
       script: |
         #!/usr/bin/env bash
         set -euo pipefail
-        # node:22-bookworm already ships jq + curl.
-        command -v jq >/dev/null || (apt-get update && apt-get install -y --no-install-recommends jq curl)
 
         TAG="$(params.TAG)"
         VERSION="${TAG#v}"
@@ -97,7 +93,7 @@ spec:
           mv extension/manifest.json.tmp extension/manifest.json
 
           OUT="dist/forgejo-mcp_${VERSION}_${goos}_${goarch}.mcpb"
-          npx -y @anthropic-ai/mcpb pack extension/ "$OUT"
+          mcpb pack extension/ "$OUT"
 
           ASSET_NAME=$(basename "$OUT")
           curl -fsSL -X POST \

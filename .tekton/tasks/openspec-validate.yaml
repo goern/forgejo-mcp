@@ -6,28 +6,19 @@ metadata:
     tekton.dev/displayName: "openspec validate --all --strict"
 spec:
   params:
-    - name: NODE_IMAGE
-      description: Container image carrying Node.js + npm.
+    - name: RELEASE_TOOLS_IMAGE
+      description: |
+        Pre-built release-tools image containing openspec (and other tools).
       type: string
-      default: docker.io/library/node:22-alpine
-    - name: OPENSPEC_VERSION
-      description: openspec CLI version to install.
-      type: string
-      default: 1.3.1
+      default: codeberg.org/operate-first/release-tools:latest
   workspaces:
     - name: source
       mountPath: /workspace/src
   steps:
     - name: validate
-      image: $(params.NODE_IMAGE)
+      image: $(params.RELEASE_TOOLS_IMAGE)
       workingDir: $(workspaces.source.path)
-      env:
-        - name: npm_config_cache
-          value: /workspace/src/.npm
       script: |
         #!/bin/sh
         set -eu
-        node --version
-        npm --version
-        npm install -g "@fission-ai/openspec@$(params.OPENSPEC_VERSION)"
         openspec validate --all --strict --no-interactive
