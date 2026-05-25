@@ -1,0 +1,8 @@
+# Build context is image/release-tools/ (passed as SCRIPT_DIR in build.sh).
+# All files in context are already scoped to this directory.
+# Exclude only files not needed inside the image build.
+build.sh
+verify.sh
+README.md
+renovate.json
+VERSIONS.md

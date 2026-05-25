@@ -1,0 +1,238 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: release-tools-on-tag-publish
+  annotations:
+    pipelinesascode.tekton.dev/on-event: "[push]"
+    pipelinesascode.tekton.dev/on-target-branch: "[refs/tags/release-tools/v*]"
+    # A1 tag-isolation + belt-and-suspenders (older PaC versions may not
+    # enforce on-target-branch prefix correctly): CEL re-checks the full ref.
+    pipelinesascode.tekton.dev/on-cel-expression: |
+      event == "push" && target_branch.matches("^refs/tags/release-tools/v.*")
+    pipelinesascode.tekton.dev/task: >-
+      [git-clone,
+       .tekton/release-tools/tasks/resolve-release-tools-tag.yaml,
+       .tekton/release-tools/tasks/build-image.yaml,
+       .tekton/release-tools/tasks/push-image-by-digest.yaml,
+       .tekton/release-tools/tasks/cosign-sign-image-by-digest.yaml,
+       .tekton/release-tools/tasks/cosign-attach-sbom.yaml,
+       .tekton/release-tools/tasks/promote-image-tag.yaml]
+    pipelinesascode.tekton.dev/max-keep-runs: "10"
+    # Tag-publish runs are not cancellable — a partially-published image
+    # with a pushed digest but without a cosign signature is a bad state.
+    pipelinesascode.tekton.dev/cancel-in-progress: "false"
+    # Operator coordination notes:
+    # Registry: codeberg.org/operate-first/release-tools (Path A — reuse
+    # codeberg-pusher dockerconfigjson Secret already in op1st-pipelines).
+    # Required Secrets in op1st-pipelines:
+    #   - codeberg-pusher       (dockerconfigjson — push auth, Path A)
+    #   - cosign-signing-key    (cosign.key/cosign.password — optional: false, fail-closed)
+    # Before first publish: confirm the PAT inside codeberg-pusher has
+    # write:package scope AND the credential user holds maintainer/owner
+    # role on the operate-first org (verifiable only via Codeberg UI).
+spec:
+  params:
+    - name: repo_url
+      value: "{{ repo_url }}"
+    - name: revision
+      value: "{{ revision }}"
+    - name: target_branch
+      value: "{{ target_branch }}"
+    # Bootstrap exception for v1.0.0 (D4 in design.md). Operator manually
+    # edits this PipelineRun and sets value: "true" for the first publish.
+    # Default "false" = fail-closed signing per A3. Subsequent releases
+    # MUST run with "false" — bootstrap is single-use; a dedicated bead
+    # tracks restoring signing on release-tools/v1.0.1+.
+    - name: SKIP_SIGN
+      value: "false"
+  pipelineSpec:
+    params:
+      - name: repo_url
+      - name: revision
+      - name: target_branch
+        description: |
+          Full ref passed by PaC (e.g. refs/tags/release-tools/v1.0.0).
+          Stripped to bare semver (e.g. v1.0.0) by resolve-tag step.
+      - name: SKIP_SIGN
+        description: |
+          Bootstrap-only opt-out for cosign signing. "true" skips cosign-sign
+          and attach-sbom Tasks. Default "false" = fail-closed signing.
+        default: "false"
+    workspaces:
+      - name: source
+      - name: registry-credentials
+        description: |
+          Kubernetes Secret containing .dockerconfigjson or config.json with
+          push credentials for codeberg.org/operate-first/release-tools.
+          # Path A (decided 2026-05-25): codeberg.org/operate-first/release-tools
+    tasks:
+      - name: fetch-source
+        taskRef:
+          name: git-clone
+        workspaces:
+          - name: output
+            workspace: source
+        params:
+          - name: url
+            value: $(params.repo_url)
+          - name: revision
+            value: $(params.revision)
+
+      - name: resolve-tag
+        runAfter:
+          - fetch-source
+        taskRef:
+          name: release-tools-resolve-tag
+        params:
+          - name: target_branch
+            value: $(params.target_branch)
+
+      # Guard: SKIP_SIGN is a single-use bootstrap exception for v1.0.0 only.
+      # This task runs (and fails) if SKIP_SIGN=true is used on any other tag,
+      # preventing accidental unsigned publishes beyond the v1.0.0 bootstrap.
+      - name: validate-skip-sign
+        runAfter:
+          - resolve-tag
+        when:
+          - input: "$(params.SKIP_SIGN)"
+            operator: in
+            values: ["true"]
+        taskSpec:
+          params:
+            - name: TAG
+          steps:
+            - name: check
+              image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+              script: |
+                #!/usr/bin/env sh
+                set -eu
+                if [ "$(params.TAG)" != "v1.0.0" ]; then
+                  echo "ERROR: SKIP_SIGN=true is only allowed for the v1.0.0 bootstrap publish. Got tag: $(params.TAG)" >&2
+                  exit 1
+                fi
+                echo "v1.0.0 bootstrap exception approved."
+        params:
+          - name: TAG
+            value: $(tasks.resolve-tag.results.tag)
+
+      - name: build-image
+        runAfter:
+          - resolve-tag
+        taskRef:
+          name: release-tools-build-image
+        workspaces:
+          - name: source
+            workspace: source
+        params:
+          - name: IMAGE
+            value: "release-tools:$(tasks.resolve-tag.results.tag)"
+          - name: CONTEXT
+            value: image/release-tools
+          - name: CONTAINERFILE
+            value: Containerfile
+
+      # L1 TOCTOU fix: push by digest first, no human-readable tag yet.
+      - name: push-by-digest
+        runAfter:
+          - build-image
+        taskRef:
+          name: release-tools-push-image-by-digest
+        workspaces:
+          - name: source
+            workspace: source
+          - name: registry-credentials
+            workspace: registry-credentials
+        params:
+          - name: IMAGE
+            value: "release-tools:$(tasks.resolve-tag.results.tag)"
+          # Path A (decided 2026-05-25): codeberg.org/operate-first/release-tools
+          - name: REGISTRY_IMAGE
+            value: "codeberg.org/operate-first/release-tools"
+
+      # A3 fail-closed (default): cosign-signing-key secret is optional: false
+      # in the task definition. If the Secret is absent, this step fails, and
+      # no human-readable tag is ever promoted.
+      # cosign sign pushes the signature object to the registry; needs
+      # write auth same as push-by-digest.
+      # Bootstrap (D4): when SKIP_SIGN=true (v1.0.0 one-time exception),
+      # this task is skipped via `when:` clause; promote-tag still runs.
+      - name: cosign-sign
+        runAfter:
+          - push-by-digest
+          - validate-skip-sign
+        when:
+          - input: "$(params.SKIP_SIGN)"
+            operator: notin
+            values: ["true"]
+        taskRef:
+          name: release-tools-cosign-sign-image-by-digest
+        workspaces:
+          - name: registry-credentials
+            workspace: registry-credentials
+        params:
+          - name: IMAGE_REPO_DIGEST
+            value: $(tasks.push-by-digest.results.IMAGE_REPO_DIGEST)
+
+      - name: attach-sbom
+        runAfter:
+          - cosign-sign
+        when:
+          - input: "$(params.SKIP_SIGN)"
+            operator: notin
+            values: ["true"]
+        taskRef:
+          name: release-tools-cosign-attach-sbom
+        workspaces:
+          - name: source
+            workspace: source
+          - name: registry-credentials
+            workspace: registry-credentials
+        params:
+          - name: IMAGE_REPO_DIGEST
+            value: $(tasks.push-by-digest.results.IMAGE_REPO_DIGEST)
+
+      # L1 TOCTOU fix: promote human-readable tag ONLY after sign + SBOM
+      # succeed. When SKIP_SIGN=true, cosign-sign + attach-sbom are skipped;
+      # promote-tag still runs after push-by-digest. The "after" list includes
+      # both signing tasks — Tekton treats skipped tasks as satisfied for
+      # downstream runAfter, so dependency order holds either way.
+      - name: promote-tag
+        runAfter:
+          - push-by-digest
+          - cosign-sign
+          - attach-sbom
+        taskRef:
+          name: release-tools-promote-image-tag
+        workspaces:
+          - name: registry-credentials
+            workspace: registry-credentials
+        params:
+          - name: IMAGE_REPO_DIGEST
+            value: $(tasks.push-by-digest.results.IMAGE_REPO_DIGEST)
+          - name: TAG
+            value: $(tasks.resolve-tag.results.tag)
+          # Path A (decided 2026-05-25): codeberg.org/operate-first/release-tools
+          - name: REGISTRY_IMAGE
+            value: "codeberg.org/operate-first/release-tools"
+
+  workspaces:
+    - name: source
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              # Image build + syft SBOM generation workspace.
+              storage: 10Gi
+    - name: registry-credentials
+      secret:
+        # Path A (decided 2026-05-25): reuse the existing codeberg-pusher
+        # dockerconfigjson Secret in op1st-pipelines. Auth covers codeberg.org;
+        # for push to codeberg.org/operate-first/release-tools to succeed, the
+        # underlying Codeberg PAT must carry `write:package` scope AND the
+        # credential user must hold maintainer/owner role on the operate-first
+        # org. Operator confirms these out-of-band (cluster cannot validate).
+        # See docs/design/release-pipeline-migration.md and the runbook for
+        # rotation procedure.
+        secretName: codeberg-pusher

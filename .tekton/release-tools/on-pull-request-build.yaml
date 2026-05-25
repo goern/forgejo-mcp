@@ -1,0 +1,92 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: release-tools-on-pull-request-build
+  annotations:
+    pipelinesascode.tekton.dev/on-event: "[pull_request]"
+    pipelinesascode.tekton.dev/on-target-branch: "[main]"
+    # A4 patch: files.any.exists (NOT files.all.exists) — fires when ANY
+    # changed file is under the release-tools trees. files.all.exists would
+    # silently skip hybrid PRs (image change + unrelated typo fix elsewhere).
+    pipelinesascode.tekton.dev/on-cel-expression: |
+      event == "pull_request" && target_branch == "main" &&
+      files.any.exists(p, p.matches("^(image/release-tools/|\\.tekton/release-tools/).*"))
+    pipelinesascode.tekton.dev/task: >-
+      [git-clone,
+       .tekton/release-tools/tasks/build-image.yaml,
+       .tekton/release-tools/tasks/verify-image-tools.yaml,
+       .tekton/release-tools/tasks/syft-scan-image.yaml]
+    pipelinesascode.tekton.dev/max-keep-runs: "5"
+    pipelinesascode.tekton.dev/cancel-in-progress: "true"
+spec:
+  params:
+    - name: repo_url
+      value: "{{ repo_url }}"
+    - name: revision
+      value: "{{ revision }}"
+  pipelineSpec:
+    params:
+      - name: repo_url
+      - name: revision
+    workspaces:
+      - name: source
+    tasks:
+      - name: fetch-source
+        taskRef:
+          name: git-clone
+        workspaces:
+          - name: output
+            workspace: source
+        params:
+          - name: url
+            value: $(params.repo_url)
+          - name: revision
+            value: $(params.revision)
+
+      - name: build-image
+        taskRef:
+          name: release-tools-build-image
+        runAfter:
+          - fetch-source
+        workspaces:
+          - name: source
+            workspace: source
+        params:
+          - name: IMAGE
+            value: "release-tools:pr-$(context.pipelineRun.name)"
+          - name: CONTEXT
+            value: image/release-tools
+          - name: CONTAINERFILE
+            value: Containerfile
+
+      - name: verify-tools
+        taskRef:
+          name: release-tools-verify-image-tools
+        runAfter:
+          - build-image
+        params:
+          - name: IMAGE_REF
+            value: $(tasks.build-image.results.IMAGE_REF)
+
+      - name: scan-sbom
+        taskRef:
+          name: release-tools-syft-scan-image
+        runAfter:
+          - verify-tools
+        workspaces:
+          - name: source
+            workspace: source
+        params:
+          - name: IMAGE_REF
+            value: $(tasks.build-image.results.IMAGE_REF)
+
+  workspaces:
+    - name: source
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              # Image build workspace: full repo checkout + buildah layer cache.
+              storage: 10Gi

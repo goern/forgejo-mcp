@@ -92,7 +92,7 @@ The public key URL referenced in the README SHALL be identical to the URL refere
 #### Scenario: Published image verifies against the documented key
 
 - **WHEN** the tag-publish pipeline completes for `release-tools/v1.0.0`
-- **AND** a consumer runs `cosign verify --key <op1st-pub-url> quay.io/operate-first/release-tools:v1.0.0`
+- **AND** a consumer runs `cosign verify --key <op1st-pub-url> codeberg.org/operate-first/release-tools:v1.0.0`
 - **THEN** the command SHALL exit 0 with `Verification for ... successful`
 
 #### Scenario: Image without signature does not pass cutover
@@ -115,7 +115,7 @@ The publish pipeline SHALL emit a CycloneDX SBOM via `syft <image-ref>` and atta
 
 #### Scenario: SBOM available alongside the image
 
-- **WHEN** a consumer runs `cosign download sbom quay.io/operate-first/release-tools:v1.0.0`
+- **WHEN** a consumer runs `cosign download sbom codeberg.org/operate-first/release-tools:v1.0.0`
 - **THEN** the command SHALL emit a CycloneDX 1.x JSON document on stdout
 
 ### Requirement: PR build pipeline CEL-gated to release-tools paths
