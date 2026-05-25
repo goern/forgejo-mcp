@@ -9,6 +9,15 @@ metadata:
     # the underlying provider payload (Codeberg/Forgejo).
     pipelinesascode.tekton.dev/on-event: "[push]"
     pipelinesascode.tekton.dev/on-target-branch: "[refs/tags/v*]"
+    # T11 defensive CEL (A1 tag-isolation): PaC's glob [refs/tags/v*] may
+    # match refs/tags/release-tools/vX.Y.Z on some PaC versions because the
+    # glob is applied after stripping refs/tags/ and "release-tools/v1.0.0"
+    # starts with a non-v prefix, but belt-and-suspenders ensures this pipeline
+    # never fires on a release-tools tag. The expression requires the ref to
+    # start with refs/tags/v followed by a digit, which excludes
+    # refs/tags/release-tools/... entirely.
+    pipelinesascode.tekton.dev/on-cel-expression: |
+      event == "push" && target_branch.matches("^refs/tags/v[0-9]")
     pipelinesascode.tekton.dev/task: "[git-clone, .tekton/tasks/goreleaser-release.yaml, .tekton/tasks/cosign-sign-release.yaml, .tekton/tasks/mcpb-pack.yaml]"
     pipelinesascode.tekton.dev/max-keep-runs: "10"
     # Releases are not cancellable — let in-flight runs finish even if

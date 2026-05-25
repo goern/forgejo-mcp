@@ -1,0 +1,60 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: release-tools-cosign-attach-sbom
+  annotations:
+    tekton.dev/displayName: "syft scan + cosign attach SBOM to release-tools image"
+spec:
+  description: |
+    Generates a CycloneDX SBOM via syft and attaches it to the published image
+    manifest using cosign attach sbom (OCI referrers). Consumers can retrieve
+    the SBOM via `cosign download sbom <image-ref>` or the OCI referrers API.
+
+    # TBD — coordinate with op1st-emea-b4mad maintainers before merge
+    # Registry: quay.io/operate-first/release-tools
+  params:
+    - name: IMAGE_REPO_DIGEST
+      description: Full digest reference to attach SBOM to (e.g. quay.io/operate-first/release-tools@sha256:abc123).
+      type: string
+  workspaces:
+    - name: source
+      mountPath: /workspace/source
+  results:
+    - name: SBOM_DIGEST
+      description: sha256 digest of the attached SBOM artifact.
+  steps:
+    - name: generate-sbom
+      image: quay.io/operate-first/release-tools:latest
+      # TBD — replace :latest with pinned digest once image is published
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+
+        IMAGE_REF="$(params.IMAGE_REPO_DIGEST)"
+        SBOM_FILE="$(workspaces.source.path)/release-tools-sbom.cdx.json"
+
+        echo "Generating CycloneDX SBOM for ${IMAGE_REF}..."
+        syft "${IMAGE_REF}" --output cyclonedx-json="${SBOM_FILE}"
+        echo "SBOM written to ${SBOM_FILE}"
+
+    - name: attach-sbom
+      image: quay.io/operate-first/release-tools:latest
+      # TBD — replace :latest with pinned digest once image is published
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+
+        IMAGE_REF="$(params.IMAGE_REPO_DIGEST)"
+        SBOM_FILE="$(workspaces.source.path)/release-tools-sbom.cdx.json"
+
+        echo "Attaching SBOM to ${IMAGE_REF}..."
+        cosign attach sbom \
+          --sbom="${SBOM_FILE}" \
+          --type=cyclonedx \
+          "${IMAGE_REF}"
+
+        SBOM_DIGEST=$(sha256sum "${SBOM_FILE}" | cut -d' ' -f1)
+        printf '%s' "sha256:${SBOM_DIGEST}" > "$(results.SBOM_DIGEST.path)"
+        echo "SBOM attached. Local digest: sha256:${SBOM_DIGEST}"

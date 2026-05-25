@@ -1,0 +1,59 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: release-tools-cosign-sign-image-by-digest
+  annotations:
+    tekton.dev/displayName: "cosign sign release-tools image manifest by digest"
+spec:
+  description: |
+    Signs the image manifest identified by digest using cosign.
+
+    A3 asymmetry (intentional, per spec):
+      - This task mounts cosign-signing-key with optional: false (fail-closed).
+        A missing key causes a Failed PipelineRun; the unsigned image is NOT
+        promoted to a human-readable tag.
+      - The forgejo-mcp release pipeline uses optional: true (fail-open).
+        The asymmetry is intentional: an unsigned release-tools image is a
+        supply-chain regression; an unsigned checksums.txt is a UX regression only.
+  params:
+    - name: IMAGE_REPO_DIGEST
+      description: Full digest reference (e.g. quay.io/operate-first/release-tools@sha256:abc123).
+      type: string
+  volumes:
+    - name: cosign-signing-key
+      secret:
+        # A3 fail-closed: optional: false ensures a missing key fails the PipelineRun
+        # rather than silently promoting an unsigned image.
+        secretName: cosign-signing-key
+        optional: false
+  steps:
+    - name: sign
+      image: quay.io/operate-first/release-tools:latest
+      # TBD — coordinate with op1st-emea-b4mad maintainers before merge
+      # Once the image is published, replace :latest with a pinned digest.
+      volumeMounts:
+        - name: cosign-signing-key
+          mountPath: /workspace/cosign-key
+          readOnly: true
+      env:
+        - name: COSIGN_KEY_PATH
+          value: /workspace/cosign-key/cosign.key
+        - name: COSIGN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: cosign-signing-key
+              key: password
+              optional: false
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+
+        IMAGE_DIGEST_REF="$(params.IMAGE_REPO_DIGEST)"
+        echo "Signing: ${IMAGE_DIGEST_REF}"
+
+        cosign sign \
+          --key="${COSIGN_KEY_PATH}" \
+          --yes \
+          "${IMAGE_DIGEST_REF}"
+
+        echo "cosign sign completed for ${IMAGE_DIGEST_REF}"
