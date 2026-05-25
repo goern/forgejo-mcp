@@ -1,0 +1,119 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: cosign-sign-release
+  annotations:
+    tekton.dev/displayName: "cosign sign-blob checksums + upload to Codeberg release"
+spec:
+  description: |
+    Signs the GoReleaser-produced `checksums.txt` with cosign (key from the
+    `cosign-release-key` Secret) and uploads the resulting `.sig` as a
+    release asset. Signing the checksum file covers all archives + SBOMs
+    transitively via the checksum chain.
+
+    Skipped (exit 0) if the cosign secret is empty/missing — mirrors the
+    behavior of .forgejo/workflows/release.yml so releases continue to ship
+    if signing infrastructure is unavailable.
+
+    Provisioning the Secret in op1st-pipelines:
+      oc -n op1st-pipelines create secret generic cosign-release-key \
+        --from-file=cosign.key=cosign.key \
+        --from-literal=cosign.password='<password>' \
+        --from-file=cosign.pub=cosign.pub
+  params:
+    - name: COSIGN_IMAGE
+      description: Container image carrying the cosign CLI.
+      type: string
+      default: ghcr.io/sigstore/cosign/cosign:v2.4.1
+    - name: TOOLS_IMAGE
+      description: Image carrying jq + curl for Codeberg API calls.
+      type: string
+      default: registry.access.redhat.com/ubi9/ubi-minimal:latest
+    - name: TAG
+      description: Tag ref name (e.g. v2.24.0).
+      type: string
+    - name: REPO
+      description: Repo slug owner/name (e.g. goern/forgejo-mcp).
+      type: string
+    - name: CODEBERG_API
+      description: Codeberg API base URL.
+      type: string
+      default: https://codeberg.org/api/v1
+  workspaces:
+    - name: source
+      mountPath: /workspace/src
+  stepTemplate:
+    workingDir: $(workspaces.source.path)
+  steps:
+    - name: sign-checksums
+      image: $(params.COSIGN_IMAGE)
+      env:
+        - name: COSIGN_PRIVATE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: cosign-release-key
+              key: cosign.key
+              optional: true
+        - name: COSIGN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: cosign-release-key
+              key: cosign.password
+              optional: true
+      script: |
+        #!/usr/bin/env sh
+        set -eu
+        if [ -z "${COSIGN_PRIVATE_KEY:-}" ]; then
+          echo "WARN: COSIGN_PRIVATE_KEY not set; skipping signature step."
+          exit 0
+        fi
+        TAG="$(params.TAG)"
+        VERSION="${TAG#v}"
+        CHECKSUMS="dist/forgejo-mcp_${VERSION}_checksums.txt"
+        if [ ! -f "$CHECKSUMS" ]; then
+          echo "ERROR: Expected $CHECKSUMS not produced by GoReleaser" >&2
+          exit 1
+        fi
+        SIG="${CHECKSUMS}.sig"
+        KEY_FILE="$(mktemp)"
+        trap 'rm -f "$KEY_FILE"' EXIT
+        printf '%s' "$COSIGN_PRIVATE_KEY" > "$KEY_FILE"
+        cosign sign-blob --yes \
+          --key "$KEY_FILE" \
+          --output-signature "$SIG" \
+          "$CHECKSUMS"
+        ls -l "$SIG"
+
+    - name: upload-signature
+      image: $(params.TOOLS_IMAGE)
+      env:
+        - name: GITEA_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-release-token
+              key: token
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        microdnf install -y jq curl tar gzip >/dev/null 2>&1 || \
+          (rpm -q jq curl >/dev/null 2>&1 || dnf install -y jq curl)
+        TAG="$(params.TAG)"
+        VERSION="${TAG#v}"
+        SIG="dist/forgejo-mcp_${VERSION}_checksums.txt.sig"
+        if [ ! -f "$SIG" ]; then
+          echo "INFO: No signature file present; signing step was skipped."
+          exit 0
+        fi
+        RELEASE_ID=$(curl -fsSL \
+          -H "Authorization: token ${GITEA_TOKEN}" \
+          "$(params.CODEBERG_API)/repos/$(params.REPO)/releases/tags/${TAG}" \
+          | jq -r '.id')
+        if [ -z "$RELEASE_ID" ] || [ "$RELEASE_ID" = "null" ]; then
+          echo "ERROR: Could not resolve release ID for tag ${TAG}" >&2
+          exit 1
+        fi
+        ASSET_NAME=$(basename "$SIG")
+        curl -fsSL -X POST \
+          -H "Authorization: token ${GITEA_TOKEN}" \
+          -F "attachment=@${SIG}" \
+          "$(params.CODEBERG_API)/repos/$(params.REPO)/releases/${RELEASE_ID}/assets?name=${ASSET_NAME}"
