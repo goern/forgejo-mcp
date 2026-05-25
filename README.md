@@ -40,6 +40,18 @@ yay -S forgejo-mcp      # builds from source
 yay -S forgejo-mcp-bin  # uses pre-built binary
 ```
 
+**Option C: Nix / NixOS**
+
+ You can run the server directly using the Nix package manager:
+ ```bash
+ nix-shell -p forgejo-mcp
+ ```
+ Or using Flakes:
+ ```bash
+ nix run nixpkgs#forgejo-mcp
+ ```
+
+ > **Note:** `forgejo-mcp` is currently only available in the `unstable` channel and is not yet part of the 25.11 stable release.
 ### 2. Get Your Access Token
 
 1. Log into your Forgejo instance
