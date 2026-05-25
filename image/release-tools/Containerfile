@@ -99,7 +99,7 @@ RUN ln -sf /usr/local/lib/node_modules/@fission-ai/openspec/bin/openspec.js /usr
 # OCI image labels
 LABEL org.opencontainers.image.source="https://codeberg.org/goern/forgejo-mcp" \
       org.opencontainers.image.version="${GORELEASER_VERSION}" \
-      org.opencontainers.image.vendor="operate-first" \
+      org.opencontainers.image.vendor="Operate First, by #B4mad" \
       org.opencontainers.image.licenses="Apache-2.0" \
       org.opencontainers.image.description="Release toolchain image: go, goreleaser, syft, cosign, govulncheck, node, npm, jq, curl, @anthropic-ai/mcpb, @fission-ai/openspec" \
       org.opencontainers.image.base.name="registry.access.redhat.com/hi/go:${HI_GO_TAG}"
