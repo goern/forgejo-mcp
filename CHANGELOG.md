@@ -1,3 +1,17 @@
+## [2.23.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.23.0...v2.23.1) (2026-05-25)
+
+### :bug: Fixes
+
+* 🚨 release: inject main.Version + use 'version' subcommand in smoke-test ([c74da84](https://codeberg.org/goern/forgejo-mcp/commit/c74da842681bb9b2cd73de5fb79fea71399ee67a)), closes [#172](https://codeberg.org/goern/forgejo-mcp/issues/172)
+
+### :memo: Documentation
+
+* 📝 credit byteflavour for v2.23.0 stateless-auth + NixOS docs ([298c6e4](https://codeberg.org/goern/forgejo-mcp/commit/298c6e48d91e0d65fbea434cc83ab981832d6ddc)), closes [#138](https://codeberg.org/goern/forgejo-mcp/issues/138) [#146](https://codeberg.org/goern/forgejo-mcp/issues/146)
+
+### :repeat: Chore
+
+* update beads jsonl ([a2756d4](https://codeberg.org/goern/forgejo-mcp/commit/a2756d440513d4a063dd0799a1dc0f3906794ce3))
+
 ## [2.23.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.22.0...v2.23.0) (2026-05-25)
 
 ### :sparkles: Features
