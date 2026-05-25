@@ -1,3 +1,13 @@
+## [2.24.2](https://codeberg.org/goern/forgejo-mcp/compare/v2.24.1...v2.24.2) (2026-05-25)
+
+### :bug: Fixes
+
+* **ci:** 🐛 move Go cache out of workspace to avoid goreleaser dirty-tree check ([efcec22](https://codeberg.org/goern/forgejo-mcp/commit/efcec225df0b2122422faee2466b6cbc838e8767))
+
+### :repeat: Chore
+
+* 🗂️ beads jsonl post-[#154](https://codeberg.org/goern/forgejo-mcp/issues/154) merge ([9254e60](https://codeberg.org/goern/forgejo-mcp/commit/9254e60e6a7d974cc2f9b1bddafae24c6fceea37))
+
 ## [2.24.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.24.0...v2.24.1) (2026-05-25)
 
 ### :bug: Fixes
