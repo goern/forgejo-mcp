@@ -1,8 +1,16 @@
 # ADR: Migrate Release Workflow to op1st Tekton Pipeline
 
-- Status: Proposed (parallel-run phase)
+- Status: Accepted (soft-cutover phase)
 - Date: 2026-05-25
-- Tracking: [forgejo-mcp-d4b](#) — depends on [forgejo-mcp-td8](#) (canonical CI gate decision)
+- Tracking: [forgejo-mcp-d4b](#) (initial migration, closed) → [forgejo-mcp-n85](#) (soft-disable Forgejo trigger, this addendum) → [forgejo-mcp-gdz](#) (hard cutover after 2 successful Tekton releases)
+- Depends on: [forgejo-mcp-td8](#) (canonical CI gate decision)
+
+## Status history
+
+| Date       | Status                  | Change                                                                                       |
+|------------|-------------------------|----------------------------------------------------------------------------------------------|
+| 2026-05-25 | Proposed                | PR #150 merged: Tekton release pipeline + Tasks + ADR + runbook + README verify chapter      |
+| 2026-05-25 | Accepted (soft-cutover) | `.forgejo/workflows/release.yml` trigger changed from `push: tags: v*` to `workflow_dispatch` only (bead forgejo-mcp-n85). Tekton is now the sole auto-firing release path; Forgejo workflow kept as manual fallback. |
 
 ## Context
 
