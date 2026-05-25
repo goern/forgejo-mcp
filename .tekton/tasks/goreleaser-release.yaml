@@ -39,10 +39,15 @@ spec:
     env:
       - name: GOFLAGS
         value: "-buildvcs=false"
+      # GOCACHE / GOMODCACHE must live OUTSIDE the workspace mount.
+      # GoReleaser refuses to publish when `git status` is dirty; Go's
+      # caches inside the repo show up as untracked directories and
+      # trip the check. /tmp is per-Step but release runs in a single
+      # Step, so we lose nothing.
       - name: GOCACHE
-        value: /workspace/src/.gocache
+        value: /tmp/gocache
       - name: GOMODCACHE
-        value: /workspace/src/.gomodcache
+        value: /tmp/gomodcache
       - name: GOTOOLCHAIN
         value: local
   steps:
