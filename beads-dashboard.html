@@ -402,40 +402,51 @@
   }
   .issue .body .label:first-child { margin-top: 0; }
 
-  /* Dependency view */
-  .dep-list {
+  /* Dependency subway map */
+  .dep-map {
     border: 1px solid var(--rule);
-    padding: 0.75rem 0.5rem;
-    font-family: var(--mono);
-    font-size: 0.82rem;
-    letter-spacing: 0.02em;
-    max-height: 28rem;
-    overflow-y: auto;
+    padding: 0.75rem;
+    overflow: auto;
+    max-height: 36rem;
+    background:
+      radial-gradient(circle at 1px 1px, rgba(180, 200, 180, 0.06) 1px, transparent 1px) 0 0 / 24px 24px;
   }
-  .dep-row {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
+  .dep-map svg { display: block; }
+  .dep-map .station rect {
+    transition: filter 0.15s, stroke-width 0.15s;
+  }
+  .dep-map .station:hover rect {
+    filter: drop-shadow(0 0 6px var(--amber-soft));
+    stroke: var(--amber) !important;
+    stroke-width: 2 !important;
+  }
+  .dep-map .station:hover text { fill: var(--amber) !important; }
+  .dep-map .station { cursor: pointer; }
+  .dep-map .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.9rem 1.4rem;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.35rem 0.65rem;
-    border-bottom: 1px dotted var(--rule);
-  }
-  .dep-row:last-child { border-bottom: none; }
-  .dep-row a {
-    color: var(--phos);
-    text-decoration: none;
-    border-bottom: 1px dashed rgba(155,205,155,0.25);
-  }
-  .dep-row a:hover { color: var(--amber); border-color: var(--amber-soft); }
-  .dep-row .arrow { color: var(--amber); }
-  .dep-row .type {
-    grid-column: 1 / -1;
-    text-align: center;
-    font-size: 0.68rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+    margin-top: 0.65rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
     color: var(--phos-muted);
-    padding-top: 0.15rem;
+    text-transform: uppercase;
+  }
+  .dep-map .legend .swatch {
+    display: inline-block;
+    width: 22px; height: 6px;
+    margin-right: 0.4rem;
+    vertical-align: middle;
+    border-radius: 3px;
+  }
+  .dep-map .legend .dot {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    margin-right: 0.35rem;
+    vertical-align: middle;
   }
 
   /* Footer */
@@ -566,7 +577,7 @@
         <h2>dependency graph</h2>
         <span class="aux" id="dep-count">-- edges</span>
       </div>
-      <div class="dep-list" id="dep-list"></div>
+      <div class="dep-map" id="dep-map"></div>
     </section>
 
     <footer>
@@ -765,29 +776,187 @@ function issueCard(i, idx) {
   `;
 }
 
-function renderDeps() {
-  const rows = [];
-  for (const i of state.data.issues) {
+/* ---------- subway-map dependency renderer ----------
+ * Edge model: in beads, `A depends_on B` means B must be done before A.
+ * For the map we draw upstream (B) on the LEFT and downstream (A) on the
+ * RIGHT — like a subway line moving in the direction of dependency flow.
+ * Layout: layered (Sugiyama-lite). Layer = longest path from any root,
+ * lane = order within the layer. Edges are routed as orthogonal SVG
+ * paths with rounded elbows and coloured per upstream "line".
+ */
+const SUBWAY = {
+  COL: 240,           // px per layer
+  ROW: 50,            // px per lane row
+  PAD_X: 32,
+  PAD_Y: 32,
+  STATION_W: 168,
+  STATION_H: 26,
+  ELBOW: 10,
+  PALETTE: ["#ffa500","#9bcd9b","#7fc8e8","#e8a0ff","#ffe066","#ff7070","#a0e8a0","#ff9966","#b8a0ff","#66e0c0"],
+};
+
+function lineColor(id) {
+  let h = 5381;
+  for (let i = 0; i < id.length; i++) h = ((h << 5) + h + id.charCodeAt(i)) >>> 0;
+  return SUBWAY.PALETTE[h % SUBWAY.PALETTE.length];
+}
+
+function buildDepGraph(issues) {
+  // out: upstream -> [downstream], inc: downstream -> [upstream]
+  const out = new Map(), inc = new Map(), edges = [];
+  const add = (n) => { if (!out.has(n)) { out.set(n, []); inc.set(n, []); } };
+  for (const i of issues) {
     for (const d of (i.dependencies || [])) {
-      rows.push({ from: i.id, to: d.depends_on_id, type: d.type || "depends" });
+      add(i.id); add(d.depends_on_id);
+      out.get(d.depends_on_id).push(i.id);
+      inc.get(i.id).push(d.depends_on_id);
+      edges.push({ from: i.id, to: d.depends_on_id, type: d.type || "depends" });
     }
   }
-  $("#dep-count").textContent = `${rows.length} edges`;
-  if (!rows.length) { $("#dep-list").innerHTML = `<div class="empty">no dependency edges recorded.</div>`; return; }
-  rows.sort((a,b) => a.from.localeCompare(b.from));
-  $("#dep-list").innerHTML = rows.map(r => `
-    <div class="dep-row">
-      <a href="#${escapeHtml(r.from)}" data-jump="${escapeHtml(r.from)}">${escapeHtml(r.from)}</a>
-      <span class="arrow">─ ${escapeHtml(r.type)} ➜</span>
-      <a href="#${escapeHtml(r.to)}" data-jump="${escapeHtml(r.to)}">${escapeHtml(r.to)}</a>
-    </div>
-  `).join("");
+  return { out, inc, edges };
+}
 
-  $$(".dep-row a").forEach(a => {
-    a.addEventListener("click", (e) => {
-      e.preventDefault();
-      const id = a.getAttribute("data-jump");
-      // reset filters and search to find the card
+function assignLayers(out, inc) {
+  // longest-path layering from roots (nodes with no upstream)
+  const layer = new Map();
+  const roots = [...inc.keys()].filter(n => inc.get(n).length === 0);
+  const queue = [...roots];
+  for (const r of roots) layer.set(r, 0);
+  let head = 0;
+  const visited = new Set(roots);
+  while (head < queue.length) {
+    const cur = queue[head++];
+    const cl = layer.get(cur);
+    for (const next of out.get(cur)) {
+      if ((layer.get(next) ?? -1) < cl + 1) layer.set(next, cl + 1);
+      if (!visited.has(next)) { visited.add(next); queue.push(next); }
+    }
+  }
+  // any nodes left (cycle members) go to layer 0
+  for (const n of out.keys()) if (!layer.has(n)) layer.set(n, 0);
+  return layer;
+}
+
+function laneAssignment(layer, out) {
+  // group by layer, sort lanes by upstream-lane avg for fewer crossings
+  const byLayer = new Map();
+  for (const [n, l] of layer) {
+    if (!byLayer.has(l)) byLayer.set(l, []);
+    byLayer.get(l).push(n);
+  }
+  const layers = [...byLayer.keys()].sort((a, b) => a - b);
+  const lane = new Map();
+  for (const l of layers) {
+    const nodes = byLayer.get(l);
+    if (l === 0) {
+      nodes.sort();
+    } else {
+      // sort by mean lane of upstream parents
+      nodes.sort((a, b) => {
+        const score = (id) => {
+          const parents = [...lane.entries()].filter(([pid]) => out.get(pid)?.includes(id)).map(([, v]) => v);
+          if (!parents.length) return 0;
+          return parents.reduce((s, x) => s + x, 0) / parents.length;
+        };
+        const sa = score(a), sb = score(b);
+        if (sa !== sb) return sa - sb;
+        return a.localeCompare(b);
+      });
+    }
+    nodes.forEach((n, idx) => lane.set(n, idx));
+  }
+  return { lane, byLayer, layers };
+}
+
+function orthogonalPath(sx, sy, tx, ty, r) {
+  if (Math.abs(sy - ty) < 0.5) return `M ${sx} ${sy} L ${tx} ${ty}`;
+  const midX = sx + (tx - sx) / 2;
+  const dir = ty > sy ? 1 : -1;
+  return `M ${sx} ${sy} L ${midX - r} ${sy} Q ${midX} ${sy} ${midX} ${sy + r * dir} L ${midX} ${ty - r * dir} Q ${midX} ${ty} ${midX + r} ${ty} L ${tx} ${ty}`;
+}
+
+function shortId(id) {
+  return id.startsWith("forgejo-mcp-") ? id.slice("forgejo-mcp-".length) : id;
+}
+
+function renderDeps() {
+  const { out, inc, edges } = buildDepGraph(state.data.issues);
+  $("#dep-count").textContent = `${edges.length} edges · ${out.size} stations`;
+
+  if (!edges.length) {
+    $("#dep-map").innerHTML = `<div class="empty">no dependency edges recorded.</div>`;
+    return;
+  }
+
+  const layer = assignLayers(out, inc);
+  const { lane, byLayer, layers } = laneAssignment(layer, out);
+
+  const issuesById = new Map(state.data.issues.map(i => [i.id, i]));
+  const { COL, ROW, PAD_X, PAD_Y, STATION_W, STATION_H, ELBOW } = SUBWAY;
+
+  const maxLane = Math.max(...[...byLayer.values()].map(a => a.length));
+  const width  = PAD_X * 2 + (layers[layers.length - 1] + 1) * COL + STATION_W;
+  const height = PAD_Y * 2 + maxLane * ROW + STATION_H;
+
+  const pos = new Map();
+  for (const [n, l] of layer) {
+    const ln = lane.get(n);
+    pos.set(n, { x: PAD_X + l * COL, y: PAD_Y + ln * ROW + STATION_H / 2 });
+  }
+
+  let svgEdges = "";
+  // group edges by upstream (so each "line" departing a station shares colour)
+  for (const e of edges) {
+    const s = pos.get(e.to);   // upstream (left)
+    const t = pos.get(e.from); // downstream (right)
+    if (!s || !t) continue;
+    const sx = s.x + STATION_W, sy = s.y;
+    const tx = t.x, ty = t.y;
+    const colour = lineColor(e.to);
+    const d = orthogonalPath(sx, sy, tx, ty, ELBOW);
+    svgEdges += `<path d="${d}" stroke="${colour}" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"><title>${escapeHtml(e.from)} depends on ${escapeHtml(e.to)}</title></path>`;
+  }
+
+  let svgNodes = "";
+  for (const [id] of out) {
+    const p = pos.get(id);
+    const issue = issuesById.get(id) || {};
+    const st = issue.status || "open";
+    const fill = st === "closed" ? "rgba(120,140,120,0.10)"
+              : st === "in_progress" ? "rgba(255,165,0,0.14)"
+              : "rgba(232,240,232,0.06)";
+    const stroke = st === "closed" ? "#5a705a"
+                : st === "in_progress" ? "#ffa500"
+                : "#b8c6b8";
+    const textCol = st === "closed" ? "#7a907a" : "#e8f0e8";
+    const dotCol = lineColor(id);
+    const label = shortId(id);
+    const title = `${id} · ${issue.title || ""} (${st})`;
+    svgNodes += `<g class="station" data-id="${escapeHtml(id)}" transform="translate(${p.x},${p.y - STATION_H/2})">
+      <title>${escapeHtml(title)}</title>
+      <rect x="0" y="0" width="${STATION_W}" height="${STATION_H}" rx="${STATION_H/2}" fill="${fill}" stroke="${stroke}" stroke-width="1.4"/>
+      <circle cx="${STATION_H/2}" cy="${STATION_H/2}" r="5" fill="${dotCol}" stroke="${stroke}" stroke-width="1"/>
+      <text x="${STATION_H + 4}" y="${STATION_H/2 + 4}" fill="${textCol}" font-family="JetBrains Mono, ui-monospace, monospace" font-size="11" font-weight="500">${escapeHtml(label)}</text>
+    </g>`;
+  }
+
+  const svg = `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Issue dependency subway map">
+    <g class="edges">${svgEdges}</g>
+    <g class="stations">${svgNodes}</g>
+  </svg>
+  <div class="legend">
+    <span><span class="dot" style="background:#ffa500"></span>in_progress / line colour</span>
+    <span><span class="dot" style="background:rgba(232,240,232,0.5); border:1px solid #b8c6b8"></span>open</span>
+    <span><span class="dot" style="background:rgba(120,140,120,0.3); border:1px solid #5a705a"></span>closed</span>
+    <span><span class="swatch" style="background:#9bcd9b"></span>each station's outbound line colours the chain</span>
+    <span>flow: upstream <span style="color:var(--amber)">→</span> downstream</span>
+  </div>`;
+
+  $("#dep-map").innerHTML = svg;
+
+  $$("#dep-map .station").forEach(g => {
+    g.addEventListener("click", () => {
+      const id = g.getAttribute("data-id");
       state.filters = { status: "*", priority: "*", type: "*" };
       state.q = id;
       $("#search").value = id;
