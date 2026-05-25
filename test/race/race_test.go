@@ -21,7 +21,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
-// fakeAPI is a package-level test server so the forgejo.Client() singleton
+// fakeAPI is a package-level test server so the forgejo.Client(context.Background()) singleton
 // (initialized via sync.Once) always points to a live server.
 var (
 	fakeAPI  *httptest.Server
@@ -77,7 +77,7 @@ func setup(t *testing.T) {
 		flagPkg.Debug = false
 
 		// Force the forgejo client singleton to initialize against our fake server.
-		_ = forgejo.Client()
+		_, _ = forgejo.Client(context.Background())
 
 		mcpSrv = server.NewMCPServer("forgejo-mcp", "test", server.WithLogging())
 		operation.RegisterTool(mcpSrv)
@@ -267,7 +267,7 @@ func TestInitFlagParseBug(t *testing.T) {
 // When the forgejo client returns (nil, nil, err), this panics.
 // Example: operation/user/user.go:44
 //
-//	user, resp, err := forgejo.Client().GetMyUserInfo()
+//	user, resp, err := forgejo.Client(context.Background()).GetMyUserInfo()
 //	forgejo.LogAPICall(ctx, "GET", "/user", duration, resp.StatusCode, err) // CRASH if resp==nil
 //	if err != nil { ... }
 //

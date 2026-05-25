@@ -17,9 +17,43 @@ var (
 	clientOnce sync.Once
 )
 
-// Client returns a Forgejo client configured to connect to a Forgejo instance
-// We use the standard Forgejo SDK to ensure API compatibility
-func Client() *forgejo.Client {
+type contextKey string
+
+const (
+	TokenContextKey contextKey = "forgejo-token"
+)
+
+// WithToken adds a Forgejo token to the context.
+func WithToken(ctx context.Context, token string) context.Context {
+	return context.WithValue(ctx, TokenContextKey, token)
+}
+
+// Client returns a Forgejo client configured to connect to a Forgejo instance.
+// If a token is found in the context, a new ephemeral client is returned.
+// Otherwise, the shared singleton client is used.
+func Client(ctx context.Context) (*forgejo.Client, error) {
+	token, ok := ctx.Value(TokenContextKey).(string)
+	if ok && token != "" {
+		// Use configured user agent or default to forgejo-mcp/<version>
+		userAgent := flag.UserAgent
+		if userAgent == "" {
+			userAgent = "forgejo-mcp/" + flag.Version
+		}
+
+		c, err := forgejo.NewClient(flag.URL,
+			forgejo.SetToken(token),
+			forgejo.SetUserAgent(userAgent),
+		)
+		if err != nil {
+			log.ErrorCtx(ctx, "Failed to create ephemeral Forgejo client",
+				log.SanitizedURLField("url", flag.URL),
+				log.ErrorField(err),
+			)
+			return nil, fmt.Errorf("create ephemeral client: %w", err)
+		}
+		return c, nil
+	}
+
 	clientOnce.Do(func() {
 		if client == nil {
 			// Use configured user agent or default to forgejo-mcp/<version>
@@ -37,6 +71,8 @@ func Client() *forgejo.Client {
 					log.SanitizedURLField("url", flag.URL),
 					log.ErrorField(err),
 				)
+				// We still fatal here because if the singleton can't be created at startup,
+				// the server is useless in stdio mode.
 				log.Fatalf("create forgejo client err: %v", err)
 			}
 			client = c
@@ -47,7 +83,7 @@ func Client() *forgejo.Client {
 			)
 		}
 	})
-	return client
+	return client, nil
 }
 
 // GetBaseURL returns the base URL of the Forgejo instance.
@@ -66,7 +102,11 @@ func VerifyConnection() error {
 		log.SanitizedURLField("url", flag.URL),
 	)
 
-	version, resp, err := Client().ServerVersion()
+	client, err := Client(context.Background())
+	if err != nil {
+		return err
+	}
+	version, resp, err := client.ServerVersion()
 	duration := time.Since(start)
 
 	if err != nil {
@@ -94,7 +134,11 @@ func HealthCheck() error {
 
 	log.Debug("Starting health check")
 
-	version, resp, err := Client().ServerVersion()
+	client, err := Client(context.Background())
+	if err != nil {
+		return err
+	}
+	version, resp, err := client.ServerVersion()
 	duration := time.Since(start)
 
 	if err != nil {

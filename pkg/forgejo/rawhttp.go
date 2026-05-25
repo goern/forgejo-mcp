@@ -95,8 +95,12 @@ func resolveSameOriginURL(pathOrURL string) (string, error) {
 	return base + pathOrURL, nil
 }
 
-func setCommonHeaders(req *http.Request) {
-	req.Header.Set("Authorization", "token "+flag.Token)
+func setCommonHeaders(ctx context.Context, req *http.Request) {
+	token, ok := ctx.Value(TokenContextKey).(string)
+	if !ok || token == "" {
+		token = flag.Token
+	}
+	req.Header.Set("Authorization", "token "+token)
 	req.Header.Set("User-Agent", userAgent())
 	req.Header.Set("Accept", "application/json")
 }
@@ -170,7 +174,7 @@ func DoJSON(ctx context.Context, method, pathOrURL string, body, out any) error 
 	if err != nil {
 		return fmt.Errorf("build request: %w", err)
 	}
-	setCommonHeaders(req)
+	setCommonHeaders(ctx, req)
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
@@ -241,7 +245,7 @@ func DoMultipart(ctx context.Context, method, pathOrURL, fieldName, filename, mi
 	if err != nil {
 		return fmt.Errorf("build request: %w", err)
 	}
-	setCommonHeaders(req)
+	setCommonHeaders(ctx, req)
 	req.Header.Set("Content-Type", mw.FormDataContentType())
 	resp, err := doRequest(ctx, req)
 	if err != nil {
@@ -275,8 +279,7 @@ func DoRaw(ctx context.Context, pathOrURL string) ([]byte, string, error) {
 	if err != nil {
 		return nil, "", fmt.Errorf("build request: %w", err)
 	}
-	req.Header.Set("Authorization", "token "+flag.Token)
-	req.Header.Set("User-Agent", userAgent())
+	setCommonHeaders(ctx, req)
 	// Don't constrain Accept here — the asset endpoint is binary.
 
 	resp, err := doRequest(ctx, req)

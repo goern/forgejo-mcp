@@ -88,6 +88,21 @@ When using streamable HTTP mode, start the server first:
 forgejo-mcp --transport http --url https://your-forgejo-instance.org --token <your-token>
 ```
 
+**Multi-tenant HTTP mode** (optional):
+
+You can run a single centralized `forgejo-mcp` instance and let each client provide its own token via the standard HTTP `Authorization` header. This enables serving multiple users or agents from one server.
+
+1. Start the server (optionally without any global token):
+   ```bash
+   forgejo-mcp --transport http --url https://your-forgejo-instance.org
+   ```
+2. Clients include their specific token in each request:
+   - `Authorization: token <token>` (Forgejo style)
+   - `Authorization: Bearer <token>` (OAuth2/MCP style)
+   - Note: The scheme (`token` or `Bearer`) is case-insensitive.
+
+See [demos/multi-tenant-http.md](demos/multi-tenant-http.md) for a copy-pasteable walkthrough.
+
 **For SSE mode** (legacy HTTP-based):
 
 ```json

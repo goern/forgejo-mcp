@@ -183,7 +183,11 @@ func ListIssueTrackedTimesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	}
 	// user filter is ignored by the issue-level endpoint; see docs/plans/issue-time-tracking.md
 
-	times, _, err := forgejo.Client().ListIssueTrackedTimes(owner, repo, int64(index), opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	times, _, err := client.ListIssueTrackedTimes(owner, repo, int64(index), opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list issue tracked times err: %v", err))
 	}
@@ -213,7 +217,11 @@ func ListRepoTrackedTimesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 		User:        user,
 	}
 
-	times, _, err := forgejo.Client().ListRepoTrackedTimes(owner, repo, opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	times, _, err := client.ListRepoTrackedTimes(owner, repo, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list repo tracked times err: %v", err))
 	}
@@ -222,7 +230,11 @@ func ListRepoTrackedTimesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 
 func ListMyTrackedTimesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called ListMyTrackedTimesFn")
-	times, _, err := forgejo.Client().GetMyTrackedTimes()
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	times, _, err := client.GetMyTrackedTimes()
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list my tracked times err: %v", err))
 	}
@@ -282,7 +294,11 @@ func AddIssueTimeFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 		opt.Created = parsed
 	}
 
-	entry, _, err := forgejo.Client().AddTime(owner, repo, int64(index), opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	entry, _, err := client.AddTime(owner, repo, int64(index), opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("add issue time err: %v", err))
 	}
@@ -296,7 +312,11 @@ func ResetIssueTimeFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	repo, _ := args["repo"].(string)
 	index, _ := to.Float64(args["index"])
 
-	_, err := forgejo.Client().ResetIssueTime(owner, repo, int64(index))
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	_, err = client.ResetIssueTime(owner, repo, int64(index))
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("reset issue time err: %v", err))
 	}
@@ -311,7 +331,11 @@ func DeleteIssueTimeEntryFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 	index, _ := to.Float64(args["index"])
 	timeID, _ := to.Float64(args["time_id"])
 
-	_, err := forgejo.Client().DeleteTime(owner, repo, int64(index), int64(timeID))
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	_, err = client.DeleteTime(owner, repo, int64(index), int64(timeID))
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("delete time entry err: %v", err))
 	}
@@ -325,7 +349,11 @@ func StartIssueStopwatchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 	repo, _ := args["repo"].(string)
 	index, _ := to.Float64(args["index"])
 
-	_, err := forgejo.Client().StartIssueStopWatch(owner, repo, int64(index))
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	_, err = client.StartIssueStopWatch(owner, repo, int64(index))
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("start issue stopwatch err: %v", err))
 	}
@@ -339,7 +367,11 @@ func StopIssueStopwatchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	repo, _ := args["repo"].(string)
 	index, _ := to.Float64(args["index"])
 
-	_, err := forgejo.Client().StopIssueStopWatch(owner, repo, int64(index))
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	_, err = client.StopIssueStopWatch(owner, repo, int64(index))
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("stop issue stopwatch err: %v", err))
 	}
@@ -353,7 +385,11 @@ func CancelIssueStopwatchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 	repo, _ := args["repo"].(string)
 	index, _ := to.Float64(args["index"])
 
-	_, err := forgejo.Client().DeleteIssueStopwatch(owner, repo, int64(index))
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	_, err = client.DeleteIssueStopwatch(owner, repo, int64(index))
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("cancel issue stopwatch err: %v", err))
 	}
@@ -362,7 +398,11 @@ func CancelIssueStopwatchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 
 func ListMyStopwatchesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called ListMyStopwatchesFn")
-	watches, _, err := forgejo.Client().GetMyStopwatches()
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	watches, _, err := client.GetMyStopwatches()
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list my stopwatches err: %v", err))
 	}
