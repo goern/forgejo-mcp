@@ -9,6 +9,7 @@ ARG HI_GO_DIGEST=sha256:d8c8b702b8a54150e8fdca86753f581d98c551ab8a3fd429886d4ddd
 ARG SYFT_VERSION=v1.44.0
 ARG GORELEASER_VERSION=v2.16.0
 ARG COSIGN_VERSION=v3.0.6
+ARG GOVULNCHECK_VERSION=latest
 ARG MCPB_VERSION=2.1.2
 
 # ---------------------------------------------------------------------------
@@ -20,6 +21,7 @@ FROM registry.access.redhat.com/hi/go:${HI_GO_TAG}@${HI_GO_DIGEST} AS tools-buil
 ARG SYFT_VERSION
 ARG GORELEASER_VERSION
 ARG COSIGN_VERSION
+ARG GOVULNCHECK_VERSION
 ARG MCPB_VERSION
 
 # Install build-time deps: tar+gzip+xz for syft install.sh archive extraction; curl for binary fetches
@@ -27,6 +29,9 @@ RUN dnf install -y nodejs npm curl ca-certificates tar gzip xz && dnf clean all
 
 # goreleaser: install via go install from pinned tag
 RUN GOBIN=/usr/local/bin go install github.com/goreleaser/goreleaser/v2@${GORELEASER_VERSION}
+
+# govulncheck: install via go install (Go module proxy + sumdb integrity)
+RUN GOBIN=/usr/local/bin go install golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}
 
 # syft: install via official install script at the pinned release tag
 RUN curl -sSfL "https://raw.githubusercontent.com/anchore/syft/${SYFT_VERSION}/install.sh" \
@@ -42,8 +47,8 @@ RUN set -ex \
     && rm /tmp/cosign-checksums.txt \
     && chmod +x /usr/local/bin/cosign
 
-# @anthropic-ai/mcpb: install from pinned lockfile into a staging directory, then
-# copy the integrity-verified tree to the global node_modules location directly.
+# npm packages (mcpb, openspec): install from pinned lockfile into a staging
+# directory, then copy the integrity-verified tree to global node_modules.
 # npm ci reads package-lock.json (integrity-hash-pinned); npm install -g does NOT
 # read the lockfile and re-resolves transitive deps from the registry, defeating
 # the supply-chain guarantee. Copy instead of re-resolve.
@@ -66,15 +71,17 @@ ARG HI_GO_TAG
 ARG SYFT_VERSION
 ARG GORELEASER_VERSION
 ARG COSIGN_VERSION
+ARG GOVULNCHECK_VERSION
 ARG MCPB_VERSION
 
 # Install runtime tools from dnf
 RUN dnf install -y nodejs npm jq curl ca-certificates && dnf clean all
 
 # Copy compiled/fetched binaries from builder stage
-COPY --from=tools-builder /usr/local/bin/goreleaser /usr/local/bin/goreleaser
-COPY --from=tools-builder /usr/local/bin/syft       /usr/local/bin/syft
-COPY --from=tools-builder /usr/local/bin/cosign     /usr/local/bin/cosign
+COPY --from=tools-builder /usr/local/bin/goreleaser    /usr/local/bin/goreleaser
+COPY --from=tools-builder /usr/local/bin/syft          /usr/local/bin/syft
+COPY --from=tools-builder /usr/local/bin/cosign        /usr/local/bin/cosign
+COPY --from=tools-builder /usr/local/bin/govulncheck   /usr/local/bin/govulncheck
 
 # Copy globally installed mcpb package tree from builder stage.
 # Do NOT COPY the bin wrapper — buildah dereferences symlinks, producing a plain
@@ -83,13 +90,15 @@ COPY --from=tools-builder /usr/local/bin/cosign     /usr/local/bin/cosign
 COPY --from=tools-builder /usr/local/lib/node_modules /usr/local/lib/node_modules
 RUN ln -sf /usr/local/lib/node_modules/@anthropic-ai/mcpb/dist/cli/cli.js /usr/local/bin/mcpb \
  && chmod +x /usr/local/lib/node_modules/@anthropic-ai/mcpb/dist/cli/cli.js
+RUN ln -sf /usr/local/lib/node_modules/@fission-ai/openspec/bin/openspec.js /usr/local/bin/openspec \
+ && chmod +x /usr/local/lib/node_modules/@fission-ai/openspec/bin/openspec.js
 
 # OCI image labels
 LABEL org.opencontainers.image.source="https://codeberg.org/goern/forgejo-mcp" \
       org.opencontainers.image.version="${GORELEASER_VERSION}" \
       org.opencontainers.image.vendor="operate-first" \
       org.opencontainers.image.licenses="Apache-2.0" \
-      org.opencontainers.image.description="Release toolchain image: go, goreleaser, syft, cosign, node, npm, jq, curl, @anthropic-ai/mcpb" \
+      org.opencontainers.image.description="Release toolchain image: go, goreleaser, syft, cosign, govulncheck, node, npm, jq, curl, @anthropic-ai/mcpb, @fission-ai/openspec" \
       org.opencontainers.image.base.name="registry.access.redhat.com/hi/go:${HI_GO_TAG}"
 
 # Smoke-check: every bundled tool must report a version or build fails
@@ -98,8 +107,10 @@ RUN go version && \
     syft version && \
     goreleaser --version && \
     cosign version && \
+    govulncheck -version && \
     jq --version && \
     curl --version && \
     node --version && \
     npm --version && \
-    mcpb --version
+    mcpb --version && \
+    openspec --version

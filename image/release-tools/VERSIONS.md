@@ -18,6 +18,7 @@ Go version shipped: `1.26.3` (from image label `org.opencontainers.image.version
 | `syft` | `v1.44.0` | curl install script from anchore releases | Binary at `/usr/local/bin/syft` |
 | `goreleaser` | `v2.16.0` | `go install github.com/goreleaser/goreleaser/v2@v2.16.0` | Binary at `/usr/local/bin/goreleaser` |
 | `cosign` | `v3.0.6` | curl prebuilt linux/amd64 binary from sigstore releases | Binary at `/usr/local/bin/cosign` |
+| `govulncheck` | `latest` | `go install golang.org/x/vuln/cmd/govulncheck@latest` | Binary at `/usr/local/bin/govulncheck`; Renovate tracks `golang.org/x/vuln` |
 
 ## Tools Installed via dnf (final stage)
 
@@ -34,6 +35,7 @@ Go version shipped: `1.26.3` (from image label `org.opencontainers.image.version
 | Package | Version | npm Integrity Hash | Tarball SHA256 |
 |---|---|---|---|
 | `@anthropic-ai/mcpb` | `2.1.2` | see `npm/package-lock.json` | see `npm/package-lock.json` `integrity` field |
+| `@fission-ai/openspec` | `1.3.1` | see `npm/package-lock.json` | see `npm/package-lock.json` `integrity` field |
 
 The tarball SHA256 is recorded in `npm/package-lock.json` under `integrity` (sha512 format).
 A manual integrity check: `npm pack @anthropic-ai/mcpb@2.1.2 --dry-run` and compare hash.

@@ -8,8 +8,8 @@ The op1st Tekton release pipeline historically installed tools at Step runtime, 
 production failures (v2.24.0/1/2). This image bakes all tooling in once, version-pinned and
 cosign-signed, so release Steps simply consume a known-good image.
 
-**Bundled tools:** `go`, `goreleaser`, `syft`, `cosign`, `node`, `npm`, `jq`, `curl`,
-`ca-certificates`, `@anthropic-ai/mcpb`
+**Bundled tools:** `go`, `goreleaser`, `syft`, `cosign`, `govulncheck`, `node`, `npm`, `jq`, `curl`,
+`ca-certificates`, `@anthropic-ai/mcpb`, `@fission-ai/openspec`
 
 See [VERSIONS.md](VERSIONS.md) for pinned versions and digest.
 

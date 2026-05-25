@@ -38,6 +38,20 @@
       "matchPackageNames": ["@anthropic-ai/mcpb"],
       "automerge": false,
       "labels": ["Kind/Enhancement", "release-tools/tool-bump"]
+    },
+    {
+      "description": "@fission-ai/openspec — auto-PR with lockfile update",
+      "matchDatasources": ["npm"],
+      "matchPackageNames": ["@fission-ai/openspec"],
+      "automerge": false,
+      "labels": ["Kind/Enhancement", "release-tools/tool-bump"]
+    },
+    {
+      "description": "govulncheck — auto-PR for patch/minor, manual for major",
+      "matchDatasources": ["go"],
+      "matchPackageNames": ["golang.org/x/vuln"],
+      "automerge": false,
+      "labels": ["Kind/Enhancement", "release-tools/tool-bump"]
     }
   ],
   "ignorePaths": [
