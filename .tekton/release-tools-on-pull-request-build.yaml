@@ -5,12 +5,12 @@ metadata:
   annotations:
     pipelinesascode.tekton.dev/on-event: "[pull_request]"
     pipelinesascode.tekton.dev/on-target-branch: "[main]"
-    # A4 patch: files.any.exists (NOT files.all.exists) — fires when ANY
-    # changed file is under the release-tools trees. files.all.exists would
-    # silently skip hybrid PRs (image change + unrelated typo fix elsewhere).
+    # A4 patch: files.exists (CEL list macro) — fires when ANY changed file
+    # is under the release-tools trees. files.all would silently skip hybrid
+    # PRs (image change + unrelated typo fix elsewhere).
     pipelinesascode.tekton.dev/on-cel-expression: |
       event == "pull_request" && target_branch == "main" &&
-      files.any.exists(p, p.matches("^(image/release-tools/|\\.tekton/release-tools/).*"))
+      files.exists(p, p.matches("^(image/release-tools/|\\.tekton/release-tools).*"))
     pipelinesascode.tekton.dev/task: >-
       [git-clone,
        .tekton/release-tools/tasks/build-image.yaml,
