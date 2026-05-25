@@ -21,10 +21,6 @@ spec:
       description: buildah storage driver.
       type: string
       default: vfs
-    - name: ISOLATION
-      description: buildah isolation mode. chroot works under OpenShift container-build SCC without privileged.
-      type: string
-      default: chroot
   workspaces:
     - name: source
       mountPath: /workspace/source
@@ -39,8 +35,7 @@ spec:
     - name: build
       image: quay.io/buildah/stable:latest
       securityContext:
-        runAsUser: 1000
-        runAsGroup: 1000
+        privileged: true
       workingDir: $(workspaces.source.path)
       script: |
         #!/usr/bin/env bash
@@ -48,7 +43,6 @@ spec:
         buildah --version
 
         buildah bud \
-          --isolation="$(params.ISOLATION)" \
           --storage-driver="$(params.STORAGE_DRIVER)" \
           --file="$(params.CONTEXT)/$(params.CONTAINERFILE)" \
           --tag="$(params.IMAGE)" \
