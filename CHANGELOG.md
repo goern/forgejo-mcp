@@ -1,3 +1,25 @@
+## [2.24.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.23.1...v2.24.0) (2026-05-25)
+
+### :sparkles: Features
+
+* **ci:** 🚀 add Tekton release pipeline mirroring Forgejo Actions release ([cf3bddf](https://codeberg.org/goern/forgejo-mcp/commit/cf3bddf8c34f0f5be65e1464ebbda13c8a64927f))
+
+### :bug: Fixes
+
+* **ci:** 🔧 align release pipeline secret names with op1st-pipelines reality ([d2cc52b](https://codeberg.org/goern/forgejo-mcp/commit/d2cc52b433ab7f5c994e76045987ebf06e2f2e72))
+
+### :memo: Documentation
+
+* 📝 add Verifying Releases chapter with cosign instructions ([c1afa7a](https://codeberg.org/goern/forgejo-mcp/commit/c1afa7a3b2b45463aee87b3fd5c4ad9e6b762413))
+
+### :repeat: Chore
+
+* 🔥 remove stale secrets/ + point at op1st-emea-b4mad as normative cosign pub ([b63095f](https://codeberg.org/goern/forgejo-mcp/commit/b63095f21140eddef42f4a828b3cea0222d5e33e))
+* 🗂️ beads jsonl post-[#150](https://codeberg.org/goern/forgejo-mcp/issues/150) merge ([641e8f1](https://codeberg.org/goern/forgejo-mcp/commit/641e8f1148ef72f5749ec11f2a8cba1d29e1d913))
+* 🗂️ beads jsonl post-[#151](https://codeberg.org/goern/forgejo-mcp/issues/151) merge ([ca93489](https://codeberg.org/goern/forgejo-mcp/commit/ca93489319db0a220e576ae0e62f81a9045f7da5))
+* 🗂️ beads jsonl post-[#152](https://codeberg.org/goern/forgejo-mcp/issues/152) merge ([ddc8206](https://codeberg.org/goern/forgejo-mcp/commit/ddc8206f5a4750a1f3da1b920f40ee3fe983e7b2))
+* **ci:** 🔌 soft-disable Forgejo release workflow auto-trigger ([2cd6682](https://codeberg.org/goern/forgejo-mcp/commit/2cd6682ba7df3fbb3c285469230eb5964c28c5c6)), closes [#150](https://codeberg.org/goern/forgejo-mcp/issues/150)
+
 ## [2.23.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.23.0...v2.23.1) (2026-05-25)
 
 ### :bug: Fixes
