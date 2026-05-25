@@ -46,26 +46,14 @@ spec:
       - name: GOTOOLCHAIN
         value: local
   steps:
-    - name: install-syft
-      image: $(params.GO_IMAGE)
-      script: |
-        #!/usr/bin/env bash
-        set -euo pipefail
-        # syft generates the per-archive CycloneDX SBOMs referenced in
-        # .goreleaser.yml's sboms: section. Install before GoReleaser.
-        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
-          | sh -s -- -b /usr/local/bin "$(params.SYFT_VERSION)"
-        syft version
-
-    - name: install-goreleaser
-      image: $(params.GO_IMAGE)
-      script: |
-        #!/usr/bin/env bash
-        set -euo pipefail
-        go install "github.com/goreleaser/goreleaser/v2@$(params.GORELEASER_VERSION)"
-        cp "$(go env GOPATH)/bin/goreleaser" /usr/local/bin/goreleaser
-        goreleaser --version
-
+    # Install syft + goreleaser AND run `goreleaser release` in a single
+    # Step. Tekton Step containers in a Pod share the workspace volume but
+    # NOT /usr/local/bin/ — tools installed in one Step disappear before
+    # the next Step starts. Splitting install from run was the cause of
+    # the v2.24.0 failure (exit 127, "goreleaser: command not found").
+    # Proper fix: a prebuilt release-tools image, tracked in
+    # forgejo-mcp-1b4. This collapsed Step is the workaround until that
+    # image exists.
     - name: release
       image: $(params.GO_IMAGE)
       env:
@@ -79,11 +67,23 @@ spec:
       script: |
         #!/usr/bin/env bash
         set -euo pipefail
+
+        # syft generates the per-archive CycloneDX SBOMs referenced in
+        # .goreleaser.yml's sboms: section.
+        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
+          | sh -s -- -b /usr/local/bin "$(params.SYFT_VERSION)"
+        syft version
+
+        go install "github.com/goreleaser/goreleaser/v2@$(params.GORELEASER_VERSION)"
+        cp "$(go env GOPATH)/bin/goreleaser" /usr/local/bin/goreleaser
+        goreleaser --version
+
         git config --global --add safe.directory "$(workspaces.source.path)"
         # GoReleaser needs full history for changelog generation. PaC
         # git-clone defaults to a shallow checkout; deepen here.
         git fetch --unshallow || true
         git fetch --tags --force
+
         goreleaser release --clean --parallelism 2
 
     - name: smoke-test
