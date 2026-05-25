@@ -22,7 +22,7 @@ spec:
       type: string
       default: vfs
     - name: ISOLATION
-      description: buildah isolation mode. chroot works under OpenShift container-build SCC without privileged.
+      description: buildah isolation mode. chroot + runAsUser 0 handles arbitrary base-image UIDs under container-build SCC.
       type: string
       default: chroot
   workspaces:
@@ -39,8 +39,7 @@ spec:
     - name: build
       image: quay.io/buildah/stable:latest
       securityContext:
-        runAsUser: 1000
-        runAsGroup: 1000
+        runAsUser: 0
       workingDir: $(workspaces.source.path)
       script: |
         #!/usr/bin/env bash
