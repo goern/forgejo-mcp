@@ -17,6 +17,10 @@ spec:
       description: buildah storage driver.
       type: string
       default: vfs
+    - name: SYFT_VERSION
+      description: syft version to install for scanning (pinned to same version baked into the image).
+      type: string
+      default: v1.44.0
   workspaces:
     - name: source
       mountPath: /workspace/source
@@ -36,18 +40,28 @@ spec:
         IMAGE="$(params.IMAGE_REF)"
         SBOM_FILE="$(workspaces.source.path)/release-tools-sbom.cdx.json"
 
-        echo "Scanning ${IMAGE} with syft..."
+        SYFT_VERSION="$(params.SYFT_VERSION)"
+        ARCHIVE="/tmp/release-tools-scan.tar"
 
-        # Run syft from within a container built from the image itself
-        # (syft is bundled in the release-tools image).
-        buildah from --storage-driver="$(params.STORAGE_DRIVER)" --name sbom-ctr "${IMAGE}"
-        buildah run \
+        # Install syft on the host step container from the pinned release tag.
+        echo "Installing syft ${SYFT_VERSION}..."
+        curl -sSfL "https://raw.githubusercontent.com/anchore/syft/${SYFT_VERSION}/install.sh" \
+          | sh -s -- -b /usr/local/bin "${SYFT_VERSION}"
+        syft version
+
+        # Export the locally-built image to an OCI archive so syft can scan it
+        # without a registry pull. Running syft inside the image container would
+        # try a registry pull (the image is not pushed at PR-build time).
+        echo "Exporting ${IMAGE} to OCI archive..."
+        buildah push \
           --storage-driver="$(params.STORAGE_DRIVER)" \
-          --volume "$(workspaces.source.path):/scan-out:Z" \
-          sbom-ctr -- \
-          syft "${IMAGE}" \
-            --output "$(params.OUTPUT_FORMAT)=/scan-out/release-tools-sbom.cdx.json"
-        buildah rm sbom-ctr
+          "${IMAGE}" \
+          "oci-archive:${ARCHIVE}"
 
+        echo "Scanning ${ARCHIVE} with syft..."
+        syft "oci-archive:${ARCHIVE}" \
+          --output "$(params.OUTPUT_FORMAT)=${SBOM_FILE}"
+
+        rm -f "${ARCHIVE}"
         printf '%s' "release-tools-sbom.cdx.json" > "$(results.SBOM_PATH.path)"
         echo "SBOM written to ${SBOM_FILE}"

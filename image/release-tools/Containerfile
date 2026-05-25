@@ -5,6 +5,7 @@
 # Switch to `1.26-builder` or `1.26.3-builder` when Hummingbird publishes a specific tag.
 
 ARG HI_GO_TAG=latest-builder
+ARG HI_GO_DIGEST=sha256:d8c8b702b8a54150e8fdca86753f581d98c551ab8a3fd429886d4ddd4e949894
 ARG SYFT_VERSION=v1.44.0
 ARG GORELEASER_VERSION=v2.16.0
 ARG COSIGN_VERSION=v3.0.6
@@ -14,7 +15,7 @@ ARG MCPB_VERSION=2.1.2
 # Stage: tools-builder
 # Compile/fetch syft, goreleaser, cosign. Pre-warm npm cache for mcpb.
 # ---------------------------------------------------------------------------
-FROM registry.access.redhat.com/hi/go:${HI_GO_TAG} AS tools-builder
+FROM registry.access.redhat.com/hi/go:${HI_GO_TAG}@${HI_GO_DIGEST} AS tools-builder
 
 ARG SYFT_VERSION
 ARG GORELEASER_VERSION
@@ -27,24 +28,30 @@ RUN dnf install -y nodejs npm curl ca-certificates tar gzip xz && dnf clean all
 # goreleaser: install via go install from pinned tag
 RUN GOBIN=/usr/local/bin go install github.com/goreleaser/goreleaser/v2@${GORELEASER_VERSION}
 
-# syft: install via official install script pinned to SYFT_VERSION
-RUN curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
+# syft: install via official install script at the pinned release tag
+RUN curl -sSfL "https://raw.githubusercontent.com/anchore/syft/${SYFT_VERSION}/install.sh" \
     | sh -s -- -b /usr/local/bin ${SYFT_VERSION}
 
-# cosign: curl prebuilt linux/amd64 binary pinned to COSIGN_VERSION
+# cosign: curl prebuilt linux/amd64 binary + verify against release checksum manifest
 RUN set -ex \
-    && COSIGN_BARE=${COSIGN_VERSION#v} \
     && curl -sSfLo /usr/local/bin/cosign \
        "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-linux-amd64" \
+    && curl -sSfLo /tmp/cosign-checksums.txt \
+       "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign_checksums.txt" \
+    && grep " cosign-linux-amd64$" /tmp/cosign-checksums.txt | sha256sum -c - \
+    && rm /tmp/cosign-checksums.txt \
     && chmod +x /usr/local/bin/cosign
 
-# @anthropic-ai/mcpb: install from pinned lockfile, then install globally so npx finds it offline.
-# npm ci resolves only what the lockfile records (integrity-hash-pinned).
-# npm install -g reuses the already-downloaded tarballs from the ci cache — no second network fetch.
+# @anthropic-ai/mcpb: install from pinned lockfile into a staging directory, then
+# copy the integrity-verified tree to the global node_modules location directly.
+# npm ci reads package-lock.json (integrity-hash-pinned); npm install -g does NOT
+# read the lockfile and re-resolves transitive deps from the registry, defeating
+# the supply-chain guarantee. Copy instead of re-resolve.
 COPY npm/package.json npm/package-lock.json /npm-src/
 RUN cd /npm-src \
  && npm ci --ignore-scripts \
- && npm install -g --ignore-scripts @anthropic-ai/mcpb@${MCPB_VERSION} \
+ && mkdir -p /usr/local/lib/node_modules \
+ && cp -r /npm-src/node_modules/. /usr/local/lib/node_modules/ \
  && npm cache clean --force
 
 # ---------------------------------------------------------------------------
@@ -53,7 +60,7 @@ RUN cd /npm-src \
 # GoReleaser invokes `go build` at release time; a thin runtime variant
 # would be insufficient. See design D2.
 # ---------------------------------------------------------------------------
-FROM registry.access.redhat.com/hi/go:${HI_GO_TAG}
+FROM registry.access.redhat.com/hi/go:${HI_GO_TAG}@${HI_GO_DIGEST}
 
 ARG HI_GO_TAG
 ARG SYFT_VERSION

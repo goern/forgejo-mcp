@@ -61,16 +61,20 @@ spec:
         LOCAL_IMAGE="$(params.IMAGE)"
         REGISTRY_IMAGE="$(params.REGISTRY_IMAGE)"
 
-        echo "Pushing ${LOCAL_IMAGE} to ${REGISTRY_IMAGE} by digest (no tag)..."
+        echo "Pushing ${LOCAL_IMAGE} to ${REGISTRY_IMAGE} by digest (no version tag)..."
 
-        # Push manifest only — no human-readable tag yet (L1 TOCTOU fix).
-        DIGEST=$(buildah push \
+        # L1 TOCTOU fix: retag to an ephemeral staging name before pushing so
+        # buildah does not inherit the version tag (e.g. v1.0.0) at the
+        # destination. The version tag is promoted AFTER signing by promote-tag.
+        buildah tag "${LOCAL_IMAGE}" release-tools:build-tmp
+
+        buildah push \
           --storage-driver="$(params.STORAGE_DRIVER)" \
           --authfile="${REGISTRY_AUTH_FILE}" \
           --digestfile=/tmp/pushed-digest \
-          "${LOCAL_IMAGE}" \
-          "docker://${REGISTRY_IMAGE}" \
-          2>&1 | tee /dev/stderr; cat /tmp/pushed-digest || true)
+          release-tools:build-tmp \
+          "docker://${REGISTRY_IMAGE}:build-tmp" \
+          2>&1 | tee /dev/stderr
 
         DIGEST=$(cat /tmp/pushed-digest)
         REPO_DIGEST="${REGISTRY_IMAGE}@${DIGEST}"

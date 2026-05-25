@@ -76,12 +76,17 @@ spec:
         set -eu
 
         # Install cosign inline. Pinned to COSIGN_VERSION param.
+        # Verify against the release checksum manifest before chmod +x.
         # microdnf for ubi9-minimal, dnf for ubi9.
         microdnf install -y curl tar gzip >/dev/null 2>&1 || \
           (rpm -q curl tar gzip >/dev/null 2>&1) || \
           dnf install -y curl tar gzip
-        curl -sSfL -o /usr/local/bin/cosign \
+        curl -sSfLo /usr/local/bin/cosign \
           "https://github.com/sigstore/cosign/releases/download/$(params.COSIGN_VERSION)/cosign-linux-amd64"
+        curl -sSfLo /tmp/cosign-checksums.txt \
+          "https://github.com/sigstore/cosign/releases/download/$(params.COSIGN_VERSION)/cosign_checksums.txt"
+        grep " cosign-linux-amd64$" /tmp/cosign-checksums.txt | sha256sum -c -
+        rm /tmp/cosign-checksums.txt
         chmod +x /usr/local/bin/cosign
         cosign version
 

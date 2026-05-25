@@ -37,16 +37,23 @@ Consumers SHOULD pin by full `vMAJOR.MINOR.PATCH` tag or by digest for maximum s
 ## Verifying the Cosign Signature
 
 The published image is signed with the op1st cosign key (same key used for forgejo-mcp release
-artifacts). The public key is documented at the same location referenced in the forgejo-mcp
-release verification guide.
+artifacts). The normative key source is the
+[`op1st-emea-b4mad`](https://codeberg.org/operate-first/op1st-emea-b4mad)
+GitOps repo — same source that provisions the `cosign-signing-key` Secret in `op1st-pipelines`.
 
 ```bash
+# Fetch the public key pinned to a specific commit (avoids mutable-branch trust-root drift).
+curl -sSfL -o cosign.pub \
+  https://codeberg.org/operate-first/op1st-emea-b4mad/raw/commit/8a3c55e5b8c892754fd61f9141dc4817a6915f45/manifests/applications/op1st-pipelines-tokens/cosign-signing-key.pub
+
 cosign verify \
-  --key https://raw.githubusercontent.com/operate-first/common/main/cosign.pub \
+  --key cosign.pub \
   codeberg.org/operate-first/release-tools:v1.0.0
 ```
 
 Expected output: `Verification for codeberg.org/operate-first/release-tools:v1.0.0 -- The following checks were performed on each of these signatures: ...`
+
+Update the commit SHA when the signing key rotates (see the op1st-emea-b4mad rotation runbook).
 
 ## Running Locally
 

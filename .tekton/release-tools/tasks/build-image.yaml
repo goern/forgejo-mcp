@@ -26,7 +26,9 @@ spec:
       mountPath: /workspace/source
   results:
     - name: IMAGE_DIGEST
-      description: sha256 digest of the built image manifest.
+      description: |
+        sha256 digest of the built image manifest. Empty for pre-push (PR)
+        builds; the real manifest digest is captured by push-image-by-digest.
     - name: IMAGE_REF
       description: Full image reference (tag@digest) of the built image.
   steps:
@@ -46,16 +48,15 @@ spec:
           --tag="$(params.IMAGE)" \
           "$(params.CONTEXT)"
 
-        DIGEST=$(buildah inspect --type image --format '{{.FromImageDigest}}' "$(params.IMAGE)" 2>/dev/null \
-          || buildah images --format '{{.ID}}' "$(params.IMAGE)")
-        IMAGE_DIGEST=$(buildah inspect --type image --format '{{index .ImageAnnotations "org.opencontainers.image.revision"}}' "$(params.IMAGE)" 2>/dev/null || true)
+        # Verify the build succeeded by checking the image exists locally.
+        # The real manifest digest is only stable after a registry push (captured
+        # by --digestfile in push-image-by-digest). Leave IMAGE_DIGEST empty here.
+        IMAGE_ID=$(buildah images --no-trunc --format '{{.ID}}' "$(params.IMAGE)" | head -1)
+        if [ -z "${IMAGE_ID}" ]; then
+          echo "ERROR: image not found in local store after build" >&2
+          exit 1
+        fi
+        echo "Built: $(params.IMAGE) local-id=${IMAGE_ID}"
 
-        # Capture the real manifest digest
-        DIGEST=$(buildah manifest inspect "$(params.IMAGE)" 2>/dev/null \
-          | grep -oP '"Digest"\s*:\s*"\Ksha256:[a-f0-9]+' \
-          || buildah inspect --format '{{.FromImageDigest}}' "$(params.IMAGE)")
-
-        printf '%s' "${DIGEST}" > "$(results.IMAGE_DIGEST.path)"
-        printf '%s@%s' "$(params.IMAGE)" "${DIGEST}" > "$(results.IMAGE_REF.path)"
-
-        echo "Built: $(params.IMAGE) digest=${DIGEST}"
+        printf '' > "$(results.IMAGE_DIGEST.path)"
+        printf '%s' "$(params.IMAGE)" > "$(results.IMAGE_REF.path)"

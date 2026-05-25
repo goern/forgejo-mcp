@@ -87,6 +87,34 @@ spec:
           - name: target_branch
             value: $(params.target_branch)
 
+      # Guard: SKIP_SIGN is a single-use bootstrap exception for v1.0.0 only.
+      # This task runs (and fails) if SKIP_SIGN=true is used on any other tag,
+      # preventing accidental unsigned publishes beyond the v1.0.0 bootstrap.
+      - name: validate-skip-sign
+        runAfter:
+          - resolve-tag
+        when:
+          - input: "$(params.SKIP_SIGN)"
+            operator: in
+            values: ["true"]
+        taskSpec:
+          params:
+            - name: TAG
+          steps:
+            - name: check
+              image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+              script: |
+                #!/usr/bin/env sh
+                set -eu
+                if [ "$(params.TAG)" != "v1.0.0" ]; then
+                  echo "ERROR: SKIP_SIGN=true is only allowed for the v1.0.0 bootstrap publish. Got tag: $(params.TAG)" >&2
+                  exit 1
+                fi
+                echo "v1.0.0 bootstrap exception approved."
+        params:
+          - name: TAG
+            value: $(tasks.resolve-tag.results.tag)
+
       - name: build-image
         runAfter:
           - resolve-tag
@@ -131,6 +159,7 @@ spec:
       - name: cosign-sign
         runAfter:
           - push-by-digest
+          - validate-skip-sign
         when:
           - input: "$(params.SKIP_SIGN)"
             operator: notin
