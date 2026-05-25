@@ -1,3 +1,63 @@
+## [2.23.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.22.0...v2.23.0) (2026-05-25)
+
+### :sparkles: Features
+
+* ✨ add 14 MCP tools for Forgejo releases and release attachments ([a41115b](https://codeberg.org/goern/forgejo-mcp/commit/a41115b9bbe442b036d84053c68349abb6fc9fb0))
+* robust stateless auth with security fixes and improved tests ([4969ee5](https://codeberg.org/goern/forgejo-mcp/commit/4969ee588180ea5bbce501ea2262b0573e6f12f8))
+* stateless per-request token handling for HTTP/SSE transports ([684844c](https://codeberg.org/goern/forgejo-mcp/commit/684844cbe6839ea68dc1f474bee185bc68682537))
+
+### :bug: Fixes
+
+* 🔒️ bump golang.org/x/crypto to v0.52.0 (GO-2026-5018) ([98b3cd5](https://codeberg.org/goern/forgejo-mcp/commit/98b3cd572aafd3cc940f72b56b2bc2baa7206064))
+* 🔒️ bump x/net to v0.55.0 + jsonparser to v1.1.2 (govulncheck) ([e084bf7](https://codeberg.org/goern/forgejo-mcp/commit/e084bf70f7c1386c1b35ad933f5e1d2a698ee366))
+
+### :memo: Documentation
+
+* 📝 add demos/README.md index grouping demos by topic cluster ([621e664](https://codeberg.org/goern/forgejo-mcp/commit/621e6648d02b67d22801b9973507b41e8dec4e2d))
+* 📝 add multi-tenant HTTP mode documentation and demo ([b53143f](https://codeberg.org/goern/forgejo-mcp/commit/b53143f18c45c547b2080f90ce5a2d51513753f8))
+* 📝 add Radicle mirror clone instructions to README ([097516a](https://codeberg.org/goern/forgejo-mcp/commit/097516ade85c3b04c388efcce8708d7be5523261))
+* 📝 add showboat demos for v2.22.0 (org labels, bounded responses) ([4baeb30](https://codeberg.org/goern/forgejo-mcp/commit/4baeb3030eebf85cf2beaada37c2ba19432689fe))
+* 📝 archive 5 delivered openspec changes, track 2 unimplemented ([7eb8a34](https://codeberg.org/goern/forgejo-mcp/commit/7eb8a342346c40f95a9ebd8551e0f52e39469561)), closes [#129](https://codeberg.org/goern/forgejo-mcp/issues/129)
+* 📝 archive add-releases-support, sync release-management spec ([1dc7a17](https://codeberg.org/goern/forgejo-mcp/commit/1dc7a17fb28b7c5dc47280abdcf609e7e8854328)), closes [#134](https://codeberg.org/goern/forgejo-mcp/issues/134)
+* 📝 battle-test forgejo-action-code-review, resolve C4 spike ([48809bd](https://codeberg.org/goern/forgejo-mcp/commit/48809bd3a5cdf3880f30f01955c6cc7c4362a41d))
+* 📝 link demos/ index from top-level README ([e55c259](https://codeberg.org/goern/forgejo-mcp/commit/e55c259ae5612adc83cad4ee68b1563430c2d2af))
+* 📝 retrofit openspec for stateless-http-auth ([#137](https://codeberg.org/goern/forgejo-mcp/issues/137), PR [#138](https://codeberg.org/goern/forgejo-mcp/issues/138)) ([df15877](https://codeberg.org/goern/forgejo-mcp/commit/df15877777b177d9d237af26fab3c4a829ba61de))
+* improve NixOS installation instructions ([9e29a13](https://codeberg.org/goern/forgejo-mcp/commit/9e29a130369f24b9f715857fb073e15f711f8dd5))
+
+### :barber: Code-style
+
+* 🎨 apply gofmt -w to operation/* and pkg/* ([34effc8](https://codeberg.org/goern/forgejo-mcp/commit/34effc817fb5f85bb0bbafd6919f1b5511ba625a))
+
+### :repeat: CI
+
+* 🔒️ add cosign-keygen.sh producing SOPS-encrypted k8s Secret ([42614b0](https://codeberg.org/goern/forgejo-mcp/commit/42614b036b9cb7eaf58ca97f2f5e8b55bfdd14ab))
+* 🔒️ provision cosign signing material for release pipeline ([d3fcc3d](https://codeberg.org/goern/forgejo-mcp/commit/d3fcc3d2eb45d4e119e82e51ffba37d724888556))
+* 🔧 gitleaks: allow placeholder tokens in demo docs ([ed5f419](https://codeberg.org/goern/forgejo-mcp/commit/ed5f4191954d3945d31d7d11850f0ed9c0974730))
+* 🚀 add Forgejo Actions CI workflow with Go cache ([815a2d0](https://codeberg.org/goern/forgejo-mcp/commit/815a2d042674a47847645e19ae8a604150ede8f3))
+* 🚀 add gitleaks scanning (Tekton + pre-commit) ([b936f8a](https://codeberg.org/goern/forgejo-mcp/commit/b936f8ab207ef1a56129ba45ff6890caf4ba0676))
+* 🚀 add vet, gofmt-check, mod-tidy, lint, race, govulncheck to go-ci ([738d979](https://codeberg.org/goern/forgejo-mcp/commit/738d9795533c29c2da0814c5e5ad5c3d07269bff))
+* 🚀 drop redundant PaC annotations on openspec-validate ([2b5721a](https://codeberg.org/goern/forgejo-mcp/commit/2b5721aaa114d2954121f737e1684ab8001d1504))
+* 🚀 enable checksums and per-archive CycloneDX SBOMs in goreleaser ([74f601a](https://codeberg.org/goern/forgejo-mcp/commit/74f601a4eb90e191c51c36c66117ecf00bd87cbb))
+* 🚀 release.yml: syft + cosign install, smoke-test, conditional sign ([c82fbee](https://codeberg.org/goern/forgejo-mcp/commit/c82fbeef424f0a4ae11eddff56344e0758e76991))
+
+### :repeat: Chore
+
+* 🔧 add Claude Code agent team infrastructure for multi-agent workflows ([3a73026](https://codeberg.org/goern/forgejo-mcp/commit/3a73026b164e83aa0438edb54c85962348d9ea44))
+* 🔧 bd: claim 51l, link PR [#144](https://codeberg.org/goern/forgejo-mcp/issues/144) ([23be9fd](https://codeberg.org/goern/forgejo-mcp/commit/23be9fdaa5e708133705ae07989cb27f3acfc2ab))
+* 🔧 bd: claim forgejo-mcp-9n2, link PR [#143](https://codeberg.org/goern/forgejo-mcp/issues/143) ([eed502b](https://codeberg.org/goern/forgejo-mcp/commit/eed502bab4d0d76a53b28c5654860af3ecf0a420))
+* 🔧 bd: claim+close 02o (PR [#145](https://codeberg.org/goern/forgejo-mcp/issues/145) labeled Kind/Security) ([45bdadc](https://codeberg.org/goern/forgejo-mcp/commit/45bdadc2e0645b92ad350bc2209cfd7d9958a310))
+* 🔧 bd: close 51l (PR [#144](https://codeberg.org/goern/forgejo-mcp/issues/144) merged) ([c0416e3](https://codeberg.org/goern/forgejo-mcp/commit/c0416e376d6655e61b08dab869a976a0a922adca))
+* 🔧 bd: close 9n2, file e9i (ci.yml run [#147](https://codeberg.org/goern/forgejo-mcp/issues/147) failure) ([2ff1ddd](https://codeberg.org/goern/forgejo-mcp/commit/2ff1ddd2de645cc414d85e5f861a942f55271f5a))
+* 🔧 bd: close dhd (PR [#147](https://codeberg.org/goern/forgejo-mcp/issues/147) merged), claim 1l5 RFC ([ebb70b3](https://codeberg.org/goern/forgejo-mcp/commit/ebb70b3dbc1c14414856238cad7c0a46fc3e0122))
+* 🔧 bd: file + close forgejo-mcp-5x8 (PaC webhook fix) ([f305e33](https://codeberg.org/goern/forgejo-mcp/commit/f305e33fc295f034c502da14f67f3b82d03e6671))
+* 🔧 bd: file C5 spike + C4 cleanup issues, link to forgejo-mcp-673 ([b6eb0a9](https://codeberg.org/goern/forgejo-mcp/commit/b6eb0a99777afd3e59bd9a08f98db23dff539133))
+* 🔧 bd: file CI hardening epic (Steps 1–3 + follow-ups) ([f4cacf1](https://codeberg.org/goern/forgejo-mcp/commit/f4cacf1bd19ca15235bd1ae55f104b54d2e6b8f3))
+* 🔧 bd: file dhd (gitleaks placeholder allowlist), claim, link PR [#147](https://codeberg.org/goern/forgejo-mcp/issues/147) ([fa2c5fc](https://codeberg.org/goern/forgejo-mcp/commit/fa2c5fc79eafc3482f770a01835d9da3017a9407))
+* 🔧 reconcile .gitignore ([7063249](https://codeberg.org/goern/forgejo-mcp/commit/7063249513ad3cf75fe7b15cee436f3aef47046e))
+* 🔧 switch Containerfile to Project Hummingbird base images ([3d8ade1](https://codeberg.org/goern/forgejo-mcp/commit/3d8ade1dd68626c7f99aebbec1307aace950d9fe))
+* **deps:** update registry.access.redhat.com/hi/go docker tag to v1.26.3 ([a623431](https://codeberg.org/goern/forgejo-mcp/commit/a623431f3cd29e9da12d4a482b4e5d5026bf4d24))
+* update beads jsonl ([bbbf84e](https://codeberg.org/goern/forgejo-mcp/commit/bbbf84ec266538b91b8e2bd375aa8ec5d36b99f9))
+
 ## [2.22.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.21.0...v2.22.0) (2026-05-12)
 
 ### :sparkles: Features
