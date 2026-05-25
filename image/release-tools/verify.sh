@@ -24,17 +24,19 @@ run_check() {
 }
 
 # Each bundled tool must report a version
-run_check "go"          "go version"
-run_check "syft"        "syft version"
-run_check "goreleaser"  "goreleaser --version"
-run_check "cosign"      "cosign version"
-run_check "jq"          "jq --version"
-run_check "curl"        "curl --version"
-run_check "node"        "node --version"
-run_check "npm"         "npm --version"
+run_check "go"           "go version"
+run_check "syft"         "syft version"
+run_check "goreleaser"   "goreleaser --version"
+run_check "cosign"       "cosign version"
+run_check "govulncheck"  "govulncheck -version"
+run_check "jq"           "jq --version"
+run_check "curl"         "curl --version"
+run_check "node"         "node --version"
+run_check "npm"          "npm --version"
+run_check "openspec"     "openspec --version"
 
 # Shell must work (Tekton script: blocks require /bin/sh)
-run_check "shell"       "/bin/sh -c 'echo ok'"
+run_check "shell"        "/bin/sh -c 'echo ok'"
 
 # mcpb must resolve without network (npm cache prewarmed in build stage)
 echo -n "  mcpb (offline npx): "
