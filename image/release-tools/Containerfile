@@ -1,0 +1,98 @@
+# release-tools image
+# Versions are pinned via ARGs sourced from VERSIONS.md.
+# Base: Project Hummingbird hi/go (registry.access.redhat.com/hi/go)
+# TAG-FLOATING RISK: only `latest-builder` is available from Hummingbird as of 2026-05-25.
+# Switch to `1.26-builder` or `1.26.3-builder` when Hummingbird publishes a specific tag.
+
+ARG HI_GO_TAG=latest-builder
+ARG SYFT_VERSION=v1.44.0
+ARG GORELEASER_VERSION=v2.16.0
+ARG COSIGN_VERSION=v3.0.6
+ARG MCPB_VERSION=2.1.2
+
+# ---------------------------------------------------------------------------
+# Stage: tools-builder
+# Compile/fetch syft, goreleaser, cosign. Pre-warm npm cache for mcpb.
+# ---------------------------------------------------------------------------
+FROM registry.access.redhat.com/hi/go:${HI_GO_TAG} AS tools-builder
+
+ARG SYFT_VERSION
+ARG GORELEASER_VERSION
+ARG COSIGN_VERSION
+ARG MCPB_VERSION
+
+# Install build-time deps: tar+gzip+xz for syft install.sh archive extraction; curl for binary fetches
+RUN dnf install -y nodejs npm curl ca-certificates tar gzip xz && dnf clean all
+
+# goreleaser: install via go install from pinned tag
+RUN GOBIN=/usr/local/bin go install github.com/goreleaser/goreleaser/v2@${GORELEASER_VERSION}
+
+# syft: install via official install script pinned to SYFT_VERSION
+RUN curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
+    | sh -s -- -b /usr/local/bin ${SYFT_VERSION}
+
+# cosign: curl prebuilt linux/amd64 binary pinned to COSIGN_VERSION
+RUN set -ex \
+    && COSIGN_BARE=${COSIGN_VERSION#v} \
+    && curl -sSfLo /usr/local/bin/cosign \
+       "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-linux-amd64" \
+    && chmod +x /usr/local/bin/cosign
+
+# @anthropic-ai/mcpb: install from pinned lockfile, then install globally so npx finds it offline.
+# npm ci resolves only what the lockfile records (integrity-hash-pinned).
+# npm install -g reuses the already-downloaded tarballs from the ci cache — no second network fetch.
+COPY npm/package.json npm/package-lock.json /npm-src/
+RUN cd /npm-src \
+ && npm ci --ignore-scripts \
+ && npm install -g --ignore-scripts @anthropic-ai/mcpb@${MCPB_VERSION} \
+ && npm cache clean --force
+
+# ---------------------------------------------------------------------------
+# Stage: final
+# Based on the same Hummingbird builder so Go toolchain is present.
+# GoReleaser invokes `go build` at release time; a thin runtime variant
+# would be insufficient. See design D2.
+# ---------------------------------------------------------------------------
+FROM registry.access.redhat.com/hi/go:${HI_GO_TAG}
+
+ARG HI_GO_TAG
+ARG SYFT_VERSION
+ARG GORELEASER_VERSION
+ARG COSIGN_VERSION
+ARG MCPB_VERSION
+
+# Install runtime tools from dnf
+RUN dnf install -y nodejs npm jq curl ca-certificates && dnf clean all
+
+# Copy compiled/fetched binaries from builder stage
+COPY --from=tools-builder /usr/local/bin/goreleaser /usr/local/bin/goreleaser
+COPY --from=tools-builder /usr/local/bin/syft       /usr/local/bin/syft
+COPY --from=tools-builder /usr/local/bin/cosign     /usr/local/bin/cosign
+
+# Copy globally installed mcpb package tree from builder stage.
+# Do NOT COPY the bin wrapper — buildah dereferences symlinks, producing a plain
+# script file outside node_modules whose Node import resolution fails.
+# Recreate the symlink explicitly so Node resolves modules correctly.
+COPY --from=tools-builder /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -sf /usr/local/lib/node_modules/@anthropic-ai/mcpb/dist/cli/cli.js /usr/local/bin/mcpb \
+ && chmod +x /usr/local/lib/node_modules/@anthropic-ai/mcpb/dist/cli/cli.js
+
+# OCI image labels
+LABEL org.opencontainers.image.source="https://codeberg.org/goern/forgejo-mcp" \
+      org.opencontainers.image.version="${GORELEASER_VERSION}" \
+      org.opencontainers.image.vendor="operate-first" \
+      org.opencontainers.image.licenses="Apache-2.0" \
+      org.opencontainers.image.description="Release toolchain image: go, goreleaser, syft, cosign, node, npm, jq, curl, @anthropic-ai/mcpb" \
+      org.opencontainers.image.base.name="registry.access.redhat.com/hi/go:${HI_GO_TAG}"
+
+# Smoke-check: every bundled tool must report a version or build fails
+# npx check runs with --network=host (build network); offline check is in verify.sh
+RUN go version && \
+    syft version && \
+    goreleaser --version && \
+    cosign version && \
+    jq --version && \
+    curl --version && \
+    node --version && \
+    npm --version && \
+    mcpb --version

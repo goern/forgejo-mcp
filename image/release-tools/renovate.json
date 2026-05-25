@@ -1,0 +1,50 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:base"],
+  "enabled": true,
+  "packageRules": [
+    {
+      "description": "Hummingbird base image — manual review required; tag is floating (latest-builder). When a specific MAJOR.MINOR-builder tag is published, switch to it and remove this rule.",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["registry.access.redhat.com/hi/go"],
+      "automerge": false,
+      "reviewers": ["goern"],
+      "labels": ["Kind/Enhancement", "release-tools/base-image-bump"]
+    },
+    {
+      "description": "goreleaser — auto-PR for patch/minor, manual for major",
+      "matchDatasources": ["go"],
+      "matchPackageNames": ["github.com/goreleaser/goreleaser/v2"],
+      "automerge": false,
+      "labels": ["Kind/Enhancement", "release-tools/tool-bump"]
+    },
+    {
+      "description": "syft — auto-PR for patch/minor, manual for major",
+      "matchDatasources": ["github-releases"],
+      "matchPackageNames": ["anchore/syft"],
+      "automerge": false,
+      "labels": ["Kind/Enhancement", "release-tools/tool-bump"]
+    },
+    {
+      "description": "cosign — auto-PR for patch/minor, manual for major",
+      "matchDatasources": ["github-releases"],
+      "matchPackageNames": ["sigstore/cosign"],
+      "automerge": false,
+      "labels": ["Kind/Enhancement", "release-tools/tool-bump"]
+    },
+    {
+      "description": "@anthropic-ai/mcpb — auto-PR with lockfile update",
+      "matchDatasources": ["npm"],
+      "matchPackageNames": ["@anthropic-ai/mcpb"],
+      "automerge": false,
+      "labels": ["Kind/Enhancement", "release-tools/tool-bump"]
+    }
+  ],
+  "ignorePaths": [
+    "go.sum",
+    "vendor/**",
+    "operation/**",
+    "pkg/**",
+    "cmd/**"
+  ]
+}
