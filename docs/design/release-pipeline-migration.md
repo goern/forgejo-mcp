@@ -130,9 +130,11 @@ visible from `oc get secret`). Operator must confirm once on Codeberg UI:
   do **not** suffice.
 - The PAT identity (e.g. `b4mad-release-bot`) is whoever should appear as
   release author in the Codeberg UI.
-- `cosign-signing-key.cosign.pub` matches `secrets/cosign.pub` committed
-  to the repo. Mismatch means `cosign verify-blob` failures for every
-  downstream user following the README "Verifying Releases" chapter.
+- `cosign-signing-key.cosign.pub` in `op1st-pipelines` matches the
+  normative public key at
+  `op1st-emea-b4mad/manifests/applications/op1st-pipelines-tokens/cosign-signing-key.pub`.
+  Mismatch means `cosign verify-blob` failures for every downstream user
+  following the README "Verifying Releases" chapter.
 
 ## Trigger semantics
 

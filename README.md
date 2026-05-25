@@ -347,20 +347,24 @@ cosign version
 
 ### 2. Fetch the public key
 
-The verifying public key lives in this repository at
-[`secrets/cosign.pub`](secrets/cosign.pub). Two ways to fetch it:
+The normative source for the cosign public key is the
+[`op1st-emea-b4mad`](https://codeberg.org/operate-first/op1st-emea-b4mad)
+GitOps repo — same source of truth that provisions the `cosign-signing-key`
+Secret in the `op1st-pipelines` namespace where the release pipeline runs.
+Two ways to fetch it:
 
 **Branch-tip (live, follows future key rotations):**
 
 ```bash
-curl -sSfLO https://codeberg.org/goern/forgejo-mcp/raw/branch/main/secrets/cosign.pub
+curl -sSfL -o cosign.pub \
+  https://codeberg.org/operate-first/op1st-emea-b4mad/raw/branch/main/manifests/applications/op1st-pipelines-tokens/cosign-signing-key.pub
 ```
 
 **Commit-pinned (tamper-evident, recommended for CI/scripts):**
 
 ```bash
 curl -sSfL -o cosign.pub \
-  https://codeberg.org/goern/forgejo-mcp/raw/commit/791ef6d30a12c5143b2df6cc5255c257d80a79b6/secrets/cosign.pub
+  https://codeberg.org/operate-first/op1st-emea-b4mad/raw/commit/8a3c55e5b8c892754fd61f9141dc4817a6915f45/manifests/applications/op1st-pipelines-tokens/cosign-signing-key.pub
 ```
 
 The commit-pinned permalink hashes its content into the URL — if anyone

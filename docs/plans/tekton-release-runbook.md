@@ -32,9 +32,9 @@ this):
 
 - `op1st-release-token.token` has Codeberg scope `write:repository` on
   `goern/forgejo-mcp` (asset upload + release publish).
-- `cosign-signing-key.cosign.pub` content matches the bytes at
-  `secrets/cosign.pub` in this repo (otherwise downstream
-  `cosign verify-blob` fails).
+- `cosign-signing-key.cosign.pub` content matches the normative public
+  key at `op1st-emea-b4mad/manifests/applications/op1st-pipelines-tokens/cosign-signing-key.pub`
+  (otherwise downstream `cosign verify-blob` fails).
 
 The PaC `Repository` CR does not need changes: it scopes by repo URL,
 not by PipelineRun, so the new release pipeline is picked up
