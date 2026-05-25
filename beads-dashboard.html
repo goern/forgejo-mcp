@@ -117,38 +117,9 @@
   .strip a:hover { color: var(--phos-bright); border-bottom-color: var(--phos-bright); }
 
   .hero {
-    padding: clamp(2rem, 6vw, 4rem) 0 clamp(2rem, 5vw, 3rem);
+    padding: clamp(1rem, 3vw, 2rem) 0 clamp(1.25rem, 3vw, 2rem);
     text-align: center;
     border-bottom: 1px solid var(--rule);
-  }
-  .brand {
-    color: var(--phos);
-    text-shadow: 0 0 4px var(--phos-dim), 0 0 14px var(--phos-dim), 0 0 28px rgba(105, 139, 105, 0.55);
-    font-family: var(--sans);
-    font-weight: 300;
-    font-size: clamp(2.5rem, 11vw, 9rem);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    line-height: 1;
-    transform: scaleX(1.2);
-    transform-origin: center;
-    user-select: none;
-    white-space: nowrap;
-    margin: 0;
-  }
-  .brand .hash {
-    display: inline-block;
-    font-size: 1.7em;
-    transform: skewX(-12deg);
-    transform-origin: baseline;
-    margin-right: 0.04em;
-  }
-  .brand .cursor {
-    display: inline-block;
-    color: var(--paper);
-    margin-left: 0.12em;
-    text-shadow: 0 0 4px var(--paper), 0 0 14px rgba(244, 241, 232, 0.85), 0 0 28px rgba(244, 241, 232, 0.55);
-    animation: blink 1s step-end infinite;
   }
   .tagline {
     color: var(--phos);
@@ -156,8 +127,13 @@
     font-size: clamp(0.8rem, 1.6vw, 1.05rem);
     letter-spacing: 0.18em;
     text-transform: lowercase;
-    margin-top: 1.5rem;
     opacity: 0.85;
+  }
+  .cursor {
+    display: inline-block;
+    color: var(--paper);
+    text-shadow: 0 0 4px var(--paper), 0 0 14px rgba(244, 241, 232, 0.85);
+    animation: blink 1s step-end infinite;
   }
   .tagline .sep { color: var(--amber); margin: 0 0.5em; }
 
@@ -526,7 +502,6 @@
     </div>
 
     <section class="hero">
-      <h1 class="brand"><span class="hash">#</span>BEADS<span class="cursor">_</span></h1>
       <div class="tagline">
         <span>issue control panel</span>
         <span class="sep">//</span>
