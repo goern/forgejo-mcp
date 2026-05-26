@@ -19,6 +19,7 @@ Go version shipped: `1.26.3` (from image label `org.opencontainers.image.version
 | `goreleaser` | `v2.16.0` | prebuilt `goreleaser_Linux_x86_64.tar.gz` from goreleaser releases | `eaae05b5eba07533bd0f06846b68c808399504784df00c62eb219541fc04e5e2` | Verified against `checksums.txt`. Binary at `/usr/local/bin/goreleaser`. Update `GORELEASER_SHA256` ARG in Containerfile on bump. |
 | `cosign` | `v3.0.6` | prebuilt `cosign-linux-amd64` from sigstore releases | see `cosign_checksums.txt` (runtime-fetched) | SHA256 verified at build time against cosign_checksums.txt. Binary at `/usr/local/bin/cosign`. |
 | `govulncheck` | `latest` | `go install golang.org/x/vuln/cmd/govulncheck@latest` | n/a (go sumdb integrity) | Binary at `/usr/local/bin/govulncheck`; Renovate tracks `golang.org/x/vuln` |
+| `go-licenses` | `v1.6.0` | `go install github.com/google/go-licenses@v1.6.0` | n/a (go sumdb integrity) | Binary at `/usr/local/bin/go-licenses`; used by `go-ci` task to fail PRs pulling forbidden/restricted licenses (GPL/AGPL/LGPL/MPL). Update `GO_LICENSES_VERSION` ARG in Containerfile on bump. |
 
 ## Tools Installed via dnf (final stage)
 
