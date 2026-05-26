@@ -117,3 +117,16 @@ spec:
         set -euo pipefail
         git config --global --add safe.directory "$(workspaces.source.path)"
         govulncheck ./...
+
+    - name: license-check
+      image: $(params.RELEASE_TOOLS_IMAGE)
+      script: |
+        #!/usr/bin/env bash
+        # Fail build if any module in the dependency closure carries a
+        # forbidden (GPL/AGPL) or restricted (LGPL/MPL/EPL) license.
+        # Protects the Apache-2.0 binary from GPL contamination.
+        set -euo pipefail
+        git config --global --add safe.directory "$(workspaces.source.path)"
+        go-licenses check ./... \
+          --disallowed_types=forbidden,restricted \
+          --ignore=codeberg.org/goern/forgejo-mcp
