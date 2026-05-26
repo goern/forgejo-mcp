@@ -1,3 +1,56 @@
+## [2.25.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.24.2...v2.25.0) (2026-05-26)
+
+### :sparkles: Features
+
+* ✨ add CRT phosphor beads dashboard ([a620b17](https://codeberg.org/goern/forgejo-mcp/commit/a620b174c56fcfffe436ff7cb183e96e33837cda))
+* ✨ add govulncheck + openspec to release-tools image ([c1316d8](https://codeberg.org/goern/forgejo-mcp/commit/c1316d8a7e60720337287e11ab77ec434e9586d1))
+* ✨ render dep graph as subway map ([e6a6185](https://codeberg.org/goern/forgejo-mcp/commit/e6a61859559fdbc174975fa40f142b2bfabd119c))
+* **ci:** 🚀 add release-tools image build + publish Tekton pipelines (iteration 2) ([5df98ba](https://codeberg.org/goern/forgejo-mcp/commit/5df98baca9a65f3b1dde12a816d760e9a71dcd87))
+* **image:** 🐳 add release-tools OCI image source tree (iteration 1) ([240a544](https://codeberg.org/goern/forgejo-mcp/commit/240a544ed39b6889e3811d17bb4dea74d0224364))
+* release-tools image source tree + build/publish Tekton pipelines ([#157](https://codeberg.org/goern/forgejo-mcp/issues/157)) ([e02cf56](https://codeberg.org/goern/forgejo-mcp/commit/e02cf5668f4f839645cf8f2b609210d08de71152))
+
+### :bug: Fixes
+
+* ✏️ buildah needs runAsUser 0 for chroot isolation with hi/go base ([41cdafc](https://codeberg.org/goern/forgejo-mcp/commit/41cdafc0bf060fe2cbb8be67041496c54abb62ff))
+* ✏️ correct CEL macro files.any.exists → files.exists ([7706d17](https://codeberg.org/goern/forgejo-mcp/commit/7706d17411307a9a59a6c098370429b0ab69a363))
+* 🐛 cosign sha256sum path — download to /tmp/cosign-linux-amd64 before verify ([8ffcd31](https://codeberg.org/goern/forgejo-mcp/commit/8ffcd31f83d89095eed980464e4ee94e4c4bda39))
+* 🐛 filename mismatch in sha256sum + privileged SCC for buildah ([97ee636](https://codeberg.org/goern/forgejo-mcp/commit/97ee636e49f605e8d6338c8e9805e2eeaac024a6))
+* 🐛 move release-tools PipelineRuns to .tekton/ root ([4649f98](https://codeberg.org/goern/forgejo-mcp/commit/4649f98c1bde32ad64c2887909b2418612faf031))
+* 🐛 pipeline task fixes validated by run11 success ([0901bf0](https://codeberg.org/goern/forgejo-mcp/commit/0901bf0b9263462b3fee5d6a42d98db6987a7b95))
+* 🐛 rootless buildah in build-image task for OpenShift SCC ([6a55f3f](https://codeberg.org/goern/forgejo-mcp/commit/6a55f3f02f1c584bb2b4c445f3356ebb5aceb9a8))
+* 🔒️ address automated code review findings from PR [#157](https://codeberg.org/goern/forgejo-mcp/issues/157) ([d59b910](https://codeberg.org/goern/forgejo-mcp/commit/d59b9105e97405b7b0cd6116e42b4a8b7ae4f9ea))
+* 🔒️ restore fail-closed cosign signing, remove bootstrap SKIP_SIGN ([8a282ca](https://codeberg.org/goern/forgejo-mcp/commit/8a282ca1e4ce59cb35c50f8b8573789457a5b914))
+* 🔒️ SHA256-verify goreleaser+syft, drop piped install.sh ([da3cfb1](https://codeberg.org/goern/forgejo-mcp/commit/da3cfb12625190e908fc58480df47b6bde83063b))
+* **ci:** 🔧 registry → codeberg.org/operate-first + cosign task bugs + bootstrap ([2f5dc51](https://codeberg.org/goern/forgejo-mcp/commit/2f5dc5123f3e378f695bc6acd3c26825566fec29))
+
+### :memo: Documentation
+
+* **openspec:** 📋 apply adversarial review patches to release-tools-image change ([ddbb5a0](https://codeberg.org/goern/forgejo-mcp/commit/ddbb5a091e527ba95555cd36cfa7bd9df819b4b8))
+* **openspec:** 📋 propose release-tools-image change for op1st Tekton pipeline ([c814127](https://codeberg.org/goern/forgejo-mcp/commit/c81412792ef762cb9fa7de55784742a3c00a2ddc))
+
+### :barber: Code-style
+
+* 💄 calm CRT text styling for legibility ([3dec0b9](https://codeberg.org/goern/forgejo-mcp/commit/3dec0b9478e3911fddfb807c520f73395fa61eab)), closes [#e8f0e8](https://codeberg.org/goern/forgejo-mcp/issues/e8f0e8) [#0a0c0a](https://codeberg.org/goern/forgejo-mcp/issues/0a0c0a)
+* 💄 drop oversized #BEADS hero from dashboard ([840f996](https://codeberg.org/goern/forgejo-mcp/commit/840f996de58c11feb95fef399f29043019d4eb11)), closes [#BEADS](https://codeberg.org/goern/forgejo-mcp/issues/BEADS)
+
+### :zap: Refactor
+
+* ♻️ rewrite .tekton/tasks/ to use release-tools image ([0dcb2e1](https://codeberg.org/goern/forgejo-mcp/commit/0dcb2e14e9f1986bb427f1b469d5b7a473ccea3d))
+
+### :repeat: Chore
+
+* 📋 archive release-tools-image openspec change + sync spec ([bd92d21](https://codeberg.org/goern/forgejo-mcp/commit/bd92d217e734e28557672705f9a772bc0a37d089))
+* 🔧 set vendor label to 'Operate First, by #B4mad' ([0f1e649](https://codeberg.org/goern/forgejo-mcp/commit/0f1e6492ab5a732a433eca3b93d3b82b5a719a44))
+* 🗂️ beads close forgejo-mcp-00o, 3h2, aps + session wrap ([1137f7e](https://codeberg.org/goern/forgejo-mcp/commit/1137f7eee788a60a44941765794130acb7b27bd4))
+* 🗂️ beads jsonl claim forgejo-mcp-3h2 + forgejo-mcp-00o ([a7883a6](https://codeberg.org/goern/forgejo-mcp/commit/a7883a62eda9f163a7402cb4a30cf24bf0e14ead))
+* 🗂️ beads jsonl close forgejo-mcp-p1p ([bbe36d6](https://codeberg.org/goern/forgejo-mcp/commit/bbe36d6b4eabf724013acb74112113f2f751eaaa))
+* 🗂️ beads jsonl post-[#155](https://codeberg.org/goern/forgejo-mcp/issues/155) merge ([9c84d7f](https://codeberg.org/goern/forgejo-mcp/commit/9c84d7f2274fd202bc4bce931fddd96ecb392177))
+* 🗂️ beads jsonl post-PR[#157](https://codeberg.org/goern/forgejo-mcp/issues/157) merge + close forgejo-mcp-1b4 ([ef5cf05](https://codeberg.org/goern/forgejo-mcp/commit/ef5cf057f3a2c4479598b7d2a876238e68a14dad))
+* 🗂️ beads jsonl post-PR[#157](https://codeberg.org/goern/forgejo-mcp/issues/157) review fixes ([ef300ba](https://codeberg.org/goern/forgejo-mcp/commit/ef300baed3878aa651c4547ce0266f8170784dd0))
+* 🗂️ beads jsonl post-tasks rewrite ([1ecb952](https://codeberg.org/goern/forgejo-mcp/commit/1ecb9527c1f0953ff7a8a06086436b01501fcb63))
+* 🗂️ beads jsonl: capture release pipeline findings on P0 image bead ([082c71e](https://codeberg.org/goern/forgejo-mcp/commit/082c71e7c8806794e6fa9802791965e845ce5935))
+* 🗂️ merge beads jsonl after [#161](https://codeberg.org/goern/forgejo-mcp/issues/161) ([8c1df9d](https://codeberg.org/goern/forgejo-mcp/commit/8c1df9dd8ed658bd7b0b51a7cf310f675f513782))
+
 ## [2.24.2](https://codeberg.org/goern/forgejo-mcp/compare/v2.24.1...v2.24.2) (2026-05-25)
 
 ### :bug: Fixes
