@@ -1,9 +1,8 @@
 # ADR: Migrate Release Workflow to op1st Tekton Pipeline
 
-- Status: Accepted (soft-cutover phase)
-- Date: 2026-05-25
-- Tracking: [forgejo-mcp-d4b](#) (initial migration, closed) → [forgejo-mcp-n85](#) (soft-disable Forgejo trigger, this addendum) → [forgejo-mcp-gdz](#) (hard cutover after 2 successful Tekton releases)
-- Depends on: [forgejo-mcp-td8](#) (canonical CI gate decision)
+- Status: Accepted (hard cutover complete)
+- Date: 2026-05-25 (initial) / 2026-05-26 (hard cutover)
+- Tracking: [forgejo-mcp-d4b](#) (initial migration, closed) → [forgejo-mcp-n85](#) (soft-disable Forgejo trigger, closed) → [forgejo-mcp-gdz](#) (hard cutover, closed) → [forgejo-mcp-td8](#) (canonical CI gate decision, closed)
 
 ## Status history
 
@@ -11,6 +10,7 @@
 |------------|-------------------------|----------------------------------------------------------------------------------------------|
 | 2026-05-25 | Proposed                | PR #150 merged: Tekton release pipeline + Tasks + ADR + runbook + README verify chapter      |
 | 2026-05-25 | Accepted (soft-cutover) | `.forgejo/workflows/release.yml` trigger changed from `push: tags: v*` to `workflow_dispatch` only (bead forgejo-mcp-n85). Tekton is now the sole auto-firing release path; Forgejo workflow kept as manual fallback. |
+| 2026-05-26 | Accepted (hard cutover) | `.forgejo/workflows/release.yml` and `ci.yml` deleted (commit 1777cca). Tekton is now the sole release and CI path. See addendum below. |
 
 ## Context
 
@@ -175,6 +175,59 @@ Delete `.tekton/on-tag-push-release.yaml`. The three Task files are
 inert without a PipelineRun referencing them; leaving them in tree
 costs nothing. The Forgejo workflow remains the authoritative release
 path until the file is removed in a follow-up commit.
+
+## Addendum: Hard cutover — 2026-05-26
+
+### Decision
+
+Hard cutover executed after **one** fully successful Tekton release (v2.25.1)
+rather than the two specified in the original cutover criteria.
+
+`.forgejo/workflows/release.yml` and `.forgejo/workflows/ci.yml` deleted in
+commit `1777cca`. Bead `forgejo-mcp-gdz` closed.
+
+### Why one run instead of two
+
+The two-run bar existed to catch infrastructure surprises: secret wiring bugs,
+image incompatibilities, PaC parameter quirks. By 2026-05-26 all of those were
+resolved:
+
+| Run     | Outcome | Blocker resolved by |
+|---------|---------|---------------------|
+| v2.24.0 | goreleaser exit 127 | release-tools image (forgejo-mcp-1b4) |
+| v2.24.1 | goreleaser dirty-tree | GOCACHE/GOMODCACHE outside workspace |
+| v2.24.2 | cosign step failed (distroless, no shell) | release-tools image (forgejo-mcp-1b4) |
+| v2.25.0 | cosign step failed (`--output-signature` deprecated) | fix in commit `cee6465` |
+| v2.25.1 | **all tasks succeeded**, `.sig` present | — first clean end-to-end run |
+
+After v2.25.1 the pipeline was demonstrably stable. No infrastructure surprises
+remained. Running a second release solely to satisfy the original count added
+delay without adding safety.
+
+Additionally, the security posture improved with this cutover:
+
+- cosign signing key split into `cosign-signing-key-artifacts` (release
+  artifacts) and `cosign-signing-key-images` (release-tools image), so a
+  compromised release-tools image can no longer forge artifact signatures
+  (PR #164, bead forgejo-mcp-j52).
+
+### Updated secrets table
+
+| Secret                          | Keys                                          | Used by                                        |
+|---------------------------------|-----------------------------------------------|------------------------------------------------|
+| `op1st-release-token`           | `token`, `username`                           | goreleaser publish + Codeberg release asset uploads |
+| `cosign-signing-key-artifacts`  | `cosign.key`, `cosign.password`, `cosign.pub` | `sign-blob` of `checksums.txt` in release pipeline |
+| `cosign-signing-key-images`     | `cosign.key`, `cosign.password`, `cosign.pub` | signing the release-tools container image      |
+
+The original `cosign-signing-key` Secret remains in `op1st-pipelines` as a
+legacy artefact; it is no longer referenced by any Task.
+
+### Rollback
+
+The Forgejo Actions workflows are deleted. Rollback requires restoring them
+from git history (`git show HEAD~1:.forgejo/workflows/release.yml`) and
+re-adding the tag trigger. The Tekton pipeline remains in tree and can be
+disabled by removing `.tekton/on-tag-push-release.yaml`.
 
 ## Out of scope
 
