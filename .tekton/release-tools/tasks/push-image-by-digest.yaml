@@ -58,7 +58,9 @@ spec:
           REGISTRY_AUTH_FILE="$(workspaces.registry-credentials.path)/config.json"
         fi
 
-        LOCAL_IMAGE="$(params.IMAGE)"
+        # Use same workspace store as build-image task.
+        BUILDAH_STORE="$(workspaces.source.path)/.buildah"
+        LOCAL_IMAGE="localhost/$(params.IMAGE)"
         REGISTRY_IMAGE="$(params.REGISTRY_IMAGE)"
 
         echo "Pushing ${LOCAL_IMAGE} to ${REGISTRY_IMAGE} by digest (no version tag)..."
@@ -66,9 +68,11 @@ spec:
         # L1 TOCTOU fix: retag to an ephemeral staging name before pushing so
         # buildah does not inherit the version tag (e.g. v1.0.0) at the
         # destination. The version tag is promoted AFTER signing by promote-tag.
-        buildah tag "${LOCAL_IMAGE}" release-tools:build-tmp
+        buildah --root "${BUILDAH_STORE}" \
+          --storage-driver="$(params.STORAGE_DRIVER)" \
+          tag "${LOCAL_IMAGE}" release-tools:build-tmp
 
-        buildah push \
+        buildah --root "${BUILDAH_STORE}" push \
           --storage-driver="$(params.STORAGE_DRIVER)" \
           --authfile="${REGISTRY_AUTH_FILE}" \
           --digestfile=/tmp/pushed-digest \
