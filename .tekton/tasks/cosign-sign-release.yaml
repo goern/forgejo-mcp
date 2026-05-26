@@ -7,7 +7,7 @@ metadata:
 spec:
   description: |
     Signs the GoReleaser-produced `checksums.txt` with cosign (key from the
-    `cosign-signing-key` Secret) and uploads the resulting `.sig` as a
+    `cosign-signing-key-artifacts` Secret) and uploads the resulting `.sig` as a
     release asset. Signing the checksum file covers all archives + SBOMs
     transitively via the checksum chain.
 
@@ -15,7 +15,7 @@ spec:
     behavior of .forgejo/workflows/release.yml so releases continue to ship
     if signing infrastructure is unavailable.
 
-    The `cosign-signing-key` Secret is provisioned in op1st-pipelines
+    The `cosign-signing-key-artifacts` Secret is provisioned in op1st-pipelines
     upstream of this Task (typically via the op1st-gitops repo + emberstack
     reflector). Expected keys: cosign.key, cosign.password, cosign.pub.
 
@@ -50,13 +50,13 @@ spec:
         - name: COSIGN_PRIVATE_KEY
           valueFrom:
             secretKeyRef:
-              name: cosign-signing-key
+              name: cosign-signing-key-artifacts
               key: cosign.key
               optional: true
         - name: COSIGN_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: cosign-signing-key
+              name: cosign-signing-key-artifacts
               key: cosign.password
               optional: true
       script: |
