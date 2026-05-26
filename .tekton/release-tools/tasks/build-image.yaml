@@ -40,20 +40,23 @@ spec:
       script: |
         #!/usr/bin/env bash
         set -euo pipefail
+        # Store in workspace PVC so subsequent tasks (push-by-digest) can access it.
+        BUILDAH_STORE="$(workspaces.source.path)/.buildah"
+        mkdir -p "${BUILDAH_STORE}"
+
         buildah --version
 
-        buildah bud \
+        buildah --root "${BUILDAH_STORE}" bud \
           --storage-driver="$(params.STORAGE_DRIVER)" \
           --file="$(params.CONTEXT)/$(params.CONTAINERFILE)" \
           --tag="$(params.IMAGE)" \
           "$(params.CONTEXT)"
 
-        # Verify the build succeeded by checking the image exists locally.
-        # The real manifest digest is only stable after a registry push (captured
-        # by --digestfile in push-image-by-digest). Leave IMAGE_DIGEST empty here.
-        IMAGE_ID=$(buildah images --no-trunc --format '{{.ID}}' "$(params.IMAGE)" | head -1)
+        IMAGE_ID=$(buildah --root "${BUILDAH_STORE}" \
+          --storage-driver="$(params.STORAGE_DRIVER)" images \
+          --no-trunc --format '{{.ID}}' 2>/dev/null | head -1)
         if [ -z "${IMAGE_ID}" ]; then
-          echo "ERROR: image not found in local store after build" >&2
+          echo "ERROR: no images in local store after build" >&2
           exit 1
         fi
         echo "Built: $(params.IMAGE) local-id=${IMAGE_ID}"

@@ -69,9 +69,8 @@ spec:
         #!/usr/bin/env sh
         set -eu
 
-        microdnf install -y curl tar gzip >/dev/null 2>&1 || \
-          (rpm -q curl tar gzip >/dev/null 2>&1) || \
-          dnf install -y curl tar gzip
+        # curl-minimal is pre-installed in ubi9-minimal; only tar+gzip need adding.
+        microdnf install -y tar gzip
 
         # Install syft from the pinned release tag (not main branch).
         curl -sSfL "https://raw.githubusercontent.com/anchore/syft/$(params.SYFT_VERSION)/install.sh" \
