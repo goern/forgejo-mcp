@@ -79,7 +79,7 @@ spec:
         printf '%s' "$COSIGN_PRIVATE_KEY" > "$KEY_FILE"
         cosign sign-blob --yes \
           --key "$KEY_FILE" \
-          --output-signature "$SIG" \
+          --bundle "$SIG" \
           "$CHECKSUMS"
         ls -l "$SIG"
 

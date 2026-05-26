@@ -119,7 +119,7 @@ jobs:
 
           cosign sign-blob --yes \
             --key "$KEY_FILE" \
-            --output-signature "$SIG" \
+            --bundle "$SIG" \
             "$CHECKSUMS"
 
           RELEASE_ID=$(curl -fsSL \
