@@ -688,7 +688,7 @@ function escapeHtml(s) {
   return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 }
 
-const DATA_SOURCE = ".beads/issues.jsonl";
+const DATA_SOURCE = "issues.jsonl";
 
 async function load() {
   $("#boot-time").textContent = "loading...";
@@ -730,7 +730,7 @@ function showFetchError(e) {
     if you opened this file from disk, your browser likely blocked <code>fetch()</code> for the <code>file://</code> scheme.<br/>
     serve the repo root over http instead — for example:<br/>
     &nbsp;&nbsp;<code>cd $(git rev-parse --show-toplevel) &amp;&amp; python3 -m http.server 8080</code><br/>
-    then open <code>http://localhost:8080/beads-dashboard.html</code> <span class="pulse"></span>
+    then open <code>http://localhost:8080/.beads/dashboard.html</code> <span class="pulse"></span>
   `;
   main.insertBefore(notice, main.children[2]);
   $("#boot-time").textContent = "offline";
