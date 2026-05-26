@@ -40,6 +40,8 @@ spec:
   results:
     - name: IMAGE_DIGEST
       description: sha256 digest of the pushed manifest (e.g. sha256:abc123...).
+    - name: IMAGE_URL
+      description: Registry URL without tag or digest (e.g. codeberg.org/operate-first/release-tools). Used by Tekton Chains to bind image to SLSA provenance.
     - name: IMAGE_REPO_DIGEST
       description: Full digest reference (e.g. codeberg.org/operate-first/release-tools@sha256:abc123).
   steps:
@@ -84,6 +86,7 @@ spec:
         REPO_DIGEST="${REGISTRY_IMAGE}@${DIGEST}"
 
         printf '%s' "${DIGEST}" > "$(results.IMAGE_DIGEST.path)"
+        printf '%s' "${REGISTRY_IMAGE}" > "$(results.IMAGE_URL.path)"
         printf '%s' "${REPO_DIGEST}" > "$(results.IMAGE_REPO_DIGEST.path)"
 
         echo "Pushed by digest: ${REPO_DIGEST}"

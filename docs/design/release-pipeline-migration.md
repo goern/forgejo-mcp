@@ -233,7 +233,45 @@ disabled by removing `.tekton/on-tag-push-release.yaml`.
 
 - Migrating CI (PR + push-to-main) Forgejo Actions to Tekton — tracked
   in `forgejo-mcp-td8`. This ADR covers release only.
-- Publishing Tekton Chains in-toto attestations to the release —
-  separate ADR if/when we decide to add that signal.
 - Konflux integration for container builds — currently no container
   release exists; revisit when one does.
+
+## Addendum: Tekton Chains SLSA provenance — 2026-05-26
+
+### Decision
+
+Enable Tekton Chains SLSA v1.0 provenance attestation for the release-tools
+publish PipelineRun (`forgejo-mcp-46j`).
+
+Changes:
+1. **`release-tools-on-tag-publish.yaml`** — added
+   `chains.tekton.dev/transparency-upload: "true"` annotation; added
+   `IMAGE_URL` and `IMAGE_DIGEST` as pipeline-level results propagated from
+   `push-by-digest`. Chains reads these results to bind image digest to
+   provenance.
+2. **`push-image-by-digest.yaml`** — added `IMAGE_URL` result (plain
+   registry URL, no tag/digest) required for Chains image-binding.
+3. **`README.md`** — new "Verify SLSA provenance" section under "Verifying
+   Releases".
+
+### Why
+
+A cosign signature alone attests *signer-holds-key*. Tekton Chains
+in-toto SLSA provenance additionally binds image digest → PipelineRun →
+git commit → builder identity. This closes the provenance gap identified in
+the adversarial review of the release-tools image (L5 finding).
+
+`chains.tekton.dev/transparency-upload: "true"` causes Chains to upload the
+attestation envelope to Rekor, making it publicly auditable.
+
+### Verify
+
+```bash
+cosign verify-attestation \
+  --type slsaprovenance \
+  --key cosign-images.pub \
+  "codeberg.org/operate-first/release-tools:${TAG}"
+```
+
+See README "Verifying Releases → Verify SLSA provenance" for the full
+procedure including key fetch.

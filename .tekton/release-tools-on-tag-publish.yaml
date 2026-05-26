@@ -21,6 +21,13 @@ metadata:
     # Tag-publish runs are not cancellable — a partially-published image
     # with a pushed digest but without a cosign signature is a bad state.
     pipelinesascode.tekton.dev/cancel-in-progress: "false"
+    # Tekton Chains: upload in-toto SLSA v1.0 provenance to Rekor transparency
+    # log. Chains observes this PipelineRun, reads IMAGE_URL + IMAGE_DIGEST
+    # pipeline results, and attaches a cosign attestation binding image digest
+    # to PipelineRun → git commit → builder identity.
+    # Verify with: cosign verify-attestation --type slsaprovenance \
+    #   --key <cosign.pub> codeberg.org/operate-first/release-tools:<tag>
+    chains.tekton.dev/transparency-upload: "true"
     # Operator coordination notes:
     # Registry: codeberg.org/operate-first/release-tools (Path A — reuse
     # codeberg-pusher dockerconfigjson Secret already in op1st-pipelines).
@@ -46,6 +53,15 @@ spec:
         description: |
           Full ref passed by PaC (e.g. refs/tags/release-tools/v1.0.0).
           Stripped to bare semver (e.g. v1.0.0) by resolve-tag step.
+    results:
+      # Tekton Chains reads IMAGE_URL + IMAGE_DIGEST at the Pipeline level to
+      # bind the pushed image to the SLSA provenance attestation it generates.
+      # Without these, Chains produces subject-less provenance that cannot be
+      # verified against a specific image digest.
+      - name: IMAGE_URL
+        value: $(tasks.push-by-digest.results.IMAGE_URL)
+      - name: IMAGE_DIGEST
+        value: $(tasks.push-by-digest.results.IMAGE_DIGEST)
     workspaces:
       - name: source
       - name: registry-credentials
