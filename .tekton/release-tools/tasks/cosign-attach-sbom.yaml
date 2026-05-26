@@ -39,9 +39,9 @@ spec:
         path. cosign attach sbom pushes the SBOM as an OCI referrer object;
         needs the same write auth as push-image-by-digest.
   volumes:
-    - name: cosign-signing-key
+    - name: cosign-signing-key-images
       secret:
-        secretName: cosign-signing-key
+        secretName: cosign-signing-key-images
         optional: false
   results:
     - name: SBOM_DIGEST
@@ -51,7 +51,7 @@ spec:
       image: registry.access.redhat.com/ubi9/ubi-minimal:latest
       workingDir: $(workspaces.source.path)
       volumeMounts:
-        - name: cosign-signing-key
+        - name: cosign-signing-key-images
           mountPath: /workspace/cosign-key
           readOnly: true
       env:
@@ -60,7 +60,7 @@ spec:
         - name: COSIGN_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: cosign-signing-key
+              name: cosign-signing-key-images
               key: cosign.password
               optional: false
         - name: REGISTRY_AUTH_FILE

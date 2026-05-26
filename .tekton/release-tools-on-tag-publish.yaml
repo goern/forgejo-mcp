@@ -26,7 +26,7 @@ metadata:
     # codeberg-pusher dockerconfigjson Secret already in op1st-pipelines).
     # Required Secrets in op1st-pipelines:
     #   - codeberg-pusher       (dockerconfigjson — push auth, Path A)
-    #   - cosign-signing-key    (cosign.key/cosign.password — optional: false, fail-closed)
+    #   - cosign-signing-key-images  (cosign.key/cosign.password — optional: false, fail-closed)
     # Before first publish: confirm the PAT inside codeberg-pusher has
     # write:package scope AND the credential user holds maintainer/owner
     # role on the operate-first org (verifiable only via Codeberg UI).
@@ -109,7 +109,7 @@ spec:
           - name: REGISTRY_IMAGE
             value: "codeberg.org/operate-first/release-tools"
 
-      # A3 fail-closed: cosign-signing-key secret is optional: false in the
+      # A3 fail-closed: cosign-signing-key-images secret is optional: false in the
       # task definition. If the Secret is absent, this step fails, and no
       # human-readable tag is ever promoted.
       - name: cosign-sign

@@ -10,7 +10,7 @@ spec:
     signature object to the registry alongside the image.
 
     A3 asymmetry (intentional, per spec):
-      - This task mounts cosign-signing-key with optional: false (fail-closed).
+      - This task mounts cosign-signing-key-images with optional: false (fail-closed).
         A missing key causes a Failed PipelineRun; the unsigned image is NOT
         promoted to a human-readable tag.
       - The forgejo-mcp release pipeline uses optional: true (fail-open).
@@ -45,17 +45,17 @@ spec:
         path. Reuses codeberg-pusher Secret in op1st-pipelines (Path A
         decision — see docs/design.md D4).
   volumes:
-    - name: cosign-signing-key
+    - name: cosign-signing-key-images
       secret:
         # A3 fail-closed: optional: false ensures a missing key fails the PipelineRun
         # rather than silently promoting an unsigned image.
-        secretName: cosign-signing-key
+        secretName: cosign-signing-key-images
         optional: false
   steps:
     - name: sign
       image: registry.access.redhat.com/ubi9/ubi-minimal:latest
       volumeMounts:
-        - name: cosign-signing-key
+        - name: cosign-signing-key-images
           mountPath: /workspace/cosign-key
           readOnly: true
       env:
@@ -64,7 +64,7 @@ spec:
         - name: COSIGN_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: cosign-signing-key
+              name: cosign-signing-key-images
               # Real Secret has keys: cosign.key, cosign.password, cosign.pub
               # (verified by inspection on nostromo op1st-pipelines namespace).
               key: cosign.password
