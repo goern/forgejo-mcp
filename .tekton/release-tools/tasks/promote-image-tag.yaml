@@ -1,0 +1,70 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: release-tools-promote-image-tag
+  annotations:
+    tekton.dev/displayName: "promote release-tools image to human-readable tag"
+spec:
+  description: |
+    L1 TOCTOU fix: this task runs LAST in the publish pipeline, after
+    cosign-sign and SBOM-attach have both succeeded. Only at this point is
+    the human-readable vMAJOR.MINOR.PATCH tag written to the registry.
+    Prior to this step, only the digest reference exists in the registry.
+
+    # Path A (decided 2026-05-25): codeberg.org/operate-first/release-tools
+    # Registry: codeberg.org/operate-first/release-tools
+  params:
+    - name: IMAGE_REPO_DIGEST
+      description: Full digest reference (e.g. codeberg.org/operate-first/release-tools@sha256:abc123).
+      type: string
+    - name: TAG
+      description: Human-readable tag to promote to (e.g. v1.0.0).
+      type: string
+    - name: REGISTRY_IMAGE
+      description: |
+        Registry image path without tag.
+        # Path A (decided 2026-05-25): codeberg.org/operate-first/release-tools
+        # Working assumption: codeberg.org/operate-first/release-tools
+      type: string
+      default: "codeberg.org/operate-first/release-tools"
+  workspaces:
+    - name: registry-credentials
+      mountPath: /workspace/registry-creds
+      optional: false
+  results:
+    - name: IMAGE_REF
+      description: Full tagged reference (e.g. codeberg.org/operate-first/release-tools:v1.0.0).
+  steps:
+    - name: promote-tag
+      image: quay.io/skopeo/stable:latest
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+
+        SRC="$(params.IMAGE_REPO_DIGEST)"
+        TAG="$(params.TAG)"
+        DEST="$(params.REGISTRY_IMAGE):${TAG}"
+
+        REGISTRY_AUTH_FILE="$(workspaces.registry-credentials.path)/.dockerconfigjson"
+        if [ ! -f "${REGISTRY_AUTH_FILE}" ]; then
+          REGISTRY_AUTH_FILE="$(workspaces.registry-credentials.path)/config.json"
+        fi
+
+        echo "Promoting ${SRC} → ${DEST}"
+
+        # skopeo copy preserves the exact digest; no re-push of image layers.
+        skopeo copy \
+          --authfile="${REGISTRY_AUTH_FILE}" \
+          "docker://${SRC}" \
+          "docker://${DEST}"
+
+        printf '%s' "${DEST}" > "$(results.IMAGE_REF.path)"
+        echo "Promoted: ${DEST}"
+
+        # Also promote :latest for non-prod convenience.
+        LATEST="$(params.REGISTRY_IMAGE):latest"
+        skopeo copy \
+          --authfile="${REGISTRY_AUTH_FILE}" \
+          "docker://${SRC}" \
+          "docker://${LATEST}"
+        echo "Promoted: ${LATEST}"

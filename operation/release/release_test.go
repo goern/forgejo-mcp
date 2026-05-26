@@ -36,7 +36,7 @@ type route struct {
 
 // newBackend mirrors operation/attachment's helper: an httptest server that
 // records requests and matches the first prefix that fits. It also wires the
-// SDK singleton at flag.URL so handlers using forgejo.Client() hit it.
+// SDK singleton at flag.URL so handlers using forgejo.Client(ctx) hit it.
 func newBackend(t *testing.T, routes ...route) *[]recordedReq {
 	t.Helper()
 	records := make([]recordedReq, 0, 4)

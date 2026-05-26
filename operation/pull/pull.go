@@ -157,7 +157,11 @@ func GetPullRequestByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	repo, _ := req.GetArguments()["repo"].(string)
 	index, _ := to.Float64(req.GetArguments()["index"])
 
-	pr, _, err := forgejo.Client().GetPullRequest(owner, repo, int64(index))
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	pr, _, err := client.GetPullRequest(owner, repo, int64(index))
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get pull request err: %v", err))
 	}
@@ -199,7 +203,11 @@ func ListRepoPullRequestsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 	// Only set milestone if provided and valid
 	// Note: Not using milestone as it's not supported in the current Forgejo SDK
 
-	prs, _, err := forgejo.Client().ListRepoPullRequests(owner, repo, opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	prs, _, err := client.ListRepoPullRequests(owner, repo, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get pull request list err: %v", err))
 	}
@@ -221,7 +229,11 @@ func CreatePullRequestFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Cal
 		Title: title,
 		Body:  body,
 	}
-	pr, _, err := forgejo.Client().CreatePullRequest(owner, repo, opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	pr, _, err := client.CreatePullRequest(owner, repo, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("create pull request err: %v", err))
 	}
@@ -261,7 +273,11 @@ func UpdatePullRequestFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Cal
 		opt.Milestone = milestoneID
 	}
 
-	pr, _, err := forgejo.Client().EditPullRequest(owner, repo, int64(index), opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	pr, _, err := client.EditPullRequest(owner, repo, int64(index), opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("update pull request err: %v", err))
 	}
@@ -289,7 +305,11 @@ func ListPullReviewsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 		},
 	}
 
-	reviews, _, err := forgejo.Client().ListPullReviews(owner, repo, int64(index), opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	reviews, _, err := client.ListPullReviews(owner, repo, int64(index), opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list pull reviews err: %v", err))
 	}
@@ -303,7 +323,11 @@ func GetPullReviewFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToo
 	index, _ := to.Float64(req.GetArguments()["index"])
 	id, _ := to.Float64(req.GetArguments()["id"])
 
-	review, _, err := forgejo.Client().GetPullReview(owner, repo, int64(index), int64(id))
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	review, _, err := client.GetPullReview(owner, repo, int64(index), int64(id))
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get pull review err: %v", err))
 	}
@@ -336,7 +360,11 @@ func MergePullRequestFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 		opt.Message = message
 	}
 
-	merged, resp, err := forgejo.Client().MergePullRequest(owner, repo, int64(index), opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	merged, resp, err := client.MergePullRequest(owner, repo, int64(index), opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("merge pull request err: %v", err))
 	}
@@ -378,7 +406,11 @@ func ListPullRequestFilesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 		},
 	}
 
-	files, _, err := forgejo.Client().ListPullRequestFiles(owner, repo, int64(index), opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	files, _, err := client.ListPullRequestFiles(owner, repo, int64(index), opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list pull request files err: %v", err))
 	}
@@ -393,7 +425,11 @@ func GetPullRequestDiffFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	index, _ := to.Float64(args["index"])
 	filePath, _ := args["file_path"].(string)
 
-	diffBytes, _, err := forgejo.Client().GetPullRequestDiff(owner, repo, int64(index), forgejo_sdk.PullRequestDiffOptions{})
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	diffBytes, _, err := client.GetPullRequestDiff(owner, repo, int64(index), forgejo_sdk.PullRequestDiffOptions{})
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get pull request diff err: %v", err))
 	}
@@ -418,7 +454,11 @@ func ListPullReviewCommentsFn(ctx context.Context, req mcp.CallToolRequest) (*mc
 	index, _ := to.Float64(req.GetArguments()["index"])
 	id, _ := to.Float64(req.GetArguments()["id"])
 
-	comments, _, err := forgejo.Client().ListPullReviewComments(owner, repo, int64(index), int64(id))
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	comments, _, err := client.ListPullReviewComments(owner, repo, int64(index), int64(id))
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list pull review comments err: %v", err))
 	}

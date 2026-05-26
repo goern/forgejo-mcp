@@ -1,0 +1,1013 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="theme-color" content="#000000" />
+<title>#BEADS_ — forgejo-mcp issue control</title>
+<meta name="description" content="CRT phosphor dashboard for bd (beads) issues in forgejo-mcp." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@300;400&family=JetBrains+Mono:wght@300;400&display=swap" />
+<style>
+  :root {
+    --bg: #0a0c0a;
+    --phos-dim: #698b69;
+    --phos: #e8f0e8;        /* high-contrast paper-white for reading */
+    --phos-bright: #ffffff;
+    --phos-muted: #b8c6b8;
+    --amber: #ffa500;
+    --amber-soft: rgba(255, 165, 0, 0.6);
+    --paper: #f4f1e8;
+    --danger: #ff7070;
+    --rule: rgba(180, 200, 180, 0.18);
+    --rule-strong: rgba(180, 200, 180, 0.45);
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --sans: "Josefin Sans", "Helvetica Neue", Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--phos);
+    font-family: var(--sans);
+    font-weight: 400;
+    min-height: 100%;
+  }
+  body {
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* CRT scanlines — kept softer to preserve text legibility */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 3px,
+      rgba(0, 0, 0, 0.18) 4px,
+      rgba(0, 0, 0, 0.18) 5px
+    );
+  }
+  /* CRT rolling band */
+  body::after {
+    content: "";
+    position: fixed;
+    left: 0;
+    right: 0;
+    height: 8px;
+    background: rgba(105, 139, 105, 0.06);
+    box-shadow: 0 0 24px rgba(105, 139, 105, 0.25);
+    z-index: 91;
+    pointer-events: none;
+    animation: roll 9s linear infinite;
+  }
+  /* vignette */
+  .vignette {
+    position: fixed;
+    inset: 0;
+    z-index: 92;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.85) 100%);
+  }
+
+  @keyframes roll { 0%{top:-10%} 100%{top:110%} }
+  @keyframes blink { 0%,50%{opacity:1} 50.01%,100%{opacity:0} }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    body::after, .cursor, .stat-card, .issue, .bar-fill { animation: none !important; }
+  }
+
+  /* Layout */
+  main {
+    position: relative;
+    z-index: 1;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: clamp(1rem, 3vw, 2.5rem);
+  }
+
+  /* Header */
+  .strip {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--phos-muted);
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  .strip a { color: var(--amber); text-decoration: none; border-bottom: 1px dashed var(--amber-soft); }
+  .strip a:hover { color: var(--phos-bright); border-bottom-color: var(--phos-bright); }
+
+  .hero {
+    padding: clamp(1rem, 3vw, 2rem) 0 clamp(1.25rem, 3vw, 2rem);
+    text-align: center;
+    border-bottom: 1px solid var(--rule);
+  }
+  .tagline {
+    color: var(--phos-muted);
+    font-family: var(--mono);
+    font-size: clamp(0.8rem, 1.6vw, 1rem);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .cursor {
+    display: inline-block;
+    color: var(--paper);
+    animation: blink 1s step-end infinite;
+  }
+  .tagline .sep { color: var(--amber); margin: 0 0.5em; }
+
+  /* Section heading */
+  .section {
+    margin-top: clamp(2rem, 5vw, 3.5rem);
+  }
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 0.5rem;
+  }
+  .section-head h2 {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 0.9rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--phos);
+  }
+  .section-head h2::before { content: "/// "; color: var(--amber); }
+  .section-head .aux {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--phos-muted);
+  }
+
+  /* Stat cards */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+  }
+  .stat-card {
+    border: 1px solid var(--rule);
+    padding: 1.1rem 1rem 1rem;
+    position: relative;
+    animation: fadeUp 0.5s both;
+  }
+  .stat-card .label {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--phos-muted);
+  }
+  .stat-card .val {
+    font-family: var(--sans);
+    font-weight: 400;
+    font-size: 2.6rem;
+    line-height: 1;
+    margin-top: 0.45rem;
+    color: var(--phos);
+  }
+  .stat-card.accent .val { color: var(--amber); }
+  .stat-card.danger .val { color: var(--danger); }
+  .stat-card::after {
+    content: "";
+    position: absolute;
+    left: 0; top: 0;
+    width: 6px; height: 100%;
+    background: var(--phos-dim);
+    opacity: 0.6;
+  }
+  .stat-card.accent::after { background: var(--amber); }
+  .stat-card.danger::after { background: var(--danger); }
+
+  /* Bars (priority breakdown) */
+  .bars { display: grid; gap: 0.65rem; }
+  .bar-row {
+    display: grid;
+    grid-template-columns: 9rem 1fr 3rem;
+    align-items: center;
+    gap: 0.85rem;
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    letter-spacing: 0.06em;
+  }
+  .bar-row .key { text-transform: uppercase; color: var(--phos); }
+  .bar-row .count { text-align: right; color: var(--amber); }
+  .bar-track {
+    position: relative;
+    height: 14px;
+    background:
+      linear-gradient(to right, rgba(105, 139, 105, 0.08), rgba(105, 139, 105, 0.04));
+    border: 1px solid var(--rule);
+  }
+  .bar-fill {
+    position: absolute;
+    inset: 1px 1px 1px 1px;
+    width: var(--w, 0);
+    background:
+      repeating-linear-gradient(135deg, var(--phos-dim) 0 6px, rgba(105, 139, 105, 0.4) 6px 12px);
+    animation: fadeUp 0.6s both;
+  }
+  .bar-row.p0 .bar-fill { background: repeating-linear-gradient(135deg, var(--amber) 0 6px, rgba(255,165,0,0.55) 6px 12px); box-shadow: 0 0 10px rgba(255,165,0,0.55); }
+  .bar-row.p1 .bar-fill { background: repeating-linear-gradient(135deg, var(--amber-soft) 0 6px, rgba(255,165,0,0.3) 6px 12px); }
+
+  /* Two column section: type + status */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+  @media (max-width: 720px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-items: center;
+    margin-bottom: 1.25rem;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+  }
+  .controls .group {
+    display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center;
+    border: 1px solid var(--rule);
+    padding: 0.35rem 0.55rem;
+  }
+  .controls .group .lbl { color: var(--phos-muted); margin-right: 0.4rem; text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.72rem; }
+  .chip {
+    display: inline-block;
+    border: 1px solid var(--rule);
+    padding: 0.3rem 0.7rem;
+    color: var(--phos);
+    background: transparent;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    transition: all 0.15s;
+  }
+  .chip:hover { color: var(--amber); border-color: var(--amber-soft); }
+  .chip.on { color: #000; background: var(--phos); border-color: var(--phos); }
+  .chip.on.amber { background: var(--amber); border-color: var(--amber); color: #000; }
+  .search {
+    flex: 1 1 220px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--rule);
+    color: var(--phos);
+    padding: 0.55rem 0.8rem;
+    font-family: var(--mono);
+    font-size: 0.9rem;
+    letter-spacing: 0.02em;
+    outline: none;
+  }
+  .search::placeholder { color: var(--phos-muted); }
+  .search:focus { border-color: var(--amber-soft); }
+
+  /* Issue cards */
+  .issues {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 0.9rem;
+  }
+  .issue {
+    position: relative;
+    border: 1px solid var(--rule);
+    padding: 1rem 1rem 0.85rem;
+    background: rgba(105, 139, 105, 0.02);
+    cursor: pointer;
+    animation: fadeUp 0.4s both;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  }
+  .issue:hover {
+    border-color: var(--amber-soft);
+    box-shadow: 0 0 16px rgba(255, 165, 0, 0.25);
+    background: rgba(255, 165, 0, 0.04);
+  }
+  .issue::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--phos-dim);
+    opacity: 0.7;
+  }
+  .issue[data-status="in_progress"]::before { background: var(--amber); opacity: 0.9; box-shadow: 0 0 8px var(--amber-soft); }
+  .issue[data-status="closed"]::before { background: rgba(155,205,155,0.25); }
+  .issue[data-status="blocked"]::before { background: var(--danger); }
+  .issue[data-priority="0"] { border-color: rgba(255,165,0,0.4); }
+  .issue[data-priority="0"]::after {
+    content: "P0";
+    position: absolute;
+    top: 0.45rem; right: 0.55rem;
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+    color: #000;
+    background: var(--amber);
+    padding: 0.1rem 0.4rem;
+    text-shadow: none;
+  }
+
+  .issue .id {
+    font-family: var(--mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--phos-muted);
+  }
+  .issue .title {
+    font-family: var(--sans);
+    font-weight: 500;
+    font-size: 1.1rem;
+    line-height: 1.4;
+    margin: 0.4rem 0 0.7rem;
+    color: var(--phos);
+    letter-spacing: 0;
+  }
+  .issue .meta {
+    display: flex; flex-wrap: wrap; gap: 0.4rem 0.85rem;
+    font-family: var(--mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.02em;
+    color: var(--phos-muted);
+    margin-top: 0.4rem;
+  }
+  .issue .meta .kv { display: inline-flex; gap: 0.3rem; }
+  .issue .meta .kv .k { color: var(--phos-muted); text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.08em; align-self: center; }
+  .issue .meta .kv .v { color: var(--phos); }
+  .issue .meta .kv.amber .v { color: var(--amber); }
+  .issue .meta .kv.danger .v { color: var(--danger); }
+
+  .issue .deps {
+    margin-top: 0.65rem;
+    display: flex; gap: 0.4rem; flex-wrap: wrap;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+  }
+  .issue .deps .pill {
+    border: 1px dashed var(--rule);
+    padding: 0.15rem 0.5rem;
+    color: var(--phos-muted);
+  }
+  .issue .deps .pill.in { color: var(--amber); border-color: var(--amber-soft); }
+
+  .issue .body {
+    margin-top: 0.75rem;
+    padding-top: 0.65rem;
+    border-top: 1px dashed var(--rule);
+    font-family: var(--sans);
+    font-size: 0.92rem;
+    line-height: 1.55;
+    color: var(--phos);
+    white-space: pre-wrap;
+    display: none;
+  }
+  .issue.open .body { display: block; animation: fadeUp 0.25s both; }
+  .issue .body .label {
+    color: var(--amber);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    display: block;
+    margin-top: 0.85rem;
+    margin-bottom: 0.25rem;
+  }
+  .issue .body .label:first-child { margin-top: 0; }
+
+  /* Dependency subway map */
+  .dep-map {
+    border: 1px solid var(--rule);
+    padding: 0.75rem;
+    overflow: auto;
+    max-height: 36rem;
+    background:
+      radial-gradient(circle at 1px 1px, rgba(180, 200, 180, 0.06) 1px, transparent 1px) 0 0 / 24px 24px;
+  }
+  .dep-map svg { display: block; }
+  .dep-map .station rect {
+    transition: filter 0.15s, stroke-width 0.15s;
+  }
+  .dep-map .station:hover rect {
+    filter: drop-shadow(0 0 6px var(--amber-soft));
+    stroke: var(--amber) !important;
+    stroke-width: 2 !important;
+  }
+  .dep-map .station:hover text { fill: var(--amber) !important; }
+  .dep-map .station { cursor: pointer; }
+  .dep-map .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.9rem 1.4rem;
+    align-items: center;
+    margin-top: 0.65rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    color: var(--phos-muted);
+    text-transform: uppercase;
+  }
+  .dep-map .legend .swatch {
+    display: inline-block;
+    width: 22px; height: 6px;
+    margin-right: 0.4rem;
+    vertical-align: middle;
+    border-radius: 3px;
+  }
+  .dep-map .legend .dot {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    margin-right: 0.35rem;
+    vertical-align: middle;
+  }
+
+  /* Footer */
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    color: var(--phos-muted);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  footer a { color: var(--amber); text-decoration: none; border-bottom: 1px dashed var(--amber-soft); }
+
+  /* Loading / error */
+  .notice {
+    border: 1px dashed var(--amber-soft);
+    padding: 1rem 1.2rem;
+    font-family: var(--mono);
+    font-size: 0.92rem;
+    color: var(--amber);
+    margin: 2rem 0;
+    line-height: 1.65;
+  }
+  .notice code { background: rgba(255,165,0,0.08); padding: 0.1em 0.35em; color: var(--phos); }
+  .notice .pulse::after { content: "_"; animation: blink 1s step-end infinite; color: var(--phos); }
+
+  /* Tiny utility */
+  .empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--phos-muted);
+    font-family: var(--mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+  }
+</style>
+</head>
+<body>
+  <div class="vignette"></div>
+
+  <main>
+    <div class="strip">
+      <span>system: bd · channel: forgejo-mcp</span>
+      <span>iss <a href="https://codeberg.org/goern/forgejo-mcp" target="_blank" rel="noopener">codeberg.org/goern/forgejo-mcp</a></span>
+    </div>
+
+    <section class="hero">
+      <div class="tagline">
+        <span>issue control panel</span>
+        <span class="sep">//</span>
+        <span>phosphor mode</span>
+        <span class="sep">//</span>
+        <span id="boot-time">booting</span>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>core telemetry</h2>
+        <span class="aux" id="last-update">--</span>
+      </div>
+      <div class="stats" id="stats"></div>
+    </section>
+
+    <section class="section two-col">
+      <div>
+        <div class="section-head">
+          <h2>priority distribution</h2>
+          <span class="aux">p0 critical → p4 backlog</span>
+        </div>
+        <div class="bars" id="prio-bars"></div>
+      </div>
+      <div>
+        <div class="section-head">
+          <h2>type distribution</h2>
+          <span class="aux">task · bug · feature</span>
+        </div>
+        <div class="bars" id="type-bars"></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>issue register</h2>
+        <span class="aux"><span id="visible-count">0</span> / <span id="total-count">0</span> visible</span>
+      </div>
+
+      <div class="controls" id="controls">
+        <div class="group">
+          <span class="lbl">status</span>
+          <button class="chip" data-filter="status" data-val="*">all</button>
+          <button class="chip on" data-filter="status" data-val="open">open</button>
+          <button class="chip" data-filter="status" data-val="in_progress">in_progress</button>
+          <button class="chip" data-filter="status" data-val="closed">closed</button>
+          <button class="chip" data-filter="status" data-val="blocked">blocked</button>
+        </div>
+        <div class="group">
+          <span class="lbl">priority</span>
+          <button class="chip on" data-filter="priority" data-val="*">all</button>
+          <button class="chip" data-filter="priority" data-val="0">p0</button>
+          <button class="chip" data-filter="priority" data-val="1">p1</button>
+          <button class="chip" data-filter="priority" data-val="2">p2</button>
+          <button class="chip" data-filter="priority" data-val="3">p3</button>
+          <button class="chip" data-filter="priority" data-val="4">p4</button>
+        </div>
+        <div class="group">
+          <span class="lbl">type</span>
+          <button class="chip on" data-filter="type" data-val="*">all</button>
+          <button class="chip" data-filter="type" data-val="task">task</button>
+          <button class="chip" data-filter="type" data-val="bug">bug</button>
+          <button class="chip" data-filter="type" data-val="feature">feature</button>
+        </div>
+        <input class="search" id="search" type="search" placeholder="grep · id, title, assignee" />
+      </div>
+
+      <div class="issues" id="issues"></div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>dependency graph</h2>
+        <span class="aux" id="dep-count">-- edges</span>
+      </div>
+      <div class="dep-map" id="dep-map"></div>
+    </section>
+
+    <footer>
+      <span>build: phosphor crt · powered by <a href="https://github.com/steveyegge/beads" target="_blank" rel="noopener">bd (beads)</a></span>
+      <span id="footer-stamp">--</span>
+    </footer>
+  </main>
+
+<script>
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+
+const PRIO_NAMES = {0:"P0 · critical", 1:"P1 · high", 2:"P2 · medium", 3:"P3 · low", 4:"P4 · backlog"};
+const STATUS_ORDER = ["open","in_progress","blocked","closed"];
+
+const state = {
+  data: null,
+  filters: { status: "open", priority: "*", type: "*" },
+  q: "",
+};
+
+function fmtDate(s) {
+  if (!s) return "--";
+  const d = new Date(s);
+  if (isNaN(d)) return s;
+  return d.toISOString().replace("T"," ").replace(/:\d{2}\.\d+Z$/, "Z");
+}
+
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+}
+
+const DATA_SOURCE = ".beads/issues.jsonl";
+
+async function load() {
+  $("#boot-time").textContent = "loading...";
+  try {
+    const res = await fetch(DATA_SOURCE, { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const text = await res.text();
+    state.data = parseJsonl(text);
+    render();
+  } catch (e) {
+    showFetchError(e);
+  }
+}
+
+function parseJsonl(text) {
+  const issues = [];
+  let lineNo = 0;
+  for (const raw of text.split(/\r?\n/)) {
+    lineNo++;
+    const line = raw.trim();
+    if (!line) continue;
+    let obj;
+    try { obj = JSON.parse(line); }
+    catch (err) { console.warn(`skipping malformed line ${lineNo}:`, err.message); continue; }
+    if (obj && obj._type === "issue") issues.push(obj);
+  }
+  issues.sort((a, b) => (b.updated_at || "").localeCompare(a.updated_at || ""));
+  const generated_at = issues.reduce((m, i) => (i.updated_at && i.updated_at > m) ? i.updated_at : m, "");
+  return { generated_at, issues };
+}
+
+function showFetchError(e) {
+  const msg = String(e && e.message || e);
+  const main = $("main");
+  const notice = document.createElement("div");
+  notice.className = "notice";
+  notice.innerHTML = `
+    <strong>signal lost.</strong> could not load <code>${escapeHtml(DATA_SOURCE)}</code> (${escapeHtml(msg)}).<br/>
+    if you opened this file from disk, your browser likely blocked <code>fetch()</code> for the <code>file://</code> scheme.<br/>
+    serve the repo root over http instead — for example:<br/>
+    &nbsp;&nbsp;<code>cd $(git rev-parse --show-toplevel) &amp;&amp; python3 -m http.server 8080</code><br/>
+    then open <code>http://localhost:8080/beads-dashboard.html</code> <span class="pulse"></span>
+  `;
+  main.insertBefore(notice, main.children[2]);
+  $("#boot-time").textContent = "offline";
+}
+
+function computeStats(issues) {
+  const s = { total: issues.length, by_status: {}, by_prio: {}, by_type: {}, p0_open: 0, in_progress: 0, blocked: 0, deps: 0 };
+  for (const i of issues) {
+    s.by_status[i.status] = (s.by_status[i.status]||0) + 1;
+    s.by_prio[i.priority] = (s.by_prio[i.priority]||0) + 1;
+    s.by_type[i.issue_type] = (s.by_type[i.issue_type]||0) + 1;
+    if (i.status !== "closed" && i.priority === 0) s.p0_open++;
+    if (i.status === "in_progress") s.in_progress++;
+    if (i.status === "blocked") s.blocked++;
+    s.deps += (i.dependencies || []).length;
+  }
+  return s;
+}
+
+function renderStats(s) {
+  const cards = [
+    { label: "total issues", val: s.total },
+    { label: "open", val: s.by_status.open || 0 },
+    { label: "in_progress", val: s.in_progress, cls: "accent" },
+    { label: "closed", val: s.by_status.closed || 0 },
+    { label: "blocked", val: s.blocked, cls: s.blocked ? "danger" : "" },
+    { label: "p0 unresolved", val: s.p0_open, cls: s.p0_open ? "accent" : "" },
+    { label: "dep edges", val: s.deps },
+  ];
+  $("#stats").innerHTML = cards.map((c, i) => `
+    <div class="stat-card ${c.cls||""}" style="animation-delay:${i*60}ms">
+      <div class="label">${c.label}</div>
+      <div class="val">${c.val}</div>
+    </div>
+  `).join("");
+}
+
+function renderBars(elId, dist, keyFmt, classFn) {
+  const el = $(elId);
+  const max = Math.max(1, ...Object.values(dist));
+  const entries = Object.entries(dist).sort((a,b) => {
+    const na = parseFloat(a[0]); const nb = parseFloat(b[0]);
+    if (!isNaN(na) && !isNaN(nb)) return na - nb;
+    return a[0].localeCompare(b[0]);
+  });
+  el.innerHTML = entries.map(([k, v], i) => {
+    const pct = Math.round((v / max) * 100);
+    const cls = classFn ? classFn(k) : "";
+    return `
+      <div class="bar-row ${cls}">
+        <span class="key">${keyFmt(k)}</span>
+        <div class="bar-track"><div class="bar-fill" style="--w:${pct}%; animation-delay:${i*80}ms"></div></div>
+        <span class="count">${v}</span>
+      </div>
+    `;
+  }).join("");
+}
+
+function priorityKey(p) {
+  return PRIO_NAMES[p] || `p${p}`;
+}
+
+function renderIssues() {
+  const all = state.data.issues;
+  const q = state.q.trim().toLowerCase();
+  const f = state.filters;
+  const filtered = all.filter(i => {
+    if (f.status !== "*" && i.status !== f.status) return false;
+    if (f.priority !== "*" && String(i.priority) !== f.priority) return false;
+    if (f.type !== "*" && i.issue_type !== f.type) return false;
+    if (q) {
+      const hay = `${i.id} ${i.title} ${i.assignee||""} ${i.issue_type} ${i.status}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  filtered.sort((a, b) => {
+    const sa = STATUS_ORDER.indexOf(a.status); const sb = STATUS_ORDER.indexOf(b.status);
+    if (sa !== sb) return (sa === -1 ? 99 : sa) - (sb === -1 ? 99 : sb);
+    if (a.priority !== b.priority) return a.priority - b.priority;
+    return (b.updated_at || "").localeCompare(a.updated_at || "");
+  });
+
+  $("#visible-count").textContent = filtered.length;
+  $("#total-count").textContent = all.length;
+
+  const html = filtered.map((i, idx) => issueCard(i, idx)).join("");
+  $("#issues").innerHTML = html || `<div class="empty">no issues match the filter.</div>`;
+
+  $$(".issue").forEach(el => {
+    el.addEventListener("click", () => el.classList.toggle("open"));
+  });
+}
+
+function issueCard(i, idx) {
+  const depsOut = (i.dependencies || []).map(d => `<span class="pill" title="this issue depends on">→ ${escapeHtml(d.depends_on_id)}</span>`).join("");
+  const depsInCount = i.dependent_count || 0;
+  const depsIn = depsInCount ? `<span class="pill in" title="blocks N other issues">← blocks ${depsInCount}</span>` : "";
+
+  const body = `
+    ${i.description ? `<span class="label">description</span>${escapeHtml(i.description)}` : ""}
+    ${i.acceptance_criteria ? `<span class="label">acceptance</span>${escapeHtml(i.acceptance_criteria)}` : ""}
+    ${i.notes ? `<span class="label">notes</span>${escapeHtml(i.notes)}` : ""}
+    <span class="label">timestamps</span>created ${fmtDate(i.created_at)}\nupdated ${fmtDate(i.updated_at)}${i.started_at ? `\nstarted ${fmtDate(i.started_at)}` : ""}
+  `;
+
+  return `
+    <article class="issue" data-status="${escapeHtml(i.status)}" data-priority="${i.priority}" data-type="${escapeHtml(i.issue_type)}" style="animation-delay:${Math.min(idx*30, 600)}ms">
+      <div class="id">${escapeHtml(i.id)} · ${escapeHtml(i.issue_type)}</div>
+      <h3 class="title">${escapeHtml(i.title)}</h3>
+      <div class="meta">
+        <span class="kv ${i.status==='in_progress'?'amber':i.status==='blocked'?'danger':''}"><span class="k">status</span><span class="v">${escapeHtml(i.status)}</span></span>
+        <span class="kv ${i.priority===0?'amber':''}"><span class="k">prio</span><span class="v">p${i.priority}</span></span>
+        ${i.assignee ? `<span class="kv"><span class="k">@</span><span class="v">${escapeHtml(i.assignee)}</span></span>` : ""}
+        ${i.comment_count ? `<span class="kv"><span class="k">cmt</span><span class="v">${i.comment_count}</span></span>` : ""}
+      </div>
+      ${(depsOut || depsIn) ? `<div class="deps">${depsIn}${depsOut}</div>` : ""}
+      <div class="body">${body}</div>
+    </article>
+  `;
+}
+
+/* ---------- subway-map dependency renderer ----------
+ * Edge model: in beads, `A depends_on B` means B must be done before A.
+ * For the map we draw upstream (B) on the LEFT and downstream (A) on the
+ * RIGHT — like a subway line moving in the direction of dependency flow.
+ * Layout: layered (Sugiyama-lite). Layer = longest path from any root,
+ * lane = order within the layer. Edges are routed as orthogonal SVG
+ * paths with rounded elbows and coloured per upstream "line".
+ */
+const SUBWAY = {
+  COL: 240,           // px per layer
+  ROW: 50,            // px per lane row
+  PAD_X: 32,
+  PAD_Y: 32,
+  STATION_W: 168,
+  STATION_H: 26,
+  ELBOW: 10,
+  PALETTE: ["#ffa500","#9bcd9b","#7fc8e8","#e8a0ff","#ffe066","#ff7070","#a0e8a0","#ff9966","#b8a0ff","#66e0c0"],
+};
+
+function lineColor(id) {
+  let h = 5381;
+  for (let i = 0; i < id.length; i++) h = ((h << 5) + h + id.charCodeAt(i)) >>> 0;
+  return SUBWAY.PALETTE[h % SUBWAY.PALETTE.length];
+}
+
+function buildDepGraph(issues) {
+  // out: upstream -> [downstream], inc: downstream -> [upstream]
+  const out = new Map(), inc = new Map(), edges = [];
+  const add = (n) => { if (!out.has(n)) { out.set(n, []); inc.set(n, []); } };
+  for (const i of issues) {
+    for (const d of (i.dependencies || [])) {
+      add(i.id); add(d.depends_on_id);
+      out.get(d.depends_on_id).push(i.id);
+      inc.get(i.id).push(d.depends_on_id);
+      edges.push({ from: i.id, to: d.depends_on_id, type: d.type || "depends" });
+    }
+  }
+  return { out, inc, edges };
+}
+
+function assignLayers(out, inc) {
+  // longest-path layering from roots (nodes with no upstream)
+  const layer = new Map();
+  const roots = [...inc.keys()].filter(n => inc.get(n).length === 0);
+  const queue = [...roots];
+  for (const r of roots) layer.set(r, 0);
+  let head = 0;
+  const visited = new Set(roots);
+  while (head < queue.length) {
+    const cur = queue[head++];
+    const cl = layer.get(cur);
+    for (const next of out.get(cur)) {
+      if ((layer.get(next) ?? -1) < cl + 1) layer.set(next, cl + 1);
+      if (!visited.has(next)) { visited.add(next); queue.push(next); }
+    }
+  }
+  // any nodes left (cycle members) go to layer 0
+  for (const n of out.keys()) if (!layer.has(n)) layer.set(n, 0);
+  return layer;
+}
+
+function laneAssignment(layer, out) {
+  // group by layer, sort lanes by upstream-lane avg for fewer crossings
+  const byLayer = new Map();
+  for (const [n, l] of layer) {
+    if (!byLayer.has(l)) byLayer.set(l, []);
+    byLayer.get(l).push(n);
+  }
+  const layers = [...byLayer.keys()].sort((a, b) => a - b);
+  const lane = new Map();
+  for (const l of layers) {
+    const nodes = byLayer.get(l);
+    if (l === 0) {
+      nodes.sort();
+    } else {
+      // sort by mean lane of upstream parents
+      nodes.sort((a, b) => {
+        const score = (id) => {
+          const parents = [...lane.entries()].filter(([pid]) => out.get(pid)?.includes(id)).map(([, v]) => v);
+          if (!parents.length) return 0;
+          return parents.reduce((s, x) => s + x, 0) / parents.length;
+        };
+        const sa = score(a), sb = score(b);
+        if (sa !== sb) return sa - sb;
+        return a.localeCompare(b);
+      });
+    }
+    nodes.forEach((n, idx) => lane.set(n, idx));
+  }
+  return { lane, byLayer, layers };
+}
+
+function orthogonalPath(sx, sy, tx, ty, r) {
+  if (Math.abs(sy - ty) < 0.5) return `M ${sx} ${sy} L ${tx} ${ty}`;
+  const midX = sx + (tx - sx) / 2;
+  const dir = ty > sy ? 1 : -1;
+  return `M ${sx} ${sy} L ${midX - r} ${sy} Q ${midX} ${sy} ${midX} ${sy + r * dir} L ${midX} ${ty - r * dir} Q ${midX} ${ty} ${midX + r} ${ty} L ${tx} ${ty}`;
+}
+
+function shortId(id) {
+  return id.startsWith("forgejo-mcp-") ? id.slice("forgejo-mcp-".length) : id;
+}
+
+function renderDeps() {
+  const { out, inc, edges } = buildDepGraph(state.data.issues);
+  $("#dep-count").textContent = `${edges.length} edges · ${out.size} stations`;
+
+  if (!edges.length) {
+    $("#dep-map").innerHTML = `<div class="empty">no dependency edges recorded.</div>`;
+    return;
+  }
+
+  const layer = assignLayers(out, inc);
+  const { lane, byLayer, layers } = laneAssignment(layer, out);
+
+  const issuesById = new Map(state.data.issues.map(i => [i.id, i]));
+  const { COL, ROW, PAD_X, PAD_Y, STATION_W, STATION_H, ELBOW } = SUBWAY;
+
+  const maxLane = Math.max(...[...byLayer.values()].map(a => a.length));
+  const width  = PAD_X * 2 + (layers[layers.length - 1] + 1) * COL + STATION_W;
+  const height = PAD_Y * 2 + maxLane * ROW + STATION_H;
+
+  const pos = new Map();
+  for (const [n, l] of layer) {
+    const ln = lane.get(n);
+    pos.set(n, { x: PAD_X + l * COL, y: PAD_Y + ln * ROW + STATION_H / 2 });
+  }
+
+  let svgEdges = "";
+  // group edges by upstream (so each "line" departing a station shares colour)
+  for (const e of edges) {
+    const s = pos.get(e.to);   // upstream (left)
+    const t = pos.get(e.from); // downstream (right)
+    if (!s || !t) continue;
+    const sx = s.x + STATION_W, sy = s.y;
+    const tx = t.x, ty = t.y;
+    const colour = lineColor(e.to);
+    const d = orthogonalPath(sx, sy, tx, ty, ELBOW);
+    svgEdges += `<path d="${d}" stroke="${colour}" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"><title>${escapeHtml(e.from)} depends on ${escapeHtml(e.to)}</title></path>`;
+  }
+
+  let svgNodes = "";
+  for (const [id] of out) {
+    const p = pos.get(id);
+    const issue = issuesById.get(id) || {};
+    const st = issue.status || "open";
+    const fill = st === "closed" ? "rgba(120,140,120,0.10)"
+              : st === "in_progress" ? "rgba(255,165,0,0.14)"
+              : "rgba(232,240,232,0.06)";
+    const stroke = st === "closed" ? "#5a705a"
+                : st === "in_progress" ? "#ffa500"
+                : "#b8c6b8";
+    const textCol = st === "closed" ? "#7a907a" : "#e8f0e8";
+    const dotCol = lineColor(id);
+    const label = shortId(id);
+    const title = `${id} · ${issue.title || ""} (${st})`;
+    svgNodes += `<g class="station" data-id="${escapeHtml(id)}" transform="translate(${p.x},${p.y - STATION_H/2})">
+      <title>${escapeHtml(title)}</title>
+      <rect x="0" y="0" width="${STATION_W}" height="${STATION_H}" rx="${STATION_H/2}" fill="${fill}" stroke="${stroke}" stroke-width="1.4"/>
+      <circle cx="${STATION_H/2}" cy="${STATION_H/2}" r="5" fill="${dotCol}" stroke="${stroke}" stroke-width="1"/>
+      <text x="${STATION_H + 4}" y="${STATION_H/2 + 4}" fill="${textCol}" font-family="JetBrains Mono, ui-monospace, monospace" font-size="11" font-weight="500">${escapeHtml(label)}</text>
+    </g>`;
+  }
+
+  const svg = `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Issue dependency subway map">
+    <g class="edges">${svgEdges}</g>
+    <g class="stations">${svgNodes}</g>
+  </svg>
+  <div class="legend">
+    <span><span class="dot" style="background:#ffa500"></span>in_progress / line colour</span>
+    <span><span class="dot" style="background:rgba(232,240,232,0.5); border:1px solid #b8c6b8"></span>open</span>
+    <span><span class="dot" style="background:rgba(120,140,120,0.3); border:1px solid #5a705a"></span>closed</span>
+    <span><span class="swatch" style="background:#9bcd9b"></span>each station's outbound line colours the chain</span>
+    <span>flow: upstream <span style="color:var(--amber)">→</span> downstream</span>
+  </div>`;
+
+  $("#dep-map").innerHTML = svg;
+
+  $$("#dep-map .station").forEach(g => {
+    g.addEventListener("click", () => {
+      const id = g.getAttribute("data-id");
+      state.filters = { status: "*", priority: "*", type: "*" };
+      state.q = id;
+      $("#search").value = id;
+      $$(".chip").forEach(c => c.classList.toggle("on", c.getAttribute("data-val") === "*"));
+      renderIssues();
+      const card = $$(".issue").find(el => el.querySelector(".id")?.textContent.startsWith(id));
+      if (card) {
+        card.classList.add("open");
+        card.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    });
+  });
+}
+
+function bindControls() {
+  $$("#controls .chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      const f = chip.getAttribute("data-filter");
+      const v = chip.getAttribute("data-val");
+      state.filters[f] = v;
+      $$(`.chip[data-filter="${f}"]`).forEach(c => {
+        const on = c.getAttribute("data-val") === v;
+        c.classList.toggle("on", on);
+        c.classList.toggle("amber", on && f === "priority" && v === "0");
+      });
+      renderIssues();
+    });
+  });
+  $("#search").addEventListener("input", (e) => {
+    state.q = e.target.value || "";
+    renderIssues();
+  });
+}
+
+function render() {
+  const issues = state.data.issues;
+  const s = computeStats(issues);
+  renderStats(s);
+  renderBars("#prio-bars", s.by_prio, k => priorityKey(k), k => `p${k}`);
+  renderBars("#type-bars", s.by_type, k => k);
+  renderIssues();
+  renderDeps();
+
+  const stamp = state.data.generated_at || (issues[0] && issues[0].updated_at) || "";
+  $("#last-update").textContent = `last update ${fmtDate(stamp)}`;
+  $("#footer-stamp").textContent = `data stamp ${fmtDate(stamp)}`;
+  $("#boot-time").textContent = `online · ${fmtDate(new Date().toISOString())}`;
+}
+
+bindControls();
+load();
+</script>
+</body>
+</html>

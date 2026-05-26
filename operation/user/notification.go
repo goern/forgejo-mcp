@@ -124,7 +124,11 @@ func CheckNotificationsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 		opt.Before = t
 	}
 
-	notifications, resp, err := forgejo.Client().ListNotifications(opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	notifications, resp, err := client.ListNotifications(opt)
 	duration := time.Since(start)
 
 	statusCode := 0
@@ -155,7 +159,11 @@ func GetNotificationThreadFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 		return to.ErrorResult(err)
 	}
 
-	thread, resp, err := forgejo.Client().GetNotification(int64(id))
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	thread, resp, err := client.GetNotification(int64(id))
 	duration := time.Since(start)
 
 	statusCode := 0
@@ -185,7 +193,11 @@ func MarkNotificationReadFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 		return to.ErrorResult(err)
 	}
 
-	thread, resp, err := forgejo.Client().ReadNotification(int64(id))
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	thread, resp, err := client.ReadNotification(int64(id))
 	duration := time.Since(start)
 
 	statusCode := 0
@@ -218,7 +230,11 @@ func MarkAllNotificationsReadFn(ctx context.Context, req mcp.CallToolRequest) (*
 		opt.LastReadAt = t
 	}
 
-	_, resp, err := forgejo.Client().ReadNotifications(opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	_, resp, err := client.ReadNotifications(opt)
 	duration := time.Since(start)
 
 	statusCode := 0
@@ -293,7 +309,11 @@ func ListRepoNotificationsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 		opt.Before = t
 	}
 
-	notifications, resp, err := forgejo.Client().ListRepoNotifications(owner, repo, opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	notifications, resp, err := client.ListRepoNotifications(owner, repo, opt)
 	duration := time.Since(start)
 
 	statusCode := 0
@@ -334,7 +354,11 @@ func MarkRepoNotificationsReadFn(ctx context.Context, req mcp.CallToolRequest) (
 		opt.LastReadAt = t
 	}
 
-	_, resp, err := forgejo.Client().ReadRepoNotifications(owner, repo, opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	_, resp, err := client.ReadRepoNotifications(owner, repo, opt)
 	duration := time.Since(start)
 
 	statusCode := 0

@@ -1,0 +1,65 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: release-tools-build-image
+  annotations:
+    tekton.dev/displayName: "buildah build — release-tools image (no push)"
+spec:
+  params:
+    - name: IMAGE
+      description: Local image tag to assign to the built image (e.g. release-tools:pr-$(context.pipelineRun.name)).
+      type: string
+    - name: CONTEXT
+      description: Path within the workspace to pass as the build context.
+      type: string
+      default: image/release-tools
+    - name: CONTAINERFILE
+      description: Path to the Containerfile relative to CONTEXT.
+      type: string
+      default: Containerfile
+    - name: STORAGE_DRIVER
+      description: buildah storage driver.
+      type: string
+      default: vfs
+  workspaces:
+    - name: source
+      mountPath: /workspace/source
+  results:
+    - name: IMAGE_DIGEST
+      description: |
+        sha256 digest of the built image manifest. Empty for pre-push (PR)
+        builds; the real manifest digest is captured by push-image-by-digest.
+    - name: IMAGE_REF
+      description: Full image reference (tag@digest) of the built image.
+  steps:
+    - name: build
+      image: quay.io/buildah/stable:latest
+      securityContext:
+        privileged: true
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        # Store in workspace PVC so subsequent tasks (push-by-digest) can access it.
+        BUILDAH_STORE="$(workspaces.source.path)/.buildah"
+        mkdir -p "${BUILDAH_STORE}"
+
+        buildah --version
+
+        buildah --root "${BUILDAH_STORE}" bud \
+          --storage-driver="$(params.STORAGE_DRIVER)" \
+          --file="$(params.CONTEXT)/$(params.CONTAINERFILE)" \
+          --tag="$(params.IMAGE)" \
+          "$(params.CONTEXT)"
+
+        IMAGE_ID=$(buildah --root "${BUILDAH_STORE}" \
+          --storage-driver="$(params.STORAGE_DRIVER)" images \
+          --no-trunc --format '{{.ID}}' 2>/dev/null | head -1)
+        if [ -z "${IMAGE_ID}" ]; then
+          echo "ERROR: no images in local store after build" >&2
+          exit 1
+        fi
+        echo "Built: $(params.IMAGE) local-id=${IMAGE_ID}"
+
+        printf '' > "$(results.IMAGE_DIGEST.path)"
+        printf '%s' "$(params.IMAGE)" > "$(results.IMAGE_REF.path)"

@@ -6,7 +6,7 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - '-s -w -X main.BuildTag={{.Version}} -X main.BuildCommit={{.Commit}} -X main.BuildDate={{.Date}}'
+      - '-s -w -X main.Version={{.Version}}'
     goos:
       - linux
       - darwin

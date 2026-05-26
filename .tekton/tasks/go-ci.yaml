@@ -14,10 +14,12 @@ spec:
       description: golangci-lint image (must be Go-version compatible with GO_IMAGE).
       type: string
       default: docker.io/golangci/golangci-lint:v1.64-alpine
-    - name: GOVULNCHECK_VERSION
-      description: govulncheck CLI version to install via 'go install'.
+    - name: RELEASE_TOOLS_IMAGE
+      description: |
+        Pre-built release-tools image containing govulncheck (and other tools).
+        Used only for the govulncheck step.
       type: string
-      default: latest
+      default: codeberg.org/operate-first/release-tools:latest
     - name: LINT_REQUIRED
       description: |
         If "true", lint findings fail the build. If "false", lint runs but its
@@ -109,10 +111,29 @@ spec:
         go test -race -shuffle=on -count=1 ./...
 
     - name: govulncheck
-      image: $(params.GO_IMAGE)
+      image: $(params.RELEASE_TOOLS_IMAGE)
       script: |
         #!/usr/bin/env bash
         set -euo pipefail
         git config --global --add safe.directory "$(workspaces.source.path)"
-        go install "golang.org/x/vuln/cmd/govulncheck@$(params.GOVULNCHECK_VERSION)"
-        "$(go env GOPATH)/bin/govulncheck" ./...
+        govulncheck ./...
+
+    - name: license-check
+      image: $(params.GO_IMAGE)
+      script: |
+        #!/usr/bin/env bash
+        # Fail build if any module in the dependency closure carries a
+        # forbidden (GPL/AGPL) or restricted (LGPL/MPL/EPL) license.
+        # Protects the Apache-2.0 binary from GPL contamination.
+        #
+        # Uses GO_IMAGE + go install rather than RELEASE_TOOLS_IMAGE to avoid
+        # the circular bootstrap problem: release-tools:latest predates this
+        # step, so go-licenses would not be present until after the image
+        # rebuilds. GOMODCACHE is workspace-scoped, so the install is cached
+        # across steps in the same PipelineRun.
+        set -euo pipefail
+        git config --global --add safe.directory "$(workspaces.source.path)"
+        go install github.com/google/go-licenses@v1.6.0
+        go-licenses check ./... \
+          --disallowed_types=forbidden,restricted \
+          --ignore=codeberg.org/goern/forgejo-mcp

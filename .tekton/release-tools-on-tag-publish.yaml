@@ -1,0 +1,197 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: release-tools-on-tag-publish
+  annotations:
+    pipelinesascode.tekton.dev/on-event: "[push]"
+    pipelinesascode.tekton.dev/on-target-branch: "[refs/tags/release-tools/v*]"
+    # A1 tag-isolation + belt-and-suspenders (older PaC versions may not
+    # enforce on-target-branch prefix correctly): CEL re-checks the full ref.
+    pipelinesascode.tekton.dev/on-cel-expression: |
+      event == "push" && target_branch.matches("^refs/tags/release-tools/v.*")
+    pipelinesascode.tekton.dev/task: >-
+      [git-clone,
+       .tekton/release-tools/tasks/resolve-release-tools-tag.yaml,
+       .tekton/release-tools/tasks/build-image.yaml,
+       .tekton/release-tools/tasks/push-image-by-digest.yaml,
+       .tekton/release-tools/tasks/cosign-sign-image-by-digest.yaml,
+       .tekton/release-tools/tasks/cosign-attach-sbom.yaml,
+       .tekton/release-tools/tasks/promote-image-tag.yaml]
+    pipelinesascode.tekton.dev/max-keep-runs: "10"
+    # Tag-publish runs are not cancellable — a partially-published image
+    # with a pushed digest but without a cosign signature is a bad state.
+    pipelinesascode.tekton.dev/cancel-in-progress: "false"
+    # Tekton Chains: upload in-toto SLSA v1.0 provenance to Rekor transparency
+    # log. Chains observes this PipelineRun, reads IMAGE_URL + IMAGE_DIGEST
+    # pipeline results, and attaches a cosign attestation binding image digest
+    # to PipelineRun → git commit → builder identity.
+    # Verify with: cosign verify-attestation --type slsaprovenance \
+    #   --key <cosign.pub> codeberg.org/operate-first/release-tools:<tag>
+    chains.tekton.dev/transparency-upload: "true"
+    # Operator coordination notes:
+    # Registry: codeberg.org/operate-first/release-tools (Path A — reuse
+    # codeberg-pusher dockerconfigjson Secret already in op1st-pipelines).
+    # Required Secrets in op1st-pipelines:
+    #   - codeberg-pusher       (dockerconfigjson — push auth, Path A)
+    #   - cosign-signing-key-images  (cosign.key/cosign.password — optional: false, fail-closed)
+    # Before first publish: confirm the PAT inside codeberg-pusher has
+    # write:package scope AND the credential user holds maintainer/owner
+    # role on the operate-first org (verifiable only via Codeberg UI).
+spec:
+  params:
+    - name: repo_url
+      value: "{{ repo_url }}"
+    - name: revision
+      value: "{{ revision }}"
+    - name: target_branch
+      value: "{{ target_branch }}"
+  pipelineSpec:
+    params:
+      - name: repo_url
+      - name: revision
+      - name: target_branch
+        description: |
+          Full ref passed by PaC (e.g. refs/tags/release-tools/v1.0.0).
+          Stripped to bare semver (e.g. v1.0.0) by resolve-tag step.
+    results:
+      # Tekton Chains reads IMAGE_URL + IMAGE_DIGEST at the Pipeline level to
+      # bind the pushed image to the SLSA provenance attestation it generates.
+      # Without these, Chains produces subject-less provenance that cannot be
+      # verified against a specific image digest.
+      - name: IMAGE_URL
+        value: $(tasks.push-by-digest.results.IMAGE_URL)
+      - name: IMAGE_DIGEST
+        value: $(tasks.push-by-digest.results.IMAGE_DIGEST)
+    workspaces:
+      - name: source
+      - name: registry-credentials
+        description: |
+          Kubernetes Secret containing .dockerconfigjson or config.json with
+          push credentials for codeberg.org/operate-first/release-tools.
+          # Path A (decided 2026-05-25): codeberg.org/operate-first/release-tools
+    tasks:
+      - name: fetch-source
+        taskRef:
+          name: git-clone
+        workspaces:
+          - name: output
+            workspace: source
+        params:
+          - name: url
+            value: $(params.repo_url)
+          - name: revision
+            value: $(params.revision)
+
+      - name: resolve-tag
+        runAfter:
+          - fetch-source
+        taskRef:
+          name: release-tools-resolve-tag
+        params:
+          - name: target_branch
+            value: $(params.target_branch)
+
+      - name: build-image
+        runAfter:
+          - resolve-tag
+        taskRef:
+          name: release-tools-build-image
+        workspaces:
+          - name: source
+            workspace: source
+        params:
+          - name: IMAGE
+            value: "release-tools:$(tasks.resolve-tag.results.tag)"
+          - name: CONTEXT
+            value: image/release-tools
+          - name: CONTAINERFILE
+            value: Containerfile
+
+      # L1 TOCTOU fix: push by digest first, no human-readable tag yet.
+      - name: push-by-digest
+        runAfter:
+          - build-image
+        taskRef:
+          name: release-tools-push-image-by-digest
+        workspaces:
+          - name: source
+            workspace: source
+          - name: registry-credentials
+            workspace: registry-credentials
+        params:
+          - name: IMAGE
+            value: "release-tools:$(tasks.resolve-tag.results.tag)"
+          # Path A (decided 2026-05-25): codeberg.org/operate-first/release-tools
+          - name: REGISTRY_IMAGE
+            value: "codeberg.org/operate-first/release-tools"
+
+      # A3 fail-closed: cosign-signing-key-images secret is optional: false in the
+      # task definition. If the Secret is absent, this step fails, and no
+      # human-readable tag is ever promoted.
+      - name: cosign-sign
+        runAfter:
+          - push-by-digest
+        taskRef:
+          name: release-tools-cosign-sign-image-by-digest
+        workspaces:
+          - name: registry-credentials
+            workspace: registry-credentials
+        params:
+          - name: IMAGE_REPO_DIGEST
+            value: $(tasks.push-by-digest.results.IMAGE_REPO_DIGEST)
+
+      - name: attach-sbom
+        runAfter:
+          - cosign-sign
+        taskRef:
+          name: release-tools-cosign-attach-sbom
+        workspaces:
+          - name: source
+            workspace: source
+          - name: registry-credentials
+            workspace: registry-credentials
+        params:
+          - name: IMAGE_REPO_DIGEST
+            value: $(tasks.push-by-digest.results.IMAGE_REPO_DIGEST)
+
+      # L1 TOCTOU fix: promote human-readable tag ONLY after sign + SBOM succeed.
+      - name: promote-tag
+        runAfter:
+          - push-by-digest
+          - cosign-sign
+          - attach-sbom
+        taskRef:
+          name: release-tools-promote-image-tag
+        workspaces:
+          - name: registry-credentials
+            workspace: registry-credentials
+        params:
+          - name: IMAGE_REPO_DIGEST
+            value: $(tasks.push-by-digest.results.IMAGE_REPO_DIGEST)
+          - name: TAG
+            value: $(tasks.resolve-tag.results.tag)
+          # Path A (decided 2026-05-25): codeberg.org/operate-first/release-tools
+          - name: REGISTRY_IMAGE
+            value: "codeberg.org/operate-first/release-tools"
+
+  workspaces:
+    - name: source
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              # Image build + syft SBOM generation workspace.
+              storage: 10Gi
+    - name: registry-credentials
+      secret:
+        # Path A (decided 2026-05-25): reuse the existing codeberg-pusher
+        # dockerconfigjson Secret in op1st-pipelines. Auth covers codeberg.org;
+        # for push to codeberg.org/operate-first/release-tools to succeed, the
+        # underlying Codeberg PAT must carry `write:package` scope AND the
+        # credential user must hold maintainer/owner role on the operate-first
+        # org. Operator confirms these out-of-band (cluster cannot validate).
+        # See docs/design/release-pipeline-migration.md and the runbook for
+        # rotation procedure.
+        secretName: codeberg-pusher

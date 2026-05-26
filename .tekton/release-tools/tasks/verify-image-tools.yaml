@@ -1,0 +1,55 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: release-tools-verify-image-tools
+  annotations:
+    tekton.dev/displayName: "verify bundled tool versions in release-tools image"
+spec:
+  params:
+    - name: IMAGE_REF
+      description: Full image reference to run (tag or tag@digest).
+      type: string
+    - name: STORAGE_DRIVER
+      description: buildah/podman storage driver.
+      type: string
+      default: vfs
+  steps:
+    - name: verify-tools
+      image: quay.io/buildah/stable:latest
+      securityContext:
+        privileged: true
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+
+        IMAGE="$(params.IMAGE_REF)"
+        echo "Verifying tools in: ${IMAGE}"
+
+        run() {
+          buildah run \
+            --storage-driver="$(params.STORAGE_DRIVER)" \
+            --isolation=chroot \
+            "$(buildah from --storage-driver="$(params.STORAGE_DRIVER)" "${IMAGE}")" \
+            -- /bin/sh -c "$1"
+        }
+
+        # Verify each required tool reports a version (fails build if any missing).
+        buildah from --storage-driver="$(params.STORAGE_DRIVER)" --name verify-ctr "${IMAGE}"
+
+        check() {
+          echo "--- $1 ---"
+          buildah run --storage-driver="$(params.STORAGE_DRIVER)" verify-ctr -- /bin/sh -c "$1"
+        }
+
+        check "go version"
+        check "syft version"
+        check "goreleaser --version"
+        check "cosign version"
+        check "jq --version"
+        check "curl --version"
+        check "node --version"
+        check "npm --version"
+        check "/bin/sh -c 'echo shell-ok'"
+
+        buildah rm verify-ctr
+        echo "All tool checks passed."

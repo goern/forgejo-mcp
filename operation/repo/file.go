@@ -92,7 +92,11 @@ func GetFileContentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	withMetadata, _ := args["with_metadata"].(bool)
 
 	if withMetadata {
-		content, _, err := forgejo.Client().GetContents(owner, repo, ref, filePath)
+		client, err := forgejo.Client(ctx)
+		if err != nil {
+			return to.ErrorResult(err)
+		}
+		content, _, err := client.GetContents(owner, repo, ref, filePath)
 		if err != nil {
 			return to.ErrorResult(fmt.Errorf("get file err: %v", err))
 		}
@@ -101,7 +105,11 @@ func GetFileContentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 
 	// Default: plain text via GetFile (SDK /raw/ endpoint, no base64).
 	// GetFile returns []byte; binary files are returned as-is without detection.
-	rawBytes, _, err := forgejo.Client().GetFile(owner, repo, ref, filePath)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	rawBytes, _, err := client.GetFile(owner, repo, ref, filePath)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get file err: %v", err))
 	}
@@ -163,7 +171,11 @@ func CreateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 		},
 		Content: base64.StdEncoding.EncodeToString([]byte(content)),
 	}
-	fileResp, _, err := forgejo.Client().CreateFile(owner, repo, filePath, opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	fileResp, _, err := client.CreateFile(owner, repo, filePath, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("create file error: %v", err))
 	}
@@ -192,7 +204,11 @@ func UpdateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 		SHA:     sha,
 		Content: base64.StdEncoding.EncodeToString([]byte(content)),
 	}
-	fileResp, _, err := forgejo.Client().UpdateFile(owner, repo, filePath, opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	fileResp, _, err := client.UpdateFile(owner, repo, filePath, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("update file error: %v", err))
 	}
@@ -226,7 +242,11 @@ func DeleteFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 		},
 		SHA: sha,
 	}
-	_, err := forgejo.Client().DeleteFile(owner, repo, filePath, opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	_, err = client.DeleteFile(owner, repo, filePath, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("delete file err: %v", err))
 	}

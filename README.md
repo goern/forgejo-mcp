@@ -40,6 +40,18 @@ yay -S forgejo-mcp      # builds from source
 yay -S forgejo-mcp-bin  # uses pre-built binary
 ```
 
+**Option C: Nix / NixOS**
+
+ You can run the server directly using the Nix package manager:
+ ```bash
+ nix-shell -p forgejo-mcp
+ ```
+ Or using Flakes:
+ ```bash
+ nix run nixpkgs#forgejo-mcp
+ ```
+
+ > **Note:** `forgejo-mcp` is currently only available in the `unstable` channel and is not yet part of the 25.11 stable release.
 ### 2. Get Your Access Token
 
 1. Log into your Forgejo instance
@@ -87,6 +99,21 @@ When using streamable HTTP mode, start the server first:
 ```bash
 forgejo-mcp --transport http --url https://your-forgejo-instance.org --token <your-token>
 ```
+
+**Multi-tenant HTTP mode** (optional):
+
+You can run a single centralized `forgejo-mcp` instance and let each client provide its own token via the standard HTTP `Authorization` header. This enables serving multiple users or agents from one server.
+
+1. Start the server (optionally without any global token):
+   ```bash
+   forgejo-mcp --transport http --url https://your-forgejo-instance.org
+   ```
+2. Clients include their specific token in each request:
+   - `Authorization: token <token>` (Forgejo style)
+   - `Authorization: Bearer <token>` (OAuth2/MCP style)
+   - Note: The scheme (`token` or `Bearer`) is case-insensitive.
+
+See [demos/multi-tenant-http.md](demos/multi-tenant-http.md) for a copy-pasteable walkthrough.
 
 **For SSE mode** (legacy HTTP-based):
 
@@ -279,6 +306,160 @@ You can configure the server using command-line arguments or environment variabl
 
 Command-line arguments take priority over environment variables.
 
+## Verifying Releases
+
+Release archives are accompanied by a `checksums.txt` file and an optional
+`checksums.txt.sig` produced by [cosign](https://github.com/sigstore/cosign)
+with the project's release keypair. Verifying both files lets you confirm
+that the binary you downloaded was built by the project's release pipeline
+and has not been tampered with in transit.
+
+> **Heads up:** cosign signing was introduced mid-2026. Tags released
+> before signing was wired up ship without a `.sig` file — verification
+> applies from `v2.23.x` onward only, and only when the
+> `COSIGN_PRIVATE_KEY` secret was configured at release time.
+
+### 1. Install cosign
+
+Follow the upstream
+[cosign installation guide](https://docs.sigstore.dev/cosign/system_config/installation/)
+for your platform. Quick paths:
+
+```bash
+# Linux/macOS — pinned binary
+COSIGN_VERSION=v2.4.1
+curl -sSfL -o /usr/local/bin/cosign \
+  "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-linux-amd64"
+chmod +x /usr/local/bin/cosign
+
+# macOS via Homebrew
+brew install cosign
+
+# Arch Linux
+sudo pacman -S cosign
+```
+
+Confirm:
+
+```bash
+cosign version
+```
+
+### 2. Fetch the public key
+
+The normative source for the cosign public key is the
+[`op1st-emea-b4mad`](https://codeberg.org/operate-first/op1st-emea-b4mad)
+GitOps repo — same source of truth that provisions the `cosign-signing-key`
+Secret in the `op1st-pipelines` namespace where the release pipeline runs.
+Two ways to fetch it:
+
+**Branch-tip (live, follows future key rotations):**
+
+```bash
+curl -sSfL -o cosign.pub \
+  https://codeberg.org/operate-first/op1st-emea-b4mad/raw/branch/main/manifests/applications/op1st-pipelines-tokens/cosign-signing-key.pub
+```
+
+**Commit-pinned (tamper-evident, recommended for CI/scripts):**
+
+```bash
+curl -sSfL -o cosign.pub \
+  https://codeberg.org/operate-first/op1st-emea-b4mad/raw/commit/8a3c55e5b8c892754fd61f9141dc4817a6915f45/manifests/applications/op1st-pipelines-tokens/cosign-signing-key.pub
+```
+
+The commit-pinned permalink hashes its content into the URL — if anyone
+ever rewrites the file at that commit, your download fails or mismatches.
+Pin to the latest commit that you trust before adopting the key in
+automation.
+
+### 3. Download the release artifacts
+
+Pick the tag you installed (e.g. `v2.23.1`) and grab the checksum file,
+its signature, and the binary archive:
+
+```bash
+TAG=v2.23.1
+VERSION="${TAG#v}"
+BASE="https://codeberg.org/goern/forgejo-mcp/releases/download/${TAG}"
+
+curl -sSfLO "${BASE}/forgejo-mcp_${VERSION}_checksums.txt"
+curl -sSfLO "${BASE}/forgejo-mcp_${VERSION}_checksums.txt.sig"
+curl -sSfLO "${BASE}/forgejo-mcp_${VERSION}_linux_amd64.tar.gz"   # adjust os/arch
+```
+
+### 4. Verify the signature, then the checksum
+
+Cosign verifies that `checksums.txt` was signed by the holder of the
+private key matching `cosign.pub`. Once the checksum file is trusted, a
+plain `sha256sum -c` check confirms the archive's integrity.
+
+```bash
+# Verify checksums.txt against the signature.
+cosign verify-blob \
+  --key cosign.pub \
+  --signature "forgejo-mcp_${VERSION}_checksums.txt.sig" \
+  "forgejo-mcp_${VERSION}_checksums.txt"
+# Expected: "Verified OK"
+
+# Verify the downloaded archive against the (now-trusted) checksums.
+sha256sum --ignore-missing -c "forgejo-mcp_${VERSION}_checksums.txt"
+# Expected: "<archive>: OK"
+```
+
+The checksum chain transitively covers the SBOMs and other per-archive
+assets — verifying `checksums.txt` once is sufficient for everything
+listed inside it.
+
+### 5. Verify SLSA provenance for the release-tools image
+
+The release-tools container image (used internally by the Tekton release
+pipeline) carries SLSA v1.0 provenance generated by [Tekton
+Chains](https://tekton.dev/docs/chains/). This attestation binds the image
+digest to the exact PipelineRun, git commit, and builder identity that
+produced it — providing supply-chain provenance beyond what the cosign
+signature alone can attest.
+
+Fetch the `cosign-signing-key-images` public key (a separate key from the
+artifact-signing key above):
+
+```bash
+curl -sSfL -o cosign-images.pub \
+  https://codeberg.org/operate-first/op1st-emea-b4mad/raw/branch/main/manifests/applications/op1st-pipelines-tokens/cosign-signing-key-images.pub
+```
+
+Verify the attestation against a specific image tag:
+
+```bash
+IMAGE_TAG=v1.0.0   # substitute the release-tools tag you want to verify
+cosign verify-attestation \
+  --type slsaprovenance \
+  --key cosign-images.pub \
+  "codeberg.org/operate-first/release-tools:${IMAGE_TAG}" \
+  | jq .
+```
+
+A successful run prints the decoded in-toto statement (JSON). Check that
+`predicate.buildDefinition.externalParameters.runSpec.params` references the
+expected git revision, and `predicate.runDetails.builder.id` shows the
+Tekton Chains builder.
+
+> **Note:** SLSA provenance attestations are available from releases built
+> after forgejo-mcp-46j (Tekton Chains support) landed. Earlier image tags
+> carry only the cosign signature; they have no `verify-attestation` payload.
+
+### Troubleshooting verification
+
+- **`Error: no matching signatures`** — the `.sig` file is from a
+  different release, or `cosign.pub` is the wrong key. Re-download both
+  from the same tag.
+- **`Error: cannot read file: checksums.txt.sig`** — release predates
+  cosign signing, or signing was skipped that run because the secret was
+  unset. Fall back to the checksum-only check (`sha256sum -c`), which
+  still detects in-transit corruption but not tampering.
+- **Mismatch between `cosign.pub` and the signature** — confirm you
+  fetched the public key from a commit that includes the key in use at
+  the time of the release. If in doubt, fetch from `branch/main`.
+
 ## Troubleshooting
 
 **Enable debug mode** to see detailed logs:
@@ -334,7 +515,7 @@ forgejo-mcp is shaped by everyone who files issues, writes code, reviews PRs, an
 | Ronmi Ren | Co-creator; SSE/HTTP transport, issue blocking, CI/CD improvements, logo, Glama spec |
 | [twstagg](https://codeberg.org/twstagg) (Tristin Stagg) | User agent configuration support (PR #89) |
 | [mattdm](https://codeberg.org/mattdm) (Matthew Miller) | Logging improvements, FORGEJO_* migration, README, URL refactor |
-| [byteflavour](https://codeberg.org/byteflavour) | `check_notifications` + full notification management API (PR #84, #86); feature requests #80, #85 |
+| [byteflavour](https://codeberg.org/byteflavour) | `check_notifications` + full notification management API (PR #84, #86); stateless per-request auth for HTTP/SSE transports (PR #138); NixOS installation docs (PR #146); feature requests #80, #85 |
 | [jesterret](https://codeberg.org/jesterret) | Pull request reviews and comments support (PR #51) |
 | [appleboy](https://codeberg.org/appleboy) | Custom SSE port support, bug fixes |
 | [ignasgil](https://codeberg.org/ignasgil) | `remove_issue_labels` tool (PR #96) |

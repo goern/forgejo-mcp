@@ -1,0 +1,92 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: release-tools-push-image-by-digest
+  annotations:
+    tekton.dev/displayName: "push release-tools image to registry by digest (no tag)"
+spec:
+  description: |
+    # Path A (decided 2026-05-25): codeberg.org/operate-first/release-tools
+    # Registry: codeberg.org/operate-first/release-tools
+    #
+    # L1 TOCTOU fix: push manifest by digest ONLY here. The human-readable
+    # vMAJOR.MINOR.PATCH tag is promoted AFTER cosign-sign succeeds (T9).
+    # This closes the window where an unsigned image could be advertised.
+  params:
+    - name: IMAGE
+      description: |
+        Local image tag to push (e.g. release-tools:build-tmp). Must already
+        exist in the buildah store in the workspace.
+        # Path A (decided 2026-05-25): codeberg.org/operate-first/release-tools
+        # Registry path working assumption: codeberg.org/operate-first/release-tools
+      type: string
+    - name: REGISTRY_IMAGE
+      description: |
+        Full registry path without tag (e.g. codeberg.org/operate-first/release-tools).
+        # Path A (decided 2026-05-25): codeberg.org/operate-first/release-tools
+        # Working assumption: codeberg.org/operate-first/release-tools
+      type: string
+      default: "codeberg.org/operate-first/release-tools"
+    - name: STORAGE_DRIVER
+      description: buildah storage driver.
+      type: string
+      default: vfs
+  workspaces:
+    - name: source
+      mountPath: /workspace/source
+    - name: registry-credentials
+      mountPath: /workspace/registry-creds
+      optional: false
+  results:
+    - name: IMAGE_DIGEST
+      description: sha256 digest of the pushed manifest (e.g. sha256:abc123...).
+    - name: IMAGE_URL
+      description: Registry URL without tag or digest (e.g. codeberg.org/operate-first/release-tools). Used by Tekton Chains to bind image to SLSA provenance.
+    - name: IMAGE_REPO_DIGEST
+      description: Full digest reference (e.g. codeberg.org/operate-first/release-tools@sha256:abc123).
+  steps:
+    - name: push-by-digest
+      image: quay.io/buildah/stable:latest
+      securityContext:
+        privileged: true
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+
+        # Configure registry auth
+        REGISTRY_AUTH_FILE="$(workspaces.registry-credentials.path)/.dockerconfigjson"
+        if [ ! -f "${REGISTRY_AUTH_FILE}" ]; then
+          REGISTRY_AUTH_FILE="$(workspaces.registry-credentials.path)/config.json"
+        fi
+
+        # Use same workspace store as build-image task.
+        BUILDAH_STORE="$(workspaces.source.path)/.buildah"
+        LOCAL_IMAGE="localhost/$(params.IMAGE)"
+        REGISTRY_IMAGE="$(params.REGISTRY_IMAGE)"
+
+        echo "Pushing ${LOCAL_IMAGE} to ${REGISTRY_IMAGE} by digest (no version tag)..."
+
+        # L1 TOCTOU fix: retag to an ephemeral staging name before pushing so
+        # buildah does not inherit the version tag (e.g. v1.0.0) at the
+        # destination. The version tag is promoted AFTER signing by promote-tag.
+        buildah --root "${BUILDAH_STORE}" \
+          --storage-driver="$(params.STORAGE_DRIVER)" \
+          tag "${LOCAL_IMAGE}" release-tools:build-tmp
+
+        buildah --root "${BUILDAH_STORE}" push \
+          --storage-driver="$(params.STORAGE_DRIVER)" \
+          --authfile="${REGISTRY_AUTH_FILE}" \
+          --digestfile=/tmp/pushed-digest \
+          release-tools:build-tmp \
+          "docker://${REGISTRY_IMAGE}:build-tmp" \
+          2>&1 | tee /dev/stderr
+
+        DIGEST=$(cat /tmp/pushed-digest)
+        REPO_DIGEST="${REGISTRY_IMAGE}@${DIGEST}"
+
+        printf '%s' "${DIGEST}" > "$(results.IMAGE_DIGEST.path)"
+        printf '%s' "${REGISTRY_IMAGE}" > "$(results.IMAGE_URL.path)"
+        printf '%s' "${REPO_DIGEST}" > "$(results.IMAGE_REPO_DIGEST.path)"
+
+        echo "Pushed by digest: ${REPO_DIGEST}"

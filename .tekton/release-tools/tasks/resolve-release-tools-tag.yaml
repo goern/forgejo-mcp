@@ -1,0 +1,30 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: release-tools-resolve-tag
+  annotations:
+    tekton.dev/displayName: "resolve release-tools tag from ref"
+spec:
+  params:
+    - name: target_branch
+      description: |
+        PaC passes the full ref here (e.g. refs/tags/release-tools/v1.0.0).
+        Strips the refs/tags/release-tools/ prefix to yield bare semver.
+      type: string
+  results:
+    - name: tag
+      description: Bare semver tag (e.g. v1.0.0).
+  steps:
+    - name: resolve
+      image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+      script: |
+        #!/usr/bin/env sh
+        set -eu
+        REF="$(params.target_branch)"
+        TAG="${REF#refs/tags/release-tools/}"
+        if [ "${TAG}" = "${REF}" ]; then
+          echo "ERROR: ref '${REF}' does not start with refs/tags/release-tools/" >&2
+          exit 1
+        fi
+        echo "Resolved tag: ${TAG}"
+        printf '%s' "${TAG}" > "$(results.tag.path)"

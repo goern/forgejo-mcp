@@ -71,8 +71,11 @@ func DispatchWorkflowFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 		Inputs: inputs,
 	}
 
-	client := forgejo.Client()
-	_, _, err := client.DispatchRepoWorkflow(owner, repo, workflow, opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	_, _, err = client.DispatchRepoWorkflow(owner, repo, workflow, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("failed to dispatch workflow: %w", err))
 	}

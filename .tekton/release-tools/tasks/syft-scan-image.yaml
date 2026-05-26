@@ -1,0 +1,67 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: release-tools-syft-scan-image
+  annotations:
+    tekton.dev/displayName: "syft SBOM scan of release-tools image"
+spec:
+  params:
+    - name: IMAGE_REF
+      description: Full image reference to scan (tag or tag@digest).
+      type: string
+    - name: OUTPUT_FORMAT
+      description: syft output format.
+      type: string
+      default: cyclonedx-json
+    - name: STORAGE_DRIVER
+      description: buildah storage driver.
+      type: string
+      default: vfs
+    - name: SYFT_VERSION
+      description: syft version to install for scanning (pinned to same version baked into the image).
+      type: string
+      default: v1.44.0
+  workspaces:
+    - name: source
+      mountPath: /workspace/source
+  results:
+    - name: SBOM_PATH
+      description: Workspace-relative path of the emitted SBOM file.
+  steps:
+    - name: scan
+      image: quay.io/buildah/stable:latest
+      securityContext:
+        privileged: true
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+
+        IMAGE="$(params.IMAGE_REF)"
+        SBOM_FILE="$(workspaces.source.path)/release-tools-sbom.cdx.json"
+
+        SYFT_VERSION="$(params.SYFT_VERSION)"
+        ARCHIVE="/tmp/release-tools-scan.tar"
+
+        # Install syft on the host step container from the pinned release tag.
+        echo "Installing syft ${SYFT_VERSION}..."
+        curl -sSfL "https://raw.githubusercontent.com/anchore/syft/${SYFT_VERSION}/install.sh" \
+          | sh -s -- -b /usr/local/bin "${SYFT_VERSION}"
+        syft version
+
+        # Export the locally-built image to an OCI archive so syft can scan it
+        # without a registry pull. Running syft inside the image container would
+        # try a registry pull (the image is not pushed at PR-build time).
+        echo "Exporting ${IMAGE} to OCI archive..."
+        buildah push \
+          --storage-driver="$(params.STORAGE_DRIVER)" \
+          "${IMAGE}" \
+          "oci-archive:${ARCHIVE}"
+
+        echo "Scanning ${ARCHIVE} with syft..."
+        syft "oci-archive:${ARCHIVE}" \
+          --output "$(params.OUTPUT_FORMAT)=${SBOM_FILE}"
+
+        rm -f "${ARCHIVE}"
+        printf '%s' "release-tools-sbom.cdx.json" > "$(results.SBOM_PATH.path)"
+        echo "SBOM written to ${SBOM_FILE}"

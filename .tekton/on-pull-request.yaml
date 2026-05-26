@@ -5,7 +5,7 @@ metadata:
   annotations:
     pipelinesascode.tekton.dev/on-event: "[pull_request]"
     pipelinesascode.tekton.dev/on-target-branch: "[main]"
-    pipelinesascode.tekton.dev/task: "[git-clone, .tekton/tasks/go-ci.yaml]"
+    pipelinesascode.tekton.dev/task: "[git-clone, .tekton/tasks/go-ci.yaml, .tekton/tasks/commit-title-check.yaml]"
     pipelinesascode.tekton.dev/max-keep-runs: "5"
     pipelinesascode.tekton.dev/cancel-in-progress: "true"
 spec:
@@ -14,10 +14,17 @@ spec:
       value: "{{ repo_url }}"
     - name: revision
       value: "{{ revision }}"
+    - name: pr_title
+      value: |-
+        {{ body.pull_request.title }}
+    - name: base_ref
+      value: "{{ target_branch }}"
   pipelineSpec:
     params:
       - name: repo_url
       - name: revision
+      - name: pr_title
+      - name: base_ref
     workspaces:
       - name: source
     tasks:
@@ -38,6 +45,20 @@ spec:
           name: go-ci
         runAfter:
           - fetch-source
+        workspaces:
+          - name: source
+            workspace: source
+
+      - name: commit-title-check
+        taskRef:
+          name: commit-title-check
+        runAfter:
+          - fetch-source
+        params:
+          - name: PR_TITLE
+            value: $(params.pr_title)
+          - name: BASE_REF
+            value: $(params.base_ref)
         workspaces:
           - name: source
             workspace: source

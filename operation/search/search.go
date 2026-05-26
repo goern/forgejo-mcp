@@ -65,7 +65,11 @@ func SearchUserFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 	}
 
 	// Use the correct options type for searching
-	result, _, err := forgejo.Client().SearchUsers(opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	result, _, err := client.SearchUsers(opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("search user err: %v", err))
 	}
@@ -88,7 +92,11 @@ func SearchOrgTeamsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	}
 
 	// Use the proper options type for search
-	result, _, err := forgejo.Client().SearchOrgTeams(org, opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	result, _, err := client.SearchOrgTeams(org, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("search org teams err: %v", err))
 	}
@@ -121,7 +129,11 @@ func SearchReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	}
 
 	// Call search repos with proper options
-	result, _, err := forgejo.Client().SearchRepos(opt)
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	result, _, err := client.SearchRepos(opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("search repos err: %v", err))
 	}
