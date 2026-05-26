@@ -1,3 +1,16 @@
+## [2.25.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.25.0...v2.25.1) (2026-05-26)
+
+### :bug: Fixes
+
+* 🐛 replace deprecated --output-signature with --bundle in cosign ([cee6465](https://codeberg.org/goern/forgejo-mcp/commit/cee64655e992fd17e77db81359b23777b6da76c5))
+* 🔒️ repoint cosign-sign-release task at cosign-signing-key-artifacts ([7633666](https://codeberg.org/goern/forgejo-mcp/commit/763366673a31300ea0338178a3505b9e88edc637))
+* 🔒️ repoint release-tools tekton tasks at cosign-signing-key-images ([d382534](https://codeberg.org/goern/forgejo-mcp/commit/d382534b5cf970a37732397e763e6aa0c58a066d))
+
+### :repeat: Chore
+
+* 🔧 default beads-dashboard status filter to open ([1003590](https://codeberg.org/goern/forgejo-mcp/commit/1003590e84fe7ee2eb92e8724552e5ab07eceee6))
+* 🗂️ close forgejo-mcp-j52 after PR [#164](https://codeberg.org/goern/forgejo-mcp/issues/164) merged ([6a90151](https://codeberg.org/goern/forgejo-mcp/commit/6a90151541f28203bdb547204fa12ffccd7f889d))
+
 ## [2.25.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.24.2...v2.25.0) (2026-05-26)
 
 ### :sparkles: Features
