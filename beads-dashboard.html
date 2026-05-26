@@ -544,8 +544,8 @@
       <div class="controls" id="controls">
         <div class="group">
           <span class="lbl">status</span>
-          <button class="chip on" data-filter="status" data-val="*">all</button>
-          <button class="chip" data-filter="status" data-val="open">open</button>
+          <button class="chip" data-filter="status" data-val="*">all</button>
+          <button class="chip on" data-filter="status" data-val="open">open</button>
           <button class="chip" data-filter="status" data-val="in_progress">in_progress</button>
           <button class="chip" data-filter="status" data-val="closed">closed</button>
           <button class="chip" data-filter="status" data-val="blocked">blocked</button>
@@ -595,7 +595,7 @@ const STATUS_ORDER = ["open","in_progress","blocked","closed"];
 
 const state = {
   data: null,
-  filters: { status: "*", priority: "*", type: "*" },
+  filters: { status: "open", priority: "*", type: "*" },
   q: "",
 };
 
