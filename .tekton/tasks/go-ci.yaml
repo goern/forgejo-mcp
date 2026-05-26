@@ -119,14 +119,21 @@ spec:
         govulncheck ./...
 
     - name: license-check
-      image: $(params.RELEASE_TOOLS_IMAGE)
+      image: $(params.GO_IMAGE)
       script: |
         #!/usr/bin/env bash
         # Fail build if any module in the dependency closure carries a
         # forbidden (GPL/AGPL) or restricted (LGPL/MPL/EPL) license.
         # Protects the Apache-2.0 binary from GPL contamination.
+        #
+        # Uses GO_IMAGE + go install rather than RELEASE_TOOLS_IMAGE to avoid
+        # the circular bootstrap problem: release-tools:latest predates this
+        # step, so go-licenses would not be present until after the image
+        # rebuilds. GOMODCACHE is workspace-scoped, so the install is cached
+        # across steps in the same PipelineRun.
         set -euo pipefail
         git config --global --add safe.directory "$(workspaces.source.path)"
+        go install github.com/google/go-licenses@v1.6.0
         go-licenses check ./... \
           --disallowed_types=forbidden,restricted \
           --ignore=codeberg.org/goern/forgejo-mcp
