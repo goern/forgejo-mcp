@@ -333,6 +333,12 @@
     padding: 0.1rem 0.4rem;
     text-shadow: none;
   }
+  .issue.focused {
+    border-color: var(--amber);
+    background: rgba(255, 165, 0, 0.06);
+    box-shadow: 0 0 18px rgba(255, 165, 0, 0.35);
+  }
+  .issue.focused::before { background: var(--amber); box-shadow: 0 0 10px var(--amber-soft); }
 
   .issue .id {
     font-family: var(--mono);
@@ -422,6 +428,32 @@
   }
   .dep-map .station:hover text { fill: var(--amber) !important; }
   .dep-map .station { cursor: pointer; }
+
+  /* focus mode: dim everything that is not the focused node or in its chain */
+  .dep-map.focusing .station,
+  .dep-map.focusing .edge {
+    transition: opacity 0.18s ease;
+  }
+  .dep-map.focusing .station.dimmed { opacity: 0.16; }
+  .dep-map.focusing .edge.dimmed { opacity: 0.08; }
+  .dep-map.focusing .station.related rect {
+    stroke: var(--phos-bright) !important;
+    stroke-width: 1.8 !important;
+  }
+  .dep-map.focusing .station.related text { fill: var(--phos-bright) !important; }
+  .dep-map.focusing .station.focused rect {
+    stroke: var(--amber) !important;
+    stroke-width: 2.4 !important;
+    filter: drop-shadow(0 0 10px var(--amber-soft));
+  }
+  .dep-map.focusing .station.focused text {
+    fill: var(--amber) !important;
+    font-weight: 700 !important;
+  }
+  .dep-map.focusing .edge.related {
+    opacity: 1 !important;
+    stroke-width: 5 !important;
+  }
   .dep-map .legend {
     display: flex;
     flex-wrap: wrap;
@@ -597,7 +629,53 @@ const state = {
   data: null,
   filters: { status: "open", priority: "*", type: "*" },
   q: "",
+  focusId: null,
+  graph: null, // cached { out, inc, edges } after first renderDeps()
 };
+
+function reachable(startId, adj) {
+  const seen = new Set();
+  if (!adj || !adj.has(startId)) return seen;
+  const queue = [startId];
+  seen.add(startId);
+  while (queue.length) {
+    const cur = queue.shift();
+    for (const next of (adj.get(cur) || [])) {
+      if (!seen.has(next)) { seen.add(next); queue.push(next); }
+    }
+  }
+  return seen;
+}
+
+function focusSet(id) {
+  if (!id || !state.graph) return null;
+  const { out, inc } = state.graph;
+  if (!out.has(id) && !inc.has(id)) return null; // focused issue has no deps — nothing to highlight
+  const ancestors = reachable(id, inc);     // things `id` depends on (transitively)
+  const descendants = reachable(id, out);   // things that depend on `id`
+  const all = new Set([...ancestors, ...descendants]);
+  all.add(id);
+  return { all, ancestors, descendants };
+}
+
+function setFocus(id, opts = {}) {
+  const next = (state.focusId === id) ? null : id;
+  state.focusId = next;
+  renderIssues();
+  renderDeps();
+  if (next && opts.scrollGraph) {
+    const station = $(`#dep-map .station[data-id="${cssEscape(next)}"]`);
+    if (station) station.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+  }
+  if (next && opts.scrollCard) {
+    const card = $$(".issue").find(el => el.dataset.id === next);
+    if (card) { card.classList.add("open"); card.scrollIntoView({ behavior: "smooth", block: "center" }); }
+  }
+}
+
+function cssEscape(s) {
+  return (window.CSS && CSS.escape) ? CSS.escape(s) : String(s).replace(/[^\w-]/g, "\\$&");
+}
 
 function fmtDate(s) {
   if (!s) return "--";
@@ -744,7 +822,11 @@ function renderIssues() {
   $("#issues").innerHTML = html || `<div class="empty">no issues match the filter.</div>`;
 
   $$(".issue").forEach(el => {
-    el.addEventListener("click", () => el.classList.toggle("open"));
+    el.addEventListener("click", () => {
+      const id = el.dataset.id;
+      if (!id) return;
+      setFocus(id, { scrollGraph: true });
+    });
   });
 }
 
@@ -760,8 +842,9 @@ function issueCard(i, idx) {
     <span class="label">timestamps</span>created ${fmtDate(i.created_at)}\nupdated ${fmtDate(i.updated_at)}${i.started_at ? `\nstarted ${fmtDate(i.started_at)}` : ""}
   `;
 
+  const focusCls = (state.focusId === i.id) ? " focused open" : "";
   return `
-    <article class="issue" data-status="${escapeHtml(i.status)}" data-priority="${i.priority}" data-type="${escapeHtml(i.issue_type)}" style="animation-delay:${Math.min(idx*30, 600)}ms">
+    <article class="issue${focusCls}" data-id="${escapeHtml(i.id)}" data-status="${escapeHtml(i.status)}" data-priority="${i.priority}" data-type="${escapeHtml(i.issue_type)}" style="animation-delay:${Math.min(idx*30, 600)}ms">
       <div class="id">${escapeHtml(i.id)} · ${escapeHtml(i.issue_type)}</div>
       <h3 class="title">${escapeHtml(i.title)}</h3>
       <div class="meta">
@@ -881,12 +964,18 @@ function shortId(id) {
 
 function renderDeps() {
   const { out, inc, edges } = buildDepGraph(state.data.issues);
+  state.graph = { out, inc, edges };
   $("#dep-count").textContent = `${edges.length} edges · ${out.size} stations`;
 
+  const wrap = $("#dep-map");
   if (!edges.length) {
-    $("#dep-map").innerHTML = `<div class="empty">no dependency edges recorded.</div>`;
+    wrap.innerHTML = `<div class="empty">no dependency edges recorded.</div>`;
+    wrap.classList.remove("focusing");
     return;
   }
+
+  const focus = focusSet(state.focusId);
+  wrap.classList.toggle("focusing", !!focus);
 
   const layer = assignLayers(out, inc);
   const { lane, byLayer, layers } = laneAssignment(layer, out);
@@ -914,7 +1003,13 @@ function renderDeps() {
     const tx = t.x, ty = t.y;
     const colour = lineColor(e.to);
     const d = orthogonalPath(sx, sy, tx, ty, ELBOW);
-    svgEdges += `<path d="${d}" stroke="${colour}" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"><title>${escapeHtml(e.from)} depends on ${escapeHtml(e.to)}</title></path>`;
+    let edgeCls = "edge";
+    if (focus) {
+      // edge is "related" if both endpoints are in the focused chain
+      const onChain = focus.all.has(e.from) && focus.all.has(e.to);
+      edgeCls += onChain ? " related" : " dimmed";
+    }
+    svgEdges += `<path class="${edgeCls}" d="${d}" stroke="${colour}" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"><title>${escapeHtml(e.from)} depends on ${escapeHtml(e.to)}</title></path>`;
   }
 
   let svgNodes = "";
@@ -932,7 +1027,13 @@ function renderDeps() {
     const dotCol = lineColor(id);
     const label = shortId(id);
     const title = `${id} · ${issue.title || ""} (${st})`;
-    svgNodes += `<g class="station" data-id="${escapeHtml(id)}" transform="translate(${p.x},${p.y - STATION_H/2})">
+    let stationCls = "station";
+    if (focus) {
+      if (id === state.focusId) stationCls += " focused";
+      else if (focus.all.has(id)) stationCls += " related";
+      else stationCls += " dimmed";
+    }
+    svgNodes += `<g class="${stationCls}" data-id="${escapeHtml(id)}" transform="translate(${p.x},${p.y - STATION_H/2})">
       <title>${escapeHtml(title)}</title>
       <rect x="0" y="0" width="${STATION_W}" height="${STATION_H}" rx="${STATION_H/2}" fill="${fill}" stroke="${stroke}" stroke-width="1.4"/>
       <circle cx="${STATION_H/2}" cy="${STATION_H/2}" r="5" fill="${dotCol}" stroke="${stroke}" stroke-width="1"/>
@@ -955,18 +1056,10 @@ function renderDeps() {
   $("#dep-map").innerHTML = svg;
 
   $$("#dep-map .station").forEach(g => {
-    g.addEventListener("click", () => {
+    g.addEventListener("click", (ev) => {
+      ev.stopPropagation();
       const id = g.getAttribute("data-id");
-      state.filters = { status: "*", priority: "*", type: "*" };
-      state.q = id;
-      $("#search").value = id;
-      $$(".chip").forEach(c => c.classList.toggle("on", c.getAttribute("data-val") === "*"));
-      renderIssues();
-      const card = $$(".issue").find(el => el.querySelector(".id")?.textContent.startsWith(id));
-      if (card) {
-        card.classList.add("open");
-        card.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
+      setFocus(id, { scrollCard: true });
     });
   });
 }
@@ -988,6 +1081,12 @@ function bindControls() {
   $("#search").addEventListener("input", (e) => {
     state.q = e.target.value || "";
     renderIssues();
+  });
+
+  // click empty area inside the dep map = clear focus
+  $("#dep-map").addEventListener("click", (ev) => {
+    if (ev.target.closest(".station")) return;
+    if (state.focusId) setFocus(state.focusId); // toggle off
   });
 }
 
