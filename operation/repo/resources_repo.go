@@ -58,7 +58,7 @@ func repoResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]mc
 	uri := req.Params.URI
 	params, err := resource.ParseRepo(uri)
 	if err != nil {
-		return nil, fmt.Errorf("invalid repo resource URI: %w", err)
+		return nil, resource.MapForgejoError(uri, err)
 	}
 
 	client, err := forgejo.Client(ctx)
