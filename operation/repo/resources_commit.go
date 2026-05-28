@@ -47,8 +47,7 @@ func commitResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]
 	commit, resp, err := client.GetSingleCommit(params.Owner, params.Repo, params.SHA)
 	if err != nil {
 		if resp != nil {
-			mappedErr := resource.MapForgejoError(uri, fmt.Errorf("%d %s", resp.StatusCode, err.Error()))
-			return nil, fmt.Errorf("%w", mappedErr)
+			return nil, resource.MapForgejoError(uri, fmt.Errorf("%d %s", resp.StatusCode, err.Error()))
 		}
 		return nil, resource.MapForgejoError(uri, err)
 	}
