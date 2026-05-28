@@ -34,20 +34,20 @@
 
 ## 4. Repo + Owner Resources (slice 4)
 
-- [ ] 4.1 Create `operation/repository/resources_repo.go` with `RegisterRepoResource(s *server.MCPServer)`; template `forgejo://repo/{owner}/{repo}`; return counts only, no embedded lists
-- [ ] 4.2 Create `operation/user/resources_owner.go` with `RegisterOwnerResource(s *server.MCPServer)`; template `forgejo://owner/{owner}`; resolve user or org
-- [ ] 4.3 Unit tests for each: happy path, 403, 404
-- [ ] 4.4 Wire both from `operation/operation.go`
-- [ ] 4.5 README: append rows for `repo` and `owner` to Resources table
+- [x] 4.1 Create `operation/repository/resources_repo.go` with `RegisterRepoResource(s *server.MCPServer)`; template `forgejo://repo/{owner}/{repo}`; return counts only, no embedded lists
+- [x] 4.2 Create `operation/user/resources_owner.go` with `RegisterOwnerResource(s *server.MCPServer)`; template `forgejo://owner/{owner}`; resolve user or org
+- [x] 4.3 Unit tests for each: happy path, 403, 404
+- [x] 4.4 Wire both from `operation/operation.go`
+- [x] 4.5 README: append rows for `repo` and `owner` to Resources table
 
 ## 5. Issue + Comment Resources (slice 5)
 
-- [ ] 5.1 Create `operation/issue/resources.go` with `RegisterIssueResources(s *server.MCPServer)`
-- [ ] 5.2 Register issue template `forgejo://repo/{owner}/{repo}/issue/{index}` with handler returning metadata + markdown sidecar + bounded `recent_comments` (sentinel names `list_issue_comments`)
-- [ ] 5.3 Register comment template `forgejo://repo/{owner}/{repo}/{kind}/{index}/comment/{id}` constraining `kind ∈ {issue, pr}` in parser (reject `wiki` etc. with `-32602`)
-- [ ] 5.4 Unit tests: issue happy path, issue with > cap comments, non-numeric index, unknown kind for comment, missing comment
-- [ ] 5.5 Wire from `operation/operation.go`
-- [ ] 5.6 README: append rows for `issue` and `comment` to Resources table
+- [x] 5.1 Create `operation/issue/resources.go` with `RegisterIssueResources(s *server.MCPServer)`
+- [x] 5.2 Register issue template `forgejo://repo/{owner}/{repo}/issue/{index}` with handler returning metadata + markdown sidecar + bounded `recent_comments` (sentinel names `list_issue_comments`)
+- [x] 5.3 Register comment template `forgejo://repo/{owner}/{repo}/{kind}/{index}/comment/{id}` constraining `kind ∈ {issue, pr}` in parser (reject `wiki` etc. with `-32602`)
+- [x] 5.4 Unit tests: issue happy path, issue with > cap comments, non-numeric index, unknown kind for comment, missing comment
+- [x] 5.5 Wire from `operation/operation.go`
+- [x] 5.6 README: append rows for `issue` and `comment` to Resources table
 
 ## 6. PR Resource (slice 6 — `mcp-resource-pr`)
 

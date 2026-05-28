@@ -220,13 +220,31 @@ func testConnection() error {
 
 func RegisterCoreResources(s *server.MCPServer) {
 	RegisterCommitResource(s)
+	RegisterIssueResources(s)
+	RegisterOwnerResource(s)
+	RegisterRepoResource(s)
 	RegisterStatusResource(s)
 	log.Debug("Registered core resource templates")
+}
+
+func RegisterIssueResources(s *server.MCPServer) {
+	issue.RegisterIssueResources(s)
+	log.Debug("Registered issue resource templates")
 }
 
 func RegisterCommitResource(s *server.MCPServer) {
 	repo.RegisterCommitResource(s)
 	log.Debug("Registered commit resource template")
+}
+
+func RegisterOwnerResource(s *server.MCPServer) {
+	user.RegisterOwnerResource(s)
+	log.Debug("Registered owner resource template")
+}
+
+func RegisterRepoResource(s *server.MCPServer) {
+	repo.RegisterRepoResource(s)
+	log.Debug("Registered repo resource template")
 }
 
 func RegisterStatusResource(s *server.MCPServer) {

@@ -31,3 +31,13 @@ func TestMapForgejoError_Nil(t *testing.T) {
 		t.Errorf("expected nil for nil input, got %v", err)
 	}
 }
+
+func TestMapForgejoError_InvalidKind(t *testing.T) {
+	err := MapForgejoError("forgejo://repo/a/b/wiki/1/comment/5", errors.New("kind must be 'issue' or 'pr', got \"wiki\""))
+	if err == nil {
+		t.Fatal("expected non-nil ResourceError")
+	}
+	if err.Code != -32602 {
+		t.Errorf("expected code -32602 for invalid kind, got %d", err.Code)
+	}
+}
