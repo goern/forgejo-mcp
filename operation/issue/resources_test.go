@@ -201,8 +201,8 @@ func TestIssueResourceHandler_404(t *testing.T) {
 }
 
 func TestIssueResourceHandler_NonNumericIndex(t *testing.T) {
-	// non-numeric index is caught at parse time → -32603 (internal) because
-	// "index must be numeric" maps to -32602 via MapForgejoError
+	// non-numeric index is caught at parse time → -32602 (invalid params)
+	// via ErrInvalidParams sentinel wrapped at every parser error return path.
 	req := mcp.ReadResourceRequest{
 		Params: mcp.ReadResourceParams{
 			URI: "forgejo://repo/goern/forgejo-mcp/issue/abc",

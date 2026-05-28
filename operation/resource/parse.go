@@ -1,11 +1,15 @@
 package resource
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
 )
+
+// ErrInvalidParams indicates a URI parse failure that should map to JSON-RPC -32602.
+var ErrInvalidParams = errors.New("invalid params")
 
 // OwnerParams holds parsed fields from forgejo://owner/{owner}.
 type OwnerParams struct {
@@ -65,11 +69,11 @@ func ParseOwner(uri string) (OwnerParams, error) {
 	}
 	// host = "owner", path = "/{owner}"
 	if u.Host != "owner" {
-		return OwnerParams{}, fmt.Errorf("invalid URI: expected forgejo://owner/{owner}, got %q", uri)
+		return OwnerParams{}, fmt.Errorf("%w: expected forgejo://owner/{owner}, got %q", ErrInvalidParams, uri)
 	}
 	parts := splitPath(u.Path)
 	if len(parts) != 1 || parts[0] == "" {
-		return OwnerParams{}, fmt.Errorf("invalid URI: expected forgejo://owner/{owner}, got %q", uri)
+		return OwnerParams{}, fmt.Errorf("%w: expected forgejo://owner/{owner}, got %q", ErrInvalidParams, uri)
 	}
 	return OwnerParams{Owner: parts[0]}, nil
 }
@@ -81,11 +85,11 @@ func ParseRepo(uri string) (RepoParams, error) {
 		return RepoParams{}, err
 	}
 	if u.Host != "repo" {
-		return RepoParams{}, fmt.Errorf("invalid URI: expected forgejo://repo/..., got %q", uri)
+		return RepoParams{}, fmt.Errorf("%w: expected forgejo://repo/..., got %q", ErrInvalidParams, uri)
 	}
 	parts := splitPath(u.Path)
 	if len(parts) != 2 {
-		return RepoParams{}, fmt.Errorf("invalid URI: expected forgejo://repo/{owner}/{repo}, got %q", uri)
+		return RepoParams{}, fmt.Errorf("%w: expected forgejo://repo/{owner}/{repo}, got %q", ErrInvalidParams, uri)
 	}
 	return RepoParams{Owner: parts[0], Repo: parts[1]}, nil
 }
@@ -98,16 +102,16 @@ func ParseCommit(uri string) (CommitParams, error) {
 		return CommitParams{}, err
 	}
 	if u.Host != "repo" {
-		return CommitParams{}, fmt.Errorf("invalid URI: expected forgejo://repo/..., got %q", uri)
+		return CommitParams{}, fmt.Errorf("%w: expected forgejo://repo/..., got %q", ErrInvalidParams, uri)
 	}
 	parts := splitPath(u.Path)
 	// parts: [owner, repo, "commit", sha]
 	if len(parts) != 4 || parts[2] != "commit" {
-		return CommitParams{}, fmt.Errorf("invalid URI: expected forgejo://repo/{owner}/{repo}/commit/{sha}, got %q", uri)
+		return CommitParams{}, fmt.Errorf("%w: expected forgejo://repo/{owner}/{repo}/commit/{sha}, got %q", ErrInvalidParams, uri)
 	}
 	sha := parts[3]
 	if err := validateSHA(sha); err != nil {
-		return CommitParams{}, fmt.Errorf("invalid URI %q: %w", uri, err)
+		return CommitParams{}, fmt.Errorf("%w: invalid URI %q: %s", ErrInvalidParams, uri, err)
 	}
 	return CommitParams{Owner: parts[0], Repo: parts[1], SHA: sha}, nil
 }
@@ -119,16 +123,16 @@ func ParseIssue(uri string) (IssueParams, error) {
 		return IssueParams{}, err
 	}
 	if u.Host != "repo" {
-		return IssueParams{}, fmt.Errorf("invalid URI: expected forgejo://repo/..., got %q", uri)
+		return IssueParams{}, fmt.Errorf("%w: expected forgejo://repo/..., got %q", ErrInvalidParams, uri)
 	}
 	parts := splitPath(u.Path)
 	// parts: [owner, repo, "issue", index]
 	if len(parts) != 4 || parts[2] != "issue" {
-		return IssueParams{}, fmt.Errorf("invalid URI: expected forgejo://repo/{owner}/{repo}/issue/{index}, got %q", uri)
+		return IssueParams{}, fmt.Errorf("%w: expected forgejo://repo/{owner}/{repo}/issue/{index}, got %q", ErrInvalidParams, uri)
 	}
 	index, err := strconv.ParseInt(parts[3], 10, 64)
 	if err != nil {
-		return IssueParams{}, fmt.Errorf("invalid URI %q: index must be numeric", uri)
+		return IssueParams{}, fmt.Errorf("%w: invalid URI %q: index must be numeric", ErrInvalidParams, uri)
 	}
 	return IssueParams{Owner: parts[0], Repo: parts[1], Index: index}, nil
 }
@@ -140,16 +144,16 @@ func ParsePR(uri string) (PRParams, error) {
 		return PRParams{}, err
 	}
 	if u.Host != "repo" {
-		return PRParams{}, fmt.Errorf("invalid URI: expected forgejo://repo/..., got %q", uri)
+		return PRParams{}, fmt.Errorf("%w: expected forgejo://repo/..., got %q", ErrInvalidParams, uri)
 	}
 	parts := splitPath(u.Path)
 	// parts: [owner, repo, "pr", index]
 	if len(parts) != 4 || parts[2] != "pr" {
-		return PRParams{}, fmt.Errorf("invalid URI: expected forgejo://repo/{owner}/{repo}/pr/{index}, got %q", uri)
+		return PRParams{}, fmt.Errorf("%w: expected forgejo://repo/{owner}/{repo}/pr/{index}, got %q", ErrInvalidParams, uri)
 	}
 	index, err := strconv.ParseInt(parts[3], 10, 64)
 	if err != nil {
-		return PRParams{}, fmt.Errorf("invalid URI %q: index must be numeric", uri)
+		return PRParams{}, fmt.Errorf("%w: invalid URI %q: index must be numeric", ErrInvalidParams, uri)
 	}
 	return PRParams{Owner: parts[0], Repo: parts[1], Index: index}, nil
 }
@@ -162,24 +166,24 @@ func ParseComment(uri string) (CommentParams, error) {
 		return CommentParams{}, err
 	}
 	if u.Host != "repo" {
-		return CommentParams{}, fmt.Errorf("invalid URI: expected forgejo://repo/..., got %q", uri)
+		return CommentParams{}, fmt.Errorf("%w: expected forgejo://repo/..., got %q", ErrInvalidParams, uri)
 	}
 	parts := splitPath(u.Path)
 	// parts: [owner, repo, kind, index, "comment", id]
 	if len(parts) != 6 || parts[4] != "comment" {
-		return CommentParams{}, fmt.Errorf("invalid URI: expected forgejo://repo/{owner}/{repo}/{kind}/{index}/comment/{id}, got %q", uri)
+		return CommentParams{}, fmt.Errorf("%w: expected forgejo://repo/{owner}/{repo}/{kind}/{index}/comment/{id}, got %q", ErrInvalidParams, uri)
 	}
 	kind := parts[2]
 	if kind != "issue" && kind != "pr" {
-		return CommentParams{}, fmt.Errorf("invalid URI %q: kind must be 'issue' or 'pr', got %q", uri, kind)
+		return CommentParams{}, fmt.Errorf("%w: invalid URI %q: kind must be 'issue' or 'pr', got %q", ErrInvalidParams, uri, kind)
 	}
 	index, err := strconv.ParseInt(parts[3], 10, 64)
 	if err != nil {
-		return CommentParams{}, fmt.Errorf("invalid URI %q: index must be numeric", uri)
+		return CommentParams{}, fmt.Errorf("%w: invalid URI %q: index must be numeric", ErrInvalidParams, uri)
 	}
 	id, err := strconv.ParseInt(parts[5], 10, 64)
 	if err != nil {
-		return CommentParams{}, fmt.Errorf("invalid URI %q: id must be numeric", uri)
+		return CommentParams{}, fmt.Errorf("%w: invalid URI %q: id must be numeric", ErrInvalidParams, uri)
 	}
 	return CommentParams{Owner: parts[0], Repo: parts[1], Kind: kind, Index: index, ID: id}, nil
 }
@@ -191,16 +195,16 @@ func ParseStatus(uri string) (StatusParams, error) {
 		return StatusParams{}, err
 	}
 	if u.Host != "repo" {
-		return StatusParams{}, fmt.Errorf("invalid URI: expected forgejo://repo/..., got %q", uri)
+		return StatusParams{}, fmt.Errorf("%w: expected forgejo://repo/..., got %q", ErrInvalidParams, uri)
 	}
 	parts := splitPath(u.Path)
 	// parts: [owner, repo, "commit", sha, "status"]
 	if len(parts) != 5 || parts[2] != "commit" || parts[4] != "status" {
-		return StatusParams{}, fmt.Errorf("invalid URI: expected forgejo://repo/{owner}/{repo}/commit/{sha}/status, got %q", uri)
+		return StatusParams{}, fmt.Errorf("%w: expected forgejo://repo/{owner}/{repo}/commit/{sha}/status, got %q", ErrInvalidParams, uri)
 	}
 	sha := parts[3]
 	if err := validateSHA(sha); err != nil {
-		return StatusParams{}, fmt.Errorf("invalid URI %q: %w", uri, err)
+		return StatusParams{}, fmt.Errorf("%w: invalid URI %q: %s", ErrInvalidParams, uri, err)
 	}
 	return StatusParams{Owner: parts[0], Repo: parts[1], SHA: sha}, nil
 }
@@ -208,10 +212,10 @@ func ParseStatus(uri string) (StatusParams, error) {
 func parseForgejoURI(uri string) (*url.URL, error) {
 	u, err := url.Parse(uri)
 	if err != nil {
-		return nil, fmt.Errorf("malformed URI %q: %w", uri, err)
+		return nil, fmt.Errorf("%w: malformed URI %q: %s", ErrInvalidParams, uri, err)
 	}
 	if u.Scheme != "forgejo" {
-		return nil, fmt.Errorf("invalid URI scheme: expected 'forgejo', got %q", u.Scheme)
+		return nil, fmt.Errorf("%w: invalid URI scheme: expected 'forgejo', got %q", ErrInvalidParams, u.Scheme)
 	}
 	// Reject empty or whitespace-only path segments so that
 	// forgejo://repo/foo//bar and forgejo://repo/foo/bar/ do not silently
@@ -220,7 +224,7 @@ func parseForgejoURI(uri string) (*url.URL, error) {
 	path := strings.TrimPrefix(u.Path, "/")
 	for _, seg := range strings.Split(path, "/") {
 		if strings.TrimSpace(seg) == "" {
-			return nil, fmt.Errorf("invalid URI %q: empty or whitespace-only path segment", uri)
+			return nil, fmt.Errorf("%w: invalid URI %q: empty or whitespace-only path segment", ErrInvalidParams, uri)
 		}
 	}
 	return u, nil
@@ -241,11 +245,11 @@ func splitPath(path string) []string {
 // validateSHA returns an error if sha is not exactly 40 lowercase hex characters.
 func validateSHA(sha string) error {
 	if len(sha) != 40 {
-		return fmt.Errorf("sha must be exactly 40 hex characters, got %d", len(sha))
+		return fmt.Errorf("%w: sha must be exactly 40 hex characters, got %d", ErrInvalidParams, len(sha))
 	}
 	for _, c := range sha {
 		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
-			return fmt.Errorf("sha contains invalid character %q", c)
+			return fmt.Errorf("%w: sha contains invalid character %q", ErrInvalidParams, c)
 		}
 	}
 	return nil

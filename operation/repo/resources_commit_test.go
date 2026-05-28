@@ -98,15 +98,14 @@ func TestCommitResourceHandler_ShortSHA(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for short sha")
 	}
-	// Parse errors must surface as *resource.ResourceError so callers using
-	// type-assertion get a non-nil value. Code is -32603 until forgejo-mcp-wgs
-	// introduces a sentinel-error path that lifts parse errors to -32602.
+	// Parse errors surface as *resource.ResourceError with Code -32602 (invalid params)
+	// because the ErrInvalidParams sentinel is now wrapped at every parser return path.
 	var resErr *resource.ResourceError
 	if !errors.As(err, &resErr) {
 		t.Fatalf("expected *resource.ResourceError, got %T: %v", err, err)
 	}
-	if resErr.Code != -32603 {
-		t.Errorf("expected Code -32603, got %d", resErr.Code)
+	if resErr.Code != -32602 {
+		t.Errorf("expected Code -32602, got %d", resErr.Code)
 	}
 }
 

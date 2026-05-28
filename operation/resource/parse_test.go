@@ -1,6 +1,7 @@
 package resource
 
 import (
+	"errors"
 	"testing"
 )
 
@@ -55,6 +56,9 @@ func TestParseCommit_ShortSHA(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for short sha")
 	}
+	if !errors.Is(err, ErrInvalidParams) {
+		t.Errorf("expected ErrInvalidParams, got %v", err)
+	}
 }
 
 func TestParseIssue_HappyPath(t *testing.T) {
@@ -71,6 +75,9 @@ func TestParseIssue_NonNumericIndex(t *testing.T) {
 	_, err := ParseIssue("forgejo://repo/goern/forgejo-mcp/issue/abc")
 	if err == nil {
 		t.Fatal("expected error for non-numeric index")
+	}
+	if !errors.Is(err, ErrInvalidParams) {
+		t.Errorf("expected ErrInvalidParams, got %v", err)
 	}
 }
 
@@ -108,6 +115,9 @@ func TestParseComment_UnknownKind(t *testing.T) {
 	_, err := ParseComment("forgejo://repo/goern/forgejo-mcp/wiki/1/comment/5")
 	if err == nil {
 		t.Fatal("expected error for unknown kind")
+	}
+	if !errors.Is(err, ErrInvalidParams) {
+		t.Errorf("expected ErrInvalidParams, got %v", err)
 	}
 }
 

@@ -1,6 +1,7 @@
 package resource
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -21,11 +22,15 @@ func (e *ResourceError) Error() string {
 // message to detect HTTP status codes. Returns a *ResourceError with:
 //   - Code -32002 for HTTP 403 access-denied responses
 //   - Code -32003 for HTTP 404 not-found responses
-//   - Code -32602 for invalid-params errors (e.g. unknown URI kind from the parser)
+//   - Code -32602 for invalid-params errors (ErrInvalidParams sentinel or parser phrases)
 //   - Code -32603 (internal error) for all other errors
 func MapForgejoError(uri string, err error) *ResourceError {
 	if err == nil {
 		return nil
+	}
+	// Check sentinel first — covers all parse-time invalid-input errors.
+	if errors.Is(err, ErrInvalidParams) {
+		return &ResourceError{URI: uri, Code: -32602, Message: "invalid params: " + err.Error()}
 	}
 	msg := err.Error()
 	switch {
@@ -33,10 +38,6 @@ func MapForgejoError(uri string, err error) *ResourceError {
 		return &ResourceError{URI: uri, Code: -32002, Message: "access denied: " + msg}
 	case strings.Contains(msg, "404") || strings.Contains(msg, "Not Found") || strings.Contains(msg, "not found"):
 		return &ResourceError{URI: uri, Code: -32003, Message: "not found: " + msg}
-	// Parser signals invalid URI parameters (e.g. unknown comment kind, non-numeric index) with
-	// phrases like "kind must be" or "index must be numeric". Map these to -32602 invalid params.
-	case strings.Contains(msg, "kind must be") || strings.Contains(msg, "index must be numeric") || strings.Contains(msg, "invalid params"):
-		return &ResourceError{URI: uri, Code: -32602, Message: "invalid params: " + msg}
 	default:
 		return &ResourceError{URI: uri, Code: -32603, Message: "internal error: " + msg}
 	}
