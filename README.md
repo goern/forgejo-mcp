@@ -247,6 +247,36 @@ List all my repositories
 | **Server** | |
 | `get_forgejo_mcp_server_version` | Get the MCP server version |
 
+## Resources
+
+MCP resource templates expose Forgejo entities as URI-addressable resources using the `forgejo://` scheme. The URI scheme is instance-portable — the same URI form works against any Forgejo instance — and does not collide with Forgejo web links. Clients that support `resources/templates/list` and `resources/read` (Claude Code, Claude Desktop, Codex, Cursor) can resolve these URIs directly. Clients without resource-template support continue to use the tools above — no functionality is removed.
+
+Resources do NOT replace any MCP tool — every existing list/get tool stays available; resources are an additive, URI-addressable read surface intended for auto-resolution from LLM context and for content-addressable caching of immutable entities like commits.
+
+Resources that embed a list (issue, pr) cap the embedded array at 30 items. When truncated, the JSON payload includes a sentinel naming the corresponding `list_*` tool the caller should invoke for the full list.
+
+**When to use resources vs tools:** prefer a resource when you have a specific sha or index in hand; prefer a tool when listing or searching.
+
+| URI Template | Entity | Notes |
+|---|---|---|
+| `forgejo://owner/{owner}` | application/json | User or org profile addressed by login; resolves user first, falls back to org. |
+| `forgejo://repo/{owner}/{repo}` | application/json | Repository overview: identity + counts, no embedded lists. |
+| `forgejo://repo/{owner}/{repo}/commit/{sha}` | Commit metadata | Immutable per sha. Returns JSON + markdown sidecar. sha must be 40 hex chars. |
+| `forgejo://repo/{owner}/{repo}/commit/{sha}/status` | application/json | Combined CI status for a sha: aggregate state + bounded per-context statuses (cap 30, sentinel names list tool `get_commit_statuses`). |
+| `forgejo://repo/{owner}/{repo}/issue/{index}` | application/json (+ text/markdown sidecar) | Issue metadata + rendered body + bounded recent comments (cap 30, sentinel names `list_issue_comments`). |
+| `forgejo://repo/{owner}/{repo}/{kind}/{index}/comment/{id}` | application/json (+ text/markdown sidecar) | Single comment by id; kind ∈ {issue, pr}. |
+| `forgejo://repo/{owner}/{repo}/pr/{index}` | application/json (+ text/markdown sidecar) | PR metadata, head/base refs, mergeability, bounded recent comments (cap 30, sentinel `list_issue_comments`) and reviews (cap 30, sentinel `list_pull_reviews`). |
+
+### Client Compatibility
+
+| Client | `resources/templates/list` | `resources/read` |
+|---|---|---|
+| Claude Code | supported | supported |
+| Claude Desktop | supported | supported |
+| Codex | supported | supported |
+| Cursor (current) | supported | supported |
+| Older / minimal clients | tools only | tools only |
+
 ## Demos
 
 End-to-end, copy-pasteable walkthroughs of the tools above — grouped by

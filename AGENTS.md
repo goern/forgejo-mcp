@@ -36,6 +36,14 @@ Key directories:
 
 See [DEVELOPER.md](DEVELOPER.md) for complete code examples and patterns.
 
+## Resources
+
+Resource templates expose Forgejo entities as `forgejo://` URIs — instance-portable, additive, coexisting with all existing tools (no tool removed). Clients that support `resources/templates/list` and `resources/read` resolve these URIs directly; others fall back to tools transparently.
+
+When adding a new resource template, place it under `operation/<domain>/resources*.go`. Use the `operation/resource` package for URI parsing (`ParseXxx`), embedded-list bounding (`Bounded`), and error mapping (`MapForgejoError`). Embedded lists MUST use `operation/resource.Bounded` so the truncation sentinel stays consistent across resources.
+
+See `openspec/specs/mcp-resources-core/spec.md` for the full normative spec (added by this slice when the change archives).
+
 ## Blocked Features
 
 Some features are blocked on upstream API/SDK support. See `docs/plans/` for:
