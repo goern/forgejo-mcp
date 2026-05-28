@@ -153,7 +153,7 @@ func TestPRResourceHandler_OpenPR_HappyPath(t *testing.T) {
 	if !payload.Mergeable {
 		t.Error("expected mergeable=true")
 	}
-	if payload.CommmentsTruncated {
+	if payload.CommentsTruncated {
 		t.Error("expected comments not truncated")
 	}
 
@@ -222,7 +222,7 @@ func TestPRResourceHandler_OverCapComments(t *testing.T) {
 	}
 	var payload prResourcePayload
 	json.Unmarshal([]byte(contents[0].(mcp.TextResourceContents).Text), &payload)
-	if !payload.CommmentsTruncated {
+	if !payload.CommentsTruncated {
 		t.Error("expected comments_truncated=true")
 	}
 	if payload.CommentsListTool != "list_issue_comments" {

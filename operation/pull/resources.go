@@ -75,9 +75,9 @@ type prResourcePayload struct {
 	CommentCount int `json:"comment_count"`
 	ReviewCount  int `json:"review_count"`
 
-	RecentComments     []prCommentRef `json:"recent_comments"`
-	CommmentsTruncated bool           `json:"comments_truncated,omitempty"`
-	CommentsListTool   string         `json:"comments_list_tool,omitempty"`
+	RecentComments    []prCommentRef `json:"recent_comments"`
+	CommentsTruncated bool           `json:"comments_truncated,omitempty"`
+	CommentsListTool  string         `json:"comments_list_tool,omitempty"`
 
 	RecentReviews    []prReviewRef `json:"recent_reviews"`
 	ReviewsTruncated bool          `json:"reviews_truncated,omitempty"`
@@ -210,28 +210,28 @@ func prResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.
 	}
 
 	payload := prResourcePayload{
-		Owner:              params.Owner,
-		Repo:               params.Repo,
-		Index:              params.Index,
-		Title:              pr.Title,
-		State:              state,
-		Author:             author,
-		CreatedAt:          createdAt,
-		UpdatedAt:          updatedAt,
-		ClosedAt:           closedAt,
-		MergedAt:           mergedAt,
-		Mergeable:          pr.Mergeable,
-		Labels:             labels,
-		Assignees:          assignees,
-		Milestone:          milestone,
-		Head:               headRef,
-		Base:               baseRef,
-		CommentCount:       pr.Comments,
-		ReviewCount:        len(reviews),
-		RecentComments:     boundedCommentRefs,
-		CommmentsTruncated: boundedComments.Truncated,
-		RecentReviews:      boundedReviewRefs,
-		ReviewsTruncated:   boundedReviews.Truncated,
+		Owner:             params.Owner,
+		Repo:              params.Repo,
+		Index:             params.Index,
+		Title:             pr.Title,
+		State:             state,
+		Author:            author,
+		CreatedAt:         createdAt,
+		UpdatedAt:         updatedAt,
+		ClosedAt:          closedAt,
+		MergedAt:          mergedAt,
+		Mergeable:         pr.Mergeable,
+		Labels:            labels,
+		Assignees:         assignees,
+		Milestone:         milestone,
+		Head:              headRef,
+		Base:              baseRef,
+		CommentCount:      pr.Comments,
+		ReviewCount:       len(reviews),
+		RecentComments:    boundedCommentRefs,
+		CommentsTruncated: boundedComments.Truncated,
+		RecentReviews:     boundedReviewRefs,
+		ReviewsTruncated:  boundedReviews.Truncated,
 	}
 	if boundedComments.Truncated {
 		payload.CommentsListTool = "list_issue_comments"
