@@ -9,14 +9,7 @@ metadata:
     # enforce on-target-branch prefix correctly): CEL re-checks the full ref.
     pipelinesascode.tekton.dev/on-cel-expression: |
       event == "push" && target_branch.matches("^refs/tags/release-tools/v.*")
-    pipelinesascode.tekton.dev/task: >-
-      [git-clone,
-       .tekton/release-tools/tasks/resolve-release-tools-tag.yaml,
-       .tekton/release-tools/tasks/build-image.yaml,
-       .tekton/release-tools/tasks/push-image-by-digest.yaml,
-       .tekton/release-tools/tasks/cosign-sign-image-by-digest.yaml,
-       .tekton/release-tools/tasks/cosign-attach-sbom.yaml,
-       .tekton/release-tools/tasks/promote-image-tag.yaml]
+    pipelinesascode.tekton.dev/task: "[git-clone, .tekton/release-tools/tasks/resolve-release-tools-tag.yaml, .tekton/release-tools/tasks/build-image.yaml, .tekton/release-tools/tasks/push-image-by-digest.yaml, .tekton/release-tools/tasks/cosign-sign-image-by-digest.yaml, .tekton/release-tools/tasks/cosign-attach-sbom.yaml, .tekton/release-tools/tasks/promote-image-tag.yaml]"
     pipelinesascode.tekton.dev/max-keep-runs: "10"
     # Tag-publish runs are not cancellable — a partially-published image
     # with a pushed digest but without a cosign signature is a bad state.

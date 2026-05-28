@@ -11,11 +11,7 @@ metadata:
     pipelinesascode.tekton.dev/on-cel-expression: |
       event == "pull_request" && target_branch == "main" &&
       files.exists(p, p.matches("^(image/release-tools/|\\.tekton/release-tools).*"))
-    pipelinesascode.tekton.dev/task: >-
-      [git-clone,
-       .tekton/release-tools/tasks/build-image.yaml,
-       .tekton/release-tools/tasks/verify-image-tools.yaml,
-       .tekton/release-tools/tasks/syft-scan-image.yaml]
+    pipelinesascode.tekton.dev/task: "[git-clone, .tekton/release-tools/tasks/build-image.yaml, .tekton/release-tools/tasks/verify-image-tools.yaml, .tekton/release-tools/tasks/syft-scan-image.yaml]"
     pipelinesascode.tekton.dev/max-keep-runs: "5"
     pipelinesascode.tekton.dev/cancel-in-progress: "true"
 spec:
