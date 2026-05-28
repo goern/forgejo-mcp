@@ -1,4 +1,10 @@
-## ADDED Requirements
+# release-tools-image Specification
+
+## Purpose
+
+The release-tools-image capability publishes a signed, SBOM-attested container image bundling Go, goreleaser, syft, cosign, jq, curl, and Node tooling for use by the forgejo-mcp release pipeline and other tag-driven workflows. The image lives in its own source tree under `image/release-tools/` and is built and published via dedicated Tekton PipelineRuns under `.tekton/release-tools/`, isolating its lifecycle from the consuming forgejo-mcp Go release.
+
+## Requirements
 
 ### Requirement: Source tree isolation
 
