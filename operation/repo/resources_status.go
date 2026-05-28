@@ -62,7 +62,7 @@ func statusResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]
 	uri := req.Params.URI
 	params, err := resource.ParseStatus(uri)
 	if err != nil {
-		return nil, fmt.Errorf("invalid status resource URI: %w", err)
+		return nil, resource.MapForgejoError(uri, err)
 	}
 
 	client, err := forgejo.Client(ctx)
