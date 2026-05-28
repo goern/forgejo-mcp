@@ -240,7 +240,7 @@ func TestPRResourceHandler_OverCapReviews(t *testing.T) {
 		commentsStatus: http.StatusOK,
 		commentsBody:   []interface{}{},
 		reviewsStatus:  http.StatusOK,
-		reviewsBody:    fakeReviews(35),
+		reviewsBody:    fakeReviews(resource.EmbeddedListCap + 1),
 	}
 	srv := setupPRMockServer(t, h)
 	defer srv.Close()
@@ -258,8 +258,8 @@ func TestPRResourceHandler_OverCapReviews(t *testing.T) {
 	if payload.ReviewsListTool != "list_pull_reviews" {
 		t.Errorf("expected reviews_list_tool=list_pull_reviews, got %q", payload.ReviewsListTool)
 	}
-	if len(payload.RecentReviews) != 30 {
-		t.Errorf("expected 30 capped reviews, got %d", len(payload.RecentReviews))
+	if len(payload.RecentReviews) != resource.EmbeddedListCap {
+		t.Errorf("expected %d capped reviews, got %d", resource.EmbeddedListCap, len(payload.RecentReviews))
 	}
 }
 

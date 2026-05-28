@@ -110,7 +110,9 @@ func prResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.
 	})
 
 	// fetch reviews
-	reviews, _, _ := client.ListPullReviews(params.Owner, params.Repo, params.Index, forgejo_sdk.ListPullReviewsOptions{})
+	reviews, _, _ := client.ListPullReviews(params.Owner, params.Repo, params.Index, forgejo_sdk.ListPullReviewsOptions{
+		ListOptions: forgejo_sdk.ListOptions{PageSize: resource.EmbeddedListCap + 1},
+	})
 
 	// bound comments
 	commentItems := make([]string, len(comments))
