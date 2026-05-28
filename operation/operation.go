@@ -132,6 +132,7 @@ func Run(transport, version string) error {
 	flag.Version = version
 	mcpServer = newMCPServer(version)
 	RegisterTool(mcpServer)
+	RegisterCoreResources(mcpServer)
 
 	// Test connection to Forgejo instance before starting the server
 	log.Info("Testing connection to Forgejo instance",
@@ -217,10 +218,21 @@ func testConnection() error {
 	return forgejo.VerifyConnection()
 }
 
+func RegisterCoreResources(s *server.MCPServer) {
+	RegisterCommitResource(s)
+	log.Debug("Registered core resource templates")
+}
+
+func RegisterCommitResource(s *server.MCPServer) {
+	repo.RegisterCommitResource(s)
+	log.Debug("Registered commit resource template")
+}
+
 func newMCPServer(version string) *server.MCPServer {
 	return server.NewMCPServer(
 		"Forgejo MCP Server",
 		version,
 		server.WithLogging(),
+		server.WithResourceCapabilities(false, false),
 	)
 }

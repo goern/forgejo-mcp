@@ -247,6 +247,26 @@ List all my repositories
 | **Server** | |
 | `get_forgejo_mcp_server_version` | Get the MCP server version |
 
+## Resources
+
+MCP resource templates expose Forgejo entities as URI-addressable resources using the `forgejo://` scheme. Clients that support `resources/templates/list` and `resources/read` (Claude Code, Claude Desktop, Codex, Cursor) can resolve these URIs directly. Clients without resource-template support continue to use the tools above — no functionality is removed.
+
+**When to use resources vs tools:** prefer a resource when you have a specific sha or index in hand; prefer a tool when listing or searching.
+
+| URI Template | Entity | Notes |
+|---|---|---|
+| `forgejo://repo/{owner}/{repo}/commit/{sha}` | Commit metadata | Immutable per sha. Returns JSON + markdown sidecar. sha must be 40 hex chars. |
+
+### Client Compatibility
+
+| Client | `resources/templates/list` | `resources/read` |
+|---|---|---|
+| Claude Code | supported | supported |
+| Claude Desktop | supported | supported |
+| Codex | supported | supported |
+| Cursor (current) | supported | supported |
+| Older / minimal clients | tools only | tools only |
+
 ## Demos
 
 End-to-end, copy-pasteable walkthroughs of the tools above — grouped by

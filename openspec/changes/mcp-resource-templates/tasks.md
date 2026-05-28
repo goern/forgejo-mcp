@@ -1,26 +1,26 @@
 ## 1. Resource Framework (slice 1 — `mcp-resources-core`)
 
-- [ ] 1.1 Add `server.WithResourceCapabilities(false, false)` to `newMCPServer` in `operation/operation.go`
-- [ ] 1.2 Create `operation/resource/` package skeleton with `doc.go`
-- [ ] 1.3 Implement URI parser helpers in `operation/resource/parse.go`: one typed-struct parser per entity (`ParseOwner`, `ParseRepo`, `ParseCommit`, `ParseIssue`, `ParsePR`, `ParseComment`, `ParseStatus`)
-- [ ] 1.4 Implement template-registration helpers in `operation/resource/register.go` (thin wrapper around `mcp.NewResourceTemplate` + `s.AddResourceTemplate`)
-- [ ] 1.5 Implement embedded-list bounding helper in `operation/resource/bound.go`: produces sentinel block referencing a named list tool, default cap = 30 exposed as `const EmbeddedListCap = 30`
-- [ ] 1.6 Implement error-mapping helper in `operation/resource/errors.go`: `MapForgejoError(uri, err) *mcp.JSONRPCError` mapping HTTP `403` → `-32002`, `404` → `-32003`
-- [ ] 1.7 Add unit tests for `operation/resource/parse.go` covering: happy path each entity, short sha, non-numeric index, unknown kind
-- [ ] 1.8 Add unit tests for `operation/resource/bound.go` covering: under-cap, at-cap, over-cap with sentinel contents
-- [ ] 1.9 Add unit tests for `operation/resource/errors.go` covering both code paths
-- [ ] 1.10 Add `RegisterCoreResources(s *server.MCPServer)` stub function in `operation/operation.go` (no-op for slice 1, gives stable wiring point)
+- [x] 1.1 Add `server.WithResourceCapabilities(false, false)` to `newMCPServer` in `operation/operation.go`
+- [x] 1.2 Create `operation/resource/` package skeleton with `doc.go`
+- [x] 1.3 Implement URI parser helpers in `operation/resource/parse.go`: one typed-struct parser per entity (`ParseOwner`, `ParseRepo`, `ParseCommit`, `ParseIssue`, `ParsePR`, `ParseComment`, `ParseStatus`)
+- [x] 1.4 Implement template-registration helpers in `operation/resource/register.go` (thin wrapper around `mcp.NewResourceTemplate` + `s.AddResourceTemplate`)
+- [x] 1.5 Implement embedded-list bounding helper in `operation/resource/bound.go`: produces sentinel block referencing a named list tool, default cap = 30 exposed as `const EmbeddedListCap = 30`
+- [x] 1.6 Implement error-mapping helper in `operation/resource/errors.go`: `MapForgejoError(uri, err) *mcp.JSONRPCError` mapping HTTP `403` → `-32002`, `404` → `-32003`
+- [x] 1.7 Add unit tests for `operation/resource/parse.go` covering: happy path each entity, short sha, non-numeric index, unknown kind
+- [x] 1.8 Add unit tests for `operation/resource/bound.go` covering: under-cap, at-cap, over-cap with sentinel contents
+- [x] 1.9 Add unit tests for `operation/resource/errors.go` covering both code paths
+- [x] 1.10 Add `RegisterCoreResources(s *server.MCPServer)` stub function in `operation/operation.go` (no-op for slice 1, gives stable wiring point)
 - [ ] 1.11 Manual verification against Claude Code, Claude Desktop, Codex, Cursor: confirm each sends `resources/templates/list` and `resources/read`; record results in design.md "Open Questions" answer
 
 ## 2. Commit Resource (slice 2 — `mcp-resource-commit`)
 
-- [ ] 2.1 Create `operation/repository/resources_commit.go` (commit lives under repository domain) with `RegisterCommitResource(s *server.MCPServer)`
-- [ ] 2.2 Register template `forgejo://repo/{owner}/{repo}/commit/{sha}` with description marking immutability
-- [ ] 2.3 Implement handler returning JSON metadata block plus `text/markdown` body sidecar
-- [ ] 2.4 Reject shas not exactly 40 hex chars via `operation/resource.ParseCommit`
-- [ ] 2.5 Unit tests: existing sha (mock client), short sha, missing sha, sidecar present
-- [ ] 2.6 Wire `RegisterCommitResource` from `operation/operation.go`
-- [ ] 2.7 README: append commit row to a new "Resources" table
+- [x] 2.1 Create `operation/repository/resources_commit.go` (commit lives under repository domain) with `RegisterCommitResource(s *server.MCPServer)`
+- [x] 2.2 Register template `forgejo://repo/{owner}/{repo}/commit/{sha}` with description marking immutability
+- [x] 2.3 Implement handler returning JSON metadata block plus `text/markdown` body sidecar
+- [x] 2.4 Reject shas not exactly 40 hex chars via `operation/resource.ParseCommit`
+- [x] 2.5 Unit tests: existing sha (mock client), short sha, missing sha, sidecar present
+- [x] 2.6 Wire `RegisterCommitResource` from `operation/operation.go`
+- [x] 2.7 README: append commit row to a new "Resources" table
 
 ## 3. Commit Status Resource (slice 3 — `mcp-resource-status`)
 
