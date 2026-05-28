@@ -155,11 +155,19 @@ func TestIssueResourceHandler_HappyPath(t *testing.T) {
 }
 
 func TestIssueResourceHandler_OverCap_Truncated(t *testing.T) {
+	// Use exactly EmbeddedListCap+1 items. In production, ListIssueComments is
+	// now called with PageSize=EmbeddedListCap+1, so the server can return up
+	// to cap+1 items when there are more than cap comments. The mock HTTP
+	// server does not enforce server-side pagination limits, so it returns all
+	// items we supply regardless of the PageSize query parameter — but the
+	// production fix ensures the server is asked for cap+1 and Bounded can
+	// correctly detect truncation.
+	capPlus1 := resource.EmbeddedListCap + 1
 	h := &issueRoutingHandler{
 		issueStatus:    http.StatusOK,
 		issueBody:      fakeIssue(),
 		commentsStatus: http.StatusOK,
-		commentsBody:   fakeComments(35),
+		commentsBody:   fakeComments(capPlus1),
 	}
 	srv := setupIssueMockServer(t, h)
 	defer srv.Close()
@@ -172,10 +180,10 @@ func TestIssueResourceHandler_OverCap_Truncated(t *testing.T) {
 	var payload issueResourcePayload
 	json.Unmarshal([]byte(contents[0].(mcp.TextResourceContents).Text), &payload)
 	if !payload.Truncated {
-		t.Error("expected truncated=true for 35 comments")
+		t.Errorf("expected truncated=true for %d comments (EmbeddedListCap+1)", capPlus1)
 	}
-	if len(payload.RecentComments) != 30 {
-		t.Errorf("expected 30 recent comments, got %d", len(payload.RecentComments))
+	if len(payload.RecentComments) != resource.EmbeddedListCap {
+		t.Errorf("expected %d recent comments, got %d", resource.EmbeddedListCap, len(payload.RecentComments))
 	}
 	if payload.ListTool != "list_issue_comments" {
 		t.Errorf("expected list_tool=list_issue_comments, got %q", payload.ListTool)

@@ -90,7 +90,14 @@ func issueResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]m
 		return nil, resource.MapForgejoError(uri, err)
 	}
 
-	comments, _, _ := client.ListIssueComments(params.Owner, params.Repo, params.Index, forgejo_sdk.ListIssueCommentOptions{})
+	// Request EmbeddedListCap+1 items so resource.Bounded can distinguish
+	// "exactly at cap" from "over cap" and surface the truncated sentinel.
+	// Forgejo's server default page size equals EmbeddedListCap (30), so
+	// leaving PageSize at zero silently caps responses at the cap and the
+	// >cap check in Bounded never fires.
+	comments, _, _ := client.ListIssueComments(params.Owner, params.Repo, params.Index, forgejo_sdk.ListIssueCommentOptions{
+		ListOptions: forgejo_sdk.ListOptions{PageSize: resource.EmbeddedListCap + 1},
+	})
 
 	items := make([]string, len(comments))
 	refs := make([]commentRef, len(comments))
