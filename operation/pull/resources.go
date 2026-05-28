@@ -105,7 +105,9 @@ func prResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.
 	}
 
 	// fetch comments (PR comments live on the issue-comments endpoint)
-	comments, _, _ := client.ListIssueComments(params.Owner, params.Repo, params.Index, forgejo_sdk.ListIssueCommentOptions{})
+	comments, _, _ := client.ListIssueComments(params.Owner, params.Repo, params.Index, forgejo_sdk.ListIssueCommentOptions{
+		ListOptions: forgejo_sdk.ListOptions{PageSize: resource.EmbeddedListCap + 1},
+	})
 
 	// fetch reviews
 	reviews, _, _ := client.ListPullReviews(params.Owner, params.Repo, params.Index, forgejo_sdk.ListPullReviewsOptions{})

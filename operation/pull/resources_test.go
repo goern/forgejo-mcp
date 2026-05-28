@@ -194,7 +194,7 @@ func TestPRResourceHandler_MergedPR(t *testing.T) {
 }
 
 func TestPRResourceHandler_OverCapComments(t *testing.T) {
-	comments := make([]map[string]interface{}, 35)
+	comments := make([]map[string]interface{}, resource.EmbeddedListCap+1)
 	for i := range comments {
 		comments[i] = map[string]interface{}{
 			"id":         i + 1,
@@ -228,8 +228,8 @@ func TestPRResourceHandler_OverCapComments(t *testing.T) {
 	if payload.CommentsListTool != "list_issue_comments" {
 		t.Errorf("expected comments_list_tool=list_issue_comments, got %q", payload.CommentsListTool)
 	}
-	if len(payload.RecentComments) != 30 {
-		t.Errorf("expected 30 capped comments, got %d", len(payload.RecentComments))
+	if len(payload.RecentComments) != resource.EmbeddedListCap {
+		t.Errorf("expected %d capped comments, got %d", resource.EmbeddedListCap, len(payload.RecentComments))
 	}
 }
 
