@@ -222,9 +222,15 @@ func RegisterCoreResources(s *server.MCPServer) {
 	RegisterCommitResource(s)
 	RegisterIssueResources(s)
 	RegisterOwnerResource(s)
+	RegisterPullResources(s)
 	RegisterRepoResource(s)
 	RegisterStatusResource(s)
 	log.Debug("Registered core resource templates")
+}
+
+func RegisterPullResources(s *server.MCPServer) {
+	pull.RegisterPullResources(s)
+	log.Debug("Registered pull request resource template")
 }
 
 func RegisterIssueResources(s *server.MCPServer) {

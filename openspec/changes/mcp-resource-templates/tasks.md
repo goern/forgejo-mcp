@@ -51,17 +51,17 @@
 
 ## 6. PR Resource (slice 6 — `mcp-resource-pr`)
 
-- [ ] 6.1 Create `operation/pull/resources.go` with `RegisterPullResources(s *server.MCPServer)`
-- [ ] 6.2 Register template `forgejo://repo/{owner}/{repo}/pr/{index}` with handler returning metadata + head/base refs + mergeability + markdown sidecar + bounded `recent_comments` (sentinel names `list_issue_comments`) + bounded `recent_reviews` (sentinel names `list_pull_reviews`)
-- [ ] 6.3 Unit tests: open PR, merged PR, PR with > cap comments, PR with > cap reviews, non-numeric index, missing PR
-- [ ] 6.4 Wire from `operation/operation.go`
-- [ ] 6.5 README: append row for `pr` to Resources table
+- [x] 6.1 Create `operation/pull/resources.go` with `RegisterPullResources(s *server.MCPServer)`
+- [x] 6.2 Register template `forgejo://repo/{owner}/{repo}/pr/{index}` with handler returning metadata + head/base refs + mergeability + markdown sidecar + bounded `recent_comments` (sentinel names `list_issue_comments`) + bounded `recent_reviews` (sentinel names `list_pull_reviews`)
+- [x] 6.3 Unit tests: open PR, merged PR, PR with > cap comments, PR with > cap reviews, non-numeric index, missing PR
+- [x] 6.4 Wire from `operation/operation.go`
+- [x] 6.5 README: append row for `pr` to Resources table
 
 ## 7. Documentation & Wrap-up
 
-- [ ] 7.1 Add "Resources" section to README explaining the URI scheme, listing all templates in one table, and stating the coexist-with-tools rule
-- [ ] 7.2 Add "Resources" subsection to AGENTS.md mirroring the README rule for AI assistants modifying the codebase
-- [ ] 7.3 Update CHANGELOG (or release notes file) noting the additive surface
-- [ ] 7.4 Verify `make build` and full test suite pass with all seven `RegisterXResources` calls wired
-- [ ] 7.5 File a follow-up bead to revisit `WithResourceCapabilities(subscribe=true, …)` once a real subscription use case appears
-- [ ] 7.6 File a follow-up bead to revisit the default embedded-list cap (currently `30`) once usage telemetry is available
+- [x] 7.1 Add "Resources" section to README explaining the URI scheme, listing all templates in one table, and stating the coexist-with-tools rule
+- [x] 7.2 Add "Resources" subsection to AGENTS.md mirroring the README rule for AI assistants modifying the codebase
+- [x] 7.3 Update CHANGELOG (or release notes file) noting the additive surface
+- [x] 7.4 Verify `make build` and full test suite pass with all seven `RegisterXResources` calls wired
+- [x] 7.5 File a follow-up bead to revisit `WithResourceCapabilities(subscribe=true, …)` once a real subscription use case appears (`forgejo-mcp-7ra`)
+- [x] 7.6 File a follow-up bead to revisit the default embedded-list cap (currently `30`) once usage telemetry is available (`forgejo-mcp-7de`)
