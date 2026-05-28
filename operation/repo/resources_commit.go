@@ -36,7 +36,7 @@ func commitResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]
 	uri := req.Params.URI
 	params, err := resource.ParseCommit(uri)
 	if err != nil {
-		return nil, fmt.Errorf("invalid commit resource URI: %w", err)
+		return nil, resource.MapForgejoError(uri, err)
 	}
 
 	client, err := forgejo.Client(ctx)

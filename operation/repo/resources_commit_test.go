@@ -3,11 +3,13 @@ package repo
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"codeberg.org/goern/forgejo-mcp/v2/operation/resource"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
 
 	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
@@ -95,6 +97,16 @@ func TestCommitResourceHandler_ShortSHA(t *testing.T) {
 	_, err := commitResourceHandler(context.Background(), req)
 	if err == nil {
 		t.Fatal("expected error for short sha")
+	}
+	// Parse errors must surface as *resource.ResourceError so callers using
+	// type-assertion get a non-nil value. Code is -32603 until forgejo-mcp-wgs
+	// introduces a sentinel-error path that lifts parse errors to -32602.
+	var resErr *resource.ResourceError
+	if !errors.As(err, &resErr) {
+		t.Fatalf("expected *resource.ResourceError, got %T: %v", err, err)
+	}
+	if resErr.Code != -32603 {
+		t.Errorf("expected Code -32603, got %d", resErr.Code)
 	}
 }
 
