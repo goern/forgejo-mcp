@@ -70,7 +70,14 @@ func statusResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]
 		return nil, fmt.Errorf("forgejo client: %w", err)
 	}
 
-	statuses, resp, err := client.ListStatuses(params.Owner, params.Repo, params.SHA, forgejo_sdk.ListStatusesOption{})
+	// Request EmbeddedListCap+1 items so resource.Bounded can distinguish
+	// "exactly at cap" from "over cap" and surface the truncated sentinel.
+	// Forgejo's server default page size equals EmbeddedListCap (30), so
+	// leaving PageSize at zero silently caps responses at the cap and the
+	// >cap check in Bounded never fires.
+	statuses, resp, err := client.ListStatuses(params.Owner, params.Repo, params.SHA, forgejo_sdk.ListStatusesOption{
+		ListOptions: forgejo_sdk.ListOptions{PageSize: resource.EmbeddedListCap + 1},
+	})
 	if err != nil {
 		if resp != nil {
 			return nil, resource.MapForgejoError(uri, fmt.Errorf("%d %s", resp.StatusCode, err.Error()))

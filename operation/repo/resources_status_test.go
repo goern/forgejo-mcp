@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"codeberg.org/goern/forgejo-mcp/v2/operation/resource"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
 
 	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
@@ -97,7 +98,15 @@ func TestStatusResourceHandler_HappyPath_UnderCap(t *testing.T) {
 }
 
 func TestStatusResourceHandler_OverCap_Truncated(t *testing.T) {
-	states := make([]string, 35)
+	// Use exactly EmbeddedListCap+1 items. In production, ListStatuses is now
+	// called with PageSize=EmbeddedListCap+1, so the server can return up to
+	// cap+1 items when there are more than cap contexts. The mock HTTP server
+	// does not enforce server-side pagination limits, so it returns all items
+	// we supply regardless of the PageSize query parameter — but the
+	// production fix ensures the server is asked for cap+1 and Bounded can
+	// correctly detect truncation.
+	capPlus1 := resource.EmbeddedListCap + 1
+	states := make([]string, capPlus1)
 	for i := range states {
 		states[i] = "success"
 	}
@@ -117,16 +126,16 @@ func TestStatusResourceHandler_OverCap_Truncated(t *testing.T) {
 		t.Fatalf("invalid JSON: %v", err)
 	}
 	if !payload.Truncated {
-		t.Error("expected truncated=true for 35 statuses")
+		t.Errorf("expected truncated=true for %d statuses (EmbeddedListCap+1)", capPlus1)
 	}
-	if len(payload.Statuses) != 30 {
-		t.Errorf("expected 30 capped statuses, got %d", len(payload.Statuses))
+	if len(payload.Statuses) != resource.EmbeddedListCap {
+		t.Errorf("expected %d capped statuses, got %d", resource.EmbeddedListCap, len(payload.Statuses))
 	}
 	if payload.ListTool != "get_commit_statuses" {
 		t.Errorf("expected list_tool=get_commit_statuses, got %q", payload.ListTool)
 	}
-	if payload.TotalCount != 35 {
-		t.Errorf("expected total_count=35, got %d", payload.TotalCount)
+	if payload.TotalCount != capPlus1 {
+		t.Errorf("expected total_count=%d, got %d", capPlus1, payload.TotalCount)
 	}
 }
 
