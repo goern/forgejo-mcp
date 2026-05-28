@@ -256,6 +256,7 @@ MCP resource templates expose Forgejo entities as URI-addressable resources usin
 | URI Template | Entity | Notes |
 |---|---|---|
 | `forgejo://repo/{owner}/{repo}/commit/{sha}` | Commit metadata | Immutable per sha. Returns JSON + markdown sidecar. sha must be 40 hex chars. |
+| `forgejo://repo/{owner}/{repo}/commit/{sha}/status` | application/json | Combined CI status for a sha: aggregate state + bounded per-context statuses (cap 30, sentinel names list tool `get_commit_statuses`). |
 
 ### Client Compatibility
 

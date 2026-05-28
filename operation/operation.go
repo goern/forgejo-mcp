@@ -220,12 +220,18 @@ func testConnection() error {
 
 func RegisterCoreResources(s *server.MCPServer) {
 	RegisterCommitResource(s)
+	RegisterStatusResource(s)
 	log.Debug("Registered core resource templates")
 }
 
 func RegisterCommitResource(s *server.MCPServer) {
 	repo.RegisterCommitResource(s)
 	log.Debug("Registered commit resource template")
+}
+
+func RegisterStatusResource(s *server.MCPServer) {
+	repo.RegisterStatusResource(s)
+	log.Debug("Registered commit status resource template")
 }
 
 func newMCPServer(version string) *server.MCPServer {

@@ -24,13 +24,13 @@
 
 ## 3. Commit Status Resource (slice 3 — `mcp-resource-status`)
 
-- [ ] 3.1 Create `operation/repository/resources_status.go` with `RegisterStatusResource(s *server.MCPServer)`
-- [ ] 3.2 Register template `forgejo://repo/{owner}/{repo}/commit/{sha}/status` with cacheability note in description
-- [ ] 3.3 Implement handler returning aggregate state + bounded `statuses` array via `operation/resource.Bounded(..., "get_commit_statuses")`
-- [ ] 3.4 Map empty-statuses case to aggregate `state="unknown"`
-- [ ] 3.5 Unit tests: < cap, > cap with sentinel naming `get_commit_statuses`, empty case, short sha, missing sha
-- [ ] 3.6 Wire from `operation/operation.go`
-- [ ] 3.7 README: append status row to Resources table
+- [x] 3.1 Create `operation/repository/resources_status.go` with `RegisterStatusResource(s *server.MCPServer)`
+- [x] 3.2 Register template `forgejo://repo/{owner}/{repo}/commit/{sha}/status` with cacheability note in description
+- [x] 3.3 Implement handler returning aggregate state + bounded `statuses` array via `operation/resource.Bounded(..., "get_commit_statuses")`
+- [x] 3.4 Map empty-statuses case to aggregate `state="unknown"`
+- [x] 3.5 Unit tests: < cap, > cap with sentinel naming `get_commit_statuses`, empty case, short sha, missing sha
+- [x] 3.6 Wire from `operation/operation.go`
+- [x] 3.7 README: append status row to Resources table
 
 ## 4. Repo + Owner Resources (slice 4)
 
