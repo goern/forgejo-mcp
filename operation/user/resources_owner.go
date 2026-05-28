@@ -90,10 +90,17 @@ func ownerResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]m
 		// fall back to org
 		org, orgResp, orgErr := client.GetOrg(params.Owner)
 		if orgErr != nil {
+			// Both user and org are "not found" → explicit -32003 with a clear message.
+			// This also guards the SDK edge where userErr==nil (u==nil, err==nil).
+			if is404(orgResp, orgErr) && (userErr == nil || is404(userResp, userErr)) {
+				return nil, &resource.ResourceError{URI: uri, Code: -32003, Message: "owner not found: " + uri}
+			}
+			// orgResp != nil (non-404 HTTP error): surface the status + org message.
 			if orgResp != nil {
 				return nil, resource.MapForgejoError(uri, fmt.Errorf("%d %s", orgResp.StatusCode, orgErr.Error()))
 			}
-			return nil, resource.MapForgejoError(uri, userErr) // surface original 404
+			// orgResp == nil: real transport/network/context error — surface orgErr.
+			return nil, resource.MapForgejoError(uri, orgErr)
 		}
 
 		payload = ownerResourcePayload{

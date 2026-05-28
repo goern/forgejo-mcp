@@ -3,11 +3,13 @@ package user
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"codeberg.org/goern/forgejo-mcp/v2/operation/resource"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
 
 	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
@@ -162,5 +164,84 @@ func TestOwnerResourceHandler_UserForbidden(t *testing.T) {
 	_, err := ownerResourceHandler(context.Background(), req)
 	if err == nil {
 		t.Fatal("expected error for 403")
+	}
+}
+
+func TestOwnerResourceHandler_BothNotFound_Returns32003(t *testing.T) {
+	h := &routingHandler{
+		userStatus: http.StatusNotFound,
+		userBody:   map[string]string{"message": "not found"},
+		orgStatus:  http.StatusNotFound,
+		orgBody:    map[string]string{"message": "not found"},
+	}
+	srv := setupOwnerMockServer(t, h)
+	defer srv.Close()
+
+	req := makeOwnerResourceRequest("ghost")
+	_, err := ownerResourceHandler(context.Background(), req)
+	if err == nil {
+		t.Fatal("expected error when both user and org return 404")
+	}
+	var resErr *resource.ResourceError
+	if !errors.As(err, &resErr) {
+		t.Fatalf("expected *resource.ResourceError, got %T: %v", err, err)
+	}
+	if resErr.Code != -32003 {
+		t.Errorf("expected Code -32003, got %d", resErr.Code)
+	}
+	if !strings.Contains(resErr.Message, "owner not found") {
+		t.Errorf("expected message to contain 'owner not found', got %q", resErr.Message)
+	}
+}
+
+func TestOwnerResourceHandler_OrgTransportError_Surfaces_OrgErr(t *testing.T) {
+	// User returns 404; org endpoint returns a 500 (non-404 error with body present).
+	h := &routingHandler{
+		userStatus: http.StatusNotFound,
+		userBody:   map[string]string{"message": "not found"},
+		orgStatus:  http.StatusInternalServerError,
+		orgBody:    map[string]string{"message": "upstream timeout"},
+	}
+	srv := setupOwnerMockServer(t, h)
+	defer srv.Close()
+
+	req := makeOwnerResourceRequest("flaky-org")
+	_, err := ownerResourceHandler(context.Background(), req)
+	if err == nil {
+		t.Fatal("expected error when org returns 500")
+	}
+	var resErr *resource.ResourceError
+	if !errors.As(err, &resErr) {
+		t.Fatalf("expected *resource.ResourceError, got %T: %v", err, err)
+	}
+	// Must NOT be the original user 404 message — should contain org error signal.
+	if strings.Contains(resErr.Message, "not found: ") && !strings.Contains(resErr.Message, "500") {
+		t.Errorf("error appears to surface user 404 instead of org error: %q", resErr.Message)
+	}
+}
+
+func TestOwnerResourceHandler_UserNilErr_OrgNotFound_Returns32003(t *testing.T) {
+	// SDK edge: user endpoint returns 404 with empty body (u==nil, userErr may be nil
+	// depending on SDK version). Org also 404 → must return explicit -32003, not (nil,nil).
+	h := &routingHandler{
+		userStatus: http.StatusNotFound,
+		userBody:   nil, // empty body — SDK may return nil error
+		orgStatus:  http.StatusNotFound,
+		orgBody:    map[string]string{"message": "not found"},
+	}
+	srv := setupOwnerMockServer(t, h)
+	defer srv.Close()
+
+	req := makeOwnerResourceRequest("phantom")
+	_, err := ownerResourceHandler(context.Background(), req)
+	if err == nil {
+		t.Fatal("expected error, not (nil,nil), when both endpoints 404")
+	}
+	var resErr *resource.ResourceError
+	if !errors.As(err, &resErr) {
+		t.Fatalf("expected *resource.ResourceError, got %T: %v", err, err)
+	}
+	if resErr.Code != -32003 {
+		t.Errorf("expected Code -32003, got %d", resErr.Code)
 	}
 }
