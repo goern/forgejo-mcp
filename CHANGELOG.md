@@ -1,3 +1,69 @@
+## [2.26.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.25.1...v2.26.0) (2026-05-28)
+
+### :sparkles: Features
+
+* ✨ enable Tekton Chains SLSA v1.0 provenance for release-tools image ([3125eec](https://codeberg.org/goern/forgejo-mcp/commit/3125eec711774c80531f2735f6442d7543d88a43))
+* ✨ focus mode — card click highlights dep-chain in subway map ([8fc1e75](https://codeberg.org/goern/forgejo-mcp/commit/8fc1e75376f52b0f203a2958b653f291ae041f1f))
+* ✨ MCP resource templates — slice 3 (commit status) ([52b19ac](https://codeberg.org/goern/forgejo-mcp/commit/52b19ac273edf896a87b42bd6da8e287324ecf00))
+* ✨ MCP resource templates — slices 1+2 (core framework + commit) ([4249374](https://codeberg.org/goern/forgejo-mcp/commit/4249374bfe50b9153692c4be66bd4771ceeb4190)), closes [#148](https://codeberg.org/goern/forgejo-mcp/issues/148)
+* ✨ MCP resource templates — slices 4+5 (repo+owner, issue+comment) ([79d0940](https://codeberg.org/goern/forgejo-mcp/commit/79d0940a9bd69ac5465f3906d40a70fcba76be8a))
+* ✨ MCP resource templates — slices 6+7 (PR resource + docs/wrap) ([f6cc2f1](https://codeberg.org/goern/forgejo-mcp/commit/f6cc2f1c40203b384bb95e5ad3400c85ed7f428a))
+
+### :bug: Fixes
+
+* ✏️ rename CommmentsTruncated → CommentsTruncated in pull resource ([683404c](https://codeberg.org/goern/forgejo-mcp/commit/683404c351070aab4a1ce4235d2c704a8af5959f))
+* 🐛 map parse errors via MapForgejoError in commit resource ([81d1945](https://codeberg.org/goern/forgejo-mcp/commit/81d194573c542a5085359a1c182cbf7992287e93))
+* 🐛 map parse errors via MapForgejoError in owner resource ([6cecf67](https://codeberg.org/goern/forgejo-mcp/commit/6cecf677200e482ad16cd64470d41603ed69c7f5))
+* 🐛 map parse errors via MapForgejoError in repo resource ([0c177af](https://codeberg.org/goern/forgejo-mcp/commit/0c177af796dcada159d6202e0dc5b934acbbb8b5))
+* 🐛 map parse errors via MapForgejoError in status resource ([10c8403](https://codeberg.org/goern/forgejo-mcp/commit/10c84032c08ac9a0f5b4f144963ae1529159b732))
+* 🐛 openspec spec/release-tools-image add Purpose + Requirements headers ([cefe9ef](https://codeberg.org/goern/forgejo-mcp/commit/cefe9ef026cfcc44a59caaca80936830dc53ec02))
+* 🐛 owner resource: surface orgErr on transport failure, explicit -32003 on both-404 ([19f1efd](https://codeberg.org/goern/forgejo-mcp/commit/19f1efd000e83eedea0506f1ef0ffabc4b7b17c7))
+* 🐛 reject empty/whitespace URI segments in forgejo:// parser ([55a39f4](https://codeberg.org/goern/forgejo-mcp/commit/55a39f4bfbc3fea5a3328bc80eb7c0f7cc4afbb5))
+* 🐛 request EmbeddedListCap+1 issue comments to detect truncation ([321b1a0](https://codeberg.org/goern/forgejo-mcp/commit/321b1a08496a9c3a59c3f573c22aeca69a37f6fb))
+* 🐛 request EmbeddedListCap+1 PR comments to detect truncation ([9e5b930](https://codeberg.org/goern/forgejo-mcp/commit/9e5b930ad41f0984de22a453522032365f743d81))
+* 🐛 request EmbeddedListCap+1 PR reviews to detect truncation ([182898a](https://codeberg.org/goern/forgejo-mcp/commit/182898a2e33b93d3fceff63f0159c127ff377793)), closes [#172](https://codeberg.org/goern/forgejo-mcp/issues/172)
+* 🐛 request EmbeddedListCap+1 statuses to detect truncation ([ee1217d](https://codeberg.org/goern/forgejo-mcp/commit/ee1217d830fa9e44617559307994777c0e03348d))
+* 🐛 unwrap ResourceError in commit resource handler ([f8d661e](https://codeberg.org/goern/forgejo-mcp/commit/f8d661eb3547b6864fa661b43598c723779ea6ae))
+* 💚 PaC task annotation YAML folding — collapse to single-line bracketed list ([3a12931](https://codeberg.org/goern/forgejo-mcp/commit/3a12931fb7d9961b0593a372b2b0fe87f9ee097b)), closes [#172](https://codeberg.org/goern/forgejo-mcp/issues/172)
+* 💚 use GO_IMAGE for license-check to break bootstrap circular dep ([1939dbf](https://codeberg.org/goern/forgejo-mcp/commit/1939dbfabbe69c0d7b43787af8973f2a2f15bc34))
+* 🔥 remove Forgejo CI workflows superseded by Tekton pipeline ([1777cca](https://codeberg.org/goern/forgejo-mcp/commit/1777cca428f164750337b8fb3eef83f92ff517da))
+* 🚨 gofmt drift on resource files ([8409fdc](https://codeberg.org/goern/forgejo-mcp/commit/8409fdc6dbc6d29e7a971e785a896140bf04086d))
+
+### :memo: Documentation
+
+* 📚 demos walkthrough for forgejo:// resource templates ([945b54b](https://codeberg.org/goern/forgejo-mcp/commit/945b54b61cdb57d035c4d4c0593b21b7bcaf2c8e))
+* 📝 ADR addendum — Tekton hard cutover after v2.25.1 ([4eed83a](https://codeberg.org/goern/forgejo-mcp/commit/4eed83aa5292ad4045933f4ecd45db3dd13e7e6a)), closes [#164](https://codeberg.org/goern/forgejo-mcp/issues/164)
+* 📝 openspec proposal for MCP resource templates ([c8c2c0a](https://codeberg.org/goern/forgejo-mcp/commit/c8c2c0afd55ef0a38c67972b095f51240a8470af))
+
+### :zap: Refactor
+
+* 🏗️ classify parse errors via sentinel ErrInvalidParams (-32602) ([1aa797a](https://codeberg.org/goern/forgejo-mcp/commit/1aa797ab7aa014e86ef0f7db13e63ab27b83b787))
+
+### :repeat: CI
+
+* ✨ add go-licenses check + Conventional Commits PR title gate ([508c7c0](https://codeberg.org/goern/forgejo-mcp/commit/508c7c0c68f2fd6941c017eafe07ec33cbf96dee))
+
+### :repeat: Chore
+
+* 🗂️ bd: close fix-pull_172 (ylb + 13 children — PR [#172](https://codeberg.org/goern/forgejo-mcp/issues/172) review fixes shipped) ([52f41f5](https://codeberg.org/goern/forgejo-mcp/commit/52f41f586d4340333ba54b62430cd1234a85b8c3))
+* 🗂️ bd: close forgejo-mcp-13x (PR [#172](https://codeberg.org/goern/forgejo-mcp/issues/172) merged) ([90d064b](https://codeberg.org/goern/forgejo-mcp/commit/90d064bf2c732ecf584e3b70b1bf9f0e3da778d8))
+* 🗂️ bd: close forgejo-mcp-pkz (PR [#173](https://codeberg.org/goern/forgejo-mcp/issues/173) merged) ([2dbb148](https://codeberg.org/goern/forgejo-mcp/commit/2dbb1487715e113a8be08d82cb978c0f3ad74ca8))
+* 🗂️ bd: log forgejo-mcp-1tc (openspec spec/release-tools-image fix on PR [#148](https://codeberg.org/goern/forgejo-mcp/issues/148)) ([2b10704](https://codeberg.org/goern/forgejo-mcp/commit/2b10704d7296f11ad9f83affb0d504ab62c2f421))
+* 🗂️ bd: log forgejo-mcp-pkz (resource templates demo) ([3587e04](https://codeberg.org/goern/forgejo-mcp/commit/3587e04318bbd0a841ab7930c141090903b09ea4)), closes [#173](https://codeberg.org/goern/forgejo-mcp/issues/173)
+* 🗂️ bd: log forgejo-mcp-wbw (PaC task annotation YAML folding fix on PR [#172](https://codeberg.org/goern/forgejo-mcp/issues/172)) ([67a7532](https://codeberg.org/goern/forgejo-mcp/commit/67a7532510901a253fa317ec6a1d52cc7f72aca6))
+* 🗂️ bd: log mcp-resources-impl team (13x in_progress, 7ra/7de follow-ups) ([4112c7a](https://codeberg.org/goern/forgejo-mcp/commit/4112c7aab0155ceb1130c4154ad5c3bc32797808)), closes [#172](https://codeberg.org/goern/forgejo-mcp/issues/172)
+* 🗂️ bd: log PR [#172](https://codeberg.org/goern/forgejo-mcp/issues/172) review-finding fix beads (parent ylb + 13 children) ([c1c95cb](https://codeberg.org/goern/forgejo-mcp/commit/c1c95cbe2b88a265612023ffb37c7aac09709241))
+* 🗂️ close forgejo-mcp-46j + forgejo-mcp-1p1 session wrap ([2de0fc7](https://codeberg.org/goern/forgejo-mcp/commit/2de0fc7cf540a3351040296e6424ad4b30bd6e63))
+* 🗂️ close forgejo-mcp-het — focus-mode dep graph shipped ([c7c9167](https://codeberg.org/goern/forgejo-mcp/commit/c7c9167761865d79d398b8e83654895a70cd003b))
+* 🗂️ close forgejo-mcp-j52, e9i, td8 — v2.25.1 session wrap ([43a421d](https://codeberg.org/goern/forgejo-mcp/commit/43a421dc90548c32fdef4c08c3c3e9bf7d6a4c96))
+* 🗂️ move dashboard into .beads/ — ships next to its data ([042dee8](https://codeberg.org/goern/forgejo-mcp/commit/042dee8d6bab361e175887d8c1874e3bf376168f))
+* AGENTS cleanup ([c644963](https://codeberg.org/goern/forgejo-mcp/commit/c6449633502cf244ecf4e97ab8b867fb6926beca))
+* **deps:** update registry.access.redhat.com/hi/core-runtime:2.42 docker digest to c85f5e0 ([dab2e88](https://codeberg.org/goern/forgejo-mcp/commit/dab2e88937fccbc265f4ee1d74603354db921ec9))
+* **deps:** update registry.access.redhat.com/hi/go:1.26.3-builder docker digest to 6bc8aae ([f9ad163](https://codeberg.org/goern/forgejo-mcp/commit/f9ad163769955bb92eba57a99e74074e6ca523bf))
+* **deps:** update registry.access.redhat.com/hi/go:1.26.3-builder docker digest to 6f8cd67 ([82762f3](https://codeberg.org/goern/forgejo-mcp/commit/82762f3fdf1d7047e55ee229a97e69110a338ea3))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to 6bc8aae ([bb93eff](https://codeberg.org/goern/forgejo-mcp/commit/bb93effcdf567e3fb0dc3723d2b8d451e4f26098))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to 6f8cd67 ([0d492cd](https://codeberg.org/goern/forgejo-mcp/commit/0d492cdc8fd11c7b632782e8cb7deaf7c01295f8))
+
 ## [Unreleased]
 
 ### Added
