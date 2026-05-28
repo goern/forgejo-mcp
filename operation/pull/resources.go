@@ -72,16 +72,16 @@ type prResourcePayload struct {
 	Head prBranchRef `json:"head"`
 	Base prBranchRef `json:"base"`
 
-	CommentCount int            `json:"comment_count"`
-	ReviewCount  int            `json:"review_count"`
+	CommentCount int `json:"comment_count"`
+	ReviewCount  int `json:"review_count"`
 
-	RecentComments       []prCommentRef `json:"recent_comments"`
-	CommmentsTruncated   bool           `json:"comments_truncated,omitempty"`
-	CommentsListTool     string         `json:"comments_list_tool,omitempty"`
+	RecentComments     []prCommentRef `json:"recent_comments"`
+	CommmentsTruncated bool           `json:"comments_truncated,omitempty"`
+	CommentsListTool   string         `json:"comments_list_tool,omitempty"`
 
-	RecentReviews        []prReviewRef `json:"recent_reviews"`
-	ReviewsTruncated     bool          `json:"reviews_truncated,omitempty"`
-	ReviewsListTool      string        `json:"reviews_list_tool,omitempty"`
+	RecentReviews    []prReviewRef `json:"recent_reviews"`
+	ReviewsTruncated bool          `json:"reviews_truncated,omitempty"`
+	ReviewsListTool  string        `json:"reviews_list_tool,omitempty"`
 }
 
 func prResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {

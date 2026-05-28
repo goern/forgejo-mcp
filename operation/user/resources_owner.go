@@ -19,17 +19,17 @@ const ownerResourceURITemplate = "forgejo://owner/{owner}"
 
 // ownerResourcePayload is the JSON body returned for user or org.
 type ownerResourcePayload struct {
-	Login        string `json:"login"`
-	FullName     string `json:"full_name,omitempty"`
-	HTMLURL      string `json:"html_url,omitempty"`
-	Kind         string `json:"kind"` // "user" or "org"
-	Description  string `json:"description,omitempty"`
-	Location     string `json:"location,omitempty"`
-	Website      string `json:"website,omitempty"`
-	CreatedAt    string `json:"created_at,omitempty"`
-	FollowersCount  int `json:"followers_count,omitempty"`
-	FollowingCount  int `json:"following_count,omitempty"`
-	PublicReposCount int `json:"public_repos_count,omitempty"`
+	Login            string `json:"login"`
+	FullName         string `json:"full_name,omitempty"`
+	HTMLURL          string `json:"html_url,omitempty"`
+	Kind             string `json:"kind"` // "user" or "org"
+	Description      string `json:"description,omitempty"`
+	Location         string `json:"location,omitempty"`
+	Website          string `json:"website,omitempty"`
+	CreatedAt        string `json:"created_at,omitempty"`
+	FollowersCount   int    `json:"followers_count,omitempty"`
+	FollowingCount   int    `json:"following_count,omitempty"`
+	PublicReposCount int    `json:"public_repos_count,omitempty"`
 }
 
 // RegisterOwnerResource registers the forgejo://owner/{owner} resource template.
@@ -67,16 +67,16 @@ func ownerResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]m
 
 	if userErr == nil && u != nil {
 		payload = ownerResourcePayload{
-			Login:            u.UserName,
-			FullName:         u.FullName,
-			HTMLURL:          u.HTMLURL,
-			Kind:             "user",
-			Description:      u.Description,
-			Location:         u.Location,
-			Website:          u.Website,
-			CreatedAt:        u.Created.Format("2006-01-02T15:04:05Z07:00"),
-			FollowersCount:   u.FollowerCount,
-			FollowingCount:   u.FollowingCount,
+			Login:          u.UserName,
+			FullName:       u.FullName,
+			HTMLURL:        u.HTMLURL,
+			Kind:           "user",
+			Description:    u.Description,
+			Location:       u.Location,
+			Website:        u.Website,
+			CreatedAt:      u.Created.Format("2006-01-02T15:04:05Z07:00"),
+			FollowersCount: u.FollowerCount,
+			FollowingCount: u.FollowingCount,
 		}
 	} else {
 		// if user fetch failed for a reason other than 404, surface it immediately

@@ -19,12 +19,12 @@ import (
 
 // prRoutingHandler routes /pulls/{index}, /issues/{index}/comments, and /pulls/{index}/reviews.
 type prRoutingHandler struct {
-	prStatus      int
-	prBody        interface{}
+	prStatus       int
+	prBody         interface{}
 	commentsStatus int
-	commentsBody  interface{}
+	commentsBody   interface{}
 	reviewsStatus  int
-	reviewsBody   interface{}
+	reviewsBody    interface{}
 }
 
 func (h *prRoutingHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -73,17 +73,17 @@ func makePRResourceRequest(index int) mcp.ReadResourceRequest {
 func fakePR(merged bool) map[string]interface{} {
 	now := time.Now().Format(time.RFC3339)
 	pr := map[string]interface{}{
-		"id":        1,
-		"number":    7,
-		"title":     "feat: add resources",
-		"body":      "This PR adds MCP resource support.",
-		"state":     "open",
-		"merged":    merged,
-		"mergeable": true,
-		"comments":  2,
-		"user":      map[string]interface{}{"login": "alice"},
-		"labels":    []interface{}{},
-		"assignees": []interface{}{},
+		"id":         1,
+		"number":     7,
+		"title":      "feat: add resources",
+		"body":       "This PR adds MCP resource support.",
+		"state":      "open",
+		"merged":     merged,
+		"mergeable":  true,
+		"comments":   2,
+		"user":       map[string]interface{}{"login": "alice"},
+		"labels":     []interface{}{},
+		"assignees":  []interface{}{},
 		"created_at": now,
 		"updated_at": now,
 		"head": map[string]interface{}{

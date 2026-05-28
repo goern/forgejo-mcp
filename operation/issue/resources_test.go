@@ -89,9 +89,9 @@ func fakeIssue() map[string]interface{} {
 		"user": map[string]interface{}{
 			"login": "alice",
 		},
-		"labels":    []interface{}{},
-		"assignees": []interface{}{},
-		"comments":  3,
+		"labels":     []interface{}{},
+		"assignees":  []interface{}{},
+		"comments":   3,
 		"created_at": time.Now().Format(time.RFC3339),
 		"updated_at": time.Now().Format(time.RFC3339),
 	}
