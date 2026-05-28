@@ -128,3 +128,41 @@ func TestParseStatus_ShortSHA(t *testing.T) {
 		t.Fatal("expected error for short sha")
 	}
 }
+
+// TestParseForgejoURI_EmptySegments verifies that URIs with empty or
+// whitespace-only path segments are rejected by all entity parsers, not
+// silently aliased to canonical forms.
+func TestParseForgejoURI_EmptySegments(t *testing.T) {
+	cases := []struct {
+		name string
+		uri  string
+	}{
+		{
+			name: "double slash mid-path",
+			uri:  "forgejo://repo/goern//forgejo-mcp",
+		},
+		{
+			name: "trailing slash",
+			uri:  "forgejo://repo/goern/forgejo-mcp/",
+		},
+		{
+			name: "percent-encoded whitespace segment",
+			uri:  "forgejo://repo/%20/forgejo-mcp",
+		},
+		{
+			name: "empty owner (single slash after host)",
+			uri:  "forgejo://owner/",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Use ParseRepo as a representative caller; the rejection happens
+			// inside parseForgejoURI which all parsers invoke first.
+			_, err := ParseRepo(tc.uri)
+			if err == nil {
+				t.Errorf("expected error for URI %q, got nil", tc.uri)
+			}
+		})
+	}
+}

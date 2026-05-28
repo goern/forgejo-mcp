@@ -213,6 +213,16 @@ func parseForgejoURI(uri string) (*url.URL, error) {
 	if u.Scheme != "forgejo" {
 		return nil, fmt.Errorf("invalid URI scheme: expected 'forgejo', got %q", u.Scheme)
 	}
+	// Reject empty or whitespace-only path segments so that
+	// forgejo://repo/foo//bar and forgejo://repo/foo/bar/ do not silently
+	// alias forgejo://repo/foo/bar.  Distinct URIs must mean distinct
+	// resources for content-addressable caching to be correct.
+	path := strings.TrimPrefix(u.Path, "/")
+	for _, seg := range strings.Split(path, "/") {
+		if strings.TrimSpace(seg) == "" {
+			return nil, fmt.Errorf("invalid URI %q: empty or whitespace-only path segment", uri)
+		}
+	}
 	return u, nil
 }
 
