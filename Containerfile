@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/hi/go:1.26.3-builder@sha256:6bc8aae21eca50925513b4905c8740da8cb6818e3ff0ebc56d09f78f8812b6da AS build
+FROM registry.access.redhat.com/hi/go:1.26.3-builder@sha256:ca7aa4333c880e5246593dd56008be52460e8ea3ecce7755bfdfd18e9bcb66f6 AS build
 
 RUN dnf install -y make git && dnf clean all
 
