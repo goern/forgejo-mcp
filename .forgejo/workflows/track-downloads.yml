@@ -30,6 +30,15 @@ jobs:
         run: |
           set -eu
 
+          # OpenShift runs the pod as an arbitrary UID with HOME=/ (read-only), so
+          # git's global config and tool caches have nowhere writable. Respect XDG:
+          # point HOME + XDG base dirs at a fresh writable directory.
+          XDG_BASE="$(mktemp -d)"
+          export HOME="$XDG_BASE"
+          export XDG_CONFIG_HOME="$XDG_BASE/.config"
+          export XDG_CACHE_HOME="$XDG_BASE/.cache"
+          mkdir -p "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME"
+
           # --- ensure curl, jq, git (distro-agnostic; pod image may be UBI/Debian/Alpine) ---
           need=""
           for t in curl jq git; do command -v "$t" >/dev/null 2>&1 || need="$need $t"; done
@@ -48,7 +57,8 @@ jobs:
           REPO_URL="https://${TRACKER_TOKEN}@codeberg.org/goern/forgejo-mcp.git"
           git clone --depth 1 "$REPO_URL" work
           cd work
-          git config --global --add safe.directory "$PWD"
+          # Local (repo) identity — clone and git run as the same UID, so no
+          # global safe.directory needed and nothing writes outside the workspace.
           git config user.name  "op1st-gitops"
           git config user.email "op1st-gitops@noreply.codeberg.org"
 
