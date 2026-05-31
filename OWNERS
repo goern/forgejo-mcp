@@ -1,0 +1,17 @@
+# OWNERS — Pipelines as Code (PaC) authorization
+#
+# PaC (running in the op1st-pipelines namespace) reads this Prow-style file
+# from the DEFAULT branch to decide who may trigger a PipelineRun on a
+# pull_request without a maintainer commenting `/ok-to-test`.
+#
+# In PaC, `approvers` and `reviewers` have EQUAL power to trigger CI; only the
+# `.*` (root) scope is honored. Bot accounts are listed explicitly because the
+# GitHub-bot auto-exemption does not apply on Forgejo/Codeberg.
+#
+# Docs: https://pipelinesascode.com/docs/guide/running/
+
+approvers:
+  - goern
+  - byteflavour
+  - b4mad-renovate
+  - op1st-gitops
