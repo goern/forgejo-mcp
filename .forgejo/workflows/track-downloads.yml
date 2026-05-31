@@ -6,6 +6,11 @@
 #   - Forgejo Actions enabled for the repo (Settings → Actions).
 #   - A repo/org secret DOWNLOAD_TRACKER_TOKEN: a token with write access used to
 #     push the daily commit back to the default branch.
+#
+# Runs on codeberg-runner-openshift, which executes steps directly in its own pod
+# image (no job `container:`). We therefore can't assume curl/jq/git are present and
+# don't use JS actions (no Node guarantee) — the job detects the package manager,
+# installs what's missing, and clones the repo manually with plain git.
 name: track-downloads
 
 on:
@@ -16,35 +21,43 @@ on:
 jobs:
   snapshot:
     runs-on: codeberg-runner-openshift
-    container:
-      image: docker.io/library/debian:bookworm-slim
     steps:
-      - name: Install tools
+      - name: Snapshot + commit
+        env:
+          TRACKER_TOKEN: ${{ secrets.DOWNLOAD_TRACKER_TOKEN }}
         run: |
-          apt-get update -qq
-          apt-get install -y -qq --no-install-recommends curl jq git ca-certificates
+          set -euo pipefail
 
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
+          # --- ensure curl, jq, git (distro-agnostic; pod image may be UBI/Debian/Alpine) ---
+          need=""
+          for t in curl jq git; do command -v "$t" >/dev/null 2>&1 || need="$need $t"; done
+          if [ -n "$need" ]; then
+            echo "Installing:$need"
+            if   command -v microdnf >/dev/null 2>&1; then microdnf install -y $need
+            elif command -v dnf      >/dev/null 2>&1; then dnf install -y $need
+            elif command -v yum      >/dev/null 2>&1; then yum install -y $need
+            elif command -v apt-get  >/dev/null 2>&1; then apt-get update -qq && apt-get install -y -qq --no-install-recommends $need ca-certificates
+            elif command -v apk      >/dev/null 2>&1; then apk add --no-cache $need
+            else echo "No known package manager to install:$need" >&2; exit 1
+            fi
+          fi
 
-      - name: Snapshot download counts
-        run: ./hack/snapshot-downloads.sh
-
-      - name: Commit if changed
-        run: |
-          git config user.name "op1st-gitops"
+          # --- clone (shallow) using the token so the later push is authenticated ---
+          REPO_URL="https://${TRACKER_TOKEN}@codeberg.org/goern/forgejo-mcp.git"
+          git clone --depth 1 "$REPO_URL" work
+          cd work
+          git config --global --add safe.directory "$PWD"
+          git config user.name  "op1st-gitops"
           git config user.email "op1st-gitops@noreply.codeberg.org"
+
+          # --- snapshot today's download counts ---
+          ./hack/snapshot-downloads.sh
+
+          # --- commit + push only if the counts moved ---
           if git diff --quiet -- docs/downloads/downloads.jsonl; then
             echo "No change in download counts today — nothing to commit."
             exit 0
           fi
           git add docs/downloads/downloads.jsonl
           git commit -m "chore: 📊 snapshot release download counts"
-          # Forgejo HTTPS git auth: token as the userinfo (not GitHub's x-access-token).
-          # Repo + branch hardcoded: this workflow only runs here and the scheduled
-          # job always targets the default branch — no runner-env-var dependency.
-          git push "https://${TRACKER_TOKEN}@codeberg.org/goern/forgejo-mcp.git" "HEAD:main"
-        env:
-          TRACKER_TOKEN: ${{ secrets.DOWNLOAD_TRACKER_TOKEN }}
+          git push origin HEAD:main
