@@ -43,6 +43,8 @@ jobs:
           git add docs/downloads/downloads.jsonl
           git commit -m "chore: 📊 snapshot release download counts"
           # Forgejo HTTPS git auth: token as the userinfo (not GitHub's x-access-token).
-          git push "https://${TRACKER_TOKEN}@codeberg.org/${GITHUB_REPOSITORY}.git" "HEAD:${GITHUB_REF_NAME}"
+          # Repo + branch hardcoded: this workflow only runs here and the scheduled
+          # job always targets the default branch — no runner-env-var dependency.
+          git push "https://${TRACKER_TOKEN}@codeberg.org/goern/forgejo-mcp.git" "HEAD:main"
         env:
           TRACKER_TOKEN: ${{ secrets.DOWNLOAD_TRACKER_TOKEN }}
