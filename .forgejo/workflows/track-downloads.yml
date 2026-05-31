@@ -1,0 +1,47 @@
+# Daily snapshot of release-asset download counts into docs/downloads/downloads.jsonl.
+#
+# NOTE: this is the ONLY Forgejo Actions workflow in the repo — CI/CD otherwise runs
+# on Tekton (op1st cluster). It exists here because a tiny scheduled curl+commit is
+# not worth a cluster CronJob. Requires:
+#   - Forgejo Actions enabled for the repo (Settings → Actions).
+#   - A repo/org secret DOWNLOAD_TRACKER_TOKEN: a token with write access used to
+#     push the daily commit back to the default branch.
+name: track-downloads
+
+on:
+  schedule:
+    - cron: "17 6 * * *" # 06:17 UTC daily (off the hour to dodge runner contention)
+  workflow_dispatch: {}
+
+jobs:
+  snapshot:
+    runs-on: docker
+    container:
+      image: docker.io/library/debian:bookworm-slim
+    steps:
+      - name: Install tools
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends curl jq git ca-certificates
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Snapshot download counts
+        run: ./hack/snapshot-downloads.sh
+
+      - name: Commit if changed
+        run: |
+          git config user.name "op1st-gitops"
+          git config user.email "op1st-gitops@noreply.codeberg.org"
+          if git diff --quiet -- docs/downloads/downloads.jsonl; then
+            echo "No change in download counts today — nothing to commit."
+            exit 0
+          fi
+          git add docs/downloads/downloads.jsonl
+          git commit -m "chore: 📊 snapshot release download counts"
+          git push "https://x-access-token:${TRACKER_TOKEN}@codeberg.org/${GITHUB_REPOSITORY}.git" "HEAD:${GITHUB_REF_NAME}"
+        env:
+          TRACKER_TOKEN: ${{ secrets.DOWNLOAD_TRACKER_TOKEN }}

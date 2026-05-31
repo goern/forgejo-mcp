@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>forgejo-mcp — release download analytics</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; font: 15px/1.5 system-ui, sans-serif; background: #0d1117; color: #c9d1d9; }
+  header { padding: 1.5rem 2rem 0.5rem; }
+  h1 { margin: 0; font-size: 1.3rem; }
+  .sub { color: #8b949e; font-size: 0.85rem; }
+  main { display: grid; gap: 1.5rem; padding: 1.5rem 2rem; max-width: 1100px; }
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1rem 1.25rem; }
+  .card h2 { margin: 0 0 0.25rem; font-size: 1rem; }
+  .card p { margin: 0 0 0.75rem; color: #8b949e; font-size: 0.8rem; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  @media (max-width: 800px) { .grid2 { grid-template-columns: 1fr; } }
+  canvas { max-height: 380px; }
+  .err { color: #f85149; font-family: monospace; white-space: pre-wrap; }
+  code { background: #21262d; padding: 0.1em 0.4em; border-radius: 4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>forgejo-mcp — release download analytics</h1>
+  <div class="sub">Cumulative <code>download_count</code> per release asset, sampled daily into
+    <code>downloads.jsonl</code>. <span id="meta"></span></div>
+</header>
+<main>
+  <div class="card">
+    <h2>Downloads per release × platform</h2>
+    <p>Latest snapshot. Stacked by asset category — the binary tarballs are the real usage signal; metadata (checksums/sig/SBOM) is mostly automated tooling.</p>
+    <canvas id="perRelease"></canvas>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h2>By release type (feat vs fix)</h2>
+      <p>Each tag classified by its semver bump vs the previous version: <b>major</b> = breaking, <b>minor</b> = feat, <b>patch</b> = fix. Sums binary-tarball downloads.</p>
+      <canvas id="byType"></canvas>
+    </div>
+    <div class="card">
+      <h2>Binary downloads over time</h2>
+      <p>Total binary-tarball downloads across all releases, per snapshot date. Grows as we collect more daily samples.</p>
+      <canvas id="overTime"></canvas>
+    </div>
+  </div>
+  <div id="error"></div>
+</main>
+<script>
+// ── data plumbing ─────────────────────────────────────────────────────────
+// downloads.jsonl lives next to this page; fetch it raw and parse line-by-line.
+async function loadRows() {
+  const res = await fetch("./downloads.jsonl", { cache: "no-store" });
+  if (!res.ok) throw new Error("fetch downloads.jsonl: HTTP " + res.status);
+  const text = await res.text();
+  return text.trim().split("\n").filter(Boolean).map((l) => JSON.parse(l));
+}
+
+// Categorize an asset filename into a stacked-series key.
+// Names look like: forgejo-mcp_2.26.0_linux_amd64.tar.gz / *.mcpb / *_checksums.txt(.sig) / *.sbom.cdx.json
+function category(name) {
+  if (/checksums\.txt/.test(name) || /\.sig$/.test(name)) return "metadata";
+  if (/\.sbom\.cdx\.json$/.test(name)) return "metadata";
+  const m = name.match(/_(linux|darwin)_(amd64|arm64)\.(tar\.gz|mcpb)$/);
+  if (!m) return "other";
+  const plat = m[1] + "/" + m[2];
+  return m[3] === "mcpb" ? "bundle " + plat : "binary " + plat;
+}
+const isBinary = (name) => /_(linux|darwin)_(amd64|arm64)\.tar\.gz$/.test(name);
+
+// Parse "vX.Y.Z" → [X,Y,Z]; null if it doesn't look like semver.
+function semver(tag) {
+  const m = String(tag).match(/^v?(\d+)\.(\d+)\.(\d+)/);
+  return m ? [+m[1], +m[2], +m[3]] : null;
+}
+const cmp = (a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2];
+
+// Classify a tag's bump relative to the next-lower semver tag in the set.
+function classify(tag, allTags) {
+  const v = semver(tag);
+  if (!v) return "other";
+  const lower = allTags.map(semver).filter(Boolean).filter((x) => cmp(x, v) < 0).sort(cmp);
+  const prev = lower[lower.length - 1];
+  if (!prev) return "initial";
+  if (v[0] > prev[0]) return "major (breaking)";
+  if (v[1] > prev[1]) return "minor (feat)";
+  if (v[2] > prev[2]) return "patch (fix)";
+  return "other";
+}
+
+const PALETTE = ["#58a6ff","#3fb950","#f778ba","#d29922","#a371f7","#ff7b72","#56d4dd","#8b949e"];
+
+(async function () {
+  let rows;
+  try { rows = await loadRows(); }
+  catch (e) {
+    document.getElementById("error").innerHTML =
+      '<div class="card err">Could not load data:\n' + e.message +
+      '\n\nRun <code>hack/snapshot-downloads.sh</code> first to create downloads.jsonl.</div>';
+    return;
+  }
+
+  const dates = [...new Set(rows.map((r) => r.date))].sort();
+  const latest = dates[dates.length - 1];
+  const cur = rows.filter((r) => r.date === latest);
+  document.getElementById("meta").textContent =
+    rows.length + " rows · " + dates.length + " snapshot(s) · latest " + latest;
+
+  // Tags newest-first by published date (fallback: semver).
+  const tags = [...new Set(cur.map((r) => r.tag))].sort((a, b) => {
+    const pa = cur.find((r) => r.tag === a).published || "";
+    const pb = cur.find((r) => r.tag === b).published || "";
+    return pb.localeCompare(pa);
+  });
+
+  // ── chart 1: per release × category (stacked bar) ──────────────────────
+  const cats = [...new Set(cur.map((r) => category(r.asset)))].sort();
+  const byTagCat = {};
+  for (const r of cur) {
+    (byTagCat[r.tag] ||= {})[category(r.asset)] =
+      (byTagCat[r.tag]?.[category(r.asset)] || 0) + r.downloads;
+  }
+  new Chart(document.getElementById("perRelease"), {
+    type: "bar",
+    data: {
+      labels: tags,
+      datasets: cats.map((c, i) => ({
+        label: c,
+        data: tags.map((t) => byTagCat[t]?.[c] || 0),
+        backgroundColor: PALETTE[i % PALETTE.length],
+      })),
+    },
+    options: { responsive: true, scales: { x: { stacked: true }, y: { stacked: true } },
+      plugins: { legend: { position: "bottom" } } },
+  });
+
+  // ── chart 2: by release type (feat/fix) — binary downloads only ────────
+  const typeTotals = {};
+  for (const r of cur) {
+    if (!isBinary(r.asset)) continue;
+    const cls = classify(r.tag, tags);
+    typeTotals[cls] = (typeTotals[cls] || 0) + r.downloads;
+  }
+  const typeKeys = Object.keys(typeTotals).sort();
+  new Chart(document.getElementById("byType"), {
+    type: "bar",
+    data: {
+      labels: typeKeys,
+      datasets: [{
+        label: "binary downloads",
+        data: typeKeys.map((k) => typeTotals[k]),
+        backgroundColor: typeKeys.map((_, i) => PALETTE[i % PALETTE.length]),
+      }],
+    },
+    options: { responsive: true, plugins: { legend: { display: false } } },
+  });
+
+  // ── chart 3: binary downloads over time (line) ─────────────────────────
+  const totalByDate = dates.map((d) =>
+    rows.filter((r) => r.date === d && isBinary(r.asset))
+        .reduce((s, r) => s + r.downloads, 0));
+  new Chart(document.getElementById("overTime"), {
+    type: "line",
+    data: {
+      labels: dates,
+      datasets: [{ label: "total binary downloads", data: totalByDate,
+        borderColor: PALETTE[0], backgroundColor: "transparent", tension: 0.2, pointRadius: 4 }],
+    },
+    options: { responsive: true, plugins: { legend: { display: false } } },
+  });
+})();
+</script>
+</body>
+</html>
