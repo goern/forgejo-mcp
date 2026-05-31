@@ -61,13 +61,18 @@ Hand an agent a prompt containing only the bare URI:
 Summarize forgejo://repo/<owner>/<repo>/wiki/Home
 ```
 
-A resource-template-aware client (Claude Code, Claude Desktop, Codex, Cursor) calls
-`resources/read` on the URI **with no explicit tool call** and gets:
+The result is **one `resources/read` call instead of a `get_wiki_page` tool call**,
+returning:
 
 - `application/json`: `{ owner, repo, page_name, title, commit_sha, recent_revisions: [...] }`
 - `text/markdown` sidecar: the decoded page body.
 
-This is the discoverability win: a wiki page is now first-class, URI-addressable context.
+A client that auto-resolves resource URIs issues that `resources/read` transparently;
+clients that do not (the common case today — auto-resolution of a bare URI embedded in
+chat text is not yet universal across Claude Code/Desktop, Codex, Cursor) issue it
+explicitly. Either way the wiki page becomes first-class, URI-addressable context — the
+discoverability win — without over-claiming that every client resolves it with zero
+prompting.
 
 ## 5. Edit the page
 

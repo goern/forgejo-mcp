@@ -13,9 +13,10 @@
 
 - [ ] 2.1 Remove the `//go:build wiki` tag and all `forgejo-sdk` wiki imports
 - [ ] 2.2 `list_wiki_pages`: add `page`/`limit` params; return pages + `page` echo + `has_next`
-- [ ] 2.3 `get_wiki_page`: base64-decode content; reuse the **shared `sliceLines`** routine from `operation/repo/file.go` (extract/share it, do not reimplement) for `start_line`/`end_line`; define `total_lines = len(strings.Split(decoded, "\n"))`; explicit error on undecodable content
+- [ ] 2.3 `get_wiki_page`: base64-decode content; reuse the shared line-slicer (see 2.3a) for `start_line`/`end_line`; define `total_lines = len(strings.Split(decoded, "\n"))`; `total_lines` always returned (with or without a range) so an agent can size-then-window; explicit error on undecodable content
+- [ ] 2.3a Make the line-slicer callable across packages: export it in place as `repo.SliceLines` (rename `sliceLines`, `operation/repo/file.go:134`) OR lift it to a shared package; `get_file_content` (file.go:123) MUST call the SAME post-rename routine with existing tests still green. REQUIRED before 2.3 (cross-package call to the unexported symbol does not compile); copy-paste is forbidden — it would re-introduce the C8 line-dialect divergence
 - [ ] 2.4 `get_wiki_revisions`: new tool; `page`/`limit` + `has_next`; 404 → not-found error
-- [ ] 2.5 `create_wiki_page` / `update_wiki_page`: base64-encode `content`; default commit message; surface server-assigned `page_name`; `update` MUST NOT silently rename when `title` omitted (mechanism per task 5.5)
+- [ ] 2.5 `create_wiki_page` / `update_wiki_page`: base64-encode `content`; default commit message; surface server-assigned `page_name`; `update` MUST NOT silently rename when `title` omitted (mechanism per task 5.5); if task 5.6a finds a precondition field, accept optional `last_commit_sha` and forward it (lost-update guard, mirroring `update_file`'s required `sha`); create on an existing title follows task 5.6b (guided "use update" error on reject, or documented-overwrite warning)
 - [ ] 2.6 `delete_wiki_page`: new tool
 - [ ] 2.7 Rich `mcp.WithDescription` per tool naming bound params; reuse `operation/params` descriptions, add missing ones
 - [ ] 2.8 `RegisterTool(s)` registers all six; unit tests per handler (happy path + bound + error), **including a CRLF/trailing-newline `total_lines` parity test** (`"a\r\nb\r\n"` and `"a\nb\n"` → same count) and an inverted-range error test
@@ -26,13 +27,13 @@
 - [ ] 3.2 Register `forgejo://repo/{owner}/{repo}/wiki/{pageName}` with `RegisterWikiResource` and a self-describing template description (note the `%2F`/space encoding rule)
 - [ ] 3.3 Handler: **two calls** (page + revisions). JSON metadata + `text/markdown` decoded-content sidecar **capped at `MaxInlineDownloadBytes` with a `get_wiki_page` marker** + bounded `recent_revisions` via `resource.Bounded(..., "get_wiki_revisions")`. `commit_sha` from the page payload. Secondary revisions-call failure degrades `recent_revisions` to empty and still succeeds the read (per `issue/resources.go`)
 - [ ] 3.4 Map the **primary page call's** `403` → `-32002`, `404` → `-32003` via `resource.MapForgejoError`
-- [ ] 3.5 Unit tests: parse (happy, empty, `%20`, `%2F` single-segment **and assert `u.EscapedPath()` retains `%2F`** — proves `RawPath` was populated, not recomputed from decoded `Path`, literal-slash guided error), read (< cap, > cap with sentinel, oversized-body capped, revisions-subcall-failure-degrades-to-empty, 404)
+- [ ] 3.5 Unit tests: parse (happy, empty, `%20`, `%2F` single-segment **and assert `u.EscapedPath()` retains `%2F`** — proves `RawPath` was populated, not recomputed from decoded `Path`, literal-slash guided error), read (< cap, > cap with sentinel, oversized-body capped, revisions-subcall-failure-degrades-to-empty, 404), **and a dispatch test that registers the wiki template alongside the issue/pr/commit templates and asserts `resources/read` on `…/wiki/Home` routes to the wiki handler** (guards literal-segment disambiguation across an mcp-go upgrade — N2)
 
 ## 4. Wiring & discovery
 
 - [ ] 4.1 Wire `RegisterWikiTool` into `RegisterTool` and `RegisterWikiResource` into `RegisterCoreResources` in `operation/operation.go`
 - [ ] 4.2 README: add a `**Wiki**` group to the tool table (six tools, bound params named) and a wiki row to the Resources table
-- [ ] 4.3 `AGENTS.md`: note `operation/wiki/` tools + resource (incl. the sub-page `%2F` encoding rule)
+- [ ] 4.3 `AGENTS.md`: note `operation/wiki/` tools + resource (incl. the sub-page `%2F` encoding rule and the naming convention `list_*` enumerates / `get_*` fetches one entity by name)
 - [ ] 4.4 `docs/plans/wiki-support.md`: header noting the SDK-contribution path is superseded by direct API calls (this change)
 - [ ] 4.5 CHANGELOG: note the additive wiki surface
 - [ ] 4.6 (Referee doc-policy, endorsed by both debate sides — non-blocking) Add one line to `docs/design/output-bounding.md` extending the invariant to MCP **resource content blocks** (a data-proportional `resources/read` sidecar MUST be capped with a marker naming a range-bound tool, since `resources/read` carries no caller knob) — so the next resource author does not re-ship the unbounded-body bug C6 caught
@@ -46,6 +47,8 @@
 - [ ] 5.5 Confirm how `update_wiki_page` preserves the page name when `title` is omitted (reusing the `Getting Started` page from 5.2: PATCH content-only, GET, read the resulting title — server-side retention vs. echoing the existing title); adopt whichever keeps the page reachable, never silently renaming
 - [ ] 5.6 Confirm the page `GET` payload carries `commit_sha`; if not, document the fallback (derive from `recent_revisions[0]`)
 - [ ] 5.7 Confirm the upstream round-trips an **encoded slash**: create `Guides/Setup`, read via resource URI `…/wiki/Guides%2FSetup` and via `get_wiki_page` `page_name=Guides/Setup`. If the server rejects/re-splits `%2F` (proxy or `AllowEncodedSlashes` off), document that resource-URI sub-page access is unsupported there (fallback: `get_wiki_page` tool) and correct the `mcp-resource-wiki` note before sync
+- [ ] 5.6a Confirm whether `PATCH …/wiki/page/{pageName}` accepts an optimistic-concurrency precondition (base `commit_sha` / `If-Match`). If yes: add optional `last_commit_sha` to `update_wiki_page` and forward it; add a stale-write conflict test. If no: document the lost-update (last-writer-wins) window in the tool description and add a missing-falsification note to design.md Risks (N3)
+- [ ] 5.6b Confirm `POST …/wiki/new` behavior when the title already exists (overwrite vs `409`/`422`). If reject: map to a guided "page exists, use `update_wiki_page`" error + test. If overwrite: document the destructive behavior in the create tool description. Correct the spec scenario to the observed branch before sync (N4)
 
 ## 5b. Lens follow-ups (api-contract-drift — operational hardening, may land as separate beads)
 

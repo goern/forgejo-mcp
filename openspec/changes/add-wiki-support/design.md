@@ -216,3 +216,38 @@ captured as lens follow-ups in `tasks.md §5` / future work.
 **Self-correction logged:** the defender's first take on C5 ("`%2F` already works") was
 false; re-reading `parse.go` (`u.Path` is already decoded) corrected it to the
 escaped-path requirement now in Decision 4.
+
+## Adversarial Review — 2026-05-31 (third pass / survival check)
+
+A third team re-ran the change under instruction to surface **only NEW** load-bearing
+critiques the first two rounds missed (no re-litigation), plus an orthogonal
+`agent-ergonomics` lens (the issue's "discoverable by agents" promise). Result: **3
+CONCEDE-PATCH, 1 WITHDRAWN** — the C1–C8 surface held, three genuinely new edges surfaced.
+
+| # | New critique | Verdict | Fix |
+|---|--------------|---------|-----|
+| N1 | Spec mandates reusing `sliceLines`, but it is **unexported** (`file.go:134`) — `operation/wiki` cannot call it | CONCEDE-PATCH | New task 2.3a: export `repo.SliceLines` (or lift to shared pkg) with `get_file_content` unchanged; copy-paste forbidden |
+| N2 | Feared resource-template **dispatch collision** (wiki vs commit/issue/pr 4-seg shapes) | **WITHDRAWN** | Disproven: commit/issue/pr/status templates already ship and coexist; referee verified mcp-go v0.17.0 `matchesTemplate` (server.go:614) matches by **literal-segment regex**, not shape. Added an optional dispatch regression test (task 3.5) as future-proofing |
+| N3 | `update_wiki_page` has **no `commit_sha` precondition** (unlike `update_file`'s required `sha`) → silent last-writer-wins clobber | CONCEDE-PATCH | Spec acknowledges the lost-update window; task 5.6a discovers if PATCH accepts a precondition → optional `last_commit_sha` if yes, documented window if no |
+| N4 | `create_wiki_page` on an **existing title** — overwrite vs 409 unspecified/unverified | CONCEDE-PATCH | Spec adds the conditional branch (guided "use update" error on reject / documented-overwrite warning); task 5.6b verifies live |
+
+**Referee finding while verifying N2** (a real spec-vs-mcp-go gap, converging with lens
+Gap 4): mcp-go matches a `resources/read` URI against each template's compiled regex
+*before* any handler runs. A **literal-slash** URI (`…/wiki/Guides/Setup`) matches no
+template regex, so mcp-go returns its own "handler not found" and `ParseWiki` is never
+reached — the spec's guided `-32602` for literal slashes **cannot fire at the resource
+layer**. The encoding guidance and `get_wiki_page` fallback therefore live in the
+**template description** (where the agent reads it before building the URI); `ParseWiki`'s
+guided error remains a belt-and-suspenders path. The `%2F`-encoded form matches and reaches
+`ParseWiki` normally. Captured in the `mcp-resource-wiki` parsing requirement.
+
+**Agent-ergonomics lens** (5 gaps; sharpest were silent-misdirection, not hard errors):
+- Gap 1 — naming convention (`list_*` enumerates / `get_*` fetches one) is implicit → state it in `AGENTS.md` (task 4.3).
+- Gap 2 — agent derives `page_name` from `title` instead of using the returned canonical name → `create_wiki_page` description must say "use the returned `page_name`, never derive from `title`" (folded into the discovery requirement + create requirement).
+- Gap 3 — the demo's "money shot" over-claimed universal client auto-resolution → reframed honestly as "one `resources/read` instead of a tool call; clients that don't auto-resolve issue it explicitly."
+- Gap 4 — `%2F`-rejecting servers / literal slashes give a bare 404 dead-end → guidance moved to the template description (see referee finding); fallback to `get_wiki_page` stated.
+- Gap 5 — agent can't know to paginate before the first (possibly huge) read → `get_wiki_page` description states `total_lines` is always returned, so size-then-window is possible.
+
+**Net:** the survival check did its job — confirmed the prior surface is sound *and* caught
+three real new edges (all mechanical, evidence-gated) plus five ergonomics refinements.
+No stalemates, no blockers.

@@ -7,8 +7,11 @@ The server SHALL register a resource template with URI
 describing a single Forgejo wiki page, registered from `operation/operation.go` via
 `RegisterWikiResource`. The template description SHALL state the URI form, that a
 `text/markdown` content sidecar is returned, and that `pageName` is the server-normalized
-page name (percent-encode characters such as `/` and spaces), so it is self-describing in
-`resources/templates/list`.
+page name (percent-encode characters such as `/` and spaces — e.g. `Guides%2FSetup`), so
+it is self-describing in `resources/templates/list`. Because mcp-go rejects a
+literal-slash URI before the handler runs (see the parsing requirement), the description
+is the only place an agent learns the encoding rule and the `get_wiki_page` fallback for
+slash-bearing sub-pages; it SHALL state both.
 
 #### Scenario: Template appears in templates list
 - **WHEN** a client issues `resources/templates/list`
@@ -96,6 +99,18 @@ the **upstream** resolves an encoded slash is server-dependent — some stacks (
 slash-bearing sub-pages is documented as unsupported and the fallback is the
 `get_wiki_page` tool (`page_name="Guides/Setup"`), with the resource returning a normal
 not-found rather than silently misleading.
+
+Implementation reality (verified against mcp-go v0.17.0, `server.go:579` /
+`matchesTemplate`): the server matches a `resources/read` URI against each template's
+compiled **regex** before any handler runs. A URI with a **literal** unencoded `/` in the
+page name (`…/wiki/Guides/Setup`) matches NO template regex (the extra segment breaks the
+anchored `[^/]+`), so mcp-go returns its own generic "handler not found" error and
+`ParseWiki` is **never reached** — the guided `-32602` message therefore CANNOT be
+produced at the resource layer for a literal slash. The guidance to percent-encode `/`
+(or use `get_wiki_page`) MUST therefore live in the **template description**, where an
+agent reads it before constructing the URI; `ParseWiki`'s guided error remains a
+belt-and-suspenders path for any caller that does reach it. The `%2F`-encoded form DOES
+match the regex and reaches `ParseWiki` normally.
 
 #### Scenario: Empty page name rejected
 - **WHEN** a client reads `forgejo://repo/goern/forgejo-mcp/wiki/`

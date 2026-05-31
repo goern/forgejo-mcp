@@ -59,11 +59,14 @@ and `total_lines`.
 
 `total_lines` is a field **introduced by this tool** (`get_file_content` does not expose
 it). To guarantee one line-range dialect across both tools, the line operations SHALL
-reuse the **same** shared splitting routine `get_file_content` uses (currently
-`sliceLines` in `operation/repo/file.go`), and `total_lines` SHALL be defined as
-`len(strings.Split(decoded, "\n"))` — the count produced by that same split. The split
-is on `"\n"`, so a trailing newline yields a final empty line that **is** counted, and
-CRLF content keeps its `"\r"` on each line. When `start_line`/`end_line` are supplied,
+call the **same** routine `get_file_content` uses (currently the unexported `sliceLines`
+in `operation/repo/file.go`); since a cross-package call requires it, the routine SHALL be
+exported in place (`repo.SliceLines`) or lifted to a shared package, with
+`get_file_content` left calling the identical routine (no behavior change). It SHALL NOT
+be copy-pasted (a divergent copy would re-break the single-dialect guarantee). `total_lines`
+SHALL be defined as `len(strings.Split(decoded, "\n"))` — the count produced by that same
+split. The split is on `"\n"`, so a trailing newline yields a final empty line that **is**
+counted, and CRLF content keeps its `"\r"` on each line. When `start_line`/`end_line` are supplied,
 `content` SHALL contain only that inclusive range (clamped to the file extent) and the
 response SHALL echo the returned range. An inverted range after clamping SHALL be
 reported as an error, matching `sliceLines`.
@@ -119,13 +122,29 @@ an empty list.
 a `POST /repos/{owner}/{repo}/wiki/new` request. When `message` is empty the handler
 SHALL supply a default commit message naming the page. The response SHALL surface the
 server-assigned `page_name` (the server normalizes the title into a page name), so
-callers can address the page in subsequent calls.
+callers can address the page in subsequent calls. Callers SHALL use the returned
+`page_name` verbatim for `get`/`update`/`delete`; they MUST NOT derive it from `title`
+(the server may transform it, e.g. spaces → dashes).
+
+The behavior of `POST …/wiki/new` against an already-existing title is fixed by live
+verification. If the upstream rejects a duplicate (e.g. `409`/`422`), `create_wiki_page`
+SHALL surface a guided error naming `update_wiki_page` as the way to modify an existing
+page (it SHALL NOT leak an opaque transport error). If the upstream instead overwrites,
+`create_wiki_page`'s description SHALL warn that creating an existing title replaces it,
+so callers do not silently clobber a page by confusing create with update.
 
 #### Scenario: Create with default message
 - **WHEN** a client calls `create_wiki_page` with a title and content but no message
 - **THEN** the request body SHALL carry the base64-encoded content
 - **AND** a non-empty default commit message naming the page SHALL be sent
 - **AND** the response SHALL include the server-assigned `page_name`
+
+#### Scenario: Create on an existing title is not a silent clobber
+- **WHEN** a client calls `create_wiki_page` with a `title` that already exists
+- **THEN** the tool SHALL either return a guided error pointing at `update_wiki_page`
+  (if the upstream rejects the duplicate)
+- **OR** report success only if the upstream's documented behavior is overwrite, in
+  which case the destructive replacement SHALL be stated in the tool description
 
 ### Requirement: Update wiki page base64-encodes content and never silently renames
 
@@ -137,10 +156,26 @@ reachable under the same name after the edit. The mechanism that preserves the n
 (server-side retention vs. echoing the existing title) is fixed by live verification
 (see the live-verification tasks).
 
+`update_wiki_page` performs a read-modify-write whose last writer wins. Whether the
+upstream `PATCH …/wiki/page/{pageName}` accepts an optimistic-concurrency precondition
+(e.g. a base `commit_sha` / `If-Match`) is fixed by live verification. If the API accepts
+such a field, `update_wiki_page` SHALL accept an optional `last_commit_sha` parameter
+(sourced from `get_wiki_page`'s `commit_sha`) and forward it so a stale write is rejected
+rather than silently clobbering a concurrent edit. If the API accepts no precondition, the
+tool SHALL document the lost-update window in its description so callers know concurrent
+edits overwrite without warning. (This mirrors `update_file`/`delete_file`, which require
+a base `sha`.)
+
 #### Scenario: Update without retitling preserves the page name
 - **WHEN** a client calls `update_wiki_page` with new content but no `title`
 - **THEN** the page SHALL remain reachable under its original `page_name` after the edit
 - **AND** the request body SHALL carry the base64-encoded new content
+
+#### Scenario: Stale update is rejected when the API supports a precondition
+- **WHEN** the upstream accepts a base-commit precondition
+- **AND** a client calls `update_wiki_page` with a `last_commit_sha` that is no longer current
+- **THEN** the tool SHALL surface the upstream conflict as an error
+- **AND** SHALL NOT silently overwrite the newer revision
 
 ### Requirement: Delete wiki page
 
@@ -165,6 +200,17 @@ its bound parameters. The README tool table SHALL include a `Wiki` group listing
 tools, and `AGENTS.md` SHALL note the `operation/wiki/` package. Bound parameters
 (`page`, `limit`, `start_line`, `end_line`) SHALL appear in both the tool description and
 the README per `docs/design/output-bounding.md`.
+
+To keep the surface legible to an agent picking a tool without trial-and-error, the
+descriptions SHALL also state the discovery affordances surfaced by the agent-ergonomics
+review:
+- `AGENTS.md` SHALL state the naming convention `list_*` enumerates / `get_*` fetches one
+  entity by name (so an agent does not guess `get_wiki_pages`).
+- `create_wiki_page`'s description SHALL tell callers to address the page by the returned
+  `page_name`, never by deriving it from `title`.
+- `get_wiki_page`'s description SHALL state that `total_lines` is always returned (with or
+  without a range), so an agent can call once unbounded to learn the size, then request a
+  `start_line`/`end_line` window for a large page.
 
 #### Scenario: README documents the bounds
 - **WHEN** a reader views the README tool table
