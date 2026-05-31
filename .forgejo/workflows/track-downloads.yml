@@ -22,10 +22,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Snapshot + commit
+        # POSIX sh, not bash: the runner's pod image is not guaranteed to ship bash,
+        # and Forgejo's default `run:` shell (bash -e) fails to start if it's absent.
+        shell: sh
         env:
           TRACKER_TOKEN: ${{ secrets.DOWNLOAD_TRACKER_TOKEN }}
         run: |
-          set -euo pipefail
+          set -eu
 
           # --- ensure curl, jq, git (distro-agnostic; pod image may be UBI/Debian/Alpine) ---
           need=""

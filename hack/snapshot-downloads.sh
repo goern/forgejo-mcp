@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 # Snapshot per-asset release download counts into an append-only JSONL time series.
 #
 # The Forgejo API exposes a *cumulative* download_count per release asset but keeps
@@ -6,8 +6,10 @@
 # appends one line per (date, tag, asset). Re-running on the same day replaces that
 # day's rows (idempotent), so a retried CI job never double-counts.
 #
+# POSIX sh (no bashisms): the CI runner's pod image may not ship bash.
+#
 # Usage: hack/snapshot-downloads.sh [owner/repo] [output.jsonl]
-set -euo pipefail
+set -eu
 
 REPO="${1:-goern/forgejo-mcp}"
 OUT="${2:-docs/downloads/downloads.jsonl}"
@@ -19,19 +21,19 @@ mkdir -p "$(dirname "$OUT")"
 # Paginate releases until a page comes back empty, flattening assets to one row
 # each. download_count is the cumulative counter we are sampling at $TODAY.
 snapshot="$(mktemp)"
-trap 'rm -f "$snapshot"' EXIT
+trap 'rm -f "$snapshot"' EXIT INT TERM
 
 page=1
-while :; do
+while : ; do
   body="$(curl -fsS "$API/repos/$REPO/releases?limit=50&page=$page")"
-  count="$(jq 'length' <<<"$body")"
+  count="$(printf '%s' "$body" | jq 'length')"
   [ "$count" -eq 0 ] && break
-  jq -c --arg date "$TODAY" '
+  printf '%s' "$body" | jq -c --arg date "$TODAY" '
     .[] as $rel
     | $rel.assets[]
     | {date:$date, tag:$rel.tag_name, published:$rel.published_at,
        asset:.name, size:.size, downloads:.download_count}
-  ' <<<"$body" >>"$snapshot"
+  ' >> "$snapshot"
   page=$((page + 1))
 done
 
@@ -47,4 +49,4 @@ if [ -f "$OUT" ]; then
 fi
 cat "$snapshot" >> "$OUT"
 
-echo "snapshot-downloads: recorded $(wc -l <"$snapshot") asset rows for $TODAY into $OUT"
+echo "snapshot-downloads: recorded $(wc -l < "$snapshot") asset rows for $TODAY into $OUT"
