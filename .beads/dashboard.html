@@ -497,6 +497,48 @@
   }
   footer a { color: var(--amber); text-decoration: none; border-bottom: 1px dashed var(--amber-soft); }
 
+  /* Channel input */
+  .channel-form {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .channel-label {
+    color: var(--phos-muted);
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .channel-input {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--rule);
+    color: var(--phos);
+    padding: 0.25rem 0.55rem;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    outline: none;
+    width: clamp(160px, 30vw, 400px);
+    transition: border-color 0.15s;
+  }
+  .channel-input::placeholder { color: var(--phos-muted); }
+  .channel-input:focus { border-color: var(--amber-soft); }
+  .channel-btn {
+    background: transparent;
+    border: 1px solid var(--rule);
+    color: var(--phos-muted);
+    padding: 0.25rem 0.6rem;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .channel-btn:hover { color: var(--amber); border-color: var(--amber-soft); }
+
   /* Loading / error */
   .notice {
     border: 1px dashed var(--amber-soft);
@@ -528,8 +570,12 @@
 
   <main>
     <div class="strip">
-      <span>system: bd · channel: forgejo-mcp</span>
-      <span>iss <a href="https://codeberg.org/goern/forgejo-mcp" target="_blank" rel="noopener">codeberg.org/goern/forgejo-mcp</a></span>
+      <span>system: bd</span>
+      <form class="channel-form" id="channel-form" onsubmit="return false;">
+        <span class="channel-label">channel ▸</span>
+        <input class="channel-input" id="channel-input" type="url" placeholder="path or URL to issues.jsonl" value="issues.jsonl" spellcheck="false" autocomplete="off" />
+        <button class="channel-btn" type="submit">load</button>
+      </form>
     </div>
 
     <section class="hero">
@@ -688,12 +734,16 @@ function escapeHtml(s) {
   return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 }
 
-const DATA_SOURCE = "issues.jsonl";
+function getDataSource() {
+  const v = ($("#channel-input") && $("#channel-input").value.trim()) || "issues.jsonl";
+  return v || "issues.jsonl";
+}
 
 async function load() {
+  const src = getDataSource();
   $("#boot-time").textContent = "loading...";
   try {
-    const res = await fetch(DATA_SOURCE, { cache: "no-store" });
+    const res = await fetch(src, { cache: "no-store" });
     if (!res.ok) throw new Error("HTTP " + res.status);
     const text = await res.text();
     state.data = parseJsonl(text);
@@ -722,11 +772,14 @@ function parseJsonl(text) {
 
 function showFetchError(e) {
   const msg = String(e && e.message || e);
+  const src = getDataSource();
   const main = $("main");
+  // remove previous error notice if any
+  $$("main .notice").forEach(n => n.remove());
   const notice = document.createElement("div");
   notice.className = "notice";
   notice.innerHTML = `
-    <strong>signal lost.</strong> could not load <code>${escapeHtml(DATA_SOURCE)}</code> (${escapeHtml(msg)}).<br/>
+    <strong>signal lost.</strong> could not load <code>${escapeHtml(src)}</code> (${escapeHtml(msg)}).<br/>
     if you opened this file from disk, your browser likely blocked <code>fetch()</code> for the <code>file://</code> scheme.<br/>
     serve the repo root over http instead — for example:<br/>
     &nbsp;&nbsp;<code>cd $(git rev-parse --show-toplevel) &amp;&amp; python3 -m http.server 8080</code><br/>
@@ -1106,6 +1159,14 @@ function render() {
 }
 
 bindControls();
+
+// channel form: submit = reload from new URL
+$("#channel-form").addEventListener("submit", () => { state.data = null; load(); });
+// also allow typing a new URL and hitting enter in the input itself
+$("#channel-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { state.data = null; load(); }
+});
+
 load();
 </script>
 </body>
