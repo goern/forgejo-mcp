@@ -42,6 +42,7 @@ jobs:
           fi
           git add docs/downloads/downloads.jsonl
           git commit -m "chore: 📊 snapshot release download counts"
-          git push "https://x-access-token:${TRACKER_TOKEN}@codeberg.org/${GITHUB_REPOSITORY}.git" "HEAD:${GITHUB_REF_NAME}"
+          # Forgejo HTTPS git auth: token as the userinfo (not GitHub's x-access-token).
+          git push "https://${TRACKER_TOKEN}@codeberg.org/${GITHUB_REPOSITORY}.git" "HEAD:${GITHUB_REF_NAME}"
         env:
           TRACKER_TOKEN: ${{ secrets.DOWNLOAD_TRACKER_TOKEN }}
