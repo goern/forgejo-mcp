@@ -61,6 +61,7 @@ Labels for goern/forgejo-mcp on Codeberg:
 | 335061 | Kind/Enhancement | 84b6eb | Improve existing functionality |
 | 335091 | Status/Blocked | 880e4f | Something is blocking this issue or pull request |
 | 335103 | Priority/Medium | e64a19 | The priority is medium |
+| 1702838 | RFC - Request For Comments | 0e8a16 | Request For Comments — design/spec open for feedback before implementation |
 
 ### Usage with Codeberg MCP
 
