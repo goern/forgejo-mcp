@@ -22,28 +22,30 @@
 
 ## 3. Wiki resource template (`operation/wiki/resources.go`)
 
-- [ ] 3.1 Add `WikiParams` + `ParseWiki` to `operation/resource/parse.go`; strict 4-segment parser; read the page-name segment from the **escaped** path (`EscapedPath`/`RawPath`) then `PathUnescape` it (so `%2F` survives as one segment); reject empty (`-32602`); literal `/` → guided `-32602` ("percent-encode as `%2F`")
+- [ ] 3.1 Add `WikiParams` + `ParseWiki` to `operation/resource/parse.go`; strict 4-segment parser; read the page-name segment from the **escaped** path (`u.EscapedPath()`/`RawPath`) then `PathUnescape` only that segment (so `%2F` survives as one segment) — MUST NOT reuse `splitPath(u.Path)` for the page name (decoded → would re-split `%2F`); reject empty (`-32602`); literal `/` → guided `-32602` ("percent-encode as `%2F`")
 - [ ] 3.2 Register `forgejo://repo/{owner}/{repo}/wiki/{pageName}` with `RegisterWikiResource` and a self-describing template description (note the `%2F`/space encoding rule)
 - [ ] 3.3 Handler: **two calls** (page + revisions). JSON metadata + `text/markdown` decoded-content sidecar **capped at `MaxInlineDownloadBytes` with a `get_wiki_page` marker** + bounded `recent_revisions` via `resource.Bounded(..., "get_wiki_revisions")`. `commit_sha` from the page payload. Secondary revisions-call failure degrades `recent_revisions` to empty and still succeeds the read (per `issue/resources.go`)
 - [ ] 3.4 Map the **primary page call's** `403` → `-32002`, `404` → `-32003` via `resource.MapForgejoError`
-- [ ] 3.5 Unit tests: parse (happy, empty, `%20`, `%2F` single-segment, literal-slash guided error), read (< cap, > cap with sentinel, oversized-body capped, revisions-subcall-failure-degrades-to-empty, 404)
+- [ ] 3.5 Unit tests: parse (happy, empty, `%20`, `%2F` single-segment **and assert `u.EscapedPath()` retains `%2F`** — proves `RawPath` was populated, not recomputed from decoded `Path`, literal-slash guided error), read (< cap, > cap with sentinel, oversized-body capped, revisions-subcall-failure-degrades-to-empty, 404)
 
 ## 4. Wiring & discovery
 
 - [ ] 4.1 Wire `RegisterWikiTool` into `RegisterTool` and `RegisterWikiResource` into `RegisterCoreResources` in `operation/operation.go`
 - [ ] 4.2 README: add a `**Wiki**` group to the tool table (six tools, bound params named) and a wiki row to the Resources table
-- [ ] 4.3 `AGENTS.md`: note `operation/wiki/` tools + resource
+- [ ] 4.3 `AGENTS.md`: note `operation/wiki/` tools + resource (incl. the sub-page `%2F` encoding rule)
 - [ ] 4.4 `docs/plans/wiki-support.md`: header noting the SDK-contribution path is superseded by direct API calls (this change)
 - [ ] 4.5 CHANGELOG: note the additive wiki surface
+- [ ] 4.6 (Referee doc-policy, endorsed by both debate sides — non-blocking) Add one line to `docs/design/output-bounding.md` extending the invariant to MCP **resource content blocks** (a data-proportional `resources/read` sidecar MUST be capped with a marker naming a range-bound tool, since `resources/read` carries no caller knob) — so the next resource author does not re-ship the unbounded-body bug C6 caught
 
 ## 5. Live verification (load-bearing)
 
 - [ ] 5.1 Against a live Forgejo/Codeberg repo with wiki enabled: confirm the `content_base64` field name on read and write
 - [ ] 5.2 Confirm page-name URL rule (spaces → dashes / encoding) for `get`/`update`/`delete` paths, and that a name from `create`/`list` round-trips verbatim
-- [ ] 5.3 Confirm list/revisions paging params and the effective `limit` ceiling; document if `limit` is advisory
-- [ ] 5.4 If any of 5.1–5.3 differ from the spec, correct the spec deltas before sync/archive
-- [ ] 5.5 Confirm how `update_wiki_page` preserves the page name when `title` is omitted (server-side retention vs. echoing the existing title); adopt whichever keeps the page reachable, never silently renaming
+- [ ] 5.3 Confirm list/revisions paging params and the effective `limit` ceiling; document if `limit` is advisory. **Also confirm the over-fetch interaction**: that requesting `limit+1` is honored below the ceiling, that at the ceiling `has_next` is computed from the effective returned row count, and pin max `limit` to `ceiling-1` if the server clamps (so a full page at the cap never falsely reports `has_next:false`)
+- [ ] 5.4 If any of 5.1–5.7 differ from the spec, correct the spec deltas before sync/archive
+- [ ] 5.5 Confirm how `update_wiki_page` preserves the page name when `title` is omitted (reusing the `Getting Started` page from 5.2: PATCH content-only, GET, read the resulting title — server-side retention vs. echoing the existing title); adopt whichever keeps the page reachable, never silently renaming
 - [ ] 5.6 Confirm the page `GET` payload carries `commit_sha`; if not, document the fallback (derive from `recent_revisions[0]`)
+- [ ] 5.7 Confirm the upstream round-trips an **encoded slash**: create `Guides/Setup`, read via resource URI `…/wiki/Guides%2FSetup` and via `get_wiki_page` `page_name=Guides/Setup`. If the server rejects/re-splits `%2F` (proxy or `AllowEncodedSlashes` off), document that resource-URI sub-page access is unsupported there (fallback: `get_wiki_page` tool) and correct the `mcp-resource-wiki` note before sync
 
 ## 5b. Lens follow-ups (api-contract-drift — operational hardening, may land as separate beads)
 

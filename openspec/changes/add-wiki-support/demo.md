@@ -111,7 +111,8 @@ edited body ends in `\n`, so the split counts a trailing empty 8th line; the sam
 // tool: delete_wiki_page
 { "owner": "<owner>", "repo": "<repo>", "page_name": "Home" }
 ```
-→ `204 No Content` reported as success. `list_wiki_pages` now returns an empty list.
+→ a `2xx` (canonically `204 No Content`) reported as success. `list_wiki_pages` now
+returns an empty list.
 
 ---
 

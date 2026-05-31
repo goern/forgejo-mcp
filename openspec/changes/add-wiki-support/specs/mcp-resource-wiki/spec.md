@@ -28,7 +28,11 @@ calls: the page via `GET …/wiki/page/{pageName}` (primary) and the revisions v
 policy follows the existing two-call precedent in `operation/issue/resources.go`: only
 the **primary** page call's status maps the read result (`403`→`-32002`, `404`→`-32003`);
 a failure of the **secondary** revisions call SHALL degrade `recent_revisions` to an
-empty array and still succeed the read.
+empty array and still succeed the read. (The page GET having already succeeded, the page
+is known to exist, so an empty `recent_revisions` here is a **degraded** read, not a
+missing-page signal — distinct from the `get_wiki_revisions` tool, where a `404` is the
+sole signal and correctly means page-not-found. The resource's page-first ordering is what
+keeps the two consistent.)
 
 When the page has more than 30 revisions the response SHALL include a truncation sentinel
 naming the `get_wiki_revisions` tool and the total count.
@@ -77,12 +81,21 @@ sub-rules 1 (no silent truncation) and 3 (resumable) without a per-read knob the
 path to be exactly `[owner, repo, "wiki", pageName]` (a strict 4-segment parser — it does
 NOT greedily join trailing segments, so future `…/wiki/{page}/<subresource>` URIs cannot
 be mis-routed). Because Go's `url.Parse` pre-splits a decoded `/`, `ParseWiki` SHALL read
-the page-name segment from the **escaped** path (`EscapedPath` / `RawPath`) and
+the page-name segment from the **escaped** path (`u.EscapedPath()` / `RawPath`) and
 `PathUnescape` only that segment — so a percent-encoded `%2F` in a sub-page name survives
-into a single decoded page name. An empty or whitespace-only page name SHALL be rejected
-with `-32602` before any upstream call. A literal (unencoded) `/` that produces extra
-segments SHALL return a guided `-32602` error telling the caller to percent-encode `/` as
-`%2F`.
+into a single decoded page name. `ParseWiki` MUST NOT reuse the shared
+`splitPath(u.Path)` for the page name: `u.Path` is already decoded, so it would re-split
+`%2F`. An empty or whitespace-only page name SHALL be rejected with `-32602` before any
+upstream call. A literal (unencoded) `/` that produces extra segments SHALL return a
+guided `-32602` error telling the caller to percent-encode `/` as `%2F`.
+
+Note: the parser keeping `%2F` as one segment is unconditional Go behavior, but whether
+the **upstream** resolves an encoded slash is server-dependent — some stacks (Apache
+`AllowEncodedSlashes` off, proxies that decode-then-resplit) reject `%2F` in a path. Task
+5.7 verifies this live; where the upstream does not resolve `%2F`, resource-URI access to
+slash-bearing sub-pages is documented as unsupported and the fallback is the
+`get_wiki_page` tool (`page_name="Guides/Setup"`), with the resource returning a normal
+not-found rather than silently misleading.
 
 #### Scenario: Empty page name rejected
 - **WHEN** a client reads `forgejo://repo/goern/forgejo-mcp/wiki/`

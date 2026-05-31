@@ -49,7 +49,14 @@ mechanism up front.
 `resp.Header`, so `X-Total-Count` / `Link` are unreachable. `has_next` is therefore
 derived by **over-fetching one row**: request `limit+1`, return at most `limit`, set
 `has_next = rows_received > limit`. This reuses the exact pattern in
-`operation/issue/resources.go` and adds no new transport capability.
+`operation/issue/resources.go` and adds no new transport capability. The inference is
+sound **only if `limit+1` escapes the server's page-size ceiling**: the `issue` precedent
+sets `PageSize = cap+1` explicitly (issue/resources.go:99) precisely because the server
+default equals the cap and would otherwise clamp the `+1` away. So the wiki handler SHALL
+send `limit+1` as an explicit page size, compute `has_next` from the **effective returned
+row count** (never the requested `limit+1`), and pin the max `limit` to `ceiling-1` once
+task 5.3 learns the live ceiling — otherwise a full page at the ceiling would falsely
+report `has_next:false`.
 
 A thin typed layer lives in `pkg/forgejo/wiki.go` (`WikiPage`, `WikiPageMeta`,
 `WikiCommit`, `ListWikiPages`, `GetWikiPage`, `GetWikiPageRevisions`, `CreateWikiPage`,

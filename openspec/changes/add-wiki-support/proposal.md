@@ -37,7 +37,7 @@ and agents can reference a wiki page by URI without an explicit tool call.
   | `get_wiki_revisions` | `GET /repos/{o}/{r}/wiki/revisions/{pageName}` | Bounded: `page` + `limit` |
   | `create_wiki_page` | `POST /repos/{o}/{r}/wiki/new` | base64-encodes content |
   | `update_wiki_page` | `PATCH /repos/{o}/{r}/wiki/page/{pageName}` | base64-encodes content |
-  | `delete_wiki_page` | `DELETE /repos/{o}/{r}/wiki/page/{pageName}` | 204 → success |
+  | `delete_wiki_page` | `DELETE /repos/{o}/{r}/wiki/page/{pageName}` | 2xx → success (204 canonical) |
 - **Add a wiki-page resource template** `forgejo://repo/{owner}/{repo}/wiki/{pageName}`
   returning page metadata + a `text/markdown` content sidecar (decoded) + a bounded
   `recent_revisions` array (cap 30, sentinel names `get_wiki_revisions`). This lets a
