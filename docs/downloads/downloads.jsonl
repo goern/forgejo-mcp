@@ -7,7 +7,7 @@
 {"date":"2026-05-31","tag":"v2.26.0","published":"2026-05-29T00:35:02+02:00","asset":"forgejo-mcp_2.26.0_darwin_arm64.tar.gz","size":4264795,"downloads":6}
 {"date":"2026-05-31","tag":"v2.26.0","published":"2026-05-29T00:35:02+02:00","asset":"forgejo-mcp_2.26.0_darwin_arm64.tar.gz.sbom.cdx.json","size":39822,"downloads":1}
 {"date":"2026-05-31","tag":"v2.26.0","published":"2026-05-29T00:35:02+02:00","asset":"forgejo-mcp_2.26.0_linux_amd64.mcpb","size":4586480,"downloads":1}
-{"date":"2026-05-31","tag":"v2.26.0","published":"2026-05-29T00:35:02+02:00","asset":"forgejo-mcp_2.26.0_linux_amd64.tar.gz","size":4566573,"downloads":35}
+{"date":"2026-05-31","tag":"v2.26.0","published":"2026-05-29T00:35:02+02:00","asset":"forgejo-mcp_2.26.0_linux_amd64.tar.gz","size":4566573,"downloads":42}
 {"date":"2026-05-31","tag":"v2.26.0","published":"2026-05-29T00:35:02+02:00","asset":"forgejo-mcp_2.26.0_linux_amd64.tar.gz.sbom.cdx.json","size":40256,"downloads":1}
 {"date":"2026-05-31","tag":"v2.26.0","published":"2026-05-29T00:35:02+02:00","asset":"forgejo-mcp_2.26.0_linux_arm64.mcpb","size":4084574,"downloads":1}
 {"date":"2026-05-31","tag":"v2.26.0","published":"2026-05-29T00:35:02+02:00","asset":"forgejo-mcp_2.26.0_linux_arm64.tar.gz","size":4105483,"downloads":3}
@@ -121,7 +121,7 @@
 {"date":"2026-05-31","tag":"v2.19.0-alpha.1","published":"2026-04-26T13:26:21+02:00","asset":"forgejo-mcp_2.19.0-alpha.1_linux_arm64.tar.gz","size":3916947,"downloads":1}
 {"date":"2026-05-31","tag":"v2.18.0","published":"2026-04-21T23:03:19+02:00","asset":"forgejo-mcp_2.18.0_darwin_amd64.tar.gz","size":4355699,"downloads":4}
 {"date":"2026-05-31","tag":"v2.18.0","published":"2026-04-21T23:03:19+02:00","asset":"forgejo-mcp_2.18.0_darwin_arm64.tar.gz","size":4028851,"downloads":16}
-{"date":"2026-05-31","tag":"v2.18.0","published":"2026-04-21T23:03:19+02:00","asset":"forgejo-mcp_2.18.0_linux_amd64.tar.gz","size":4287013,"downloads":4076}
+{"date":"2026-05-31","tag":"v2.18.0","published":"2026-04-21T23:03:19+02:00","asset":"forgejo-mcp_2.18.0_linux_amd64.tar.gz","size":4287013,"downloads":4081}
 {"date":"2026-05-31","tag":"v2.18.0","published":"2026-04-21T23:03:19+02:00","asset":"forgejo-mcp_2.18.0_linux_arm64.tar.gz","size":3884418,"downloads":13}
 {"date":"2026-05-31","tag":"v2.17.0","published":"2026-03-28T00:29:58+01:00","asset":"forgejo-mcp_2.17.0_darwin_amd64.tar.gz","size":4335446,"downloads":6}
 {"date":"2026-05-31","tag":"v2.17.0","published":"2026-03-28T00:29:58+01:00","asset":"forgejo-mcp_2.17.0_darwin_arm64.tar.gz","size":4016002,"downloads":36}
