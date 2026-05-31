@@ -15,7 +15,7 @@ on:
 
 jobs:
   snapshot:
-    runs-on: docker
+    runs-on: codeberg-runner-openshift
     container:
       image: docker.io/library/debian:bookworm-slim
     steps:
