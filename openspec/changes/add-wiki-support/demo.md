@@ -47,9 +47,11 @@ plain markdown.
 { "owner": "<owner>", "repo": "<repo>", "page_name": "Home" }
 ```
 ```jsonc
-{ "title": "Home", "commit_sha": "a1b2c3…", "total_lines": 3,
+{ "title": "Home", "commit_sha": "a1b2c3…", "total_lines": 4,
   "content": "# Welcome\n\nThis wiki is driven by forgejo-mcp.\n" }
 ```
+> `total_lines` is 4, not 3: the body ends in `\n`, and the shared `sliceLines` split
+> (`strings.Split(content, "\n")`) counts the trailing newline as a final empty line.
 
 ## 4. Read via the resource URI — the money shot
 
@@ -96,10 +98,12 @@ This is the discoverability win: a wiki page is now first-class, URI-addressable
   "start_line": 1, "end_line": 5 }
 ```
 ```jsonc
-{ "title": "Home", "total_lines": 7, "start_line": 1, "end_line": 5,
+{ "title": "Home", "total_lines": 8, "start_line": 1, "end_line": 5,
   "content": "# Welcome\n\nThis wiki is driven by forgejo-mcp.\n\n## Links" }
 ```
-`total_lines: 7` > `end_line: 5` ⇒ the caller knows to request lines 6–7 next.
+`total_lines: 8` > `end_line: 5` ⇒ the caller knows to request lines 6–8 next. (The
+edited body ends in `\n`, so the split counts a trailing empty 8th line; the same
+`sliceLines` routine and count as `get_file_content`.)
 
 ## 8. Cleanup
 

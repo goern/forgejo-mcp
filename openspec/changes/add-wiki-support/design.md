@@ -34,9 +34,22 @@ shape of problem, so it gets the same solution.
 
 ## Decision 1 — Direct REST via `DoJSON`, not the SDK
 
-Handlers call `forgejo.DoJSON(ctx, method, path, body, &out)` (and `DoJSONList` for the
-list endpoint, so a `404` on an empty wiki maps to "no pages" rather than an error).
-Path building mirrors `rawhttp.go`'s own convention: `url.PathEscape` each path segment.
+Handlers call `forgejo.DoJSON(ctx, method, path, body, &out)`. The `404`→empty mapping
+(`DoJSONList`) is used for **`list_wiki_pages` only** — there a `404` means "wiki has no
+pages." `get_wiki_revisions` uses plain `DoJSON`: an existing page always has ≥1 revision,
+so a `404` there means the page does not exist and MUST surface as a not-found error, not
+an empty list. Path building escapes each segment, but the wiki page-name segment is the
+one wire detail the live-verification tasks pin down (see Decision 2): the upstream may
+expect the dashed/normalized form rather than a `%20`-escaped human title, so the spec
+states a **round-trip-correctness requirement** (a name returned by `create`/`list` must
+be reusable verbatim on `get`/`update`/`delete`) rather than prescribing the escape
+mechanism up front.
+
+**Paging without response headers.** `DoJSON` returns only `error` and discards
+`resp.Header`, so `X-Total-Count` / `Link` are unreachable. `has_next` is therefore
+derived by **over-fetching one row**: request `limit+1`, return at most `limit`, set
+`has_next = rows_received > limit`. This reuses the exact pattern in
+`operation/issue/resources.go` and adds no new transport capability.
 
 A thin typed layer lives in `pkg/forgejo/wiki.go` (`WikiPage`, `WikiPageMeta`,
 `WikiCommit`, `ListWikiPages`, `GetWikiPage`, `GetWikiPageRevisions`, `CreateWikiPage`,
@@ -53,9 +66,11 @@ field on both read and write. Therefore:
 - **Write** (`create_wiki_page`, `update_wiki_page`): the caller passes plain markdown in
   `content`; the handler base64-encodes it into `content_base64`.
 
-This field name and the spaces→dashes page-name URL rule are asserted from the
-documented API but **MUST be confirmed against a live instance** (task 5.x) before the
-change archives. If the live API differs, the spec deltas are corrected before sync.
+This field name and the page-name URL rule are asserted from the documented API but
+**MUST be confirmed against a live instance** (tasks 5.1–5.6) before the change archives.
+If the live API differs, the spec deltas are corrected before sync. The
+`update_wiki_page` no-rename guarantee (task 5.5) and whether the page `GET` payload
+carries `commit_sha` (task 5.6) are gated the same way.
 
 ## Decision 3 — output-bounding per response shape
 
@@ -63,31 +78,52 @@ change archives. If the live API differs, the spec deltas are corrected before s
 |------|-----------|----------------------------------|---------------|
 | `list_wiki_pages` | list of pages | `page`, `limit` | `has_next` + echoed `page` |
 | `get_wiki_revisions` | list of commits | `page`, `limit` | `has_next` + echoed `page` |
-| `get_wiki_page` | one page, unbounded body | `start_line`, `end_line` (reuse `get_file_content` vocab) | `total_lines` + echoed range |
+| `get_wiki_page` | one page, unbounded body | `start_line`, `end_line` (same param names as `get_file_content`) | `total_lines` + echoed range |
 | `create`/`update`/`delete` | single fixed-shape result | exempt (semantics-bounded) | n/a |
 
-`get_wiki_page` reuses the **exact** parameter names `get_file_content` already exposes
-so agents carry one line-range dialect across both tools.
+`get_wiki_page` reuses the **same line-splitting routine** `get_file_content` uses
+(`sliceLines` in `operation/repo/file.go`), not merely its parameter names — so the two
+tools agree on what a "line" is by construction. Important: `get_file_content` does **not**
+itself expose a `total_lines` field; `total_lines` is **new to `get_wiki_page`**, defined
+as `len(strings.Split(decoded, "\n"))` (the count produced by that same split). The split
+is on `"\n"`, so a trailing newline counts as a final empty line and CRLF bodies keep
+their `"\r"` — the count is identical for `"a\r\nb\r\n"` and `"a\nb\n"`. A unit test
+asserts CRLF/LF parity and trailing-newline counting.
 
 For the **resource**, embedded `recent_revisions` use `operation/resource.Bounded(...,
-"get_wiki_revisions")` (cap = `EmbeddedListCap` = 30) so the truncation sentinel is
-identical to every other embedded list. The page *content* in the resource is returned
-in full as a `text/markdown` sidecar — matching the issue/commit precedent where the
-entity body is embedded whole (resource reads take no params, so range-slicing belongs
-on the tool, not the resource). A size note is documented; callers needing slices use
-the `get_wiki_page` tool.
+"get_wiki_revisions")` (cap = `EmbeddedListCap` = 30). The page *content* sidecar is
+**bounded too** — a wiki page is a document and can be megabytes, which is exactly the
+unbounded-body trap `output-bounding.md` exists to prevent (the issue/commit precedent
+does not apply: issue bodies are bounded by comment norms, wiki pages are not). The
+sidecar is capped at `MaxInlineDownloadBytes` (the existing 1 MiB cap in `pkg/forgejo`)
+with a truncation marker naming `get_wiki_page` (which has `start_line`/`end_line`) for
+the remainder. This satisfies sub-rules 1 and 3 without a per-read knob the
+`resources/read` protocol cannot carry.
+
+The resource performs **two upstream calls** (page + revisions). Per the
+`operation/issue/resources.go` precedent, only the primary page call maps the read
+result (`403`→`-32002`, `404`→`-32003`); a secondary revisions-call failure degrades
+`recent_revisions` to empty and still succeeds the read. `commit_sha` comes from the page
+payload, not `recent_revisions[0]`.
 
 ## Decision 4 — URI parsing for wiki page names
 
 New `ParseWiki(uri) (WikiParams, error)` in `operation/resource/parse.go`:
-- path = `[owner, repo, "wiki", pageName]`, so `len(parts) == 4 && parts[2] == "wiki"`.
-- `pageName` is URL-decoded (`url.PathUnescape`) and must be non-empty after decode.
+- Strict 4-segment path = `[owner, repo, "wiki", pageName]` (`parts[2] == "wiki"`). It does
+  **not** greedily join trailing segments — a greedy join would mis-route any future
+  `…/wiki/{page}/<subresource>` URI.
+- The page-name segment is read from the **escaped** path (`u.EscapedPath()` / `RawPath`),
+  then `url.PathUnescape`d on its own. This matters: `parseForgejoURI` splits on the
+  already-decoded `u.Path`, so a `%2F` in a sub-page name would be pre-split into two
+  segments and lost. Reading the escaped form keeps `Guides%2FSetup` as one segment that
+  decodes to `Guides/Setup`.
+- Empty/whitespace page name → `-32602` (handled by `parseForgejoURI` today).
+- A **literal** unencoded `/` (extra segments) → a guided `-32602` telling the caller to
+  percent-encode `/` as `%2F`, rather than an opaque "invalid params."
 - `WikiParams{Owner, Repo, PageName string}`.
 
-The existing `parseForgejoURI` already rejects empty/whitespace path segments, so
-`forgejo://repo/o/r/wiki/` fails with `-32602` for free. Page names containing `/`
-(sub-paths) are out of scope for v1 — a `/`-bearing name would parse as extra segments
-and be rejected; documented as a known limitation.
+Sub-pages are therefore reachable (via `%2F`), not silently lossy. The README/AGENTS
+entries document the percent-encoding rule for `/` and spaces.
 
 ## Decision 5 — discoverability is a first-class requirement
 
@@ -126,10 +162,50 @@ reviewer can replay it and a future reader sees the intended UX end to end.
 
 ## Risks / Open Questions
 
-- **base64 field name / page-name encoding** — verify live (task 5.x). Highest-impact
+- **base64 field name / page-name encoding** — verify live (tasks 5.1–5.2). Highest-impact
   unknown; everything else is mechanical.
-- **`limit` ceiling** — Forgejo caps `limit`; we echo the server's effective page size
-  and document that `limit` is advisory, mirroring other paged tools.
+- **`limit` ceiling** — Forgejo caps `limit` server-side. We cannot read `X-Total-Count`
+  (no header access), so `has_next` is derived by `limit+1` over-fetch; a server cap below
+  the requested `limit` still yields a correct `has_next` because the over-fetched row is
+  also subject to the cap. We document `limit` as advisory.
 - **Write auth** — wiki writes need a token with repo write + wiki enabled on the repo;
   `403` maps to `ErrUnauthorized` → MCP error, same as every other write tool. The demo
   notes the required token scope.
+- **Referee doc-policy item (from C6)** — `docs/design/output-bounding.md` is written for
+  *tools*; it is silent on whether the invariant extends to MCP *resource* content blocks.
+  This change makes the wiki resource compliant regardless (1 MiB cap + marker), so it is
+  not a blocker, but the cross-cutting doc-policy decision ("does the bounding contract
+  formally cover resource content?") is logged for the maintainer to settle repo-wide.
+
+## Adversarial Review — 2026-05-31
+
+A three-agent debate team (adversary `devils-advocate`, defender `proponent`, and an
+orthogonal `api-contract-drift` lens) reviewed the proposal + design. The adversary culled
+to **8 load-bearing critiques**; the defender returned **8 CONCEDE-PATCH, 0 DEFEND, 0
+STALEMATE**. The referee (lead) verified the load-bearing code claims against the actual
+repo before applying every patch. Direction held (direct REST via `DoJSON`, resource
+template, output-bounding intent); the spec under-specified wire details and leaned on a
+single-word demo page (`Home`) that hid every multi-word / oversized / multi-call edge.
+
+| # | Load-bearing critique | Verdict | Fix (bound to an existing repo precedent) |
+|---|----------------------|---------|-------------------------------------------|
+| C1 | Page-name encoding self-contradicted (`url.PathEscape`→`%20` vs spaces→dashes) | CONCEDE-PATCH | Spec states round-trip-correctness; mechanism gated on live task 5.2; normative multi-word scenario added |
+| C2 | `has_next` not derivable — `DoJSON` discards `resp.Header` | CONCEDE-PATCH | `limit+1` over-fetch (`issue/resources.go`); no transport change |
+| C3 | `404`→empty wrong for `get_wiki_revisions` (existing page always has ≥1 commit) | CONCEDE-PATCH | `DoJSON` not `DoJSONList`; not-found scenario added; 404 asymmetry documented |
+| C4 | `update` title-default silently renames a spaced page | CONCEDE-PATCH | Outcome-based "MUST NOT silently rename"; mechanism gated on new task 5.5 |
+| C5 | Sub-page `/` names → opaque `-32602`; `%2F` would pre-split on decoded path | CONCEDE-PATCH | Parse page name from **escaped** path; strict 4-seg parser; `%2F` scenario + guided error |
+| C6 | Resource embedded page body unbounded | CONCEDE-PATCH | Cap sidecar at `MaxInlineDownloadBytes` (1 MiB) + marker → `get_wiki_page` (+ referee doc item) |
+| C7 | Resource is a 2-call read with no error policy | CONCEDE-PATCH | Primary-call-maps-errors / secondary-degrades-to-empty (`issue/resources.go`); `commit_sha` from page payload; new task 5.6 |
+| C8 | `total_lines`/line-range non-deterministic; false claim `get_file_content` returns `total_lines` | CONCEDE-PATCH | Mandate reuse of the shared `sliceLines`; define `total_lines = len(strings.Split(decoded,"\n"))`; CRLF/trailing-newline test; corrected demo counts; dropped the false provenance claim |
+
+**Orthogonal lens (`api-contract-drift`)** surfaced operational/longevity risks the
+in-loop adversary did not, recorded as follow-ups rather than blockers: (a) silent empty
+body if Forgejo renames `content_base64` in a future release → add a post-decode
+non-empty guard; (b) `has_wiki=false` repos return `404` indistinguishable from
+"page not found" on writes → probe `has_wiki` and return a distinct "wiki disabled" error;
+(c) no declared Forgejo/Gitea support matrix → document a tested version range. These are
+captured as lens follow-ups in `tasks.md §5` / future work.
+
+**Self-correction logged:** the defender's first take on C5 ("`%2F` already works") was
+false; re-reading `parse.go` (`u.Path` is already decoded) corrected it to the
+escaped-path requirement now in Decision 4.
