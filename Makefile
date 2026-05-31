@@ -32,7 +32,7 @@ IMAGE_TAG ?= $(shell git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' |
 
 .PHONY: container
 container:
-	podman build -t $(IMAGE_NAME):$(IMAGE_TAG) -f Containerfile .
+	podman build --build-arg VERSION=$(VERSION) -t $(IMAGE_NAME):$(IMAGE_TAG) -f Containerfile .
 
 ## mcpb: build the Claude Desktop Extension (.mcpb) for the host platform
 GOOS ?= $(shell $(GO) env GOOS)

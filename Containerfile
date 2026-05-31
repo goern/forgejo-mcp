@@ -1,4 +1,8 @@
-FROM registry.access.redhat.com/hi/go:1.26.3-builder@sha256:ca7aa4333c880e5246593dd56008be52460e8ea3ecce7755bfdfd18e9bcb66f6 AS build
+FROM quay.io/hummingbird/go:1.26.3-builder@sha256:ca7aa4333c880e5246593dd56008be52460e8ea3ecce7755bfdfd18e9bcb66f6 AS build
+
+# Version is injected at build time; the container has no usable .git to derive
+# it from (see `make container`). Defaults to "dev" for plain `podman build`.
+ARG VERSION=dev
 
 RUN dnf install -y make git && dnf clean all
 
@@ -9,9 +13,9 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux make build
+RUN CGO_ENABLED=0 GOOS=linux make build VERSION="${VERSION}"
 
-FROM registry.access.redhat.com/hi/core-runtime:2.42@sha256:c85f5e01b7f638cb30e75a8a79d06b0cbeb44209945f62572166448bb56b53e9
+FROM quay.io/hummingbird/core-runtime:2.42@sha256:c85f5e01b7f638cb30e75a8a79d06b0cbeb44209945f62572166448bb56b53e9
 
 WORKDIR /app
 
