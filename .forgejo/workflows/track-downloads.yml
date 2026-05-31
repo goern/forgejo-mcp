@@ -7,10 +7,9 @@
 #   - A repo/org secret DOWNLOAD_TRACKER_TOKEN: a token with write access used to
 #     push the daily commit back to the default branch.
 #
-# Runs on codeberg-runner-openshift, which executes steps directly in its own pod
-# image (no job `container:`). We therefore can't assume curl/jq/git are present and
-# don't use JS actions (no Node guarantee) — the job detects the package manager,
-# installs what's missing, and clones the repo manually with plain git.
+# Runs on the ubuntu-latest runner. To stay portable we don't assume jq is present
+# and avoid JS actions — the job installs any missing tool, then clones the repo
+# manually with plain git (the token in the clone URL also authenticates the push).
 name: track-downloads
 
 on:
@@ -20,7 +19,7 @@ on:
 
 jobs:
   snapshot:
-    runs-on: codeberg-runner-openshift
+    runs-on: ubuntu-latest
     steps:
       - name: Snapshot + commit
         env:
