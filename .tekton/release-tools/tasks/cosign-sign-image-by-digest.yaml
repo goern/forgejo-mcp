@@ -100,6 +100,54 @@ spec:
         IMAGE_DIGEST_REF="$(params.IMAGE_REPO_DIGEST)"
         echo "Signing: ${IMAGE_DIGEST_REF}"
 
+        # --- credential resolution shim ------------------------------------
+        # cosign / go-containerregistry resolve registry auth by HOST only
+        # (e.g. "codeberg.org"), whereas skopeo/buildah longest-prefix-match
+        # path-scoped entries (e.g. "codeberg.org/goern"). The codeberg-pusher
+        # Secret carries BOTH: a host-level auth (op1st-gitops, no goern
+        # package-write) and a path-scoped goern auth (write:package on
+        # goern/*). push-image-by-digest (skopeo) picks goern by prefix and
+        # succeeds; cosign picks the host entry and gets
+        # "401 Unauthorized: reqPackageAccess".
+        #
+        # Replicate skopeo's behaviour: pick the longest auths key that is a
+        # path-prefix of this image's repo, then re-key it under the bare host
+        # so cosign's host-only lookup finds the right token. No-op for
+        # operate-first/release-tools, whose longest match IS the host key.
+        # jq is fetched as a static binary (curl + sha256, same supply-chain
+        # pattern as cosign/syft/goreleaser) because the step runs non-root and
+        # cannot microdnf-install.
+        JQ_VERSION=jq-1.7.1
+        JQ_SHA256=5942c9b0934e510ee61eb3e30273f1b3fe2590df93933a93d7c58b81d19c8ff5
+        curl -sSfLo /tmp/jq \
+          "https://github.com/jqlang/jq/releases/download/${JQ_VERSION}/jq-linux-amd64"
+        echo "${JQ_SHA256}  /tmp/jq" | sha256sum -c -
+        chmod +x /tmp/jq
+
+        REPO="${IMAGE_DIGEST_REF%@*}"   # strip @sha256:... -> codeberg.org/ns/img
+        HOST="${REPO%%/*}"              # codeberg.org
+        # Longest auths key that equals REPO or is a "<key>/" path-prefix of it.
+        # Done in shell (not jq) to avoid jq's "." rebinding inside a pipe.
+        BEST_KEY=""
+        for k in $(/tmp/jq -r '.auths | keys[]' "${REGISTRY_AUTH_FILE}"); do
+          if [ "${REPO}" = "${k}" ] || [ "${REPO#"${k}"/}" != "${REPO}" ]; then
+            [ ${#k} -gt ${#BEST_KEY} ] && BEST_KEY="${k}"
+          fi
+        done
+        if [ -z "${BEST_KEY}" ]; then
+          echo "ERROR: no auth entry in ${REGISTRY_AUTH_FILE} matches ${REPO}" >&2
+          /tmp/jq -r '.auths | keys[]' "${REGISTRY_AUTH_FILE}" >&2 || true
+          exit 1
+        fi
+        echo "Auth entry '${BEST_KEY}' re-keyed under host '${HOST}' for cosign"
+        mkdir -p /tmp/cosign-docker
+        /tmp/jq -c --arg key "${BEST_KEY}" --arg host "${HOST}" \
+          '{auths: {($host): .auths[$key]}}' "${REGISTRY_AUTH_FILE}" \
+          > /tmp/cosign-docker/config.json
+        export DOCKER_CONFIG=/tmp/cosign-docker
+        export REGISTRY_AUTH_FILE=/tmp/cosign-docker/config.json
+        # -------------------------------------------------------------------
+
         cosign sign \
           --key="${COSIGN_KEY_PATH}" \
           --yes \
