@@ -18,11 +18,34 @@ metadata:
     # refs/tags/release-tools/... entirely.
     pipelinesascode.tekton.dev/on-cel-expression: |
       event == "push" && target_branch.matches("^refs/tags/v[0-9]")
-    pipelinesascode.tekton.dev/task: "[git-clone, .tekton/tasks/goreleaser-release.yaml, .tekton/tasks/cosign-sign-release.yaml, .tekton/tasks/mcpb-pack.yaml]"
+    pipelinesascode.tekton.dev/task: "[git-clone, .tekton/tasks/goreleaser-release.yaml, .tekton/tasks/cosign-sign-release.yaml, .tekton/tasks/mcpb-pack.yaml, .tekton/release-tools/tasks/build-image.yaml, .tekton/release-tools/tasks/push-image-by-digest.yaml, .tekton/release-tools/tasks/cosign-sign-image-by-digest.yaml, .tekton/release-tools/tasks/cosign-attach-sbom.yaml, .tekton/release-tools/tasks/promote-image-tag.yaml]"
     pipelinesascode.tekton.dev/max-keep-runs: "10"
     # Releases are not cancellable — let in-flight runs finish even if
     # another tag arrives.
     pipelinesascode.tekton.dev/cancel-in-progress: "false"
+    # Tekton Chains: upload in-toto SLSA v1.0 provenance for the published app
+    # image to the Rekor transparency log. Chains reads the IMAGE_URL +
+    # IMAGE_DIGEST pipeline results below and attaches a cosign attestation
+    # binding the image digest → PipelineRun → git commit → builder identity.
+    # Verify with: cosign verify-attestation --type slsaprovenance \
+    #   --key cosign-images.pub codeberg.org/goern/forgejo-mcp:<tag>
+    chains.tekton.dev/transparency-upload: "true"
+    # dn0 — App OCI image publish (decided 2026-06-01):
+    # Registry: codeberg.org/goern/forgejo-mcp (mirrors the signed-binary
+    # release namespace). Tags: vMAJOR.MINOR.PATCH + latest (promote-image-tag).
+    # Single-arch amd64 (reuses release-tools-build-image, which is not a
+    # manifest-list build). Image build runs in parallel with goreleaser — it
+    # compiles its own binary inside the Containerfile and only depends on
+    # resolve-tag.
+    # Required Secrets in op1st-pipelines (operator-confirmable preconditions):
+    #   - codeberg-pusher           (dockerconfigjson — push auth). Its PAT MUST
+    #     carry `write:package` on goern/forgejo-mcp. The cluster cannot validate
+    #     token scope; confirm once via the Codeberg UI before the first vX.Y.Z
+    #     tag. The release-tools image proved this Secret can push to codeberg.org,
+    #     but that auth targets the operate-first org — package-write on goern is
+    #     a SEPARATE grant that must be present on the same PAT identity.
+    #   - cosign-signing-key-images (cosign.key/.password — optional: false,
+    #     fail-closed). A missing key fails the run; no tag is ever promoted.
 spec:
   params:
     - name: repo_url
@@ -39,8 +62,22 @@ spec:
         description: |
           PaC passes the matched ref here (e.g. refs/tags/v2.24.0). Stripped
           to the bare tag name (v2.24.0) for downstream tasks.
+    results:
+      # Tekton Chains reads IMAGE_URL + IMAGE_DIGEST at the Pipeline level to
+      # bind the published app image to the SLSA provenance attestation it
+      # generates. Without these, Chains produces subject-less provenance that
+      # cannot be verified against a specific image digest.
+      - name: IMAGE_URL
+        value: $(tasks.push-image-by-digest.results.IMAGE_URL)
+      - name: IMAGE_DIGEST
+        value: $(tasks.push-image-by-digest.results.IMAGE_DIGEST)
     workspaces:
       - name: source
+      - name: registry-credentials
+        description: |
+          Kubernetes Secret containing .dockerconfigjson (or config.json) with
+          push credentials for codeberg.org/goern/forgejo-mcp. Used by the
+          image push, cosign-sign, SBOM-attach, and tag-promote tasks.
     tasks:
       - name: fetch-source
         taskRef:
@@ -117,6 +154,94 @@ spec:
           - name: REPO
             value: goern/forgejo-mcp
 
+      # dn0 — App OCI image (codeberg.org/goern/forgejo-mcp). Reuses the
+      # release-tools image tasks. Independent of goreleaser: the Containerfile
+      # compiles its own binary, so this only needs source + resolve-tag and
+      # runs in parallel with the binary release.
+      - name: build-image
+        runAfter:
+          - resolve-tag
+        taskRef:
+          name: release-tools-build-image
+        workspaces:
+          - name: source
+            workspace: source
+        params:
+          - name: IMAGE
+            value: "forgejo-mcp:$(tasks.resolve-tag.results.tag)"
+          - name: CONTEXT
+            value: "."
+          - name: CONTAINERFILE
+            value: Containerfile
+          # Inject the release version so the in-image binary reports the tag
+          # instead of the Containerfile's ARG VERSION=dev default.
+          - name: BUILD_ARGS
+            value: "VERSION=$(tasks.resolve-tag.results.tag)"
+
+      # L1 TOCTOU fix: push by digest first, no human-readable tag yet.
+      - name: push-image-by-digest
+        runAfter:
+          - build-image
+        taskRef:
+          name: release-tools-push-image-by-digest
+        workspaces:
+          - name: source
+            workspace: source
+          - name: registry-credentials
+            workspace: registry-credentials
+        params:
+          - name: IMAGE
+            value: "forgejo-mcp:$(tasks.resolve-tag.results.tag)"
+          - name: REGISTRY_IMAGE
+            value: "codeberg.org/goern/forgejo-mcp"
+
+      # Fail-closed: cosign-signing-key-images is optional: false in the task.
+      # If absent, this fails and no human-readable tag is promoted.
+      - name: cosign-sign-image
+        runAfter:
+          - push-image-by-digest
+        taskRef:
+          name: release-tools-cosign-sign-image-by-digest
+        workspaces:
+          - name: registry-credentials
+            workspace: registry-credentials
+        params:
+          - name: IMAGE_REPO_DIGEST
+            value: $(tasks.push-image-by-digest.results.IMAGE_REPO_DIGEST)
+
+      - name: attach-image-sbom
+        runAfter:
+          - cosign-sign-image
+        taskRef:
+          name: release-tools-cosign-attach-sbom
+        workspaces:
+          - name: source
+            workspace: source
+          - name: registry-credentials
+            workspace: registry-credentials
+        params:
+          - name: IMAGE_REPO_DIGEST
+            value: $(tasks.push-image-by-digest.results.IMAGE_REPO_DIGEST)
+
+      # L1 TOCTOU fix: promote vX.Y.Z + latest ONLY after sign + SBOM succeed.
+      - name: promote-image-tag
+        runAfter:
+          - push-image-by-digest
+          - cosign-sign-image
+          - attach-image-sbom
+        taskRef:
+          name: release-tools-promote-image-tag
+        workspaces:
+          - name: registry-credentials
+            workspace: registry-credentials
+        params:
+          - name: IMAGE_REPO_DIGEST
+            value: $(tasks.push-image-by-digest.results.IMAGE_REPO_DIGEST)
+          - name: TAG
+            value: $(tasks.resolve-tag.results.tag)
+          - name: REGISTRY_IMAGE
+            value: "codeberg.org/goern/forgejo-mcp"
+
   workspaces:
     - name: source
       volumeClaimTemplate:
@@ -126,5 +251,17 @@ spec:
           resources:
             requests:
               # Release builds need ~6× CI: cross-compiled binaries +
-              # SBOMs + checksums + .mcpb bundles per platform.
-              storage: 8Gi
+              # SBOMs + checksums + .mcpb bundles per platform. dn0 adds a
+              # container image build (buildah store + layers) and a syft
+              # image SBOM scan into the same workspace — bumped 8Gi → 12Gi.
+              storage: 12Gi
+    - name: registry-credentials
+      secret:
+        # dn0 (decided 2026-06-01): push to codeberg.org/goern/forgejo-mcp.
+        # Reuse the existing codeberg-pusher dockerconfigjson Secret in
+        # op1st-pipelines. Its auth covers codeberg.org, but for push to the
+        # goern namespace to succeed the underlying PAT MUST carry
+        # `write:package` on goern/forgejo-mcp — a separate grant from the
+        # operate-first package-write the release-tools image relies on.
+        # Operator confirms out-of-band (cluster cannot validate token scope).
+        secretName: codeberg-pusher

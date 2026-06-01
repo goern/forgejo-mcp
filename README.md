@@ -52,6 +52,32 @@ yay -S forgejo-mcp-bin  # uses pre-built binary
  ```
 
  > **Note:** `forgejo-mcp` is currently only available in the `unstable` channel and is not yet part of the 25.11 stable release.
+
+**Option D: Container image**
+
+A signed multi-stage OCI image is published on every release to
+`codeberg.org/goern/forgejo-mcp`. Run the server without building from source:
+
+```bash
+# Latest release
+podman run --rm -i \
+  -e FORGEJO_ACCESS_TOKEN="<your personal access token>" \
+  codeberg.org/goern/forgejo-mcp:latest \
+  --transport stdio --url https://your-forgejo-instance.org
+
+# Or pin a specific version
+podman run --rm -i codeberg.org/goern/forgejo-mcp:v2.24.0 --help
+```
+
+| Tag             | Meaning                                                         |
+|-----------------|----------------------------------------------------------------|
+| `vMAJOR.MINOR.PATCH` | Immutable — the exact release (e.g. `v2.24.0`). Use in production. |
+| `latest`        | Moving — tracks the most recent release. Convenience only.     |
+
+The image is single-arch (`linux/amd64`), signed with cosign, and carries an
+attached CycloneDX SBOM. See [Verify the container image](#6-verify-the-container-image)
+to check the signature and provenance before running.
+
 ### 2. Get Your Access Token
 
 1. Log into your Forgejo instance
@@ -476,6 +502,43 @@ Tekton Chains builder.
 > **Note:** SLSA provenance attestations are available from releases built
 > after forgejo-mcp-46j (Tekton Chains support) landed. Earlier image tags
 > carry only the cosign signature; they have no `verify-attestation` payload.
+
+### 6. Verify the container image
+
+The `codeberg.org/goern/forgejo-mcp` application image ([Option D](#1-install))
+is signed by the same `cosign-signing-key-images` key as the release-tools
+image, carries an attached CycloneDX SBOM, and gets SLSA v1.0 provenance from
+Tekton Chains. Reuse the `cosign-images.pub` key fetched above.
+
+Verify the signature:
+
+```bash
+IMAGE_TAG=v2.24.0   # substitute the release you are pulling
+cosign verify \
+  --key cosign-images.pub \
+  "codeberg.org/goern/forgejo-mcp:${IMAGE_TAG}" \
+  | jq .
+```
+
+Verify the SLSA provenance attestation:
+
+```bash
+cosign verify-attestation \
+  --type slsaprovenance \
+  --key cosign-images.pub \
+  "codeberg.org/goern/forgejo-mcp:${IMAGE_TAG}" \
+  | jq .
+```
+
+Download the attached SBOM:
+
+```bash
+cosign download sbom "codeberg.org/goern/forgejo-mcp:${IMAGE_TAG}" > forgejo-mcp.cdx.json
+```
+
+Because the publish pipeline pushes by digest and only promotes the
+`vX.Y.Z` / `latest` tags *after* signing and SBOM attachment succeed, any tag
+you can pull is guaranteed to be signed.
 
 ### Troubleshooting verification
 

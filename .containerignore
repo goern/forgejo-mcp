@@ -8,6 +8,12 @@ yarn-error.log
 build/
 dist/
 
+# buildah store created in-workspace by the Tekton release-tools-build-image
+# task (CONTEXT=. shares the workspace root). Excluding it stops the build
+# context from tarring up buildah's own image store mid-build. Harmless for
+# local `make container`, where no .buildah/ exists.
+.buildah/
+
 # Environment variables
 .env
 .env.local

@@ -21,6 +21,16 @@ spec:
       description: buildah storage driver.
       type: string
       default: vfs
+    - name: BUILD_ARGS
+      description: |
+        Whitespace-separated KEY=VALUE build args forwarded to `buildah bud`
+        as --build-arg flags. Empty by default — the release-tools image build
+        needs none. The forgejo-mcp app image release passes VERSION=<tag> so
+        the embedded binary reports the real release version instead of "dev"
+        (the Containerfile's ARG VERSION default). Values must not contain
+        spaces (release tags never do).
+      type: string
+      default: ""
   workspaces:
     - name: source
       mountPath: /workspace/source
@@ -46,8 +56,18 @@ spec:
 
         buildah --version
 
+        # Forward optional KEY=VALUE build args as --build-arg flags. Unquoted
+        # expansion is intentional: empty BUILD_ARGS expands to nothing, and
+        # each token (--build-arg / KEY=VALUE) must word-split into its own
+        # argument. Release tags carry no spaces, so this is safe.
+        BUILD_ARG_FLAGS=""
+        for kv in $(params.BUILD_ARGS); do
+          BUILD_ARG_FLAGS="${BUILD_ARG_FLAGS} --build-arg ${kv}"
+        done
+
         buildah --root "${BUILDAH_STORE}" bud \
           --storage-driver="$(params.STORAGE_DRIVER)" \
+          ${BUILD_ARG_FLAGS} \
           --file="$(params.CONTEXT)/$(params.CONTAINERFILE)" \
           --tag="$(params.IMAGE)" \
           "$(params.CONTEXT)"
