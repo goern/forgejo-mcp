@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
-  name: release-tools-on-pull-request-build
+  name: forgejo-mcp-release-tools-on-pull-request-build
   annotations:
     pipelinesascode.tekton.dev/on-event: "[pull_request]"
     pipelinesascode.tekton.dev/on-target-branch: "[main]"

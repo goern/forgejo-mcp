@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
-  name: on-tag-push-release
+  name: forgejo-mcp-on-tag-push-release
   annotations:
     # PipelinesAsCode: trigger on tag pushes matching v* refs.
     # `on-target-branch` is overloaded to match refs/tags/* as well as

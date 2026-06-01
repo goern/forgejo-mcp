@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
-  name: openspec-validate-push
+  name: forgejo-mcp-openspec-validate-push
   annotations:
     pipelinesascode.tekton.dev/on-cel-expression: |
       event == "push" && target_branch == "main" && (

@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
-  name: code-scans
+  name: forgejo-mcp-code-scans
   annotations:
     pipelinesascode.tekton.dev/on-event: "[push, pull_request]"
     pipelinesascode.tekton.dev/on-target-branch: "[main]"

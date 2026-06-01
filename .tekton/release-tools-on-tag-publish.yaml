@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
-  name: release-tools-on-tag-publish
+  name: forgejo-mcp-release-tools-on-tag-publish
   annotations:
     pipelinesascode.tekton.dev/on-event: "[push]"
     pipelinesascode.tekton.dev/on-target-branch: "[refs/tags/release-tools/v*]"
