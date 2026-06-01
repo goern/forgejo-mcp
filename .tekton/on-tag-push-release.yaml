@@ -155,12 +155,21 @@ spec:
             value: goern/forgejo-mcp
 
       # dn0 — App OCI image (codeberg.org/goern/forgejo-mcp). Reuses the
-      # release-tools image tasks. Independent of goreleaser: the Containerfile
-      # compiles its own binary, so this only needs source + resolve-tag and
-      # runs in parallel with the binary release.
+      # release-tools image tasks. The Containerfile compiles its own binary, so
+      # it is logically independent of goreleaser. It MUST NOT run in parallel
+      # with the goreleaser-family tasks, however: build-image runs buildah
+      # privileged-as-root and writes its ~1GB store (.buildah) into the SHARED
+      # `source` PVC, while goreleaser/cosign-sign/mcpb-pack read+write the same
+      # volume as uid 1000. On the single-node topolvm cluster this concurrency
+      # corrupted goreleaser's view of the workspace — the first release that
+      # added this task failed every time goreleaser ran beside buildah
+      # (compile fork/exec EACCES, then `error reading .git`). Gating on all
+      # three goreleaser-family tasks gives buildah the PVC to itself.
       - name: build-image
         runAfter:
-          - resolve-tag
+          - goreleaser
+          - cosign-sign
+          - mcpb-pack
         taskRef:
           name: release-tools-build-image
         workspaces:
