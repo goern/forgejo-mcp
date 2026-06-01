@@ -7,7 +7,7 @@ description: Convention for building a reproducible demo artifact co-located wit
 
 ## Scope
 
-This skill encodes **spellkave-local conventions** for Showboat. It is
+This skill encodes **forgejo-mcp-local conventions** for Showboat. It is
 self-contained — it does not depend on any external recipe skill.
 
 ### What Showboat Is
@@ -124,12 +124,12 @@ the env-var pattern and document the setup at the top of the demo:
 ## Replay setup
 
 ```bash
-export SPELLKAVE_BIN="${SPELLKAVE_BIN:-spellkave}"
-# Point at a local build: export SPELLKAVE_BIN=./client/target/release/spellkave
+export FORGEJO_MCP_BIN="${FORGEJO_MCP_BIN:-forgejo-mcp}"
+# Point at a local build: export FORGEJO_MCP_BIN=./forgejo-mcp
 ```
 ````
 
-Then reference the binary as `${SPELLKAVE_BIN}` in all evidence commands.
+Then reference the binary as `${FORGEJO_MCP_BIN}` in all evidence commands.
 For arbitrary repo-rooted scripts, use `${SHOWBOAT_REPO:-$(git rev-parse --show-toplevel)}`.
 See `authoring-smells.md` smells #1 and #7.
 
@@ -167,7 +167,7 @@ See `anchored-mode.md` for the full procedure, slug derivation, block shape, and
 
 ### Retrofit Existing Demo
 
-See `retrofit-mode.md` for the full procedure. Run `just check-demos` after writing.
+See `retrofit-mode.md` for the full procedure. Manually review anchor/scenario parity after writing (no automated checker is wired up in this repo yet).
 
 </workflow>
 
@@ -188,8 +188,8 @@ See `retrofit-mode.md` for the full procedure. Run `just check-demos` after writ
 - [ ] Machine and human anchor share the exact same slug
 - [ ] Quoted scenario text matches `spec.md` verbatim (whitespace-normalized)
 - [ ] At least one evidence block per proof (fenced code or `evidence-kind` marker)
-- [ ] `just check-demos` exits 0 before committing
-- [ ] No absolute `PATH=/Users/…` in evidence commands (use `${SPELLKAVE_BIN:-spellkave}`)
+- [ ] Anchor/scenario parity manually verified before committing (no automated checker in this repo yet)
+- [ ] No absolute `PATH=/Users/…` in evidence commands (use `${FORGEJO_MCP_BIN:-forgejo-mcp}`)
 - [ ] No `## AC<n>` H2 headings shadowing a quoted `#### Scenario:` H4
 - [ ] No AC numbering gaps from mid-sequence scenario insertion
 
@@ -203,8 +203,6 @@ See `retrofit-mode.md` for the full procedure. Run `just check-demos` after writ
 | `retrofit-mode.md` | Retrofit procedure for existing demos under newly-anchored specs |
 | `authoring-smells.md` | Seven antipatterns; scan before authoring in any mode |
 | `showboat --help` | Authoritative CLI reference — run it, do not memorize flags |
-| `openspec/schemas/spec-driven/templates/demo.md` | Canonical anchored demo skeleton |
-| `scripts/ci/check-spec-demo-anchors.sh` | The checker — run via `just check-demos` |
 | Host project's observability contract | The structured-output surface demos ride on |
 | Host skill's implementation workflow | Where demo construction is sequenced |
 

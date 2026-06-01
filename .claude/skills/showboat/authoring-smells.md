@@ -1,15 +1,15 @@
 # Authoring Smells
 <!-- authoring smells — antipattern index -->
 
-Seven concrete antipatterns surfaced from PoC2 demo review. Each has a
+Seven concrete antipatterns surfaced from demo review. Each has a
 one-line do/don't. All apply to both new and retrofit demos.
 
 ## 1. Absolute build paths (replayability)
 
-**DON'T:** `PATH=/Users/alice/src/spellkave--20260425/client/target/release:$PATH spellkave …`
+**DON'T:** `PATH=/Users/alice/src/forgejo-mcp--20260425:$PATH forgejo-mcp …`
 
-**DO:** Use `${SPELLKAVE_BIN:-spellkave}` and add a `## Replay setup` block
-at the top of the demo documenting how to point `SPELLKAVE_BIN` at a local
+**DO:** Use `${FORGEJO_MCP_BIN:-forgejo-mcp}` and add a `## Replay setup` block
+at the top of the demo documenting how to point `FORGEJO_MCP_BIN` at a local
 build. Absolute paths from the author's worktree break replayability for
 every other developer and reviewer.
 
@@ -76,9 +76,9 @@ to verify the mapping without reading the test source.
 
 ```markdown
 <!-- evidence-kind: unit-test-output -->
-<!-- proves: asserts that `last_used_profile` is written to state/, not config/ — see line 42 -->
+<!-- proves: asserts that a bare token is rejected, not forged into an identity — see TestExtractToken/bare_token_rejected -->
 ```bash
-cargo test --lib state::tests
+go test ./operation/ -run TestExtractToken
 ```
 ```
 
@@ -90,10 +90,10 @@ time, not only at test-source-read time.
 **DON'T:** Hard-code the worktree directory in paths inside evidence blocks:
 
 ```bash
-$ /Users/alice/src/spellkave--20260425/server/tests/run_fixtures.sh
+$ /Users/alice/src/forgejo-mcp--20260425/scripts/run_fixtures.sh
 ```
 
-**DO:** Use repo-root-relative paths (e.g. `server/tests/run_fixtures.sh`,
+**DO:** Use repo-root-relative paths (e.g. `scripts/run_fixtures.sh`,
 run from repo root) or `${SHOWBOAT_REPO:-$(git rev-parse --show-toplevel)}`
 for scripts that require an absolute prefix. Document the variable in the
 `## Replay setup` block and add `export SHOWBOAT_REPO="$(pwd)"` to the

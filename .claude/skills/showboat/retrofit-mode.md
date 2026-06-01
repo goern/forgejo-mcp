@@ -35,7 +35,7 @@ first. Antipattern checklist lives in `authoring-smells.md`.
 
    After retrofit:
    ```markdown
-   <!-- spec-scenario: spellkave-cli#config-state-and-cache-have-distinct-homes -->
+   <!-- spec-scenario: merge-pull-request#config-state-and-cache-have-distinct-homes -->
    **Proves:** [spec.md → Scenario: Config, state, and cache have distinct homes](./spec.md#scenario-config-state-and-cache-have-distinct-homes)
 
    #### Scenario: Config, state, and cache have distinct homes
@@ -60,11 +60,11 @@ first. Antipattern checklist lives in `authoring-smells.md`.
 
 4. **Surface test candidates** — for each scenario slug, grep the following
    paths for test function names or filter strings that resemble the slug:
-   - `server/tests/`
-   - `client/tests/`
-   - `packages/*/test` (if present)
+   - `pkg/**/*_test.go`
+   - `operation/**/*_test.go`
+   - `test/` (if present)
 
-   A candidate matches when its function name, test name, or `--exact` filter
+   A candidate matches when its function name or `go test -run` filter
    contains any substring of the scenario slug (at least one full slug token).
    Report candidates to the caller before writing.
 
@@ -92,6 +92,5 @@ first. Antipattern checklist lives in `authoring-smells.md`.
 7. **Note test-split decisions** — when a `unit-test-output` placeholder is
    chosen instead of `test-invocation`, add an inline comment explaining why
    (`<!-- retrofitted: no 1:1 test found; unit-test-output fallback -->`).
-   This is the data the Tier-C pilot is meant to surface.
 
-8. **Verify.** Run `just check-demos`; fix any reported errors before committing.
+8. **Verify.** Manually confirm anchor/scenario parity (every `#### Scenario:` has a matching proof block); fix any gaps before committing.

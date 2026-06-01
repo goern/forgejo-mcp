@@ -59,7 +59,7 @@ Each scenario proof consists of four consecutive elements:
 
 Rules:
 1. **Machine anchor** — HTML comment on its own line. `<capability>` is the
-   spec's directory name (e.g. `spellkave-cli`). `<slug>` is derived as above.
+   spec's directory name (e.g. `merge-pull-request`). `<slug>` is derived as above.
 2. **Human anchor** — `**Proves:**` link on the very next line. The `#scenario-<slug>`
    fragment matches GitHub's auto-generated anchor for the heading.
 3. **Quoted scenario** — the `#### Scenario:` heading and all WHEN/THEN/AND
@@ -70,9 +70,7 @@ Rules:
    per scenario minimum. The checker validates presence, not content.
 
 > Before authoring: see `authoring-smells.md` for concrete antipatterns
-> that break replayability, readability, and checker compliance.
-
-See `openspec/schemas/spec-driven/templates/demo.md` for the canonical skeleton.
+> that break replayability and readability.
 
 ## Evidence Kinds
 
@@ -81,10 +79,10 @@ evidence is not a plain shell capture:
 
 | Kind | When to use | Example |
 |------|-------------|---------|
-| `showboat-cli` | Captured `spellkave` CLI command + stdout. Default for observable behaviors. | `$ spellkave status` + JSONL output |
-| `test-invocation` | Single targeted test command + its output. Use when the scenario maps 1:1 to a test function. | `$ cargo test --manifest-path server/Cargo.toml -- world_tick_advances --exact` |
-| `unit-test-output` | Captured output of a multi-test run; include a comment naming which test(s) inside prove the scenario. Use when 1:1 mapping is too expensive. | `$ cargo test --manifest-path server/Cargo.toml` + note: "see `test_item_pickup` assertion on line 47" |
-| `external-artifact` | Link to a file or run elsewhere in the repo (e.g. snapshot fixture, CI run URL). | `See server/tests/fixtures/world_tick_snapshot.json` |
+| `showboat-cli` | Captured `forgejo-mcp` CLI command + stdout. Default for observable behaviors. | `$ forgejo-mcp --help` + output |
+| `test-invocation` | Single targeted test command + its output. Use when the scenario maps 1:1 to a test function. | `$ go test ./pkg/forgejo/ -run TestClient_AuthorizationHeader -v` |
+| `unit-test-output` | Captured output of a multi-test run; include a comment naming which test(s) inside prove the scenario. Use when 1:1 mapping is too expensive. | `$ go test ./...` + note: "see `TestExtractToken/bare_token_rejected` assertion" |
+| `external-artifact` | Link to a file or run elsewhere in the repo (e.g. fixture, CI run URL). | `See demos/multi-tenant-http.md` |
 
 **Prefer `test-invocation` when a 1:1 test exists.** Retrofit mode surfaces
 candidates automatically (see `retrofit-mode.md`). Fall back to
@@ -122,10 +120,10 @@ navigation to be machine-readable without grep.
 1. **Detect opt-in.** Confirm `<!-- demos-anchored: true -->` is present in `spec.md`.
 2. **Extract scenarios.** Read every `#### Scenario:` heading and WHEN/THEN/AND bullets from `spec.md`. Compute slug for each.
 3. **Deploy.** Ensure the current branch is live.
-4. **Add `## Replay setup` block.** Document `SPELLKAVE_BIN` at the top of the demo before the first anchor (see SKILL.md "Portable Binary Reference").
+4. **Add `## Replay setup` block.** Document `FORGEJO_MCP_BIN` at the top of the demo before the first anchor (see SKILL.md "Portable Binary Reference").
 5. **For each scenario in spec order:**
    a. Write the machine anchor and human anchor.
    b. Copy the scenario heading and WHEN/THEN/AND bullets verbatim.
    c. Run the evidence command and capture output, OR grep for a test candidate.
    d. Write the evidence block with the appropriate `<!-- evidence-kind: ... -->` marker.
-6. **Commit.** Run `just check-demos` to confirm the spec passes before committing.
+6. **Commit.** Manually confirm every `#### Scenario:` in `spec.md` has a matching anchored proof block before committing.
