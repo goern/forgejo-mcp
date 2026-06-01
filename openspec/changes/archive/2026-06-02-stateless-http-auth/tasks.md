@@ -37,7 +37,7 @@
 - [x] 6.1 `make build` passes against PR #138's branch.
 - [x] 6.2 `go test ./...` passes against PR #138's branch.
 - [x] 6.3 `openspec validate stateless-http-auth --strict` passes.
-- [ ] 6.4 Manual smoke: start server with `--transport http --url https://codeberg.org` (no `--token`); send two requests with distinct tokens; each `get_my_user_info` returns the correct distinct identity.
-- [ ] 6.5 Manual smoke: send a request with `Authorization: bearer xyz` (lowercase scheme) and confirm it resolves to the per-request identity, not the global fallback. (Validates 2.4.)
-- [ ] 6.6 Manual smoke: send a request with a deliberately broken Forgejo URL so the SDK's version probe fails; confirm the request returns an error rather than silently authenticating as the global token. (Validates 1.3.)
-- [ ] 6.7 After PR #138 merges with blocker fixes, archive this change under `openspec/changes/archive/<date>-stateless-http-auth/`.
+- [x] 6.4 Manual smoke: started server `--transport http --url https://codeberg.org` (no `--token`, env tokens unset → `token_configured: false`). A `get_my_user_info` call with `Authorization: token <valid>` returned `goern`; with a bogus token and with no header it returned an error and **no** identity (no silent global fallback). Two *distinct user* identities not exercised (single available account), but per-request isolation across distinct tokens is proven by unit test 4.2.
+- [x] 6.5 Manual smoke: `Authorization: bearer <valid>` (lowercase scheme) resolved to the per-request identity `goern`, confirming case-insensitive matching. (Validates 2.4.)
+- [x] 6.6 Covered by unit test 4.3 (`TestClient_EphemeralConstructionError`): ctx-token + unreachable URL → `Client(ctx)` returns an error and nil client, no singleton downgrade. An E2E smoke is not feasible — a broken `--url` fails startup `VerifyConnection`, so the server never boots to serve a request. (Validates 1.3.)
+- [x] 6.7 PR #185 (blocker fix) merged to main; archiving this change under `openspec/changes/archive/<date>-stateless-http-auth/`.
