@@ -1,3 +1,49 @@
+## [2.27.0-alpha.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.26.0...v2.27.0-alpha.1) (2026-06-01)
+
+### :sparkles: Features
+
+* ✨ build and publish signed OCI image on tag release ([bdfd968](https://codeberg.org/goern/forgejo-mcp/commit/bdfd968f7360df1d8ed5a2d1d4003d3a36aad3b4))
+* 📊 daily release-download tracking + Chart.js dashboard ([c6bdcfa](https://codeberg.org/goern/forgejo-mcp/commit/c6bdcfadb39e57d9bd5dd20aaa6dc223589a60c9))
+
+### :bug: Fixes
+
+* 🐛 Forgejo push auth — token as userinfo, not x-access-token ([9df82c8](https://codeberg.org/goern/forgejo-mcp/commit/9df82c8134fbb3f48233f5c5576daddb6190c575))
+* 💚 POSIX sh for runner — no bash in pod image (shell: sh, drop pipefail/herestrings) ([976b245](https://codeberg.org/goern/forgejo-mcp/commit/976b24549df5e0f8545d3c41ba7456094fc8405d))
+* 💚 respect XDG/HOME — writable dir for git config on read-only pod FS ([b83fcde](https://codeberg.org/goern/forgejo-mcp/commit/b83fcde85d6b19a60abc58aff511d8bc30d521fd))
+* 💚 run in own pod image — drop container:, manual clone, distro-agnostic deps ([16a7000](https://codeberg.org/goern/forgejo-mcp/commit/16a7000932e1bad52eb8c300002707e258bd80a3))
+* 💚 run track-downloads on codeberg-runner-openshift (docker label unavailable) ([d1b0f79](https://codeberg.org/goern/forgejo-mcp/commit/d1b0f798c3a4ee40d0c84f145b4b9f1eabd5c255))
+* 💚 use ubuntu-latest runner label ([781c32f](https://codeberg.org/goern/forgejo-mcp/commit/781c32f7ca92832f375b174ff3a45ad3912a1cf8))
+
+### :zap: Refactor
+
+* ♻️ hardcode repo+branch in push, drop GITHUB_* runner vars ([2770e79](https://codeberg.org/goern/forgejo-mcp/commit/2770e79b98afe0563762cb789f4b2e9802172281))
+
+### :repeat: CI
+
+* ⏭️ skip on-pull-request pipeline for docs-only PRs ([#180](https://codeberg.org/goern/forgejo-mcp/issues/180)) ([03e58ea](https://codeberg.org/goern/forgejo-mcp/commit/03e58ea45f86c53aee2d09ef456efe4501b671ec))
+
+### :repeat: Chore
+
+* 📊 snapshot release download counts ([ef6db22](https://codeberg.org/goern/forgejo-mcp/commit/ef6db2257504c377fa87a41697fb02726a7f3be7))
+* 📊 snapshot release download counts ([01e29f1](https://codeberg.org/goern/forgejo-mcp/commit/01e29f12792fecc34f951ea0cae20e643535467f))
+* 🔖 close bead forgejo-mcp-5zy (download tracking shipped) ([0df01c2](https://codeberg.org/goern/forgejo-mcp/commit/0df01c2797aaeaa9a9205f162580071a2785c6d0))
+* 🔖 sync beads jsonl ([da794b0](https://codeberg.org/goern/forgejo-mcp/commit/da794b0942da8def1b8cda7917fdb28da333b3e8))
+* 🔖 track bead forgejo-mcp-3ph for wiki OpenSpec ([f6596bf](https://codeberg.org/goern/forgejo-mcp/commit/f6596bfbabdfd42573831da9d46ef115ce6ad78b))
+* 🔖 track bead forgejo-mcp-5zy (release download analytics) ([7c9c182](https://codeberg.org/goern/forgejo-mcp/commit/7c9c182f03359b150b4c21287f93528759f6fb5d))
+* 🔖 track bead forgejo-mcp-dn0 (OCI image release pipeline) ([33e4eba](https://codeberg.org/goern/forgejo-mcp/commit/33e4eba871324a7a951b54a63664c7e69e670564))
+* 🔖 track bead forgejo-mcp-fd6 (label tools + resource templates) ([03633b3](https://codeberg.org/goern/forgejo-mcp/commit/03633b38016327d416b64489045ea71f5cda5951))
+* 🔧 add openspec verify-change and sync-specs skills ([8614964](https://codeberg.org/goern/forgejo-mcp/commit/861496497a174f9afa8e789aa3bb5d729920e17e))
+* 🔧 add OWNERS for Pipelines as Code CI authorization ([f268f8d](https://codeberg.org/goern/forgejo-mcp/commit/f268f8daad2420090da12f53d2102a116eb652b4)), closes [#178](https://codeberg.org/goern/forgejo-mcp/issues/178)
+* 🔧 add verify-and-journal wrapper script for OpenSpec SQI ([a900db0](https://codeberg.org/goern/forgejo-mcp/commit/a900db049df1933fdf38901a7bcf5cbba9cdcee6))
+* 🔧 close forgejo-mcp-dn0 (OCI image publish) ([7d51b76](https://codeberg.org/goern/forgejo-mcp/commit/7d51b76408caefce363896d456f3bd1a29370b1b))
+* 🗃️ sync beads state (close vbz, add hxv) ([daf834b](https://codeberg.org/goern/forgejo-mcp/commit/daf834b392336466b22bbb8ac4ac668b1af48dd9))
+* **deps:** lock file maintenance ([d5f0e1d](https://codeberg.org/goern/forgejo-mcp/commit/d5f0e1d7fad395bed3ff93ea574321f17303f294))
+* **deps:** update quay.io/hummingbird/go:1.26.3-builder docker digest to 8701cf6 ([a7b46f7](https://codeberg.org/goern/forgejo-mcp/commit/a7b46f7cb8a782066627d52fb41063ac2979d26c))
+* **deps:** update registry.access.redhat.com/hi/go:1.26.3-builder docker digest to ca7aa43 ([874e9a4](https://codeberg.org/goern/forgejo-mcp/commit/874e9a47d24fbd409162ee97de61d648bc6fa31e))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to 8701cf6 ([247d64f](https://codeberg.org/goern/forgejo-mcp/commit/247d64fde285e96a3f0ced6e72228b332c14efd5))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to ca7aa43 ([004a28c](https://codeberg.org/goern/forgejo-mcp/commit/004a28c849a38a471b2ac042b9ddb329ed1ef494))
+* migrated to a project of it's own: https://codeberg.org/goern/beads-tv ([f61e858](https://codeberg.org/goern/forgejo-mcp/commit/f61e8588668e720beb3f0dfc01069699c5c9d352))
+
 ## [2.26.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.25.1...v2.26.0) (2026-05-28)
 
 ### :sparkles: Features
