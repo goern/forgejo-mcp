@@ -52,3 +52,8 @@ mcpb: build
 		mv extension/manifest.json.tmp extension/manifest.json && \
 		npx -y @anthropic-ai/mcpb pack extension/ "$(MCPB_OUT)"
 	@echo "Built $(MCPB_OUT)"
+
+## check-demos: validate anchored Showboat demos against their specs
+.PHONY: check-demos
+check-demos:
+	./scripts/ci/check-spec-demo-anchors.sh
