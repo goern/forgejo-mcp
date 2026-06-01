@@ -72,9 +72,14 @@ spec:
           --tag="$(params.IMAGE)" \
           "$(params.CONTEXT)"
 
-        IMAGE_ID=$(buildah --root "${BUILDAH_STORE}" \
+        # Capture all image IDs, then take the first line via shell expansion.
+        # Piping `buildah images` into `head -1` lets head close the pipe early,
+        # sending buildah SIGPIPE; under `set -o pipefail` that fails the step
+        # with exit 141 (observed intermittently). Avoid the pipe entirely.
+        IMAGE_IDS=$(buildah --root "${BUILDAH_STORE}" \
           --storage-driver="$(params.STORAGE_DRIVER)" images \
-          --no-trunc --format '{{.ID}}' 2>/dev/null | head -1)
+          --no-trunc --format '{{.ID}}' 2>/dev/null)
+        IMAGE_ID=${IMAGE_IDS%%$'\n'*}
         if [ -z "${IMAGE_ID}" ]; then
           echo "ERROR: no images in local store after build" >&2
           exit 1
