@@ -8,7 +8,8 @@ metadata:
         files.all.exists(f, f.startsWith('openspec/')) ||
         files.all.exists(f, f == '.tekton/openspec-validate-pr.yaml') ||
         files.all.exists(f, f == '.tekton/openspec-validate-push.yaml') ||
-        files.all.exists(f, f == '.tekton/tasks/openspec-validate.yaml')
+        files.all.exists(f, f == '.tekton/tasks/openspec-validate.yaml') ||
+        files.all.exists(f, f == 'scripts/ci/check-spec-demo-anchors.sh')
       )
     pipelinesascode.tekton.dev/task: "[git-clone, .tekton/tasks/openspec-validate.yaml]"
     pipelinesascode.tekton.dev/max-keep-runs: "5"

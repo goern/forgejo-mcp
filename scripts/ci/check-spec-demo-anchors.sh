@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 #
 # check-spec-demo-anchors.sh — validate anchored Showboat demos against specs.
 #
@@ -19,19 +19,28 @@
 #
 # Exit 0 when all anchored specs pass (including the trivial "no anchored specs
 # yet" case). Exit 1 on any violation.
+#
+# POSIX sh — no bashisms — so it runs identically in local shells, the
+# pre-commit hook, and the minimal release-tools CI image.
 
-set -euo pipefail
+set -eu
 
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$ROOT"
 
-errors=0
+# Errors are recorded in a temp file: the spec-discovery loop reads from a file
+# (not a pipe), so it runs in the current shell, but accumulating to a file
+# keeps the logic robust regardless of how any inner loop is spawned.
+errfile="$(mktemp)"
+trap 'rm -f "$errfile" "$specs_list" 2>/dev/null || true' EXIT
+specs_list="$(mktemp)"
+
 specs_checked=0
 scenarios_checked=0
 
 err() {
   printf 'FAIL: %s\n' "$1" >&2
-  errors=$((errors + 1))
+  echo x >>"$errfile"
 }
 
 # GitHub-style slug: lowercase, non-alnum runs -> '-', trim leading/trailing '-'.
@@ -50,27 +59,26 @@ is_anchored() {
   ' "$1"
 }
 
-# Find the sibling demo for a spec.md in the same directory.
+# Find the sibling demo for a spec.md in the same directory. Prints path, or
+# returns non-zero when none exists.
 find_demo() {
-  local dir="$1" d
-  if [[ -f "$dir/demo.md" ]]; then
-    printf '%s\n' "$dir/demo.md"
+  _dir="$1"
+  if [ -f "$_dir/demo.md" ]; then
+    printf '%s\n' "$_dir/demo.md"
     return 0
   fi
-  for d in "$dir"/*.demo.md; do
-    [[ -e "$d" ]] || continue
-    printf '%s\n' "$d"
+  for _d in "$_dir"/*.demo.md; do
+    [ -e "$_d" ] || continue
+    printf '%s\n' "$_d"
     return 0
   done
   return 1
 }
 
-shopt -s nullglob
+find openspec -type f -name 'spec.md' 2>/dev/null | sort >"$specs_list" || true
 
-# Collect spec.md files under openspec/ (specs + change deltas).
-mapfile -t spec_files < <(find openspec -type f -name 'spec.md' 2>/dev/null | sort)
-
-for spec in "${spec_files[@]}"; do
+while IFS= read -r spec; do
+  [ -n "$spec" ] || continue
   is_anchored "$spec" || continue
   specs_checked=$((specs_checked + 1))
 
@@ -83,12 +91,11 @@ for spec in "${spec_files[@]}"; do
   fi
 
   # Every '#### Scenario:' heading in the spec.
-  while IFS= read -r heading; do
-    [[ -n "$heading" ]] || continue
-    scenarios_checked=$((scenarios_checked + 1))
+  sed -nE 's/^#### Scenario:[[:space:]]*//p' "$spec" | while IFS= read -r heading; do
+    [ -n "$heading" ] || continue
     slug="$(slugify "$heading")"
-
     machine="<!-- spec-scenario: ${capability}#${slug} -->"
+
     if ! grep -qF "$machine" "$demo"; then
       err "$demo missing machine anchor for scenario \"$heading\" (expected: $machine)"
       continue
@@ -108,12 +115,20 @@ for spec in "${spec_files[@]}"; do
     ' "$demo"; then
       err "$demo proof for scenario \"$heading\" has no evidence block (fenced code or <!-- evidence-kind: ... -->)"
     fi
-  done < <(sed -nE 's/^#### Scenario:[[:space:]]*//p' "$spec")
-done
+  done
+
+  # Count scenarios for the summary (separate pass; the loop above runs in a
+  # pipe subshell so its increments would not survive).
+  n="$(grep -cE '^#### Scenario:' "$spec" || true)"
+  scenarios_checked=$((scenarios_checked + n))
+done <"$specs_list"
+
+errors=0
+if [ -s "$errfile" ]; then
+  errors="$(wc -l <"$errfile" | tr -d ' ')"
+fi
 
 echo "check-demos: ${specs_checked} anchored spec(s), ${scenarios_checked} scenario(s) checked, ${errors} error(s)."
 
-if [[ "$errors" -gt 0 ]]; then
-  exit 1
-fi
+[ "$errors" -eq 0 ] || exit 1
 exit 0

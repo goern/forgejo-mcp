@@ -3,3 +3,13 @@ repos:
     rev: v8.30.1
     hooks:
       - id: gitleaks
+
+  - repo: local
+    hooks:
+      - id: check-demos
+        name: check anchored spec demos
+        description: Validate anchored Showboat demos against their specs.
+        entry: scripts/ci/check-spec-demo-anchors.sh
+        language: script
+        pass_filenames: false
+        files: ^(openspec/.*\.(spec|demo)\.md|openspec/.*/(spec|demo)\.md|scripts/ci/check-spec-demo-anchors\.sh)$
