@@ -114,16 +114,14 @@ func extractToken(auth string) string {
 		return ""
 	}
 	parts := strings.SplitN(auth, " ", 2)
-	if len(parts) == 2 {
-		scheme := strings.ToLower(parts[0])
-		if scheme == "token" || scheme == "bearer" {
-			return parts[1]
-		}
+	if len(parts) != 2 {
+		// No scheme prefix. Spec: bare tokens MUST be rejected and treated
+		// as if no Authorization header were present (no silent identity).
 		return ""
 	}
-	// Minimalist fallback for bare tokens (no spaces allowed)
-	if !strings.Contains(auth, " ") {
-		return auth
+	scheme := strings.ToLower(parts[0])
+	if scheme == "token" || scheme == "bearer" {
+		return parts[1]
 	}
 	return ""
 }

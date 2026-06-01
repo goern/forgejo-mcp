@@ -141,6 +141,8 @@ You can run a single centralized `forgejo-mcp` instance and let each client prov
 
 See [demos/multi-tenant-http.md](demos/multi-tenant-http.md) for a copy-pasteable walkthrough.
 
+> Design rationale, token-resolution rules, and request-isolation guarantees: see the `stateless-http-auth` OpenSpec change (`openspec/changes/archive/`).
+
 **For SSE mode** (legacy HTTP-based):
 
 ```json

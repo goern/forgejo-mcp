@@ -51,6 +51,28 @@ func TestClient_WithContextToken(t *testing.T) {
 	}
 }
 
+// TestClient_EphemeralConstructionError asserts that when a context token is
+// present but forgejo.NewClient fails (here: unreachable URL so the SDK's
+// version probe errors), Client returns an error and a nil client rather than
+// silently downgrading to the global singleton. Spec: "Failed ephemeral
+// construction MUST NOT fall through to the singleton."
+func TestClient_EphemeralConstructionError(t *testing.T) {
+	// Port 1 refuses connections, so the SDK's server-version probe fails.
+	flag.URL = "http://127.0.0.1:1"
+	flag.Token = "global-token"
+	client = nil
+	clientOnce = sync.Once{}
+
+	ctx := WithToken(context.Background(), "request-token")
+	c, err := Client(ctx)
+	if err == nil {
+		t.Fatalf("expected error when ephemeral client construction fails, got nil")
+	}
+	if c != nil {
+		t.Fatalf("expected nil client on construction failure, got non-nil (silent singleton downgrade)")
+	}
+}
+
 func TestClient_AuthorizationHeader(t *testing.T) {
 	tokensSeen := make(map[string]bool)
 	var mu sync.Mutex
