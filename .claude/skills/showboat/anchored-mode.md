@@ -126,4 +126,4 @@ navigation to be machine-readable without grep.
    b. Copy the scenario heading and WHEN/THEN/AND bullets verbatim.
    c. Run the evidence command and capture output, OR grep for a test candidate.
    d. Write the evidence block with the appropriate `<!-- evidence-kind: ... -->` marker.
-6. **Commit.** Manually confirm every `#### Scenario:` in `spec.md` has a matching anchored proof block before committing.
+6. **Commit.** Run `just check-demos` to confirm the spec passes before committing.

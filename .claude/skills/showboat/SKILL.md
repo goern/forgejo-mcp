@@ -167,7 +167,7 @@ See `anchored-mode.md` for the full procedure, slug derivation, block shape, and
 
 ### Retrofit Existing Demo
 
-See `retrofit-mode.md` for the full procedure. Manually review anchor/scenario parity after writing (no automated checker is wired up in this repo yet).
+See `retrofit-mode.md` for the full procedure. Run `just check-demos` after writing.
 
 </workflow>
 
@@ -188,7 +188,7 @@ See `retrofit-mode.md` for the full procedure. Manually review anchor/scenario p
 - [ ] Machine and human anchor share the exact same slug
 - [ ] Quoted scenario text matches `spec.md` verbatim (whitespace-normalized)
 - [ ] At least one evidence block per proof (fenced code or `evidence-kind` marker)
-- [ ] Anchor/scenario parity manually verified before committing (no automated checker in this repo yet)
+- [ ] `just check-demos` exits 0 before committing
 - [ ] No absolute `PATH=/Users/…` in evidence commands (use `${FORGEJO_MCP_BIN:-forgejo-mcp}`)
 - [ ] No `## AC<n>` H2 headings shadowing a quoted `#### Scenario:` H4
 - [ ] No AC numbering gaps from mid-sequence scenario insertion
@@ -203,6 +203,7 @@ See `retrofit-mode.md` for the full procedure. Manually review anchor/scenario p
 | `retrofit-mode.md` | Retrofit procedure for existing demos under newly-anchored specs |
 | `authoring-smells.md` | Seven antipatterns; scan before authoring in any mode |
 | `showboat --help` | Authoritative CLI reference — run it, do not memorize flags |
+| `scripts/ci/check-spec-demo-anchors.sh` | The checker — run via `just check-demos` |
 | Host project's observability contract | The structured-output surface demos ride on |
 | Host skill's implementation workflow | Where demo construction is sequenced |
 

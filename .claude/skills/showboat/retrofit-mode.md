@@ -93,4 +93,4 @@ first. Antipattern checklist lives in `authoring-smells.md`.
    chosen instead of `test-invocation`, add an inline comment explaining why
    (`<!-- retrofitted: no 1:1 test found; unit-test-output fallback -->`).
 
-8. **Verify.** Manually confirm anchor/scenario parity (every `#### Scenario:` has a matching proof block); fix any gaps before committing.
+8. **Verify.** Run `just check-demos`; fix any reported errors before committing.
