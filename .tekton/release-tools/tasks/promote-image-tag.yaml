@@ -61,10 +61,20 @@ spec:
         printf '%s' "${DEST}" > "$(results.IMAGE_REF.path)"
         echo "Promoted: ${DEST}"
 
-        # Also promote :latest for non-prod convenience.
-        LATEST="$(params.REGISTRY_IMAGE):latest"
-        skopeo copy \
-          --authfile="${REGISTRY_AUTH_FILE}" \
-          "docker://${SRC}" \
-          "docker://${LATEST}"
-        echo "Promoted: ${LATEST}"
+        # Promote :latest ONLY for stable releases. The pipeline triggers on any
+        # v* tag, including pre-releases (vX.Y.Z-alpha.N / -beta.N / -rc.N), and
+        # :latest must never point at a pre-release. A semver pre-release carries
+        # a "-" segment; stable tags do not.
+        case "${TAG}" in
+          *-*)
+            echo "Pre-release ${TAG}: skipping :latest promotion"
+            ;;
+          *)
+            LATEST="$(params.REGISTRY_IMAGE):latest"
+            skopeo copy \
+              --authfile="${REGISTRY_AUTH_FILE}" \
+              "docker://${SRC}" \
+              "docker://${LATEST}"
+            echo "Promoted: ${LATEST}"
+            ;;
+        esac
