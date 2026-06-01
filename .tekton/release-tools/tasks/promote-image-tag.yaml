@@ -78,3 +78,15 @@ spec:
             echo "Promoted: ${LATEST}"
             ;;
         esac
+
+        # Remove the ephemeral :build-tmp tag left by push-image-by-digest.
+        # It only exists to keep the manifest alive (referenced) until a
+        # permanent tag is promoted; now that :${TAG} points at the same
+        # digest, the staging tag is redundant and should not linger in the
+        # registry's tag list. Best-effort: tolerate its absence (e.g. re-runs).
+        BUILD_TMP="$(params.REGISTRY_IMAGE):build-tmp"
+        if skopeo delete --authfile="${REGISTRY_AUTH_FILE}" "docker://${BUILD_TMP}" 2>/dev/null; then
+          echo "Removed staging tag: ${BUILD_TMP}"
+        else
+          echo "Staging tag ${BUILD_TMP} not present (nothing to remove)"
+        fi
