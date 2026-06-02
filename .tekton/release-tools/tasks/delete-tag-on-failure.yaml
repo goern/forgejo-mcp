@@ -1,0 +1,51 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: release-tools-delete-tag-on-failure
+  annotations:
+    tekton.dev/displayName: "delete the version tag if signing/attestation did not succeed"
+spec:
+  description: |
+    Fail-closed cleanup (bd forgejo-mcp-9r4). push-image-by-digest now pushes
+    the :vX.Y.Z tag BEFORE it is signed, so a failed cosign-sign or attach-sbom
+    would otherwise leave an unsigned image advertised under its version tag.
+
+    This task runs in the pipeline `finally` block, guarded by a `when`
+    expression that fires only when the attach-sbom task did not succeed
+    (which also covers a skipped attach-sbom when cosign-sign failed before it).
+    At that point :latest has not been promoted and no :build-tmp exists, so
+    :vX.Y.Z is the only tag on the manifest — deleting it (which deletes the
+    manifest on Forgejo/Codeberg) safely removes the unsigned image entirely.
+
+    Best-effort: a missing tag is not an error (e.g. push itself failed).
+  params:
+    - name: REGISTRY_IMAGE
+      description: Registry image path without tag.
+      type: string
+    - name: TAG
+      description: Human-readable version tag to delete (e.g. v1.0.0).
+      type: string
+  workspaces:
+    - name: registry-credentials
+      mountPath: /workspace/registry-creds
+      optional: false
+  steps:
+    - name: delete-unsigned-tag
+      image: quay.io/skopeo/stable:latest
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+
+        TARGET="$(params.REGISTRY_IMAGE):$(params.TAG)"
+
+        REGISTRY_AUTH_FILE="$(workspaces.registry-credentials.path)/.dockerconfigjson"
+        if [ ! -f "${REGISTRY_AUTH_FILE}" ]; then
+          REGISTRY_AUTH_FILE="$(workspaces.registry-credentials.path)/config.json"
+        fi
+
+        echo "Signing/attestation did not succeed — removing unsigned ${TARGET}"
+        if skopeo delete --authfile="${REGISTRY_AUTH_FILE}" "docker://${TARGET}" 2>/dev/null; then
+          echo "Deleted unsigned tag: ${TARGET}"
+        else
+          echo "Tag ${TARGET} not present (nothing to remove)"
+        fi

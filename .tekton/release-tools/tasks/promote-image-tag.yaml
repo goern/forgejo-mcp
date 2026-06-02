@@ -6,11 +6,16 @@ metadata:
     tekton.dev/displayName: "promote release-tools image to human-readable tag"
 spec:
   description: |
-    L1 TOCTOU fix: this task runs LAST in the publish pipeline, after
-    cosign-sign and SBOM-attach have both succeeded. Only at this point is
-    the human-readable vMAJOR.MINOR.PATCH tag written to the registry.
-    Prior to this step, only the digest reference exists in the registry.
+    Runs LAST in the publish pipeline, after cosign-sign and SBOM-attach have
+    both succeeded. The version tag (:vMAJOR.MINOR.PATCH) was already pushed
+    and signed in place by the earlier tasks; this task only adds the :latest
+    tag, and only for stable releases.
 
+    # bd forgejo-mcp-9r4: this task no longer copies :vX.Y.Z (already pushed)
+    # and no longer deletes a :build-tmp staging tag. Deleting a tag on
+    # Forgejo/Codeberg deletes the shared manifest, which previously removed
+    # the just-promoted :vX.Y.Z and :latest tags. :latest is a separate tag
+    # pointing at the same digest; we only ADD it, never delete here.
     # Path A (decided 2026-05-25): codeberg.org/operate-first/release-tools
     # Registry: codeberg.org/operate-first/release-tools
   params:
@@ -43,28 +48,22 @@ spec:
 
         SRC="$(params.IMAGE_REPO_DIGEST)"
         TAG="$(params.TAG)"
-        DEST="$(params.REGISTRY_IMAGE):${TAG}"
 
         REGISTRY_AUTH_FILE="$(workspaces.registry-credentials.path)/.dockerconfigjson"
         if [ ! -f "${REGISTRY_AUTH_FILE}" ]; then
           REGISTRY_AUTH_FILE="$(workspaces.registry-credentials.path)/config.json"
         fi
 
-        echo "Promoting ${SRC} → ${DEST}"
+        # The version tag was already pushed (and signed in place) upstream.
+        # Record it as the canonical reference for Tekton Chains / consumers.
+        printf '%s' "$(params.REGISTRY_IMAGE):${TAG}" > "$(results.IMAGE_REF.path)"
+        echo "Version tag already published: $(params.REGISTRY_IMAGE):${TAG}"
 
-        # skopeo copy preserves the exact digest; no re-push of image layers.
-        skopeo copy \
-          --authfile="${REGISTRY_AUTH_FILE}" \
-          "docker://${SRC}" \
-          "docker://${DEST}"
-
-        printf '%s' "${DEST}" > "$(results.IMAGE_REF.path)"
-        echo "Promoted: ${DEST}"
-
-        # Promote :latest ONLY for stable releases. The pipeline triggers on any
+        # Add :latest ONLY for stable releases. The pipeline triggers on any
         # v* tag, including pre-releases (vX.Y.Z-alpha.N / -beta.N / -rc.N), and
         # :latest must never point at a pre-release. A semver pre-release carries
-        # a "-" segment; stable tags do not.
+        # a "-" segment; stable tags do not. skopeo copy preserves the exact
+        # digest; no re-push of image layers.
         case "${TAG}" in
           *-*)
             echo "Pre-release ${TAG}: skipping :latest promotion"
@@ -78,15 +77,3 @@ spec:
             echo "Promoted: ${LATEST}"
             ;;
         esac
-
-        # Remove the ephemeral :build-tmp tag left by push-image-by-digest.
-        # It only exists to keep the manifest alive (referenced) until a
-        # permanent tag is promoted; now that :${TAG} points at the same
-        # digest, the staging tag is redundant and should not linger in the
-        # registry's tag list. Best-effort: tolerate its absence (e.g. re-runs).
-        BUILD_TMP="$(params.REGISTRY_IMAGE):build-tmp"
-        if skopeo delete --authfile="${REGISTRY_AUTH_FILE}" "docker://${BUILD_TMP}" 2>/dev/null; then
-          echo "Removed staging tag: ${BUILD_TMP}"
-        else
-          echo "Staging tag ${BUILD_TMP} not present (nothing to remove)"
-        fi

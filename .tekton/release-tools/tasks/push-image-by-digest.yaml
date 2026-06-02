@@ -6,12 +6,18 @@ metadata:
     tekton.dev/displayName: "push release-tools image to registry by digest (no tag)"
 spec:
   description: |
-    # Path A (decided 2026-05-25): codeberg.org/operate-first/release-tools
-    # Registry: codeberg.org/operate-first/release-tools
-    #
-    # L1 TOCTOU fix: push manifest by digest ONLY here. The human-readable
-    # vMAJOR.MINOR.PATCH tag is promoted AFTER cosign-sign succeeds (T9).
-    # This closes the window where an unsigned image could be advertised.
+    Push the built image to the registry under its version tag (vX.Y.Z) and
+    record the resulting manifest digest for downstream sign/attest.
+
+    # bd forgejo-mcp-9r4: the earlier design pushed an ephemeral :build-tmp tag
+    # and deleted it after promotion. On Forgejo/Codeberg, deleting ANY tag
+    # deletes the underlying manifest — so removing :build-tmp also removed the
+    # :vX.Y.Z and :latest tags that shared the same digest (only the separate
+    # cosign .sig/.att manifests survived). We now push :vX.Y.Z directly with
+    # no staging tag. cosign-sign + attach-sbom operate on the digest in place;
+    # promote-image-tag adds :latest only after both succeed. The tag is
+    # briefly unsigned (~1 min) until cosign-sign runs; a signing failure
+    # deletes the unsigned :vX.Y.Z via the pipeline's finally cleanup.
   params:
     - name: IMAGE
       description: |
@@ -27,6 +33,9 @@ spec:
         # Working assumption: codeberg.org/operate-first/release-tools
       type: string
       default: "codeberg.org/operate-first/release-tools"
+    - name: TAG
+      description: Human-readable version tag to push (e.g. v1.0.0).
+      type: string
     - name: STORAGE_DRIVER
       description: buildah storage driver.
       type: string
@@ -65,21 +74,23 @@ spec:
         LOCAL_IMAGE="localhost/$(params.IMAGE)"
         REGISTRY_IMAGE="$(params.REGISTRY_IMAGE)"
 
-        echo "Pushing ${LOCAL_IMAGE} to ${REGISTRY_IMAGE} by digest (no version tag)..."
+        TAG="$(params.TAG)"
+        DEST="${REGISTRY_IMAGE}:${TAG}"
 
-        # L1 TOCTOU fix: retag to an ephemeral staging name before pushing so
-        # buildah does not inherit the version tag (e.g. v1.0.0) at the
-        # destination. The version tag is promoted AFTER signing by promote-tag.
-        buildah --root "${BUILDAH_STORE}" \
-          --storage-driver="$(params.STORAGE_DRIVER)" \
-          tag "${LOCAL_IMAGE}" release-tools:build-tmp
+        echo "Pushing ${LOCAL_IMAGE} to docker://${DEST} ..."
 
+        # Push directly to the version tag — NO ephemeral :build-tmp staging
+        # tag (bd forgejo-mcp-9r4: deleting a staging tag on Forgejo/Codeberg
+        # deletes the shared manifest and takes the real tags with it). The
+        # tag is briefly unsigned until cosign-sign runs next; a signing
+        # failure removes it via the pipeline's finally cleanup. --digestfile
+        # still records the manifest digest so sign/attest can pin by digest.
         buildah --root "${BUILDAH_STORE}" push \
           --storage-driver="$(params.STORAGE_DRIVER)" \
           --authfile="${REGISTRY_AUTH_FILE}" \
           --digestfile=/tmp/pushed-digest \
-          release-tools:build-tmp \
-          "docker://${REGISTRY_IMAGE}:build-tmp" \
+          "${LOCAL_IMAGE}" \
+          "docker://${DEST}" \
           2>&1 | tee /dev/stderr
 
         DIGEST=$(cat /tmp/pushed-digest)
