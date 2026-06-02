@@ -196,6 +196,40 @@ func TestEditBranchProtectionFn_ContextsRoundTrip(t *testing.T) {
 	}
 }
 
+func TestEditBranchProtectionFn_PushWhitelistRoundTrip(t *testing.T) {
+	var body map[string]interface{}
+	srv := setupBPMockServer(t, func(w http.ResponseWriter, r *http.Request) {
+		rawb, _ := io.ReadAll(r.Body)
+		_ = json.Unmarshal(rawb, &body)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"rule_name": "main"})
+	})
+	defer srv.Close()
+
+	_, err := EditBranchProtectionFn(context.Background(), newCallToolRequest(map[string]interface{}{
+		"owner": "goern", "repo": "forgejo-mcp", "rule": "main",
+		"enable_push_whitelist":    true,
+		"push_whitelist_usernames": "goern,op1st-gitops",
+	}))
+	if err != nil {
+		t.Fatalf("EditBranchProtectionFn err: %v", err)
+	}
+	if body["enable_push_whitelist"] != true {
+		t.Errorf("expected enable_push_whitelist=true, got %v", body["enable_push_whitelist"])
+	}
+	got := toStrings(body["push_whitelist_usernames"])
+	if len(got) != 2 || got[0] != "goern" || got[1] != "op1st-gitops" {
+		t.Errorf("push_whitelist_usernames not round-tripped: %v", got)
+	}
+	// An unpassed merge whitelist must serialize as null (leave-unchanged),
+	// never an empty list (which would wipe the existing whitelist).
+	var raw map[string]json.RawMessage
+	rawb, _ := json.Marshal(body)
+	_ = json.Unmarshal(rawb, &raw)
+	if v, ok := raw["merge_whitelist_usernames"]; ok && string(v) != "null" {
+		t.Errorf("unpassed merge_whitelist_usernames must be null, got %s", string(v))
+	}
+}
+
 func TestDeleteBranchProtectionFn_OK(t *testing.T) {
 	called := false
 	srv := setupBPMockServer(t, func(w http.ResponseWriter, r *http.Request) {

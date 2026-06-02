@@ -147,6 +147,23 @@ the caller. Expect future tools to follow the same pattern.
 endpoint and pointing multiple MCP clients at it, instead of every
 client spawning its own stdio subprocess.
 
+### 9. Branch protection (governance)
+
+CRUD on a repository's branch protection rules — require status checks
+or approvals before merge, and whitelist specific users (e.g. a release
+bot) to push to an otherwise locked branch. This demo is **token-free**:
+it proves the surface through the CLI tool registry and the `httptest`
+suite, since reading/writing real protection needs a repo-admin token.
+It is co-located with its spec under `openspec/`, not in this folder.
+
+| Demo | Tools | What it shows |
+|------|-------|---------------|
+| [../openspec/specs/branch-protection/branch-protection.demo.md](../openspec/specs/branch-protection/branch-protection.demo.md) | 5 tools — `list`/`get`/`create`/`edit`/`delete_branch_protection` | Registration, the `branch_name`-required guard, push/merge/approvals whitelist params, and PATCH null-safety (unpassed fields never wipe an existing rule) |
+
+**Use case.** A governance agent that locks `main`, requires green CI
+before merge, and whitelists a release bot to push tags — without
+relaxing protection for anyone else.
+
 ---
 
 ## Cross-cutting workflows
