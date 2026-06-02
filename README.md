@@ -407,22 +407,25 @@ cosign version
 
 The normative source for the cosign public key is the
 [`op1st-emea-b4mad`](https://codeberg.org/operate-first/op1st-emea-b4mad)
-GitOps repo — same source of truth that provisions the `cosign-signing-key`
-Secret in the `op1st-pipelines` namespace where the release pipeline runs.
+GitOps repo — same source of truth that provisions the
+`cosign-signing-key-artifacts` Secret in the `op1st-pipelines` namespace
+where the release pipeline runs. This is the **artifact-signing** key that
+signs release blobs (`checksums.txt.sig`); it is distinct from the
+**image-signing** key `cosign-signing-key-images.pub` used in §5–§6 below.
 Two ways to fetch it:
 
 **Branch-tip (live, follows future key rotations):**
 
 ```bash
 curl -sSfL -o cosign.pub \
-  https://codeberg.org/operate-first/op1st-emea-b4mad/raw/branch/main/manifests/applications/op1st-pipelines-tokens/cosign-signing-key.pub
+  https://codeberg.org/operate-first/op1st-emea-b4mad/raw/branch/main/manifests/applications/op1st-pipelines-tokens/cosign-signing-key-artifacts.pub
 ```
 
 **Commit-pinned (tamper-evident, recommended for CI/scripts):**
 
 ```bash
 curl -sSfL -o cosign.pub \
-  https://codeberg.org/operate-first/op1st-emea-b4mad/raw/commit/8a3c55e5b8c892754fd61f9141dc4817a6915f45/manifests/applications/op1st-pipelines-tokens/cosign-signing-key.pub
+  https://codeberg.org/operate-first/op1st-emea-b4mad/raw/commit/cd3715fa8283a2069a2e3e299744a7b55b1b0260/manifests/applications/op1st-pipelines-tokens/cosign-signing-key-artifacts.pub
 ```
 
 The commit-pinned permalink hashes its content into the URL — if anyone
