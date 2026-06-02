@@ -8,7 +8,7 @@
 <!-- captured-at: 2026-06-02 -->
 <!-- captured-against: 0826172 (feat/branch-protection-impl-uc6) -->
 
-Proves the `branch-protection` capability — change [`branch-protection-management`](./specs/branch-protection/spec.md), issue `forgejo-mcp-uc6` (discovered from `forgejo-mcp-f6h`: a repo with no protection let Renovate automerge before CI was green).
+Proves the `branch-protection` capability — spec [`spec.md`](./spec.md) (archived change `2026-06-02-branch-protection-management`), issue `forgejo-mcp-uc6` (discovered from `forgejo-mcp-f6h`: a repo with no protection let Renovate automerge before CI was green).
 
 > **Token-free demo.** Reading or writing real branch protection requires a repo-admin token, and the server, like any client, must not leak it. This demo deliberately uses **no token and no live instance**: it proves the surface through the CLI tool registry and the validation path, and proves behaviour through the test suite, which exercises the exact Forgejo HTTP round-trips against an in-process `httptest` server. No secrets appear anywhere in this file.
 
