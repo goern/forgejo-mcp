@@ -1,3 +1,22 @@
+## [2.28.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.27.0...v2.28.0) (2026-06-02)
+
+### :sparkles: Features
+
+* ✨ branch protection edit — push/merge/approvals whitelists ([3259301](https://codeberg.org/goern/forgejo-mcp/commit/3259301669c5219363418ba3beb88b8097b8d948))
+
+### :bug: Fixes
+
+* 🐛 push image version tag directly, never delete a staging tag ([748de51](https://codeberg.org/goern/forgejo-mcp/commit/748de5102d71ab196cf34c3a40b9cda6dbca8e80))
+
+### :repeat: CI
+
+* 🚀 track-downloads pushes via PR + auto-merge (main is protected) ([ffbc8d8](https://codeberg.org/goern/forgejo-mcp/commit/ffbc8d82964022aa830fe7937a1ec1b085c0378b))
+* 🚀 track-downloads schedules auto-merge when checks are required ([e5ffd8e](https://codeberg.org/goern/forgejo-mcp/commit/e5ffd8e8dfbd289e265b712ba37f0f6198e04fef)), closes [#249](https://codeberg.org/goern/forgejo-mcp/issues/249)
+
+### :repeat: Chore
+
+* 📊 snapshot release download counts ([2e3bd30](https://codeberg.org/goern/forgejo-mcp/commit/2e3bd30bc7a0068e3786fa76913a323d7e1b7a35))
+
 ## [2.27.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.26.0...v2.27.0) (2026-06-02)
 
 ### :sparkles: Features
