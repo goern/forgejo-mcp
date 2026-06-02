@@ -112,16 +112,26 @@ jobs:
           echo "Opened PR #$PR_NUMBER from $BRANCH."
 
           # --- merge it; delete the branch on success ---
-          # The token carries PR-merge permission, so this passes branch
-          # protection. delete_branch_after_merge keeps refs from piling up.
-          merge_body='{"Do":"merge","delete_branch_after_merge":true}'
-          if curl -fsS -X POST \
-               -H "$AUTH" -H 'Content-Type: application/json' \
-               -d "$merge_body" \
-               "$API_BASE/repos/$REPO_SLUG/pulls/$PR_NUMBER/merge"; then
-            echo "Merged PR #$PR_NUMBER."
+          # Two-step because `main` is protected by required status checks
+          # (Tekton Pipelines-as-Code). An immediate merge returns HTTP 405
+          # while those checks are still pending, so we:
+          #   1. try an immediate merge — succeeds on instances with no
+          #      required checks (the fast path), then
+          #   2. fall back to Forgejo's scheduled auto-merge
+          #      (merge_when_checks_succeed) so the PR lands unattended once
+          #      the checks go green, and the job still exits 0.
+          # delete_branch_after_merge keeps the bot/ refs from piling up.
+          merge_now='{"Do":"merge","delete_branch_after_merge":true}'
+          merge_sched='{"Do":"merge","merge_when_checks_succeed":true,"delete_branch_after_merge":true}'
+          merge_url="$API_BASE/repos/$REPO_SLUG/pulls/$PR_NUMBER/merge"
+          if curl -fsS -X POST -H "$AUTH" -H 'Content-Type: application/json' \
+               -d "$merge_now" "$merge_url" >/dev/null 2>&1; then
+            echo "Merged PR #$PR_NUMBER immediately."
+          elif curl -fsS -X POST -H "$AUTH" -H 'Content-Type: application/json' \
+               -d "$merge_sched" "$merge_url" >/dev/null 2>&1; then
+            echo "Scheduled PR #$PR_NUMBER to auto-merge when checks succeed."
           else
-            echo "Merge of PR #$PR_NUMBER failed (required checks not green, or perms?)." >&2
+            echo "Could not merge or schedule PR #$PR_NUMBER (perms? base out of date?)." >&2
             echo "Leaving PR open for manual handling; branch $BRANCH retained." >&2
             exit 1
           fi
