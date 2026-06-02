@@ -9,7 +9,7 @@ metadata:
     # enforce on-target-branch prefix correctly): CEL re-checks the full ref.
     pipelinesascode.tekton.dev/on-cel-expression: |
       event == "push" && target_branch.matches("^refs/tags/release-tools/v.*")
-    pipelinesascode.tekton.dev/task: "[git-clone, .tekton/release-tools/tasks/resolve-release-tools-tag.yaml, .tekton/release-tools/tasks/build-image.yaml, .tekton/release-tools/tasks/push-image-by-digest.yaml, .tekton/release-tools/tasks/cosign-sign-image-by-digest.yaml, .tekton/release-tools/tasks/cosign-attach-sbom.yaml, .tekton/release-tools/tasks/promote-image-tag.yaml]"
+    pipelinesascode.tekton.dev/task: "[git-clone, .tekton/release-tools/tasks/resolve-release-tools-tag.yaml, .tekton/release-tools/tasks/build-image.yaml, .tekton/release-tools/tasks/push-image-by-digest.yaml, .tekton/release-tools/tasks/cosign-sign-image-by-digest.yaml, .tekton/release-tools/tasks/cosign-attach-sbom.yaml, .tekton/release-tools/tasks/promote-image-tag.yaml, .tekton/release-tools/tasks/delete-tag-on-failure.yaml]"
     pipelinesascode.tekton.dev/max-keep-runs: "10"
     # Tag-publish runs are not cancellable — a partially-published image
     # with a pushed digest but without a cosign signature is a bad state.
@@ -100,7 +100,9 @@ spec:
           - name: CONTAINERFILE
             value: Containerfile
 
-      # L1 TOCTOU fix: push by digest first, no human-readable tag yet.
+      # bd forgejo-mcp-9r4: push the :vX.Y.Z tag directly (no :build-tmp
+      # staging tag). It is signed in place by cosign-sign next; the finally
+      # block deletes it if signing/attestation fail.
       - name: push-by-digest
         runAfter:
           - build-image
@@ -117,6 +119,8 @@ spec:
           # Path A (decided 2026-05-25): codeberg.org/operate-first/release-tools
           - name: REGISTRY_IMAGE
             value: "codeberg.org/operate-first/release-tools"
+          - name: TAG
+            value: $(tasks.resolve-tag.results.tag)
 
       # A3 fail-closed: cosign-signing-key-images secret is optional: false in the
       # task definition. If the Secret is absent, this step fails, and no
@@ -147,7 +151,9 @@ spec:
           - name: IMAGE_REPO_DIGEST
             value: $(tasks.push-by-digest.results.IMAGE_REPO_DIGEST)
 
-      # L1 TOCTOU fix: promote human-readable tag ONLY after sign + SBOM succeed.
+      # Add :latest ONLY after sign + SBOM succeed (skipped for pre-releases).
+      # The :vX.Y.Z tag was already pushed + signed upstream; this no longer
+      # writes it or deletes any staging tag (bd forgejo-mcp-9r4).
       - name: promote-tag
         runAfter:
           - push-by-digest
@@ -166,6 +172,29 @@ spec:
           # Path A (decided 2026-05-25): codeberg.org/operate-first/release-tools
           - name: REGISTRY_IMAGE
             value: "codeberg.org/operate-first/release-tools"
+
+    # Fail-closed cleanup (bd forgejo-mcp-9r4): if attach-sbom did not succeed
+    # — which also covers a skipped attach when cosign-sign failed first — the
+    # :vX.Y.Z tag was pushed but never signed/attested. Delete it so no
+    # unsigned image stays advertised. :latest is not yet promoted at that
+    # point, so :vX.Y.Z is the manifest's only tag and the delete is safe.
+    finally:
+      - name: delete-unsigned-tag
+        when:
+          - input: "$(tasks.attach-sbom.status)"
+            operator: notin
+            values: ["Succeeded"]
+        taskRef:
+          name: release-tools-delete-tag-on-failure
+        workspaces:
+          - name: registry-credentials
+            workspace: registry-credentials
+        params:
+          # Path A (decided 2026-05-25): codeberg.org/operate-first/release-tools
+          - name: REGISTRY_IMAGE
+            value: "codeberg.org/operate-first/release-tools"
+          - name: TAG
+            value: $(tasks.resolve-tag.results.tag)
 
   workspaces:
     - name: source
