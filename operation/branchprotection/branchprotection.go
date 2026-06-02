@@ -75,6 +75,12 @@ var (
 		mcp.WithBoolean("block_on_outdated_branch", mcp.Description(params.BPBlockOnOutdatedBranch)),
 		mcp.WithBoolean("require_signed_commits", mcp.Description(params.BPRequireSignedCommits)),
 		mcp.WithBoolean("dismiss_stale_approvals", mcp.Description(params.BPDismissStaleApprovals)),
+		mcp.WithBoolean("enable_push_whitelist", mcp.Description(params.BPEnablePushWhitelist)),
+		mcp.WithString("push_whitelist_usernames", mcp.Description(params.BPPushWhitelistUsers)),
+		mcp.WithBoolean("enable_merge_whitelist", mcp.Description(params.BPEnableMergeWhitelist)),
+		mcp.WithString("merge_whitelist_usernames", mcp.Description(params.BPMergeWhitelistUsers)),
+		mcp.WithBoolean("enable_approvals_whitelist", mcp.Description(params.BPEnableApprovalsWl)),
+		mcp.WithString("approvals_whitelist_usernames", mcp.Description(params.BPApprovalsWhitelistUsers)),
 	)
 
 	DeleteBranchProtectionTool = mcp.NewTool(
@@ -243,6 +249,24 @@ func EditBranchProtectionFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 	}
 	if v, ok := args["dismiss_stale_approvals"].(bool); ok {
 		opt.DismissStaleApprovals = ptr.To(v)
+	}
+	if v, ok := args["enable_push_whitelist"].(bool); ok {
+		opt.EnablePushWhitelist = ptr.To(v)
+	}
+	if v, ok := args["push_whitelist_usernames"].(string); ok {
+		opt.PushWhitelistUsernames = splitContexts(v)
+	}
+	if v, ok := args["enable_merge_whitelist"].(bool); ok {
+		opt.EnableMergeWhitelist = ptr.To(v)
+	}
+	if v, ok := args["merge_whitelist_usernames"].(string); ok {
+		opt.MergeWhitelistUsernames = splitContexts(v)
+	}
+	if v, ok := args["enable_approvals_whitelist"].(bool); ok {
+		opt.EnableApprovalsWhitelist = ptr.To(v)
+	}
+	if v, ok := args["approvals_whitelist_usernames"].(string); ok {
+		opt.ApprovalsWhitelistUsernames = splitContexts(v)
 	}
 
 	client, err := forgejo.Client(ctx)
