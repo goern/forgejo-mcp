@@ -1,3 +1,101 @@
+## [2.27.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.26.0...v2.27.0) (2026-06-02)
+
+### :sparkles: Features
+
+* ✨ branch protection management — CRUD tools + forgejo:// resources (uc6) ([0826172](https://codeberg.org/goern/forgejo-mcp/commit/0826172c239b154bacdb77dce6550387295c3927)), closes [#195](https://codeberg.org/goern/forgejo-mcp/issues/195)
+* ✨ branch protection management — CRUD tools + forgejo:// resources (uc6) ([#196](https://codeberg.org/goern/forgejo-mcp/issues/196)) ([70765bc](https://codeberg.org/goern/forgejo-mcp/commit/70765bcfdfc9944e82f93451ff8f9e5a9a2cd681))
+* ✨ build and publish signed OCI image on tag release ([bdfd968](https://codeberg.org/goern/forgejo-mcp/commit/bdfd968f7360df1d8ed5a2d1d4003d3a36aad3b4))
+* 📊 daily release-download tracking + Chart.js dashboard ([c6bdcfa](https://codeberg.org/goern/forgejo-mcp/commit/c6bdcfadb39e57d9bd5dd20aaa6dc223589a60c9))
+
+### :bug: Fixes
+
+* 🐛 avoid SIGPIPE (exit 141) capturing buildah image id ([e1092ce](https://codeberg.org/goern/forgejo-mcp/commit/e1092cec492d1b53268f6487f314741f65140de9))
+* 🐛 Forgejo push auth — token as userinfo, not x-access-token ([9df82c8](https://codeberg.org/goern/forgejo-mcp/commit/9df82c8134fbb3f48233f5c5576daddb6190c575))
+* 🐛 serialize build-image after goreleaser to prevent PVC contention ([5dc1a18](https://codeberg.org/goern/forgejo-mcp/commit/5dc1a18fe476966e4cf2fe5c1ea1ffb1643a8fbb))
+* 🐛 skip :latest image promotion for pre-release tags ([596527e](https://codeberg.org/goern/forgejo-mcp/commit/596527e601cb9241ec161b05cb0d08282cd9e93e))
+* 💚 POSIX sh for runner — no bash in pod image (shell: sh, drop pipefail/herestrings) ([976b245](https://codeberg.org/goern/forgejo-mcp/commit/976b24549df5e0f8545d3c41ba7456094fc8405d))
+* 💚 respect XDG/HOME — writable dir for git config on read-only pod FS ([b83fcde](https://codeberg.org/goern/forgejo-mcp/commit/b83fcde85d6b19a60abc58aff511d8bc30d521fd))
+* 💚 run in own pod image — drop container:, manual clone, distro-agnostic deps ([16a7000](https://codeberg.org/goern/forgejo-mcp/commit/16a7000932e1bad52eb8c300002707e258bd80a3))
+* 💚 run track-downloads on codeberg-runner-openshift (docker label unavailable) ([d1b0f79](https://codeberg.org/goern/forgejo-mcp/commit/d1b0f798c3a4ee40d0c84f145b4b9f1eabd5c255))
+* 💚 use ubuntu-latest runner label ([781c32f](https://codeberg.org/goern/forgejo-mcp/commit/781c32f7ca92832f375b174ff3a45ad3912a1cf8))
+* 📝 point README artifact-key fetch at renamed cosign-signing-key-artifacts.pub ([c0f6595](https://codeberg.org/goern/forgejo-mcp/commit/c0f6595aa5ee66ae0bfd8fcc0150f732b1fc2193))
+* 📝 point README artifact-key fetch at renamed cosign-signing-key-artifacts.pub ([#194](https://codeberg.org/goern/forgejo-mcp/issues/194)) ([2c84eed](https://codeberg.org/goern/forgejo-mcp/commit/2c84eed0bea213734c043f944b550a2c7ec8dd5f))
+* 🔒️ reject bare tokens in stateless HTTP auth ([63e1624](https://codeberg.org/goern/forgejo-mcp/commit/63e16242a3b634c5320afbaef2dd6625c7cfdb39))
+* 🔒️ resolve goern push token for cosign in image sign + SBOM tasks ([2a0db63](https://codeberg.org/goern/forgejo-mcp/commit/2a0db63027c7c9f95fa9ce9aed2d69b9127aca06))
+* 🔒️ sign SBOM via cosign attest (replace deprecated attach sbom) ([560e375](https://codeberg.org/goern/forgejo-mcp/commit/560e37523512e79b6658ddec50a5128f5bf0931c)), closes [sigstore/cosign#2755](https://codeberg.org/sigstore/cosign/issues/2755)
+* 🔥 remove ephemeral :build-tmp tag after promotion ([f026f8c](https://codeberg.org/goern/forgejo-mcp/commit/f026f8c30ff575ab654ab532e482fcf9f87c1691))
+
+### :memo: Documentation
+
+* ✏️ stamp showboat demo provenance with PR [#193](https://codeberg.org/goern/forgejo-mcp/issues/193) ([120b0f0](https://codeberg.org/goern/forgejo-mcp/commit/120b0f0e6fd6b02bf7529bff51283f9327689677))
+* 📝 archive branch-protection-management + co-locate demo (uc6) ([88cd866](https://codeberg.org/goern/forgejo-mcp/commit/88cd866d0f8be50241ef9ecb3c56b4d058b77afd))
+* 📝 archive branch-protection-management + co-locate demo (uc6) ([#197](https://codeberg.org/goern/forgejo-mcp/issues/197)) ([0fbfe56](https://codeberg.org/goern/forgejo-mcp/commit/0fbfe567ccdf2b40b65616170af7928e79b1e5d9))
+* 📝 archive signed-sbom-attestation + showboat demo (release-tools-image) ([6311de0](https://codeberg.org/goern/forgejo-mcp/commit/6311de072196fcf43193cf57ce15e70585d49665)), closes [#189](https://codeberg.org/goern/forgejo-mcp/issues/189)
+* 📝 archive signed-sbom-attestation + showboat demo (release-tools-image) ([#193](https://codeberg.org/goern/forgejo-mcp/issues/193)) ([e5edfe6](https://codeberg.org/goern/forgejo-mcp/commit/e5edfe6719439e7c3c587cf399691fc19098ae2d))
+* 📝 archive stateless-http-auth change, sync spec ([f107ca3](https://codeberg.org/goern/forgejo-mcp/commit/f107ca364aab54dd8d8817e3e52a19fd4fb22efa))
+* 📝 openspec change — branch protection management (branch-protection capability) ([6312bd2](https://codeberg.org/goern/forgejo-mcp/commit/6312bd2775700cfc035b2361f0fff524c71e23a4))
+* 📝 openspec change — branch protection management (branch-protection capability) ([#195](https://codeberg.org/goern/forgejo-mcp/issues/195)) ([1b994fb](https://codeberg.org/goern/forgejo-mcp/commit/1b994fbe667d90326aaa0e9b1b03a8797a7af2ca))
+* 📝 openspec change — signed SBOM attestation (release-tools-image) ([5207bd9](https://codeberg.org/goern/forgejo-mcp/commit/5207bd9282ab3e57dad61cddb219ca326320354a)), closes [sigstore/cosign#2755](https://codeberg.org/sigstore/cosign/issues/2755)
+* 📝 openspec change — signed SBOM attestation (release-tools-image) ([#189](https://codeberg.org/goern/forgejo-mcp/issues/189)) ([7b85ba4](https://codeberg.org/goern/forgejo-mcp/commit/7b85ba42f43d715ae219b89ff446bf1cb90b141a))
+* 📝 retarget showboat skill from spellkave to forgejo-mcp ([1e017ef](https://codeberg.org/goern/forgejo-mcp/commit/1e017ef2609cdb23d1d524d8d32e0ec580174c65))
+* 📝 showboat demo for branch protection (uc6) — token-free ([3e5dad4](https://codeberg.org/goern/forgejo-mcp/commit/3e5dad455ed4d5a6768c7fa5628766cc65b9d8c2))
+
+### :zap: Refactor
+
+* ♻️ hardcode repo+branch in push, drop GITHUB_* runner vars ([2770e79](https://codeberg.org/goern/forgejo-mcp/commit/2770e79b98afe0563762cb789f4b2e9802172281))
+
+### :repeat: CI
+
+* ⏭️ skip on-pull-request pipeline for docs-only PRs ([#180](https://codeberg.org/goern/forgejo-mcp/issues/180)) ([03e58ea](https://codeberg.org/goern/forgejo-mcp/commit/03e58ea45f86c53aee2d09ef456efe4501b671ec))
+* 🚀 enforce check-demos in PaC and pre-commit ([cb6f657](https://codeberg.org/goern/forgejo-mcp/commit/cb6f6576443c9fa3f1be4972e7dee7b1d061a77c))
+* 🚀 track-downloads pushes via PR + auto-merge (main is protected) ([b36d097](https://codeberg.org/goern/forgejo-mcp/commit/b36d097dd4db5b7f660a5d131598020e919c4a74))
+
+### :repeat: Chore
+
+* 📊 snapshot release download counts ([ef6db22](https://codeberg.org/goern/forgejo-mcp/commit/ef6db2257504c377fa87a41697fb02726a7f3be7))
+* 📊 snapshot release download counts ([01e29f1](https://codeberg.org/goern/forgejo-mcp/commit/01e29f12792fecc34f951ea0cae20e643535467f))
+* 🔖 close bead forgejo-mcp-5zy (download tracking shipped) ([0df01c2](https://codeberg.org/goern/forgejo-mcp/commit/0df01c2797aaeaa9a9205f162580071a2785c6d0))
+* 🔖 sync beads jsonl ([da794b0](https://codeberg.org/goern/forgejo-mcp/commit/da794b0942da8def1b8cda7917fdb28da333b3e8))
+* 🔖 track bead forgejo-mcp-3ph for wiki OpenSpec ([f6596bf](https://codeberg.org/goern/forgejo-mcp/commit/f6596bfbabdfd42573831da9d46ef115ce6ad78b))
+* 🔖 track bead forgejo-mcp-5zy (release download analytics) ([7c9c182](https://codeberg.org/goern/forgejo-mcp/commit/7c9c182f03359b150b4c21287f93528759f6fb5d))
+* 🔖 track bead forgejo-mcp-dn0 (OCI image release pipeline) ([33e4eba](https://codeberg.org/goern/forgejo-mcp/commit/33e4eba871324a7a951b54a63664c7e69e670564))
+* 🔖 track bead forgejo-mcp-fd6 (label tools + resource templates) ([03633b3](https://codeberg.org/goern/forgejo-mcp/commit/03633b38016327d416b64489045ea71f5cda5951))
+* 🔧 add bead forgejo-mcp-8if (merge [#185](https://codeberg.org/goern/forgejo-mcp/issues/185), finish smoke tests, archive) ([0008cb3](https://codeberg.org/goern/forgejo-mcp/commit/0008cb331181fdcda1a7a18ec461bbbe9a78d78f))
+* 🔧 add make check-demos target ([4bae972](https://codeberg.org/goern/forgejo-mcp/commit/4bae9727c1540d4f5e96b89c3cb2e1e8a2618e32))
+* 🔧 add openspec verify-change and sync-specs skills ([8614964](https://codeberg.org/goern/forgejo-mcp/commit/861496497a174f9afa8e789aa3bb5d729920e17e))
+* 🔧 add OWNERS for Pipelines as Code CI authorization ([f268f8d](https://codeberg.org/goern/forgejo-mcp/commit/f268f8daad2420090da12f53d2102a116eb652b4)), closes [#178](https://codeberg.org/goern/forgejo-mcp/issues/178)
+* 🔧 add showboat skill (spec-linked demo artifact convention) ([890c1ec](https://codeberg.org/goern/forgejo-mcp/commit/890c1ec8a0aa96b6f502d838f9b3b6e517da18d6))
+* 🔧 add verify-and-journal wrapper script for OpenSpec SQI ([a900db0](https://codeberg.org/goern/forgejo-mcp/commit/a900db049df1933fdf38901a7bcf5cbba9cdcee6))
+* 🔧 close forgejo-mcp-dn0 (OCI image publish) ([7d51b76](https://codeberg.org/goern/forgejo-mcp/commit/7d51b76408caefce363896d456f3bd1a29370b1b))
+* 🔧 close forgejo-mcp-o5b (:latest gating) ([6f9cc57](https://codeberg.org/goern/forgejo-mcp/commit/6f9cc577d9eda7b37fba80ab7b0a94c92c02c1e7))
+* 🔧 prefix all .tekton PipelineRun names with forgejo-mcp- ([b12dd07](https://codeberg.org/goern/forgejo-mcp/commit/b12dd07410a9ad54ec2d0f9742c477b7c78801bd))
+* 🔧 track follow-up issues for image latest-tag + SBOM attest ([a0e7ab3](https://codeberg.org/goern/forgejo-mcp/commit/a0e7ab3d554b95ce6465553399dc885d8048fb20))
+* 🔧 wire up just check-demos anchored-demo checker ([15cd115](https://codeberg.org/goern/forgejo-mcp/commit/15cd1153e3b49e20d316ed4b942c5dc65fcae02f))
+* 🗂️ bd claim 0zl (README artifact-key rename) ([78ab25b](https://codeberg.org/goern/forgejo-mcp/commit/78ab25b6424684df08821159b9f59538798b8e66))
+* 🗂️ bd close 0zl (merged [#194](https://codeberg.org/goern/forgejo-mcp/issues/194), README artifact-key fixed) ([d5d84cb](https://codeberg.org/goern/forgejo-mcp/commit/d5d84cbe89dcad1e4e000e57e4aa1fe4a051798a))
+* 🗂️ bd close 3y1 (merged [#193](https://codeberg.org/goern/forgejo-mcp/issues/193), signed-sbom-attestation archived) ([8078ce5](https://codeberg.org/goern/forgejo-mcp/commit/8078ce5d00bf506cf2ce793adb0a0255c299019d))
+* 🗂️ bd close aa6 (cosign attest migration) + file 3y1 spec follow-up ([fd7fdd5](https://codeberg.org/goern/forgejo-mcp/commit/fd7fdd5d258f63c017b82885be996c8cc81de2a1))
+* 🗂️ bd close fd6 (label CRUD issue [#190](https://codeberg.org/goern/forgejo-mcp/issues/190) prepared) ([0e6b5c6](https://codeberg.org/goern/forgejo-mcp/commit/0e6b5c6b433b946e46d198ca9d7714625e2309e5))
+* 🗂️ bd close k5f (extend [#136](https://codeberg.org/goern/forgejo-mcp/issues/136) scope to webhook resource-templates) ([86d95da](https://codeberg.org/goern/forgejo-mcp/commit/86d95da7c50c58256b0171a3553c112d51a6b965))
+* 🗂️ bd close uc6 (branch protection shipped [#195](https://codeberg.org/goern/forgejo-mcp/issues/195)/[#196](https://codeberg.org/goern/forgejo-mcp/issues/196)/[#197](https://codeberg.org/goern/forgejo-mcp/issues/197)) ([313e1cb](https://codeberg.org/goern/forgejo-mcp/commit/313e1cb6011d2bc42c41ccd4183a8a6de5cccb9b))
+* 🗂️ bd file 773 (label-crud openspec impl, PR [#192](https://codeberg.org/goern/forgejo-mcp/issues/192)) ([dedc5b5](https://codeberg.org/goern/forgejo-mcp/commit/dedc5b5507791470a0790dce511d6c21a9812e6c))
+* 🗂️ bd file tcy (CLI resource-read parity, Codeberg [#191](https://codeberg.org/goern/forgejo-mcp/issues/191)) ([5a5d921](https://codeberg.org/goern/forgejo-mcp/commit/5a5d921cab9337e5848edd4bf39fa1ba145ec186))
+* 🗂️ bd update 3y1 (signed-sbom archived; file 0zl README §4 key-rename follow-up) ([8989dd4](https://codeberg.org/goern/forgejo-mcp/commit/8989dd4ff3c5baa1c167f002790d4c5a5e0d211d))
+* 🗂️ bd update 773 (label-crud debate outcome: delete_mode enum, repo-prefixed names, org URI) ([7b2a16e](https://codeberg.org/goern/forgejo-mcp/commit/7b2a16e151320b9c54cef24e9345e4c9dab0f697))
+* 🗂️ bd update 773 (label-crud scope: org CRUD + safe delete) ([caa1708](https://codeberg.org/goern/forgejo-mcp/commit/caa170805831c77e5179dd9e729f04e132126a1b))
+* 🗂️ bd update uc6 (branch-protection openspec proposed) ([05731b0](https://codeberg.org/goern/forgejo-mcp/commit/05731b0b066e895f5affc18f775ad8a941de2fde))
+* 🗂️ track PR [#189](https://codeberg.org/goern/forgejo-mcp/issues/189) on bd-3y1 (signed SBOM openspec change) ([7234a08](https://codeberg.org/goern/forgejo-mcp/commit/7234a081db30ac4f126c6850789b7199fa1ada2d))
+* 🗃️ sync beads state (close vbz, add hxv) ([daf834b](https://codeberg.org/goern/forgejo-mcp/commit/daf834b392336466b22bbb8ac4ac668b1af48dd9))
+* **deps:** lock file maintenance ([d5f0e1d](https://codeberg.org/goern/forgejo-mcp/commit/d5f0e1d7fad395bed3ff93ea574321f17303f294))
+* **deps:** update quay.io/hummingbird/go:1.26.3-builder docker digest to 8701cf6 ([a7b46f7](https://codeberg.org/goern/forgejo-mcp/commit/a7b46f7cb8a782066627d52fb41063ac2979d26c))
+* **deps:** update quay.io/hummingbird/go:1.26.3-builder docker digest to 9523912 ([6ffa142](https://codeberg.org/goern/forgejo-mcp/commit/6ffa142c635f441bf6d21ea321b96c575a0a8f82))
+* **deps:** update registry.access.redhat.com/hi/go:1.26.3-builder docker digest to ca7aa43 ([874e9a4](https://codeberg.org/goern/forgejo-mcp/commit/874e9a47d24fbd409162ee97de61d648bc6fa31e))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to 8701cf6 ([247d64f](https://codeberg.org/goern/forgejo-mcp/commit/247d64fde285e96a3f0ced6e72228b332c14efd5))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to 9523912 ([7279457](https://codeberg.org/goern/forgejo-mcp/commit/7279457d4f1f2c676130b684c5bf327b8289108e))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to ca7aa43 ([004a28c](https://codeberg.org/goern/forgejo-mcp/commit/004a28c849a38a471b2ac042b9ddb329ed1ef494))
+* migrated to a project of it's own: https://codeberg.org/goern/beads-tv ([f61e858](https://codeberg.org/goern/forgejo-mcp/commit/f61e8588668e720beb3f0dfc01069699c5c9d352))
+* **release:** 2.27.0-alpha.1 ([3914fbe](https://codeberg.org/goern/forgejo-mcp/commit/3914fbe20a9fd124f956e1274fb447b0c9e56f3a))
+
 ## [2.27.0-alpha.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.26.0...v2.27.0-alpha.1) (2026-06-01)
 
 ### :sparkles: Features
