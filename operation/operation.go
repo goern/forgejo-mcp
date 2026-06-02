@@ -8,6 +8,7 @@ import (
 
 	"codeberg.org/goern/forgejo-mcp/v2/operation/actions"
 	"codeberg.org/goern/forgejo-mcp/v2/operation/attachment"
+	"codeberg.org/goern/forgejo-mcp/v2/operation/branchprotection"
 	"codeberg.org/goern/forgejo-mcp/v2/operation/issue"
 	"codeberg.org/goern/forgejo-mcp/v2/operation/org"
 	"codeberg.org/goern/forgejo-mcp/v2/operation/pull"
@@ -43,6 +44,7 @@ func RegisterTool(s *server.MCPServer) {
 	RegisterTrackingTool(s)
 	RegisterAttachmentTool(s)
 	RegisterReleaseTool(s)
+	RegisterBranchProtectionTool(s)
 
 	log.Info("All MCP tools registered successfully")
 }
@@ -107,6 +109,11 @@ func RegisterAttachmentTool(s *server.MCPServer) {
 func RegisterReleaseTool(s *server.MCPServer) {
 	release.RegisterTool(s)
 	log.Debug("Registered release tools")
+}
+
+func RegisterBranchProtectionTool(s *server.MCPServer) {
+	branchprotection.RegisterTool(s)
+	log.Debug("Registered branch protection tools")
 }
 
 func extractToken(auth string) string {
@@ -223,7 +230,13 @@ func RegisterCoreResources(s *server.MCPServer) {
 	RegisterPullResources(s)
 	RegisterRepoResource(s)
 	RegisterStatusResource(s)
+	RegisterBranchProtectionResources(s)
 	log.Debug("Registered core resource templates")
+}
+
+func RegisterBranchProtectionResources(s *server.MCPServer) {
+	branchprotection.RegisterResource(s)
+	log.Debug("Registered branch protection resource templates")
 }
 
 func RegisterPullResources(s *server.MCPServer) {

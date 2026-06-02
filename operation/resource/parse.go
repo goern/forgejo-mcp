@@ -209,6 +209,63 @@ func ParseStatus(uri string) (StatusParams, error) {
 	return StatusParams{Owner: parts[0], Repo: parts[1], SHA: sha}, nil
 }
 
+// BranchProtectionsParams holds parsed fields from
+// forgejo://repo/{owner}/{repo}/branch_protections (collection).
+type BranchProtectionsParams struct {
+	Owner string
+	Repo  string
+}
+
+// BranchProtectionParams holds parsed fields from
+// forgejo://repo/{owner}/{repo}/branch_protection/{rule} (single entity).
+// Rule is the rule name and MAY contain slashes (branch-name globs such as
+// "release/*"), so it is reassembled from all trailing path segments.
+type BranchProtectionParams struct {
+	Owner string
+	Repo  string
+	Rule  string
+}
+
+// ParseBranchProtections parses forgejo://repo/{owner}/{repo}/branch_protections.
+func ParseBranchProtections(uri string) (BranchProtectionsParams, error) {
+	u, err := parseForgejoURI(uri)
+	if err != nil {
+		return BranchProtectionsParams{}, err
+	}
+	if u.Host != "repo" {
+		return BranchProtectionsParams{}, fmt.Errorf("%w: expected forgejo://repo/..., got %q", ErrInvalidParams, uri)
+	}
+	parts := splitPath(u.Path)
+	// parts: [owner, repo, "branch_protections"]
+	if len(parts) != 3 || parts[2] != "branch_protections" {
+		return BranchProtectionsParams{}, fmt.Errorf("%w: expected forgejo://repo/{owner}/{repo}/branch_protections, got %q", ErrInvalidParams, uri)
+	}
+	return BranchProtectionsParams{Owner: parts[0], Repo: parts[1]}, nil
+}
+
+// ParseBranchProtection parses forgejo://repo/{owner}/{repo}/branch_protection/{rule}.
+// The rule name is the remainder after "branch_protection/" so glob rules
+// containing slashes round-trip.
+func ParseBranchProtection(uri string) (BranchProtectionParams, error) {
+	u, err := parseForgejoURI(uri)
+	if err != nil {
+		return BranchProtectionParams{}, err
+	}
+	if u.Host != "repo" {
+		return BranchProtectionParams{}, fmt.Errorf("%w: expected forgejo://repo/..., got %q", ErrInvalidParams, uri)
+	}
+	parts := splitPath(u.Path)
+	// parts: [owner, repo, "branch_protection", rule...]
+	if len(parts) < 4 || parts[2] != "branch_protection" {
+		return BranchProtectionParams{}, fmt.Errorf("%w: expected forgejo://repo/{owner}/{repo}/branch_protection/{rule}, got %q", ErrInvalidParams, uri)
+	}
+	rule := strings.Join(parts[3:], "/")
+	if rule == "" {
+		return BranchProtectionParams{}, fmt.Errorf("%w: empty rule name in %q", ErrInvalidParams, uri)
+	}
+	return BranchProtectionParams{Owner: parts[0], Repo: parts[1], Rule: rule}, nil
+}
+
 func parseForgejoURI(uri string) (*url.URL, error) {
 	u, err := url.Parse(uri)
 	if err != nil {

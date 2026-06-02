@@ -191,6 +191,12 @@ List all my repositories
 | `list_branches` | List all branches in a repository |
 | `create_branch` | Create a new branch |
 | `delete_branch` | Delete a branch |
+| **Branch Protection** | |
+| `list_branch_protections` | List a repository's branch protection rules. Bounded by `page` (1-based) + `limit` (page size); the response echoes `page`/`limit` so callers can fetch the next page. |
+| `get_branch_protection` | Get a single rule by `rule` name |
+| `create_branch_protection` | Create a rule. Requires `branch_name`; `status_check_contexts` is a comma-separated list of required checks (e.g. `"ci/build,ci/test"`). |
+| `edit_branch_protection` | Edit a rule by `rule` name. Only fields you pass change; omitted fields are left unchanged. |
+| `delete_branch_protection` | Delete a rule by `rule` name |
 | **Files** | |
 | `get_file_content` | Get the content of a file. Optional `start_line`/`end_line` request a 1-indexed inclusive line range (clamps to file extent; ignored when `with_metadata=true`). |
 | `create_file` | Create a new file |
