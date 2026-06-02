@@ -4,7 +4,7 @@
 <!-- showboat-id: e2ed831c-a5c6-485c-be1b-f6b795173611 -->
 
 *Captured: 2026-06-02 via Showboat 0.6.1*
-<!-- captured-for: PR pending (branch openspec/archive-signed-sbom-attestation) -->
+<!-- captured-for: PR #193 -->
 <!-- captured-at: 2026-06-02 -->
 <!-- captured-against: 7b85ba4 (openspec/archive-signed-sbom-attestation) -->
 
