@@ -3,9 +3,7 @@
 ## Purpose
 
 The release-tools-image capability publishes a signed, SBOM-attested container image bundling Go, goreleaser, syft, cosign, jq, curl, and Node tooling for use by the forgejo-mcp release pipeline and other tag-driven workflows. The image lives in its own source tree under `image/release-tools/` and is built and published via dedicated Tekton PipelineRuns under `.tekton/release-tools/`, isolating its lifecycle from the consuming forgejo-mcp Go release.
-
 ## Requirements
-
 ### Requirement: Source tree isolation
 
 All artifacts introduced by this capability SHALL live under exactly two top-level paths:
@@ -117,12 +115,19 @@ The publish pipeline SHALL push to the registry by digest only (no human-readabl
 
 ### Requirement: SBOM attached as registry artifact
 
-The publish pipeline SHALL emit a CycloneDX SBOM via `syft <image-ref>` and attach it to the published image manifest. Consumers SHALL be able to retrieve the SBOM via `cosign download sbom <image-ref>` or via the OCI referrers API.
+The publish pipeline SHALL emit a CycloneDX SBOM via `syft <image-ref>` and bind it to the published image manifest as a **signed** in-toto attestation using `cosign attest --predicate <sbom> --type cyclonedx --key <cosign-key>`. The attestation SHALL be signed with the same cosign key used to sign the image manifest. The pipeline SHALL NOT use `cosign attach sbom`, which is deprecated (sigstore/cosign#2755) and pushes the SBOM unsigned. Consumers SHALL be able to verify and retrieve the SBOM via `cosign verify-attestation --type cyclonedx --key <cosign.pub> <image-ref>` (or `cosign download attestation <image-ref>` for the raw DSSE envelope), or via the OCI referrers API.
 
-#### Scenario: SBOM available alongside the image
+#### Scenario: Signed SBOM attestation verifiable alongside the image
 
-- **WHEN** a consumer runs `cosign download sbom codeberg.org/operate-first/release-tools:v1.0.0`
-- **THEN** the command SHALL emit a CycloneDX 1.x JSON document on stdout
+- **WHEN** a consumer runs `cosign verify-attestation --type cyclonedx --key cosign-images.pub codeberg.org/operate-first/release-tools:v1.0.0`
+- **THEN** the command SHALL succeed, confirming the attestation signature against the public key
+- **AND** the verified attestation payload SHALL carry a CycloneDX 1.x JSON document as its predicate
+
+#### Scenario: Deprecated unsigned attach path is not used
+
+- **WHEN** the publish pipeline binds the SBOM to the published image
+- **THEN** it SHALL use `cosign attest` (signed)
+- **AND** it SHALL NOT use `cosign attach sbom` (deprecated, unsigned)
 
 ### Requirement: PR build pipeline CEL-gated to release-tools paths
 
@@ -163,3 +168,4 @@ This change SHALL NOT modify `.tekton/tasks/goreleaser-release.yaml`, `.tekton/t
 
 - **WHEN** the PR introducing this capability is reviewed
 - **THEN** `git diff` SHALL show no modifications under `.tekton/tasks/` or `.tekton/on-tag-push-release.yaml`
+

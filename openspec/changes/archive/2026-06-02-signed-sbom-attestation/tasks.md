@@ -10,4 +10,4 @@
 ## 3. Validate & archive
 
 - [x] 3.1 `openspec validate signed-sbom-attestation --strict` passes.
-- [ ] 3.2 After merge: archive the change and sync `openspec/specs/release-tools-image/spec.md`.
+- [x] 3.2 After merge: archive the change and sync `openspec/specs/release-tools-image/spec.md`.
