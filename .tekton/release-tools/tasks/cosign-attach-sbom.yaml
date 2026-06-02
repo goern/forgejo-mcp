@@ -3,12 +3,19 @@ kind: Task
 metadata:
   name: release-tools-cosign-attach-sbom
   annotations:
-    tekton.dev/displayName: "syft scan + cosign attach SBOM to release-tools image"
+    tekton.dev/displayName: "syft scan + cosign attest (signed CycloneDX SBOM) for release-tools image"
 spec:
   description: |
-    Generates a CycloneDX SBOM via syft and attaches it to the published image
-    manifest using cosign attach sbom (OCI referrers). Consumers can retrieve
-    the SBOM via `cosign download sbom <image-ref>` or the OCI referrers API.
+    Generates a CycloneDX SBOM via syft and binds it to the published image
+    manifest as a SIGNED in-toto attestation using `cosign attest --type
+    cyclonedx` (stored as an OCI referrer). Consumers verify and retrieve it via
+    `cosign verify-attestation --type cyclonedx --key <cosign.pub> <image-ref>`
+    (or `cosign download attestation <image-ref>` for the raw envelope).
+
+    Migrated from `cosign attach sbom` (forgejo-mcp-aa6): `attach sbom` is
+    deprecated (sigstore/cosign#2755) and pushes the SBOM UNSIGNED. `attest`
+    signs the SBOM with the same cosign key used by the image-signing task, so
+    the SBOM is tamper-evident.
 
     Registry: codeberg.org/operate-first/release-tools (Path A — reuses
     codeberg-pusher Secret in op1st-pipelines for both push and attach).
@@ -36,8 +43,8 @@ spec:
       optional: false
       description: |
         Dockerconfigjson Secret with write auth on the release-tools registry
-        path. cosign attach sbom pushes the SBOM as an OCI referrer object;
-        needs the same write auth as push-image-by-digest.
+        path. cosign attest pushes the signed SBOM attestation as an OCI
+        referrer object; needs the same write auth as push-image-by-digest.
   volumes:
     - name: cosign-signing-key-images
       secret:
@@ -103,8 +110,9 @@ spec:
         SBOM_FILE="$(workspaces.source.path)/release-tools-sbom.cdx.json"
 
         # --- credential resolution shim ------------------------------------
-        # `cosign attach sbom` pushes the SBOM as an OCI referrer, so it needs
-        # the same registry WRITE auth as the image push. cosign/ggcr resolve
+        # `cosign attest` pushes the signed SBOM attestation as an OCI referrer,
+        # so it needs the same registry WRITE auth as the image push. cosign/ggcr
+        # resolve
         # auth by HOST only, whereas skopeo longest-prefix-matches path-scoped
         # entries. The codeberg-pusher Secret carries a host-level auth
         # (op1st-gitops, no goern package-write) plus a path-scoped goern auth.
@@ -146,12 +154,18 @@ spec:
         syft "${IMAGE_REF}" --output cyclonedx-json="${SBOM_FILE}"
         echo "SBOM written to ${SBOM_FILE}"
 
-        echo "Attaching SBOM to ${IMAGE_REF}..."
-        cosign attach sbom \
-          --sbom="${SBOM_FILE}" \
+        echo "Attesting signed SBOM for ${IMAGE_REF}..."
+        # `attest` signs the SBOM with the cosign key (COSIGN_KEY_PATH /
+        # COSIGN_PASSWORD already in env) and pushes it as an in-toto
+        # attestation OCI referrer. Replaces deprecated `cosign attach sbom`,
+        # which pushed the SBOM unsigned (sigstore/cosign#2755).
+        cosign attest \
+          --predicate="${SBOM_FILE}" \
           --type=cyclonedx \
+          --key="${COSIGN_KEY_PATH}" \
+          --yes \
           "${IMAGE_REF}"
 
         SBOM_DIGEST=$(sha256sum "${SBOM_FILE}" | cut -d' ' -f1)
         printf '%s' "sha256:${SBOM_DIGEST}" > "$(results.SBOM_DIGEST.path)"
-        echo "SBOM attached. Local digest: sha256:${SBOM_DIGEST}"
+        echo "Signed SBOM attestation pushed. Local SBOM digest: sha256:${SBOM_DIGEST}"

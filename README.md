@@ -532,11 +532,18 @@ cosign verify-attestation \
   | jq .
 ```
 
-Download the attached SBOM:
+Verify and download the signed CycloneDX SBOM attestation:
 
 ```bash
-cosign download sbom "codeberg.org/goern/forgejo-mcp:${IMAGE_TAG}" > forgejo-mcp.cdx.json
+cosign verify-attestation \
+  --type cyclonedx \
+  --key cosign-images.pub \
+  "codeberg.org/goern/forgejo-mcp:${IMAGE_TAG}" \
+  | jq -r '.payload | @base64d | fromjson | .predicate' > forgejo-mcp.cdx.json
 ```
+
+> The SBOM is now a **signed** in-toto attestation (`cosign attest`), not an
+> unsigned `attach sbom` artifact. `cosign download sbom` no longer applies.
 
 Because the publish pipeline pushes by digest and only promotes the
 `vX.Y.Z` / `latest` tags *after* signing and SBOM attachment succeed, any tag
