@@ -85,6 +85,17 @@ const (
 	AttachmentFilename = `Filename to associate with the uploaded attachment (e.g. "requirements.pdf")`
 	AttachmentMIME     = "MIME type hint for uploaded file (optional; inferred from filename if omitted)"
 
+	// Branch protection parameters
+	BPRule                  = "Branch protection rule name (the rule_name; Forgejo defaults it to branch_name)"
+	BPRuleName              = "Rule name (optional; defaults to branch_name if omitted)"
+	BPEnablePush            = "Allow direct pushes to the protected branch"
+	BPEnableStatusCheck     = "Require status checks to pass before merging"
+	BPStatusCheckContexts   = `Required status check contexts (comma-separated, e.g. "ci/build,ci/test")`
+	BPRequiredApprovals     = "Number of required approving reviews before merge"
+	BPBlockOnOutdatedBranch = "Block merge when the branch is behind its base"
+	BPRequireSignedCommits  = "Require commits on the protected branch to be signed"
+	BPDismissStaleApprovals = "Dismiss approvals when new commits are pushed"
+
 	// Release parameters
 	ReleaseID              = "Release ID"
 	ReleaseTag             = "Existing release tag name"

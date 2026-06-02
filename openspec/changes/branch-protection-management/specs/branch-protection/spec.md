@@ -53,7 +53,7 @@ The server SHALL provide an `edit_branch_protection` tool that updates a rule vi
 
 - **WHEN** `edit_branch_protection` is called with only `required_approvals` set to 2
 - **THEN** the request body sent to Forgejo SHALL set `required_approvals` to 2
-- **AND** SHALL NOT include the other protection fields the caller did not pass
+- **AND** the other protection fields the caller did not pass SHALL be sent as `null` (leave-unchanged), never as a concrete value such as `false` that would silently relax protection
 
 #### Scenario: Editing status checks round-trips the contexts
 
