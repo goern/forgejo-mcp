@@ -7,6 +7,8 @@
 <!-- captured-for: PR #196 -->
 <!-- captured-at: 2026-06-02 -->
 <!-- captured-against: 0826172 (feat/branch-protection-impl-uc6) -->
+<!-- updated-for: push/merge/approvals whitelist params on edit_branch_protection (feat/bp-whitelist-params) -->
+<!-- updated-at: 2026-06-02 -->
 
 Proves the `branch-protection` capability — spec [`spec.md`](./spec.md) (archived change `2026-06-02-branch-protection-management`), issue `forgejo-mcp-uc6` (discovered from `forgejo-mcp-f6h`: a repo with no protection let Renovate automerge before CI was green).
 
@@ -47,9 +49,32 @@ Spec: *create_branch_protection ... SHALL return an error result and SHALL NOT c
 branch_name is required
 ```
 
+## Scenario: Whitelist a user to push to a protected branch
+
+`edit_branch_protection` accepts push/merge/approvals whitelist params so an
+admin can allow a specific user (e.g. a release bot like `op1st-gitops`) to
+push to an otherwise locked branch. Usernames are comma-separated and **replace**
+the existing list; each user must already be a collaborator with write access —
+the whitelist filters *which writers* may push, it does not grant access.
+
+```bash
+"${FORGEJO_MCP_BIN:-./forgejo-mcp}" --cli list 2>/dev/null \
+  | grep edit_branch_protection
+```
+
+```output
+  edit_branch_protection                   Edit a branch protection rule. Only fields you pass are changed; omitted fields are left untouched.
+```
+
+PATCH null-safety extends to the whitelists: an unpassed list serializes as
+`null` (leave-unchanged), never `[]` (which would silently wipe an existing
+whitelist). This is asserted by `TestEditBranchProtectionFn_PushWhitelistRoundTrip`
+below, which sends `enable_push_whitelist: true` + `push_whitelist_usernames:
+["goern","op1st-gitops"]` and verifies the unpassed merge whitelist stays `null`.
+
 ## Scenario coverage via the executable spec
 
-Each spec scenario is a test against an in-process `httptest` Forgejo (real request/response, no network, no token). The names map 1:1 to the spec: `status_check_contexts` round-trip, edit PATCH null-safety, list/collection bounding + truncation sentinel, get/collection 404 → resource error, single-resource happy path, malformed URI → invalid-params, and the slash-glob rule URI.
+Each spec scenario is a test against an in-process `httptest` Forgejo (real request/response, no network, no token). The names map 1:1 to the spec: `status_check_contexts` round-trip, edit PATCH null-safety, push-whitelist round-trip, list/collection bounding + truncation sentinel, get/collection 404 → resource error, single-resource happy path, malformed URI → invalid-params, and the slash-glob rule URI.
 
 ```bash
 go test -v -run "BranchProtection|ParseBranchProtection|SplitContexts" ./operation/branchprotection/ ./operation/resource/ 2>&1 | grep -E "^(=== RUN|--- PASS|--- FAIL|PASS|FAIL|ok)" | sed -E "s#\t# #g"
@@ -70,6 +95,8 @@ go test -v -run "BranchProtection|ParseBranchProtection|SplitContexts" ./operati
 --- PASS: TestEditBranchProtectionFn_OnlyPassedFields (0.00s)
 === RUN   TestEditBranchProtectionFn_ContextsRoundTrip
 --- PASS: TestEditBranchProtectionFn_ContextsRoundTrip (0.00s)
+=== RUN   TestEditBranchProtectionFn_PushWhitelistRoundTrip
+--- PASS: TestEditBranchProtectionFn_PushWhitelistRoundTrip (0.00s)
 === RUN   TestDeleteBranchProtectionFn_OK
 --- PASS: TestDeleteBranchProtectionFn_OK (0.00s)
 === RUN   TestSplitContexts
