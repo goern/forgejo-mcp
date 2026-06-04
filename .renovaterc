@@ -15,5 +15,20 @@
     ],
     "automergeSchedule": [
         "* * * * *"
+    ],
+    "packageRules": [
+        {
+            "description": "Automerge container image patch, minor, and digest updates; hold major for review",
+            "matchDatasources": [
+                "docker"
+            ],
+            "matchUpdateTypes": [
+                "minor",
+                "patch",
+                "digest",
+                "pin"
+            ],
+            "automerge": true
+        }
     ]
 }
