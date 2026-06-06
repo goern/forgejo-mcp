@@ -5,6 +5,6 @@
   "description": "Pinned npm dependencies for release-tools image; installed via npm ci --ignore-scripts",
   "dependencies": {
     "@anthropic-ai/mcpb": "2.1.2",
-    "@fission-ai/openspec": "1.4.0"
+    "@fission-ai/openspec": "1.4.1"
   }
 }
