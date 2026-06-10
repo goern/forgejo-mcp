@@ -51,9 +51,12 @@ cover the mutations.
 | [list-milestones-labels.md](list-milestones-labels.md) | `list_repo_labels`, `list_repo_milestones` | Discover the ID↔name mapping needed by `add_issue_labels` and `update_issue` |
 | [issue-labels.md](issue-labels.md) | `add_issue_labels`, `remove_issue_labels` | Full add/remove cycle on a real issue, plus multi-label calls |
 | [org-labels.md](org-labels.md) | `list_org_labels`, merged `list_repo_labels` | Org-scope labels surfaced through the same ID space, with `scope` field and opt-out |
+| [label-management.md](label-management.md) | `create_repo_label`, `edit_repo_label`, `delete_repo_label`, `get_repo_label`, `create_org_label`, `edit_org_label`, `delete_org_label`, `get_org_label` + 3 resource templates | Full label lifecycle: create with color normalisation, PATCH-edit, safe-delete with in-use guard, URI-addressable resources |
 
 **Use case.** Build a label lookup table once, then have the agent
 classify issues and apply labels without ever leaving the MCP loop.
+`label-management.md` covers the full lifecycle — agents can now also
+*create* the label taxonomy from scratch without leaving MCP.
 
 ### 2. Attachments
 
