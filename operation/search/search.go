@@ -56,12 +56,23 @@ func RegisterTool(s *server.MCPServer) {
 }
 
 func SearchUserFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Create a search query for dummy implementation
+	log.Debugf("Called SearchUserFn")
 	keyword, _ := req.GetArguments()["keyword"].(string)
+	page, _ := to.Float64(req.GetArguments()["page"])
+	if page == 0 {
+		page = 1
+	}
+	limit, _ := to.Float64(req.GetArguments()["limit"])
+	if limit == 0 {
+		limit = 100
+	}
 
-	// Create a basic search option with just a keyword
 	opt := forgejo_sdk.SearchUsersOption{
 		KeyWord: keyword,
+		ListOptions: forgejo_sdk.ListOptions{
+			Page:     int(page),
+			PageSize: int(limit),
+		},
 	}
 
 	// Use the correct options type for searching
@@ -85,10 +96,21 @@ func SearchOrgTeamsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	}
 
 	keyword, _ := req.GetArguments()["keyword"].(string)
+	page, _ := to.Float64(req.GetArguments()["page"])
+	if page == 0 {
+		page = 1
+	}
+	limit, _ := to.Float64(req.GetArguments()["limit"])
+	if limit == 0 {
+		limit = 100
+	}
 
-	// Create proper search team options
 	opt := &forgejo_sdk.SearchTeamsOptions{
 		Query: keyword,
+		ListOptions: forgejo_sdk.ListOptions{
+			Page:     int(page),
+			PageSize: int(limit),
+		},
 	}
 
 	// Use the proper options type for search

@@ -279,9 +279,9 @@ func ListRepoIssuesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		},
 	}
 
-	// Set issue type if provided (convert to string parameters)
+	// Set issue type if provided
 	if issueType != "" {
-		// Note: Using optional parameters since IssueType is not directly assignable
+		opt.Type = forgejo_sdk.IssueType(issueType)
 	}
 
 	// Set milestones if provided

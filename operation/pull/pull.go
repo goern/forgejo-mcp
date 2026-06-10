@@ -47,7 +47,6 @@ var (
 		mcp.WithString("state", mcp.Description("State (open|closed|all)"), mcp.DefaultString("open")),
 		mcp.WithString("sort", mcp.Description("Sort (oldest|recentupdate|leastupdate|mostcomment)")),
 		mcp.WithString("milestone", mcp.Description(params.Milestone)),
-		mcp.WithString("labels", mcp.Description(params.Labels)),
 		mcp.WithNumber("page", mcp.Description(params.Page), mcp.DefaultNumber(1)),
 		mcp.WithNumber("limit", mcp.Description(params.Limit), mcp.DefaultNumber(20)),
 	)
@@ -177,19 +176,15 @@ func ListRepoPullRequestsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 		state = "open"
 	}
 	sort, _ := req.GetArguments()["sort"].(string)
+	milestone, _ := req.GetArguments()["milestone"].(string)
 	page, _ := to.Float64(req.GetArguments()["page"])
-	if !ok {
+	if page == 0 {
 		page = 1
 	}
 	limit, _ := to.Float64(req.GetArguments()["limit"])
-	if !ok {
+	if limit == 0 {
 		limit = 20
 	}
-
-	// Convert milestone from string to int64 if provided
-	// Note: Not using milestoneID since it's not supported in the current Forgejo SDK
-
-	// Labels - not used directly in query per API, will be handled in the API call
 
 	opt := forgejo_sdk.ListPullRequestsOptions{
 		State: forgejo_sdk.StateType(state),
@@ -200,8 +195,13 @@ func ListRepoPullRequestsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 		},
 	}
 
-	// Only set milestone if provided and valid
-	// Note: Not using milestone as it's not supported in the current Forgejo SDK
+	if milestone != "" {
+		milestoneID, err := strconv.ParseInt(milestone, 10, 64)
+		if err != nil {
+			return to.ErrorResult(fmt.Errorf("invalid milestone ID: %v", err))
+		}
+		opt.Milestone = milestoneID
+	}
 
 	client, err := forgejo.Client(ctx)
 	if err != nil {

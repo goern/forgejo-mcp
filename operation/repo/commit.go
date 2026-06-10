@@ -45,11 +45,11 @@ func ListRepoCommitsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 		shaStr = sha
 	}
 	page, _ := to.Float64(req.GetArguments()["page"])
-	if !ok {
+	if page == 0 {
 		page = 1
 	}
 	limit, _ := to.Float64(req.GetArguments()["limit"])
-	if !ok {
+	if limit == 0 {
 		limit = 100
 	}
 	opt := forgejo_sdk.ListCommitOptions{

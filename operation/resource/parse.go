@@ -95,7 +95,7 @@ func ParseRepo(uri string) (RepoParams, error) {
 }
 
 // ParseCommit parses forgejo://repo/{owner}/{repo}/commit/{sha}.
-// Returns an error if sha is not exactly 40 lowercase hex characters.
+// Returns an error if sha is not exactly 40 hex characters.
 func ParseCommit(uri string) (CommitParams, error) {
 	u, err := parseForgejoURI(uri)
 	if err != nil {
@@ -373,7 +373,8 @@ func splitPath(path string) []string {
 	return result
 }
 
-// validateSHA returns an error if sha is not exactly 40 lowercase hex characters.
+// validateSHA returns an error if sha is not exactly 40 hex characters
+// (either case).
 func validateSHA(sha string) error {
 	if len(sha) != 40 {
 		return fmt.Errorf("%w: sha must be exactly 40 hex characters, got %d", ErrInvalidParams, len(sha))

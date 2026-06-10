@@ -84,13 +84,13 @@ func initFlags() {
 	fs.BoolVar(
 		&debug,
 		"d",
-		true,
+		false,
 		"debug mode",
 	)
 	fs.BoolVar(
 		&debug,
 		"debug",
-		true,
+		false,
 		"debug mode",
 	)
 

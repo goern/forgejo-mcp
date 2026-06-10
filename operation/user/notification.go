@@ -87,11 +87,11 @@ func CheckNotificationsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	sinceStr, _ := req.GetArguments()["since"].(string)
 	beforeStr, _ := req.GetArguments()["before"].(string)
 	page, _ := to.Float64(req.GetArguments()["page"])
-	if !ok {
+	if page == 0 {
 		page = 1
 	}
 	limit, _ := to.Float64(req.GetArguments()["limit"])
-	if !ok {
+	if limit == 0 {
 		limit = 20
 	}
 
@@ -272,11 +272,11 @@ func ListRepoNotificationsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	sinceStr, _ := req.GetArguments()["since"].(string)
 	beforeStr, _ := req.GetArguments()["before"].(string)
 	page, _ := to.Float64(req.GetArguments()["page"])
-	if !ok {
+	if page == 0 {
 		page = 1
 	}
 	limit, _ := to.Float64(req.GetArguments()["limit"])
-	if !ok {
+	if limit == 0 {
 		limit = 20
 	}
 

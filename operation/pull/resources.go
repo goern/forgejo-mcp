@@ -122,10 +122,7 @@ func prResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.
 		if c.Poster != nil {
 			author = c.Poster.UserName
 		}
-		excerpt := c.Body
-		if len(excerpt) > 200 {
-			excerpt = excerpt[:200] + "…"
-		}
+		excerpt := resource.Excerpt(c.Body, 200)
 		commentRefs[i] = prCommentRef{
 			ID:          c.ID,
 			Author:      author,
@@ -148,10 +145,7 @@ func prResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.
 		if r.Reviewer != nil {
 			reviewer = r.Reviewer.UserName
 		}
-		excerpt := r.Body
-		if len(excerpt) > 200 {
-			excerpt = excerpt[:200] + "…"
-		}
+		excerpt := resource.Excerpt(r.Body, 200)
 		reviewRefs[i] = prReviewRef{
 			ID:          r.ID,
 			Reviewer:    reviewer,

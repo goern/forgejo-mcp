@@ -154,9 +154,8 @@ func httpErrorFromResponse(req *http.Request, resp *http.Response) *HTTPError {
 // non-nil; decodes 2xx response into out if non-nil. 204 responses are
 // always success-with-no-body. 4xx/5xx return *HTTPError.
 //
-// The boolean isList signals "list endpoint": for those, 404 is treated
-// as an empty list (not an error), matching Forgejo's habit of 404ing
-// list endpoints when the parent entity has no children.
+// For list endpoints where a 404 should mean "empty list" (Forgejo's habit
+// when the parent entity has no children), use DoJSONList instead.
 func DoJSON(ctx context.Context, method, pathOrURL string, body, out any) error {
 	full, err := resolveURL(pathOrURL)
 	if err != nil {

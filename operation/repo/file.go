@@ -235,10 +235,12 @@ func DeleteFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 	if !ok {
 		return to.ErrorResult(fmt.Errorf("sha is required"))
 	}
+	newBranchName, _ := req.GetArguments()["new_branch_name"].(string)
 	opt := forgejo_sdk.DeleteFileOptions{
 		FileOptions: forgejo_sdk.FileOptions{
-			Message:    message,
-			BranchName: branchName,
+			Message:       message,
+			BranchName:    branchName,
+			NewBranchName: newBranchName,
 		},
 		SHA: sha,
 	}

@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strconv"
 
 	"codeberg.org/goern/forgejo-mcp/v2/operation/resource"
@@ -260,10 +261,24 @@ func orgLabelsResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) 
 }
 
 // pageLimit extracts page and limit from resource URI query params with
-// EmbeddedListCap as the ceiling for limit.
+// EmbeddedListCap as the ceiling for limit. Malformed or absent values
+// fall back to page=1, limit=EmbeddedListCap.
 func pageLimit(req mcp.ReadResourceRequest) (page, limit int) {
 	page = 1
 	limit = resource.EmbeddedListCap
-	// URI query params are not yet standard in mcp-go resources; fall back to caps.
+	u, err := url.Parse(req.Params.URI)
+	if err != nil {
+		return page, limit
+	}
+	q := u.Query()
+	if v, err := strconv.Atoi(q.Get("page")); err == nil && v >= 1 {
+		page = v
+	}
+	if v, err := strconv.Atoi(q.Get("limit")); err == nil && v >= 1 {
+		limit = v
+		if limit > resource.EmbeddedListCap {
+			limit = resource.EmbeddedListCap
+		}
+	}
 	return page, limit
 }

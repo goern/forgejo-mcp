@@ -106,10 +106,7 @@ func issueResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]m
 		if c.Poster != nil {
 			author = c.Poster.UserName
 		}
-		excerpt := c.Body
-		if len(excerpt) > 200 {
-			excerpt = excerpt[:200] + "…"
-		}
+		excerpt := resource.Excerpt(c.Body, 200)
 		refs[i] = commentRef{
 			ID:          c.ID,
 			Author:      author,
