@@ -1,3 +1,58 @@
+## [2.29.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.28.0...v2.29.0) (2026-06-10)
+
+### :sparkles: Features
+
+* ✨ add whitelist params to edit_branch_protection ([cd190ed](https://codeberg.org/goern/forgejo-mcp/commit/cd190edfd019e16af7dcbd556bdc21680ea334aa))
+* ✨ label CRUD tools and resource-templates (closes [#190](https://codeberg.org/goern/forgejo-mcp/issues/190)) ([6c7e0fe](https://codeberg.org/goern/forgejo-mcp/commit/6c7e0fe53d654f018a32f00dc52df52e1f0d709b)), closes [#rrggbb](https://codeberg.org/goern/forgejo-mcp/issues/rrggbb)
+
+### :bug: Fixes
+
+* **deps:** update dependency @fission-ai/openspec to v1.4.0 ([78cb277](https://codeberg.org/goern/forgejo-mcp/commit/78cb277ca9127148bea0481c1b3727d0911c667a))
+* **deps:** update dependency @fission-ai/openspec to v1.4.1 ([3e4eaaf](https://codeberg.org/goern/forgejo-mcp/commit/3e4eaaf47f58719375b488b2a896366482f1e53c))
+
+### :memo: Documentation
+
+* 🏷️ register 'RFC - Request For Comments' label ([f7a2591](https://codeberg.org/goern/forgejo-mcp/commit/f7a2591ef13cfd48bef2d04e7a555aa36c54b871)), closes [#0e8a16](https://codeberg.org/goern/forgejo-mcp/issues/0e8a16)
+* 📝 add label-management showboat demo + README index entry ([bc3f3db](https://codeberg.org/goern/forgejo-mcp/commit/bc3f3dbdec5d12014964e275b25f2dd4f6bf5667))
+* 📝 add OpenSpec change for wiki support via direct API ([aa6fd2b](https://codeberg.org/goern/forgejo-mcp/commit/aa6fd2b235b3411ad7fbeb28617ba24aba8a210e)), closes [#32](https://codeberg.org/goern/forgejo-mcp/issues/32)
+* 📝 apply convergence-round refinements to add-wiki-support ([de6229d](https://codeberg.org/goern/forgejo-mcp/commit/de6229d97303eda02cebd3774052278fdbc13f58)), closes [#32](https://codeberg.org/goern/forgejo-mcp/issues/32)
+* 📝 harden add-wiki-support spec via adversarial debate ([62c5424](https://codeberg.org/goern/forgejo-mcp/commit/62c5424c1dcc53e752a119e8d0af0c80a6a07c1c)), closes [#32](https://codeberg.org/goern/forgejo-mcp/issues/32)
+* 📝 mark label-crud tasks done; update README + AGENTS docs ([db1bf44](https://codeberg.org/goern/forgejo-mcp/commit/db1bf441a5f9112f25c2ab163b50d96c4619b483)), closes [#190](https://codeberg.org/goern/forgejo-mcp/issues/190)
+* 📝 OpenSpec change label-crud (label CRUD tools + label resources) ([ca69d3b](https://codeberg.org/goern/forgejo-mcp/commit/ca69d3b196f94a5ccf722b134db74a657c19d206)), closes [#190](https://codeberg.org/goern/forgejo-mcp/issues/190) [#190](https://codeberg.org/goern/forgejo-mcp/issues/190)
+* 📝 third-pass survival check refinements for add-wiki-support ([aad9b36](https://codeberg.org/goern/forgejo-mcp/commit/aad9b361db2607aeb46d5c404466df6d67a8df7a)), closes [#32](https://codeberg.org/goern/forgejo-mcp/issues/32)
+
+### :repeat: Chore
+
+* ✨ add opsx sync/verify commands and update openspec skills ([af66960](https://codeberg.org/goern/forgejo-mcp/commit/af669600a4b2e4ab23101d83a294f07382d9e6eb))
+* 📊 snapshot release download counts ([0ba6b83](https://codeberg.org/goern/forgejo-mcp/commit/0ba6b838bb96a260fc9a56dcd10b89239f9165c4))
+* 📊 snapshot release download counts ([d0e1833](https://codeberg.org/goern/forgejo-mcp/commit/d0e1833615e27ebf24198fc22f97ddf1ace41f1a))
+* 📊 snapshot release download counts ([27b6933](https://codeberg.org/goern/forgejo-mcp/commit/27b6933088be95b3c05857ae0b87a272d77b9923))
+* 📊 snapshot release download counts ([c10b700](https://codeberg.org/goern/forgejo-mcp/commit/c10b700608fa45b4b5c4bd91a43266293d6200b2))
+* 📊 snapshot release download counts ([a0b298c](https://codeberg.org/goern/forgejo-mcp/commit/a0b298cd5f279cf86d872a5e9749f17f66ba48f2))
+* 📊 snapshot release download counts ([d213a97](https://codeberg.org/goern/forgejo-mcp/commit/d213a97f30d5d4e0cc12dd49b9e1330b7776672d))
+* 🔧 automerge non-major container image updates ([9f9dbaf](https://codeberg.org/goern/forgejo-mcp/commit/9f9dbafae247a21fe3bb00f1eee46596e86402af))
+* 🔧 switch to GPL-3.0, update config and dev rules ([3e265ea](https://codeberg.org/goern/forgejo-mcp/commit/3e265ea5e953459272c99e305fdc00111eb16cc2))
+* 🔧 update beads issue tracker state ([00221ef](https://codeberg.org/goern/forgejo-mcp/commit/00221efb1ad49c00616df21bf957f37341922b19))
+* **deps:** lock file maintenance ([d44e2b0](https://codeberg.org/goern/forgejo-mcp/commit/d44e2b0702c98e90e8eac599dbb7c4e09efbdd40))
+* **deps:** update quay.io/hummingbird/core-runtime:2.42 docker digest to a71de5c ([9eff781](https://codeberg.org/goern/forgejo-mcp/commit/9eff781d1866b053ac0865e52d43c0970ca33497))
+* **deps:** update quay.io/hummingbird/go docker tag to v1.26.4 ([eb66d14](https://codeberg.org/goern/forgejo-mcp/commit/eb66d149d9a0729b0e814f78a98b1bec16139086))
+* **deps:** update quay.io/hummingbird/go:1.26.4-builder docker digest to 1aaf9b3 ([dfb6ee3](https://codeberg.org/goern/forgejo-mcp/commit/dfb6ee37f63270afd052806485129d297c032213))
+* **deps:** update quay.io/hummingbird/go:1.26.4-builder docker digest to 218c841 ([ff9786e](https://codeberg.org/goern/forgejo-mcp/commit/ff9786edd6b24c8b3f5a2aba742a7fb6bdfd7a6b))
+* **deps:** update quay.io/hummingbird/go:1.26.4-builder docker digest to 3828e50 ([73e4587](https://codeberg.org/goern/forgejo-mcp/commit/73e4587d012e55af601e964c8f953400c25b149b))
+* **deps:** update quay.io/hummingbird/go:1.26.4-builder docker digest to 4333774 ([801ecbc](https://codeberg.org/goern/forgejo-mcp/commit/801ecbc98ac007a5fec8d8912171dd3154fdbe91))
+* **deps:** update quay.io/hummingbird/go:1.26.4-builder docker digest to 5f0d472 ([1ece055](https://codeberg.org/goern/forgejo-mcp/commit/1ece055b86f25379247ebd77a4a0ca422278bce8))
+* **deps:** update quay.io/hummingbird/go:1.26.4-builder docker digest to b3a5ba1 ([1e3e805](https://codeberg.org/goern/forgejo-mcp/commit/1e3e80530419dea121ae5226c5edd36720f62bef))
+* **deps:** update quay.io/hummingbird/go:1.26.4-builder docker digest to cdef296 ([6aaea12](https://codeberg.org/goern/forgejo-mcp/commit/6aaea1269047e214dee9b350ee7d8bb67a6e5f6f))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to 1aaf9b3 ([366ffed](https://codeberg.org/goern/forgejo-mcp/commit/366ffed351d61faacd65c57d19bd3c8ccbe81886))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to 218c841 ([e7eb2d1](https://codeberg.org/goern/forgejo-mcp/commit/e7eb2d17af596083c95c00022769154a13ab0b2f))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to 3e54930 ([9938dc3](https://codeberg.org/goern/forgejo-mcp/commit/9938dc348a943f35b73700e054a581dee79b4a97))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to 4333774 ([5861913](https://codeberg.org/goern/forgejo-mcp/commit/5861913b167d64c1dd7058b4fdef733b78f7ad61))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to b312927 ([68d38d7](https://codeberg.org/goern/forgejo-mcp/commit/68d38d7b7e2d83d97a2ea3aac66d3c1ef485c433))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to b3a5ba1 ([bec9422](https://codeberg.org/goern/forgejo-mcp/commit/bec9422abea705363dd0627fd46ce54f4017f6d4))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to cdef296 ([9cffae6](https://codeberg.org/goern/forgejo-mcp/commit/9cffae6f390b110c98eba5bcad201e47b28230c9))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to dd39528 ([539d7af](https://codeberg.org/goern/forgejo-mcp/commit/539d7af64c55f59726278fe4d2cd712781a21dca))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to f7764ee ([71b14f0](https://codeberg.org/goern/forgejo-mcp/commit/71b14f0ae0812c98f8f65e6dde25c021a2b6cd1e))
+
 ## [2.28.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.27.0...v2.28.0) (2026-06-02)
 
 ### :sparkles: Features
