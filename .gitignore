@@ -43,3 +43,6 @@ worktrees/
 # Defense-in-depth: catch SOPS scratch files and any future secrets/ usage.
 secrets/
 .~decrypted*.enc.yaml
+
+.mcp.json
+references/labels-cache.md

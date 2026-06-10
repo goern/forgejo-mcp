@@ -23,6 +23,26 @@ Key directories:
 - `pkg/to/` - Response formatting helpers
 - `pkg/params/` - Shared parameter descriptions
 
+## File Header
+
+Every new source file MUST begin with an SPDX license header as the very first lines, before any package declaration or imports:
+
+```go
+// SPDX-License-Identifier: GPL-3.0-or-later
+```
+
+For non-Go files (YAML, Markdown, shell, etc.), use the appropriate comment syntax:
+
+```yaml
+# SPDX-License-Identifier: GPL-3.0-or-later
+```
+
+```bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+```
+
+Do not add a copyright line — the SPDX identifier line alone is sufficient.
+
 ## Adding a New Tool
 
 1. Create or modify a file in `operation/{domain}/`
