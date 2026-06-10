@@ -226,12 +226,18 @@ func testConnection() error {
 func RegisterCoreResources(s *server.MCPServer) {
 	RegisterCommitResource(s)
 	RegisterIssueResources(s)
+	RegisterLabelResources(s)
 	RegisterOwnerResource(s)
 	RegisterPullResources(s)
 	RegisterRepoResource(s)
 	RegisterStatusResource(s)
 	RegisterBranchProtectionResources(s)
 	log.Debug("Registered core resource templates")
+}
+
+func RegisterLabelResources(s *server.MCPServer) {
+	issue.RegisterLabelResources(s)
+	log.Debug("Registered label resource templates")
 }
 
 func RegisterBranchProtectionResources(s *server.MCPServer) {

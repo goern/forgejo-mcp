@@ -228,6 +228,7 @@ func RegisterTool(s *server.MCPServer) {
 	s.AddTool(ListRepoMilestonesTool, ListRepoMilestonesFn)
 	s.AddTool(ListRepoLabelsTool, ListRepoLabelsFn)
 	s.AddTool(ListOrgLabelsTool, ListOrgLabelsFn)
+	RegisterLabelTool(s)
 }
 
 func GetIssueByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {

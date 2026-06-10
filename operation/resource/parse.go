@@ -266,6 +266,80 @@ func ParseBranchProtection(uri string) (BranchProtectionParams, error) {
 	return BranchProtectionParams{Owner: parts[0], Repo: parts[1], Rule: rule}, nil
 }
 
+// LabelParams holds parsed fields from forgejo://repo/{owner}/{repo}/label/{id}.
+type LabelParams struct {
+	Owner string
+	Repo  string
+	ID    int64
+}
+
+// LabelsParams holds parsed fields from forgejo://repo/{owner}/{repo}/labels.
+type LabelsParams struct {
+	Owner string
+	Repo  string
+}
+
+// OrgLabelsParams holds parsed fields from forgejo://org/{org}/labels.
+type OrgLabelsParams struct {
+	Org string
+}
+
+// ParseLabel parses forgejo://repo/{owner}/{repo}/label/{id}.
+// Returns ErrInvalidParams if the id is not numeric.
+func ParseLabel(uri string) (LabelParams, error) {
+	u, err := parseForgejoURI(uri)
+	if err != nil {
+		return LabelParams{}, err
+	}
+	if u.Host != "repo" {
+		return LabelParams{}, fmt.Errorf("%w: expected forgejo://repo/..., got %q", ErrInvalidParams, uri)
+	}
+	parts := splitPath(u.Path)
+	// parts: [owner, repo, "label", id]
+	if len(parts) != 4 || parts[2] != "label" {
+		return LabelParams{}, fmt.Errorf("%w: expected forgejo://repo/{owner}/{repo}/label/{id}, got %q", ErrInvalidParams, uri)
+	}
+	id, err := strconv.ParseInt(parts[3], 10, 64)
+	if err != nil {
+		return LabelParams{}, fmt.Errorf("%w: invalid URI %q: id must be numeric", ErrInvalidParams, uri)
+	}
+	return LabelParams{Owner: parts[0], Repo: parts[1], ID: id}, nil
+}
+
+// ParseLabels parses forgejo://repo/{owner}/{repo}/labels.
+func ParseLabels(uri string) (LabelsParams, error) {
+	u, err := parseForgejoURI(uri)
+	if err != nil {
+		return LabelsParams{}, err
+	}
+	if u.Host != "repo" {
+		return LabelsParams{}, fmt.Errorf("%w: expected forgejo://repo/..., got %q", ErrInvalidParams, uri)
+	}
+	parts := splitPath(u.Path)
+	// parts: [owner, repo, "labels"]
+	if len(parts) != 3 || parts[2] != "labels" {
+		return LabelsParams{}, fmt.Errorf("%w: expected forgejo://repo/{owner}/{repo}/labels, got %q", ErrInvalidParams, uri)
+	}
+	return LabelsParams{Owner: parts[0], Repo: parts[1]}, nil
+}
+
+// ParseOrgLabels parses forgejo://org/{org}/labels.
+func ParseOrgLabels(uri string) (OrgLabelsParams, error) {
+	u, err := parseForgejoURI(uri)
+	if err != nil {
+		return OrgLabelsParams{}, err
+	}
+	if u.Host != "org" {
+		return OrgLabelsParams{}, fmt.Errorf("%w: expected forgejo://org/{org}/labels, got %q", ErrInvalidParams, uri)
+	}
+	parts := splitPath(u.Path)
+	// parts: [org, "labels"]
+	if len(parts) != 2 || parts[1] != "labels" {
+		return OrgLabelsParams{}, fmt.Errorf("%w: expected forgejo://org/{org}/labels, got %q", ErrInvalidParams, uri)
+	}
+	return OrgLabelsParams{Org: parts[0]}, nil
+}
+
 func parseForgejoURI(uri string) (*url.URL, error) {
 	u, err := url.Parse(uri)
 	if err != nil {
