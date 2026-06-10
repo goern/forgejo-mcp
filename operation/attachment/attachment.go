@@ -190,13 +190,13 @@ func ListIssueAttachmentsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 	repo, _ := req.GetArguments()["repo"].(string)
 	index, err := to.Float64(req.GetArguments()["index"])
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("index: %v", err))
+		return to.ErrorResult(fmt.Errorf("index: %w", err))
 	}
 
 	var out []*forgejo_sdk.Attachment
 	path := fmt.Sprintf("/repos/%s/%s/issues/%d/assets", owner, repo, int64(index))
 	if err := forgejo.DoJSONList(ctx, http.MethodGet, path, &out); err != nil {
-		return to.ErrorResult(fmt.Errorf("list issue attachments err: %v", err))
+		return to.ErrorResult(fmt.Errorf("list issue attachments err: %w", err))
 	}
 	if out == nil {
 		out = []*forgejo_sdk.Attachment{}
@@ -210,16 +210,16 @@ func GetIssueAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	repo, _ := req.GetArguments()["repo"].(string)
 	index, err := to.Float64(req.GetArguments()["index"])
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("index: %v", err))
+		return to.ErrorResult(fmt.Errorf("index: %w", err))
 	}
 	aid, err := to.Float64(req.GetArguments()["attachment_id"])
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("attachment_id: %v", err))
+		return to.ErrorResult(fmt.Errorf("attachment_id: %w", err))
 	}
 
 	att, err := getIssueAttachment(ctx, owner, repo, int64(index), int64(aid))
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("get issue attachment err: %v", err))
+		return to.ErrorResult(fmt.Errorf("get issue attachment err: %w", err))
 	}
 	return to.TextResult(att)
 }
@@ -230,16 +230,16 @@ func DownloadIssueAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*m
 	repo, _ := req.GetArguments()["repo"].(string)
 	index, err := to.Float64(req.GetArguments()["index"])
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("index: %v", err))
+		return to.ErrorResult(fmt.Errorf("index: %w", err))
 	}
 	aid, err := to.Float64(req.GetArguments()["attachment_id"])
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("attachment_id: %v", err))
+		return to.ErrorResult(fmt.Errorf("attachment_id: %w", err))
 	}
 
 	att, err := getIssueAttachment(ctx, owner, repo, int64(index), int64(aid))
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("download issue attachment (metadata) err: %v", err))
+		return to.ErrorResult(fmt.Errorf("download issue attachment (metadata) err: %w", err))
 	}
 	return downloadResultFor(ctx, att)
 }
@@ -250,7 +250,7 @@ func CreateIssueAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	repo, _ := req.GetArguments()["repo"].(string)
 	index, err := to.Float64(req.GetArguments()["index"])
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("index: %v", err))
+		return to.ErrorResult(fmt.Errorf("index: %w", err))
 	}
 	content, _ := req.GetArguments()["content"].(string)
 	filename, _ := req.GetArguments()["filename"].(string)
@@ -261,13 +261,13 @@ func CreateIssueAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	}
 	raw, err := base64.StdEncoding.DecodeString(content)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("content must be base64-encoded: %v", err))
+		return to.ErrorResult(fmt.Errorf("content must be base64-encoded: %w", err))
 	}
 
 	var att forgejo_sdk.Attachment
 	path := fmt.Sprintf("/repos/%s/%s/issues/%d/assets", owner, repo, int64(index))
 	if err := forgejo.DoMultipart(ctx, http.MethodPost, path, multipartFieldName, filename, mimeType, bytes.NewReader(raw), &att); err != nil {
-		return to.ErrorResult(fmt.Errorf("create issue attachment err: %v", err))
+		return to.ErrorResult(fmt.Errorf("create issue attachment err: %w", err))
 	}
 	return to.TextResult(att)
 }
@@ -278,11 +278,11 @@ func EditIssueAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 	repo, _ := req.GetArguments()["repo"].(string)
 	index, err := to.Float64(req.GetArguments()["index"])
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("index: %v", err))
+		return to.ErrorResult(fmt.Errorf("index: %w", err))
 	}
 	aid, err := to.Float64(req.GetArguments()["attachment_id"])
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("attachment_id: %v", err))
+		return to.ErrorResult(fmt.Errorf("attachment_id: %w", err))
 	}
 	name, _ := req.GetArguments()["name"].(string)
 	if name == "" {
@@ -293,7 +293,7 @@ func EditIssueAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 	body := map[string]string{"name": name}
 	path := fmt.Sprintf("/repos/%s/%s/issues/%d/assets/%d", owner, repo, int64(index), int64(aid))
 	if err := forgejo.DoJSON(ctx, http.MethodPatch, path, body, &att); err != nil {
-		return to.ErrorResult(fmt.Errorf("edit issue attachment err: %v", err))
+		return to.ErrorResult(fmt.Errorf("edit issue attachment err: %w", err))
 	}
 	return to.TextResult(att)
 }
@@ -304,15 +304,15 @@ func DeleteIssueAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	repo, _ := req.GetArguments()["repo"].(string)
 	index, err := to.Float64(req.GetArguments()["index"])
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("index: %v", err))
+		return to.ErrorResult(fmt.Errorf("index: %w", err))
 	}
 	aid, err := to.Float64(req.GetArguments()["attachment_id"])
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("attachment_id: %v", err))
+		return to.ErrorResult(fmt.Errorf("attachment_id: %w", err))
 	}
 	path := fmt.Sprintf("/repos/%s/%s/issues/%d/assets/%d", owner, repo, int64(index), int64(aid))
 	if err := forgejo.DoJSON(ctx, http.MethodDelete, path, nil, nil); err != nil {
-		return to.ErrorResult(fmt.Errorf("delete issue attachment err: %v", err))
+		return to.ErrorResult(fmt.Errorf("delete issue attachment err: %w", err))
 	}
 	return to.TextResult(map[string]string{"status": "deleted"})
 }
@@ -325,13 +325,13 @@ func ListCommentAttachmentsFn(ctx context.Context, req mcp.CallToolRequest) (*mc
 	repo, _ := req.GetArguments()["repo"].(string)
 	cid, err := to.Float64(req.GetArguments()["comment_id"])
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("comment_id: %v", err))
+		return to.ErrorResult(fmt.Errorf("comment_id: %w", err))
 	}
 
 	var out []*forgejo_sdk.Attachment
 	path := fmt.Sprintf("/repos/%s/%s/issues/comments/%d/assets", owner, repo, int64(cid))
 	if err := forgejo.DoJSONList(ctx, http.MethodGet, path, &out); err != nil {
-		return to.ErrorResult(fmt.Errorf("list comment attachments err: %v", err))
+		return to.ErrorResult(fmt.Errorf("list comment attachments err: %w", err))
 	}
 	if out == nil {
 		out = []*forgejo_sdk.Attachment{}
@@ -345,16 +345,16 @@ func GetCommentAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 	repo, _ := req.GetArguments()["repo"].(string)
 	cid, err := to.Float64(req.GetArguments()["comment_id"])
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("comment_id: %v", err))
+		return to.ErrorResult(fmt.Errorf("comment_id: %w", err))
 	}
 	aid, err := to.Float64(req.GetArguments()["attachment_id"])
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("attachment_id: %v", err))
+		return to.ErrorResult(fmt.Errorf("attachment_id: %w", err))
 	}
 
 	att, err := getCommentAttachment(ctx, owner, repo, int64(cid), int64(aid))
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("get comment attachment err: %v", err))
+		return to.ErrorResult(fmt.Errorf("get comment attachment err: %w", err))
 	}
 	return to.TextResult(att)
 }
@@ -365,15 +365,15 @@ func DownloadCommentAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (
 	repo, _ := req.GetArguments()["repo"].(string)
 	cid, err := to.Float64(req.GetArguments()["comment_id"])
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("comment_id: %v", err))
+		return to.ErrorResult(fmt.Errorf("comment_id: %w", err))
 	}
 	aid, err := to.Float64(req.GetArguments()["attachment_id"])
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("attachment_id: %v", err))
+		return to.ErrorResult(fmt.Errorf("attachment_id: %w", err))
 	}
 	att, err := getCommentAttachment(ctx, owner, repo, int64(cid), int64(aid))
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("download comment attachment (metadata) err: %v", err))
+		return to.ErrorResult(fmt.Errorf("download comment attachment (metadata) err: %w", err))
 	}
 	return downloadResultFor(ctx, att)
 }
@@ -384,7 +384,7 @@ func CreateCommentAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*m
 	repo, _ := req.GetArguments()["repo"].(string)
 	cid, err := to.Float64(req.GetArguments()["comment_id"])
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("comment_id: %v", err))
+		return to.ErrorResult(fmt.Errorf("comment_id: %w", err))
 	}
 	content, _ := req.GetArguments()["content"].(string)
 	filename, _ := req.GetArguments()["filename"].(string)
@@ -394,13 +394,13 @@ func CreateCommentAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*m
 	}
 	raw, err := base64.StdEncoding.DecodeString(content)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("content must be base64-encoded: %v", err))
+		return to.ErrorResult(fmt.Errorf("content must be base64-encoded: %w", err))
 	}
 
 	var att forgejo_sdk.Attachment
 	path := fmt.Sprintf("/repos/%s/%s/issues/comments/%d/assets", owner, repo, int64(cid))
 	if err := forgejo.DoMultipart(ctx, http.MethodPost, path, multipartFieldName, filename, mimeType, bytes.NewReader(raw), &att); err != nil {
-		return to.ErrorResult(fmt.Errorf("create comment attachment err: %v", err))
+		return to.ErrorResult(fmt.Errorf("create comment attachment err: %w", err))
 	}
 	return to.TextResult(att)
 }
@@ -411,11 +411,11 @@ func EditCommentAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	repo, _ := req.GetArguments()["repo"].(string)
 	cid, err := to.Float64(req.GetArguments()["comment_id"])
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("comment_id: %v", err))
+		return to.ErrorResult(fmt.Errorf("comment_id: %w", err))
 	}
 	aid, err := to.Float64(req.GetArguments()["attachment_id"])
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("attachment_id: %v", err))
+		return to.ErrorResult(fmt.Errorf("attachment_id: %w", err))
 	}
 	name, _ := req.GetArguments()["name"].(string)
 	if name == "" {
@@ -426,7 +426,7 @@ func EditCommentAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	body := map[string]string{"name": name}
 	path := fmt.Sprintf("/repos/%s/%s/issues/comments/%d/assets/%d", owner, repo, int64(cid), int64(aid))
 	if err := forgejo.DoJSON(ctx, http.MethodPatch, path, body, &att); err != nil {
-		return to.ErrorResult(fmt.Errorf("edit comment attachment err: %v", err))
+		return to.ErrorResult(fmt.Errorf("edit comment attachment err: %w", err))
 	}
 	return to.TextResult(att)
 }
@@ -437,15 +437,15 @@ func DeleteCommentAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*m
 	repo, _ := req.GetArguments()["repo"].(string)
 	cid, err := to.Float64(req.GetArguments()["comment_id"])
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("comment_id: %v", err))
+		return to.ErrorResult(fmt.Errorf("comment_id: %w", err))
 	}
 	aid, err := to.Float64(req.GetArguments()["attachment_id"])
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("attachment_id: %v", err))
+		return to.ErrorResult(fmt.Errorf("attachment_id: %w", err))
 	}
 	path := fmt.Sprintf("/repos/%s/%s/issues/comments/%d/assets/%d", owner, repo, int64(cid), int64(aid))
 	if err := forgejo.DoJSON(ctx, http.MethodDelete, path, nil, nil); err != nil {
-		return to.ErrorResult(fmt.Errorf("delete comment attachment err: %v", err))
+		return to.ErrorResult(fmt.Errorf("delete comment attachment err: %w", err))
 	}
 	return to.TextResult(map[string]string{"status": "deleted"})
 }
@@ -491,7 +491,7 @@ func downloadResultFor(ctx context.Context, att *forgejo_sdk.Attachment) (*mcp.C
 			res.Reason = "body exceeded inline cap during fetch; fetch browser_download_url with Authorization: token <TOKEN>"
 			return to.TextResult(res)
 		}
-		return to.ErrorResult(fmt.Errorf("download body err: %v", err))
+		return to.ErrorResult(fmt.Errorf("download body err: %w", err))
 	}
 	res.Inline = true
 	res.BytesIncluded = int64(len(body))

@@ -101,7 +101,7 @@ func ListOrgTeamsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 	}
 	teams, _, err := client.ListOrgTeams(orgName, opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("list org teams err: %v", err))
+		return to.ErrorResult(fmt.Errorf("list org teams err: %w", err))
 	}
 	return to.TextResult(teams)
 }
@@ -142,7 +142,7 @@ func CreateOrgTeamFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToo
 	}
 	team, _, err := client.CreateTeam(orgName, opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("create org team err: %v", err))
+		return to.ErrorResult(fmt.Errorf("create org team err: %w", err))
 	}
 	return to.TextResult(team)
 }
@@ -165,7 +165,7 @@ func AddTeamMemberFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToo
 	}
 	_, err = client.AddTeamMember(teamID, user)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("add team member err: %v", err))
+		return to.ErrorResult(fmt.Errorf("add team member err: %w", err))
 	}
 	return to.TextResult(fmt.Sprintf("User '%s' added to team %d", user, teamID))
 }
@@ -188,7 +188,7 @@ func RemoveTeamMemberFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 	}
 	_, err = client.RemoveTeamMember(teamID, user)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("remove team member err: %v", err))
+		return to.ErrorResult(fmt.Errorf("remove team member err: %w", err))
 	}
 	return to.TextResult(fmt.Sprintf("User '%s' removed from team %d", user, teamID))
 }
@@ -215,7 +215,7 @@ func AddTeamRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	}
 	_, err = client.AddTeamRepository(teamID, orgName, repo)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("add team repo err: %v", err))
+		return to.ErrorResult(fmt.Errorf("add team repo err: %w", err))
 	}
 	return to.TextResult(fmt.Sprintf("Repository '%s/%s' added to team %d", orgName, repo, teamID))
 }
@@ -242,7 +242,7 @@ func RemoveTeamRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	}
 	_, err = client.RemoveTeamRepository(teamID, orgName, repo)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("remove team repo err: %v", err))
+		return to.ErrorResult(fmt.Errorf("remove team repo err: %w", err))
 	}
 	return to.TextResult(fmt.Sprintf("Repository '%s/%s' removed from team %d", orgName, repo, teamID))
 }

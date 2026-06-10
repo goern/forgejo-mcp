@@ -178,9 +178,10 @@ func TestDeleteRepoLabelFn_UnusedSuccess(t *testing.T) {
 		// GET label
 		mux.HandleFunc("/api/v1/repos/owner/repo/labels/1", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
-			if r.Method == http.MethodGet {
+			switch r.Method {
+			case http.MethodGet:
 				json.NewEncoder(w).Encode(forgejo_sdk.Label{ID: 1, Name: "unused"})
-			} else if r.Method == http.MethodDelete {
+			case http.MethodDelete:
 				w.WriteHeader(http.StatusNoContent)
 			}
 		})

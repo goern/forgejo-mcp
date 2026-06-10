@@ -59,7 +59,7 @@ func ListRepoContentsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 	}
 	contents, _, err := client.ListContents(owner, repo, ref, path)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("list repo contents err: %v", err))
+		return to.ErrorResult(fmt.Errorf("list repo contents err: %w", err))
 	}
 	return to.TextResult(contents)
 }
@@ -101,7 +101,7 @@ func GetRepoTreeFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	}
 	tree, _, err := client.GetTrees(owner, repo, ref, opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("get repo tree err: %v", err))
+		return to.ErrorResult(fmt.Errorf("get repo tree err: %w", err))
 	}
 	return to.TextResult(tree)
 }

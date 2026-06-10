@@ -243,7 +243,7 @@ func GetIssueByIndexFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 	}
 	issue, _, err := client.GetIssue(owner, repo, int64(index))
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("get issue err: %v", err))
+		return to.ErrorResult(fmt.Errorf("get issue err: %w", err))
 	}
 	return to.TextResult(issue)
 }
@@ -300,7 +300,7 @@ func ListRepoIssuesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	}
 	issues, _, err := client.ListRepoIssues(owner, repo, opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("get issues list err: %v", err))
+		return to.ErrorResult(fmt.Errorf("get issues list err: %w", err))
 	}
 	return to.TextResult(issues)
 }
@@ -322,7 +322,7 @@ func CreateIssueFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	}
 	issue, _, err := client.CreateIssue(owner, repo, opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("create issue err: %v", err))
+		return to.ErrorResult(fmt.Errorf("create issue err: %w", err))
 	}
 	return to.TextResult(issue)
 }
@@ -343,7 +343,7 @@ func CreateIssueCommentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	}
 	comment, _, err := client.CreateIssueComment(owner, repo, int64(index), opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("create issue comment err: %v", err))
+		return to.ErrorResult(fmt.Errorf("create issue comment err: %w", err))
 	}
 	return to.TextResult(comment)
 }
@@ -379,7 +379,7 @@ func UpdateIssueFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	if milestone != "" {
 		milestoneID, err := strconv.ParseInt(milestone, 10, 64)
 		if err != nil {
-			return to.ErrorResult(fmt.Errorf("invalid milestone ID: %v", err))
+			return to.ErrorResult(fmt.Errorf("invalid milestone ID: %w", err))
 		}
 		opt.Milestone = &milestoneID
 	}
@@ -390,7 +390,7 @@ func UpdateIssueFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	}
 	issue, _, err := client.EditIssue(owner, repo, int64(index), opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("update issue err: %v", err))
+		return to.ErrorResult(fmt.Errorf("update issue err: %w", err))
 	}
 	return to.TextResult(issue)
 }
@@ -411,7 +411,7 @@ func AddIssueLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		labelStr = strings.TrimSpace(labelStr)
 		labelID, err := strconv.ParseInt(labelStr, 10, 64)
 		if err != nil {
-			return to.ErrorResult(fmt.Errorf("invalid label ID '%s': %v - labels must be numeric IDs", labelStr, err))
+			return to.ErrorResult(fmt.Errorf("invalid label ID '%s': %w - labels must be numeric IDs", labelStr, err))
 		}
 		labelIDs = append(labelIDs, labelID)
 	}
@@ -427,13 +427,13 @@ func AddIssueLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	}
 	_, _, err = client.AddIssueLabels(owner, repo, int64(index), opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("add issue labels err: %v", err))
+		return to.ErrorResult(fmt.Errorf("add issue labels err: %w", err))
 	}
 
 	// Fetch the updated issue to return it with the new labels
 	issue, _, err := client.GetIssue(owner, repo, int64(index))
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("get updated issue err: %v", err))
+		return to.ErrorResult(fmt.Errorf("get updated issue err: %w", err))
 	}
 	return to.TextResult(issue)
 }
@@ -454,18 +454,18 @@ func RemoveIssueLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Cal
 		labelStr = strings.TrimSpace(labelStr)
 		labelID, err := strconv.ParseInt(labelStr, 10, 64)
 		if err != nil {
-			return to.ErrorResult(fmt.Errorf("invalid label ID '%s': %v - labels must be numeric IDs", labelStr, err))
+			return to.ErrorResult(fmt.Errorf("invalid label ID '%s': %w - labels must be numeric IDs", labelStr, err))
 		}
 		_, err = client.DeleteIssueLabel(owner, repo, int64(index), labelID)
 		if err != nil {
-			return to.ErrorResult(fmt.Errorf("remove issue label err: %v", err))
+			return to.ErrorResult(fmt.Errorf("remove issue label err: %w", err))
 		}
 	}
 
 	// Fetch the updated issue to return it with the updated labels
 	issue, _, err := client.GetIssue(owner, repo, int64(index))
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("get updated issue err: %v", err))
+		return to.ErrorResult(fmt.Errorf("get updated issue err: %w", err))
 	}
 	return to.TextResult(issue)
 }
@@ -494,7 +494,7 @@ func IssueStateChangeFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 	}
 	issue, _, err := client.EditIssue(owner, repo, int64(index), opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("change issue state err: %v", err))
+		return to.ErrorResult(fmt.Errorf("change issue state err: %w", err))
 	}
 	return to.TextResult(issue)
 }
@@ -526,14 +526,14 @@ func ListIssueCommentsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Cal
 	if since != "" {
 		sinceTime, err := time.Parse(time.RFC3339, since)
 		if err != nil {
-			return to.ErrorResult(fmt.Errorf("invalid since time format (expected RFC3339): %v", err))
+			return to.ErrorResult(fmt.Errorf("invalid since time format (expected RFC3339): %w", err))
 		}
 		opt.Since = sinceTime
 	}
 	if before != "" {
 		beforeTime, err := time.Parse(time.RFC3339, before)
 		if err != nil {
-			return to.ErrorResult(fmt.Errorf("invalid before time format (expected RFC3339): %v", err))
+			return to.ErrorResult(fmt.Errorf("invalid before time format (expected RFC3339): %w", err))
 		}
 		opt.Before = beforeTime
 	}
@@ -544,7 +544,7 @@ func ListIssueCommentsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Cal
 	}
 	comments, _, err := client.ListIssueComments(owner, repo, int64(index), opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("list issue comments err: %v", err))
+		return to.ErrorResult(fmt.Errorf("list issue comments err: %w", err))
 	}
 	return to.TextResult(comments)
 }
@@ -561,7 +561,7 @@ func GetIssueCommentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 	}
 	comment, _, err := client.GetIssueComment(owner, repo, int64(commentID))
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("get issue comment err: %v", err))
+		return to.ErrorResult(fmt.Errorf("get issue comment err: %w", err))
 	}
 	return to.TextResult(comment)
 }
@@ -582,7 +582,7 @@ func EditIssueCommentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 	}
 	comment, _, err := client.EditIssueComment(owner, repo, int64(commentID), opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("edit issue comment err: %v", err))
+		return to.ErrorResult(fmt.Errorf("edit issue comment err: %w", err))
 	}
 	return to.TextResult(comment)
 }
@@ -599,7 +599,7 @@ func DeleteIssueCommentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	}
 	_, err = client.DeleteIssueComment(owner, repo, int64(commentID))
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("delete issue comment err: %v", err))
+		return to.ErrorResult(fmt.Errorf("delete issue comment err: %w", err))
 	}
 	return to.TextResult("Delete comment success")
 }
@@ -634,7 +634,7 @@ func ListRepoMilestonesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	}
 	milestones, _, err := client.ListRepoMilestones(owner, repo, opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("list repo milestones err: %v", err))
+		return to.ErrorResult(fmt.Errorf("list repo milestones err: %w", err))
 	}
 	return to.TextResult(milestones)
 }
@@ -670,7 +670,7 @@ func ListRepoLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	}
 	repoLabels, _, err := client.ListRepoLabels(owner, repo, opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("list repo labels err: %v", err))
+		return to.ErrorResult(fmt.Errorf("list repo labels err: %w", err))
 	}
 	merged := make([]ScopedLabel, 0, len(repoLabels))
 	for _, l := range repoLabels {
@@ -680,7 +680,7 @@ func ListRepoLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	if includeOrg {
 		orgLabels, oerr := fetchOrgLabels(ctx, owner, int(page), int(limit))
 		if oerr != nil {
-			return to.ErrorResult(fmt.Errorf("list org labels err: %v", oerr))
+			return to.ErrorResult(fmt.Errorf("list org labels err: %w", oerr))
 		}
 		merged = append(merged, orgLabels...)
 	}
@@ -703,7 +703,7 @@ func ListOrgLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToo
 
 	labels, err := fetchOrgLabels(ctx, org, int(page), int(limit))
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("list org labels err: %v", err))
+		return to.ErrorResult(fmt.Errorf("list org labels err: %w", err))
 	}
 	return to.TextResult(labels)
 }

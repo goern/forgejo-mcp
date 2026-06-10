@@ -126,7 +126,7 @@ func CreateRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 		repo, _, err = client.CreateRepo(opt)
 	}
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("create repo err: %v", err))
+		return to.ErrorResult(fmt.Errorf("create repo err: %w", err))
 	}
 	return to.TextResult(repo)
 }
@@ -161,7 +161,7 @@ func ForkRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResu
 	}
 	_, _, err = client.CreateFork(user, repo, opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("fork repository error %v", err))
+		return to.ErrorResult(fmt.Errorf("fork repository error %w", err))
 	}
 	return to.TextResult("Fork success")
 }
@@ -188,7 +188,7 @@ func ListMyReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	}
 	repos, _, err := client.ListMyRepos(opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("list my repositories error: %v", err))
+		return to.ErrorResult(fmt.Errorf("list my repositories error: %w", err))
 	}
 
 	return to.TextResult(repos)

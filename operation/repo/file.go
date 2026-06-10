@@ -98,7 +98,7 @@ func GetFileContentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		}
 		content, _, err := client.GetContents(owner, repo, ref, filePath)
 		if err != nil {
-			return to.ErrorResult(fmt.Errorf("get file err: %v", err))
+			return to.ErrorResult(fmt.Errorf("get file err: %w", err))
 		}
 		return to.TextResult(content)
 	}
@@ -111,7 +111,7 @@ func GetFileContentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	}
 	rawBytes, _, err := client.GetFile(owner, repo, ref, filePath)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("get file err: %v", err))
+		return to.ErrorResult(fmt.Errorf("get file err: %w", err))
 	}
 
 	startF, _ := to.Float64(args["start_line"])
@@ -177,7 +177,7 @@ func CreateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 	}
 	fileResp, _, err := client.CreateFile(owner, repo, filePath, opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("create file error: %v", err))
+		return to.ErrorResult(fmt.Errorf("create file error: %w", err))
 	}
 	return to.TextResult(fileResp)
 }
@@ -210,7 +210,7 @@ func UpdateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 	}
 	fileResp, _, err := client.UpdateFile(owner, repo, filePath, opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("update file error: %v", err))
+		return to.ErrorResult(fmt.Errorf("update file error: %w", err))
 	}
 	return to.TextResult(fileResp)
 }
@@ -250,7 +250,7 @@ func DeleteFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 	}
 	_, err = client.DeleteFile(owner, repo, filePath, opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("delete file err: %v", err))
+		return to.ErrorResult(fmt.Errorf("delete file err: %w", err))
 	}
 	return to.TextResult("Delete file success")
 }

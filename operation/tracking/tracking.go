@@ -148,13 +148,13 @@ func parseTimeFilters(args map[string]any) (since, before time.Time, err error) 
 	if s, ok := args["since"].(string); ok && s != "" {
 		since, err = time.Parse(time.RFC3339, s)
 		if err != nil {
-			return since, before, fmt.Errorf("invalid since (expected RFC3339): %v", err)
+			return since, before, fmt.Errorf("invalid since (expected RFC3339): %w", err)
 		}
 	}
 	if b, ok := args["before"].(string); ok && b != "" {
 		before, err = time.Parse(time.RFC3339, b)
 		if err != nil {
-			return since, before, fmt.Errorf("invalid before (expected RFC3339): %v", err)
+			return since, before, fmt.Errorf("invalid before (expected RFC3339): %w", err)
 		}
 	}
 	return since, before, nil
@@ -189,7 +189,7 @@ func ListIssueTrackedTimesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	}
 	times, _, err := client.ListIssueTrackedTimes(owner, repo, int64(index), opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("list issue tracked times err: %v", err))
+		return to.ErrorResult(fmt.Errorf("list issue tracked times err: %w", err))
 	}
 	return to.TextResult(times)
 }
@@ -223,7 +223,7 @@ func ListRepoTrackedTimesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 	}
 	times, _, err := client.ListRepoTrackedTimes(owner, repo, opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("list repo tracked times err: %v", err))
+		return to.ErrorResult(fmt.Errorf("list repo tracked times err: %w", err))
 	}
 	return to.TextResult(times)
 }
@@ -236,7 +236,7 @@ func ListMyTrackedTimesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	}
 	times, _, err := client.GetMyTrackedTimes()
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("list my tracked times err: %v", err))
+		return to.ErrorResult(fmt.Errorf("list my tracked times err: %w", err))
 	}
 	return to.TextResult(times)
 }
@@ -261,7 +261,7 @@ func resolveSeconds(args map[string]any) (int64, error) {
 	default:
 		d, err := time.ParseDuration(durStr)
 		if err != nil {
-			return 0, fmt.Errorf("invalid duration %q: %v", durStr, err)
+			return 0, fmt.Errorf("invalid duration %q: %w", durStr, err)
 		}
 		if d <= 0 {
 			return 0, fmt.Errorf("duration must be positive, got %s", d)
@@ -289,7 +289,7 @@ func AddIssueTimeFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 	if ts, ok := args["created_at"].(string); ok && ts != "" {
 		parsed, err := time.Parse(time.RFC3339, ts)
 		if err != nil {
-			return to.ErrorResult(fmt.Errorf("invalid created_at (expected RFC3339): %v", err))
+			return to.ErrorResult(fmt.Errorf("invalid created_at (expected RFC3339): %w", err))
 		}
 		opt.Created = parsed
 	}
@@ -300,7 +300,7 @@ func AddIssueTimeFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 	}
 	entry, _, err := client.AddTime(owner, repo, int64(index), opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("add issue time err: %v", err))
+		return to.ErrorResult(fmt.Errorf("add issue time err: %w", err))
 	}
 	return to.TextResult(entry)
 }
@@ -318,7 +318,7 @@ func ResetIssueTimeFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	}
 	_, err = client.ResetIssueTime(owner, repo, int64(index))
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("reset issue time err: %v", err))
+		return to.ErrorResult(fmt.Errorf("reset issue time err: %w", err))
 	}
 	return to.TextResult("Reset tracked time success")
 }
@@ -337,7 +337,7 @@ func DeleteIssueTimeEntryFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 	}
 	_, err = client.DeleteTime(owner, repo, int64(index), int64(timeID))
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("delete time entry err: %v", err))
+		return to.ErrorResult(fmt.Errorf("delete time entry err: %w", err))
 	}
 	return to.TextResult("Delete time entry success")
 }
@@ -355,7 +355,7 @@ func StartIssueStopwatchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 	}
 	_, err = client.StartIssueStopWatch(owner, repo, int64(index))
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("start issue stopwatch err: %v", err))
+		return to.ErrorResult(fmt.Errorf("start issue stopwatch err: %w", err))
 	}
 	return to.TextResult("Stopwatch started")
 }
@@ -373,7 +373,7 @@ func StopIssueStopwatchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	}
 	_, err = client.StopIssueStopWatch(owner, repo, int64(index))
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("stop issue stopwatch err: %v", err))
+		return to.ErrorResult(fmt.Errorf("stop issue stopwatch err: %w", err))
 	}
 	return to.TextResult("Stopwatch stopped; elapsed time recorded as a tracked time entry")
 }
@@ -391,7 +391,7 @@ func CancelIssueStopwatchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 	}
 	_, err = client.DeleteIssueStopwatch(owner, repo, int64(index))
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("cancel issue stopwatch err: %v", err))
+		return to.ErrorResult(fmt.Errorf("cancel issue stopwatch err: %w", err))
 	}
 	return to.TextResult("Stopwatch cancelled")
 }
@@ -404,7 +404,7 @@ func ListMyStopwatchesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Cal
 	}
 	watches, _, err := client.GetMyStopwatches()
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("list my stopwatches err: %v", err))
+		return to.ErrorResult(fmt.Errorf("list my stopwatches err: %w", err))
 	}
 	return to.TextResult(watches)
 }

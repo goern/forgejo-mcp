@@ -111,7 +111,7 @@ func ParseCommit(uri string) (CommitParams, error) {
 	}
 	sha := parts[3]
 	if err := validateSHA(sha); err != nil {
-		return CommitParams{}, fmt.Errorf("%w: invalid URI %q: %s", ErrInvalidParams, uri, err)
+		return CommitParams{}, fmt.Errorf("%w: invalid URI %q: %w", ErrInvalidParams, uri, err)
 	}
 	return CommitParams{Owner: parts[0], Repo: parts[1], SHA: sha}, nil
 }
@@ -204,7 +204,7 @@ func ParseStatus(uri string) (StatusParams, error) {
 	}
 	sha := parts[3]
 	if err := validateSHA(sha); err != nil {
-		return StatusParams{}, fmt.Errorf("%w: invalid URI %q: %s", ErrInvalidParams, uri, err)
+		return StatusParams{}, fmt.Errorf("%w: invalid URI %q: %w", ErrInvalidParams, uri, err)
 	}
 	return StatusParams{Owner: parts[0], Repo: parts[1], SHA: sha}, nil
 }
@@ -343,7 +343,7 @@ func ParseOrgLabels(uri string) (OrgLabelsParams, error) {
 func parseForgejoURI(uri string) (*url.URL, error) {
 	u, err := url.Parse(uri)
 	if err != nil {
-		return nil, fmt.Errorf("%w: malformed URI %q: %s", ErrInvalidParams, uri, err)
+		return nil, fmt.Errorf("%w: malformed URI %q: %w", ErrInvalidParams, uri, err)
 	}
 	if u.Scheme != "forgejo" {
 		return nil, fmt.Errorf("%w: invalid URI scheme: expected 'forgejo', got %q", ErrInvalidParams, u.Scheme)
@@ -380,7 +380,8 @@ func validateSHA(sha string) error {
 		return fmt.Errorf("%w: sha must be exactly 40 hex characters, got %d", ErrInvalidParams, len(sha))
 	}
 	for _, c := range sha {
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+		isHex := (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
+		if !isHex {
 			return fmt.Errorf("%w: sha contains invalid character %q", ErrInvalidParams, c)
 		}
 	}

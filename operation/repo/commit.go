@@ -66,7 +66,7 @@ func ListRepoCommitsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 	}
 	commits, _, err := client.ListRepoCommits(owner, repo, opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("list repo commits error: %v", err))
+		return to.ErrorResult(fmt.Errorf("list repo commits error: %w", err))
 	}
 	return to.TextResult(commits)
 }

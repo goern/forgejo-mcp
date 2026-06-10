@@ -72,7 +72,7 @@ func CreateBranchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 		OldBranchName: oldBranch,
 	})
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("create branch error: %v", err))
+		return to.ErrorResult(fmt.Errorf("create branch error: %w", err))
 	}
 
 	return mcp.NewToolResultText("Branch Created"), nil
@@ -90,7 +90,7 @@ func DeleteBranchFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 	}
 	success, _, err := client.DeleteRepoBranch(owner, repo, branch)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("delete branch err: %v", err))
+		return to.ErrorResult(fmt.Errorf("delete branch err: %w", err))
 	}
 	if !success {
 		return to.ErrorResult(fmt.Errorf("failed to delete branch (status not 204)"))
@@ -124,7 +124,7 @@ func ListBranchesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 	}
 	branches, _, err := client.ListRepoBranches(owner, repo, opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("list branches err: %v", err))
+		return to.ErrorResult(fmt.Errorf("list branches err: %w", err))
 	}
 	return to.TextResult(branches)
 }

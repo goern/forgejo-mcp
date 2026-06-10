@@ -135,7 +135,7 @@ func ListBranchProtectionsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 		ListOptions: forgejo_sdk.ListOptions{Page: int(page), PageSize: int(limit)},
 	})
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("list branch protections err: %v", err))
+		return to.ErrorResult(fmt.Errorf("list branch protections err: %w", err))
 	}
 	return to.TextResult(listBranchProtectionsResult{
 		Page:              int(page),
@@ -161,7 +161,7 @@ func GetBranchProtectionFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 	}
 	bp, _, err := client.GetBranchProtection(owner, repo, rule)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("get branch protection err: %v", err))
+		return to.ErrorResult(fmt.Errorf("get branch protection err: %w", err))
 	}
 	return to.TextResult(bp)
 }
@@ -211,7 +211,7 @@ func CreateBranchProtectionFn(ctx context.Context, req mcp.CallToolRequest) (*mc
 	}
 	bp, _, err := client.CreateBranchProtection(owner, repo, opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("create branch protection err: %v", err))
+		return to.ErrorResult(fmt.Errorf("create branch protection err: %w", err))
 	}
 	return to.TextResult(bp)
 }
@@ -275,7 +275,7 @@ func EditBranchProtectionFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 	}
 	bp, _, err := client.EditBranchProtection(owner, repo, rule, opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("edit branch protection err: %v", err))
+		return to.ErrorResult(fmt.Errorf("edit branch protection err: %w", err))
 	}
 	return to.TextResult(bp)
 }
@@ -295,7 +295,7 @@ func DeleteBranchProtectionFn(ctx context.Context, req mcp.CallToolRequest) (*mc
 		return to.ErrorResult(err)
 	}
 	if _, err := client.DeleteBranchProtection(owner, repo, rule); err != nil {
-		return to.ErrorResult(fmt.Errorf("delete branch protection err: %v", err))
+		return to.ErrorResult(fmt.Errorf("delete branch protection err: %w", err))
 	}
 	return to.TextResult(fmt.Sprintf("Deleted branch protection rule %q on %s/%s", rule, owner, repo))
 }

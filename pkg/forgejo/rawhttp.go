@@ -141,10 +141,10 @@ func httpErrorFromResponse(req *http.Request, resp *http.Response) *HTTPError {
 		Method:     req.Method,
 		URL:        req.URL.String(),
 	}
-	switch {
-	case resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden:
+	switch resp.StatusCode {
+	case http.StatusUnauthorized, http.StatusForbidden:
 		e.wrapped = ErrUnauthorized
-	case resp.StatusCode == http.StatusNotFound:
+	case http.StatusNotFound:
 		e.wrapped = ErrNotFound
 	}
 	return e

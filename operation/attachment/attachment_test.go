@@ -443,7 +443,7 @@ func TestCommentAttachmentLifecycle_Smoke(t *testing.T) {
 			pathPrefix: "/api/v1/repos/o/r/issues/comments/55/assets/9",
 			handler: func(w http.ResponseWriter, _ *http.Request) {
 				getCalled = true
-				_, _ = w.Write([]byte(fmt.Sprintf(`{"id":9,"name":"x","size":15,"uuid":"u","browser_download_url":"%s/attachments/u"}`, flag.URL)))
+				_, _ = fmt.Fprintf(w, `{"id":9,"name":"x","size":15,"uuid":"u","browser_download_url":"%s/attachments/u"}`, flag.URL)
 			},
 		},
 		route{

@@ -3,6 +3,7 @@ package issue
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -203,7 +204,11 @@ func TestIssueResourceHandler_404(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for 404")
 	}
-	if re, ok := err.(*resource.ResourceError); ok && re.Code != -32003 {
+	var re *resource.ResourceError
+	if !errors.As(err, &re) {
+		t.Fatalf("expected *resource.ResourceError, got %T", err)
+	}
+	if re.Code != -32003 {
 		t.Errorf("expected -32003, got %d", re.Code)
 	}
 }
@@ -220,7 +225,8 @@ func TestIssueResourceHandler_NonNumericIndex(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for non-numeric index")
 	}
-	if re, ok := err.(*resource.ResourceError); ok {
+	var re *resource.ResourceError
+	if errors.As(err, &re) {
 		if re.Code != -32602 {
 			t.Errorf("expected -32602 for non-numeric index, got %d", re.Code)
 		}
@@ -237,7 +243,8 @@ func TestCommentResourceHandler_UnknownKind(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for unknown kind")
 	}
-	if re, ok := err.(*resource.ResourceError); ok {
+	var re *resource.ResourceError
+	if errors.As(err, &re) {
 		if re.Code != -32602 {
 			t.Errorf("expected -32602 for unknown kind, got %d", re.Code)
 		}
@@ -257,7 +264,11 @@ func TestCommentResourceHandler_NotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for 404 comment")
 	}
-	if re, ok := err.(*resource.ResourceError); ok && re.Code != -32003 {
+	var re *resource.ResourceError
+	if !errors.As(err, &re) {
+		t.Fatalf("expected *resource.ResourceError, got %T", err)
+	}
+	if re.Code != -32003 {
 		t.Errorf("expected -32003, got %d", re.Code)
 	}
 }

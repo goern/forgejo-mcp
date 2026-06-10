@@ -3,6 +3,7 @@ package branchprotection
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -108,7 +109,8 @@ func TestBranchProtectionsResource_NotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for 404")
 	}
-	re, ok := err.(*resource.ResourceError)
+	var re *resource.ResourceError
+	ok := errors.As(err, &re)
 	if !ok {
 		t.Fatalf("expected *resource.ResourceError, got %T", err)
 	}
@@ -145,7 +147,8 @@ func TestBranchProtectionResource_MalformedURI(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for malformed URI (missing rule)")
 	}
-	re, ok := err.(*resource.ResourceError)
+	var re *resource.ResourceError
+	ok := errors.As(err, &re)
 	if !ok {
 		t.Fatalf("expected *resource.ResourceError, got %T", err)
 	}

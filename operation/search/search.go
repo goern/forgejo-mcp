@@ -82,7 +82,7 @@ func SearchUserFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 	}
 	result, _, err := client.SearchUsers(opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("search user err: %v", err))
+		return to.ErrorResult(fmt.Errorf("search user err: %w", err))
 	}
 	return to.TextResult(result)
 }
@@ -120,7 +120,7 @@ func SearchOrgTeamsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	}
 	result, _, err := client.SearchOrgTeams(org, opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("search org teams err: %v", err))
+		return to.ErrorResult(fmt.Errorf("search org teams err: %w", err))
 	}
 	return to.TextResult(result)
 }
@@ -157,7 +157,7 @@ func SearchReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	}
 	result, _, err := client.SearchRepos(opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("search repos err: %v", err))
+		return to.ErrorResult(fmt.Errorf("search repos err: %w", err))
 	}
 	return to.TextResult(result)
 }

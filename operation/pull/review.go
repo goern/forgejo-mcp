@@ -114,7 +114,7 @@ func CreatePullReviewFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 	if commentsJSON != "" {
 		var comments []forgejo_sdk.CreatePullReviewComment
 		if err := json.Unmarshal([]byte(commentsJSON), &comments); err != nil {
-			return to.ErrorResult(fmt.Errorf("invalid comments JSON: %v", err))
+			return to.ErrorResult(fmt.Errorf("invalid comments JSON: %w", err))
 		}
 		opt.Comments = comments
 	}
@@ -125,7 +125,7 @@ func CreatePullReviewFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 	}
 	review, _, err := client.CreatePullReview(owner, repo, int64(index), opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("create pull review err: %v", err))
+		return to.ErrorResult(fmt.Errorf("create pull review err: %w", err))
 	}
 	return to.TextResult(review)
 }
@@ -150,7 +150,7 @@ func SubmitPullReviewFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 	}
 	review, _, err := client.SubmitPullReview(owner, repo, int64(index), int64(id), opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("submit pull review err: %v", err))
+		return to.ErrorResult(fmt.Errorf("submit pull review err: %w", err))
 	}
 	return to.TextResult(review)
 }
@@ -173,7 +173,7 @@ func DismissPullReviewFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Cal
 	}
 	_, err = client.DismissPullReview(owner, repo, int64(index), int64(id), opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("dismiss pull review err: %v", err))
+		return to.ErrorResult(fmt.Errorf("dismiss pull review err: %w", err))
 	}
 	return mcp.NewToolResultText(`{"Result":"review dismissed successfully"}`), nil
 }
@@ -191,7 +191,7 @@ func DeletePullReviewFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 	}
 	_, err = client.DeletePullReview(owner, repo, int64(index), int64(id))
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("delete pull review err: %v", err))
+		return to.ErrorResult(fmt.Errorf("delete pull review err: %w", err))
 	}
 	return mcp.NewToolResultText(`{"Result":"review deleted successfully"}`), nil
 }
@@ -218,7 +218,7 @@ func CreateReviewRequestsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 	}
 	_, err = client.CreateReviewRequests(owner, repo, int64(index), opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("create review requests err: %v", err))
+		return to.ErrorResult(fmt.Errorf("create review requests err: %w", err))
 	}
 	return mcp.NewToolResultText(`{"Result":"review requests created successfully"}`), nil
 }
@@ -245,7 +245,7 @@ func DeleteReviewRequestsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 	}
 	_, err = client.DeleteReviewRequests(owner, repo, int64(index), opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("delete review requests err: %v", err))
+		return to.ErrorResult(fmt.Errorf("delete review requests err: %w", err))
 	}
 	return mcp.NewToolResultText(`{"Result":"review requests deleted successfully"}`), nil
 }

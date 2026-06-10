@@ -31,7 +31,8 @@ func mockNotificationServer(t *testing.T) *httptest.Server {
 
 		switch {
 		case r.URL.Path == "/api/v1/notifications":
-			if r.Method == "GET" {
+			switch r.Method {
+			case "GET":
 				w.WriteHeader(http.StatusOK)
 				notifications := []map[string]interface{}{
 					{
@@ -48,13 +49,14 @@ func mockNotificationServer(t *testing.T) *httptest.Server {
 					},
 				}
 				_ = json.NewEncoder(w).Encode(notifications)
-			} else if r.Method == "PUT" {
+			case "PUT":
 				w.WriteHeader(http.StatusResetContent)
 				w.Write([]byte("[]"))
 			}
 
 		case strings.HasPrefix(r.URL.Path, "/api/v1/notifications/threads/"):
-			if r.Method == "GET" {
+			switch r.Method {
+			case "GET":
 				w.WriteHeader(http.StatusOK)
 				thread := map[string]interface{}{
 					"id":         1,
@@ -62,13 +64,14 @@ func mockNotificationServer(t *testing.T) *httptest.Server {
 					"updated_at": time.Now().Format(time.RFC3339),
 				}
 				_ = json.NewEncoder(w).Encode(thread)
-			} else if r.Method == "PATCH" {
+			case "PATCH":
 				w.WriteHeader(http.StatusResetContent)
 				w.Write([]byte("{}"))
 			}
 
 		case strings.HasPrefix(r.URL.Path, "/api/v1/repos/") && strings.HasSuffix(r.URL.Path, "/notifications"):
-			if r.Method == "GET" {
+			switch r.Method {
+			case "GET":
 				w.WriteHeader(http.StatusOK)
 				notifications := []map[string]interface{}{
 					{
@@ -77,7 +80,7 @@ func mockNotificationServer(t *testing.T) *httptest.Server {
 					},
 				}
 				_ = json.NewEncoder(w).Encode(notifications)
-			} else if r.Method == "PUT" {
+			case "PUT":
 				w.WriteHeader(http.StatusResetContent)
 				w.Write([]byte("[]"))
 			}

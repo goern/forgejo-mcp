@@ -127,7 +127,8 @@ func normalizeColor(color string) (string, error) {
 		return "", fmt.Errorf("color must be a 6-digit hex string (e.g. #0088ff or 0088ff), got %q", color)
 	}
 	for _, ch := range c {
-		if !((ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f')) {
+		isHex := (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f')
+		if !isHex {
 			return "", fmt.Errorf("color must be a 6-digit hex string (e.g. #0088ff or 0088ff), got %q", color)
 		}
 	}

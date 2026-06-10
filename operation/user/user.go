@@ -56,7 +56,7 @@ func GetUserInfoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 
 	if err != nil {
 		log.LogMCPToolError(ctx, GetMyUserInfoToolName, duration, err)
-		return to.ErrorResult(fmt.Errorf("get user info err: %v", err))
+		return to.ErrorResult(fmt.Errorf("get user info err: %w", err))
 	}
 
 	log.LogMCPToolComplete(ctx, GetMyUserInfoToolName, duration, fmt.Sprintf("Retrieved info for user: %s", user.UserName))

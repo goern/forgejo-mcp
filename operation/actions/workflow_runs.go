@@ -98,7 +98,7 @@ func ListWorkflowRunsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 	}
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("Workflow Runs for %s/%s (total: %d):\n\n", owner, repo, resp.TotalCount))
+	fmt.Fprintf(&sb, "Workflow Runs for %s/%s (total: %d):\n\n", owner, repo, resp.TotalCount)
 
 	for _, run := range resp.WorkflowRuns {
 		duration := ""
@@ -106,13 +106,13 @@ func ListWorkflowRunsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 			duration = fmt.Sprintf(" | Duration: %s", run.Stopped.Sub(run.Started).Round(1e9).String())
 		}
 
-		sb.WriteString(fmt.Sprintf("#%d - %s\n", run.ID, run.Title))
-		sb.WriteString(fmt.Sprintf("  Status: %s | Event: %s | SHA: %.7s%s\n",
-			run.Status, run.Event, run.CommitSHA, duration))
+		fmt.Fprintf(&sb, "#%d - %s\n", run.ID, run.Title)
+		fmt.Fprintf(&sb, "  Status: %s | Event: %s | SHA: %.7s%s\n",
+			run.Status, run.Event, run.CommitSHA, duration)
 		if !run.Started.IsZero() {
-			sb.WriteString(fmt.Sprintf("  Started: %s\n", run.Started.Format("2006-01-02 15:04:05")))
+			fmt.Fprintf(&sb, "  Started: %s\n", run.Started.Format("2006-01-02 15:04:05"))
 		}
-		sb.WriteString(fmt.Sprintf("  URL: %s\n\n", run.HTMLURL))
+		fmt.Fprintf(&sb, "  URL: %s\n\n", run.HTMLURL)
 	}
 
 	return to.TextResult(sb.String())

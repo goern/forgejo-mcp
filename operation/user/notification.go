@@ -110,7 +110,7 @@ func CheckNotificationsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 		t, err := time.Parse(time.RFC3339, sinceStr)
 		if err != nil {
 			log.LogMCPToolError(ctx, CheckNotificationsToolName, time.Since(start), err)
-			return to.ErrorResult(fmt.Errorf("invalid since time format (expected RFC3339): %v", err))
+			return to.ErrorResult(fmt.Errorf("invalid since time format (expected RFC3339): %w", err))
 		}
 		opt.Since = t
 	}
@@ -119,7 +119,7 @@ func CheckNotificationsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 		t, err := time.Parse(time.RFC3339, beforeStr)
 		if err != nil {
 			log.LogMCPToolError(ctx, CheckNotificationsToolName, time.Since(start), err)
-			return to.ErrorResult(fmt.Errorf("invalid before time format (expected RFC3339): %v", err))
+			return to.ErrorResult(fmt.Errorf("invalid before time format (expected RFC3339): %w", err))
 		}
 		opt.Before = t
 	}
@@ -139,7 +139,7 @@ func CheckNotificationsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 
 	if err != nil {
 		log.LogMCPToolError(ctx, CheckNotificationsToolName, duration, err)
-		return to.ErrorResult(fmt.Errorf("list notifications err: %v", err))
+		return to.ErrorResult(fmt.Errorf("list notifications err: %w", err))
 	}
 
 	log.LogMCPToolComplete(ctx, CheckNotificationsToolName, duration, fmt.Sprintf("Retrieved %d notifications", len(notifications)))
@@ -174,7 +174,7 @@ func GetNotificationThreadFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 
 	if err != nil {
 		log.LogMCPToolError(ctx, GetNotificationThreadToolName, duration, err)
-		return to.ErrorResult(fmt.Errorf("get notification thread err: %v", err))
+		return to.ErrorResult(fmt.Errorf("get notification thread err: %w", err))
 	}
 
 	log.LogMCPToolComplete(ctx, GetNotificationThreadToolName, duration, "Retrieved notification thread")
@@ -208,7 +208,7 @@ func MarkNotificationReadFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 
 	if err != nil {
 		log.LogMCPToolError(ctx, MarkNotificationReadToolName, duration, err)
-		return to.ErrorResult(fmt.Errorf("mark notification read err: %v", err))
+		return to.ErrorResult(fmt.Errorf("mark notification read err: %w", err))
 	}
 
 	log.LogMCPToolComplete(ctx, MarkNotificationReadToolName, duration, "Marked notification as read")
@@ -225,7 +225,7 @@ func MarkAllNotificationsReadFn(ctx context.Context, req mcp.CallToolRequest) (*
 		t, err := time.Parse(time.RFC3339, lastReadAtStr)
 		if err != nil {
 			log.LogMCPToolError(ctx, MarkAllNotificationsReadToolName, time.Since(start), err)
-			return to.ErrorResult(fmt.Errorf("invalid last_read_at time format (expected RFC3339): %v", err))
+			return to.ErrorResult(fmt.Errorf("invalid last_read_at time format (expected RFC3339): %w", err))
 		}
 		opt.LastReadAt = t
 	}
@@ -245,7 +245,7 @@ func MarkAllNotificationsReadFn(ctx context.Context, req mcp.CallToolRequest) (*
 
 	if err != nil {
 		log.LogMCPToolError(ctx, MarkAllNotificationsReadToolName, duration, err)
-		return to.ErrorResult(fmt.Errorf("mark all notifications read err: %v", err))
+		return to.ErrorResult(fmt.Errorf("mark all notifications read err: %w", err))
 	}
 
 	log.LogMCPToolComplete(ctx, MarkAllNotificationsReadToolName, duration, "Marked all notifications as read")
@@ -295,7 +295,7 @@ func ListRepoNotificationsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 		t, err := time.Parse(time.RFC3339, sinceStr)
 		if err != nil {
 			log.LogMCPToolError(ctx, ListRepoNotificationsToolName, time.Since(start), err)
-			return to.ErrorResult(fmt.Errorf("invalid since time format (expected RFC3339): %v", err))
+			return to.ErrorResult(fmt.Errorf("invalid since time format (expected RFC3339): %w", err))
 		}
 		opt.Since = t
 	}
@@ -304,7 +304,7 @@ func ListRepoNotificationsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 		t, err := time.Parse(time.RFC3339, beforeStr)
 		if err != nil {
 			log.LogMCPToolError(ctx, ListRepoNotificationsToolName, time.Since(start), err)
-			return to.ErrorResult(fmt.Errorf("invalid before time format (expected RFC3339): %v", err))
+			return to.ErrorResult(fmt.Errorf("invalid before time format (expected RFC3339): %w", err))
 		}
 		opt.Before = t
 	}
@@ -324,7 +324,7 @@ func ListRepoNotificationsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 
 	if err != nil {
 		log.LogMCPToolError(ctx, ListRepoNotificationsToolName, duration, err)
-		return to.ErrorResult(fmt.Errorf("list repo notifications err: %v", err))
+		return to.ErrorResult(fmt.Errorf("list repo notifications err: %w", err))
 	}
 
 	log.LogMCPToolComplete(ctx, ListRepoNotificationsToolName, duration, fmt.Sprintf("Retrieved %d notifications for repo %s/%s", len(notifications), owner, repo))
@@ -349,7 +349,7 @@ func MarkRepoNotificationsReadFn(ctx context.Context, req mcp.CallToolRequest) (
 		t, err := time.Parse(time.RFC3339, lastReadAtStr)
 		if err != nil {
 			log.LogMCPToolError(ctx, MarkRepoNotificationsReadToolName, time.Since(start), err)
-			return to.ErrorResult(fmt.Errorf("invalid last_read_at time format (expected RFC3339): %v", err))
+			return to.ErrorResult(fmt.Errorf("invalid last_read_at time format (expected RFC3339): %w", err))
 		}
 		opt.LastReadAt = t
 	}
@@ -369,7 +369,7 @@ func MarkRepoNotificationsReadFn(ctx context.Context, req mcp.CallToolRequest) (
 
 	if err != nil {
 		log.LogMCPToolError(ctx, MarkRepoNotificationsReadToolName, duration, err)
-		return to.ErrorResult(fmt.Errorf("mark repo notifications read err: %v", err))
+		return to.ErrorResult(fmt.Errorf("mark repo notifications read err: %w", err))
 	}
 
 	log.LogMCPToolComplete(ctx, MarkRepoNotificationsReadToolName, duration, fmt.Sprintf("Marked all notifications for repo %s/%s as read", owner, repo))

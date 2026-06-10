@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"net/url"
@@ -94,7 +95,8 @@ func initFlags() {
 		"debug mode",
 	)
 
-	fs.Parse(os.Args[1:])
+	// ExitOnError: Parse exits the process on error, so the return is moot.
+	_ = fs.Parse(os.Args[1:])
 
 	flagPkg.URL = urlFlag
 	flagPkg.UserAgent = userAgent
@@ -230,7 +232,9 @@ func Execute(version string) {
 		)
 	}
 
-	defer log.Default().Sync()
+	// Sync flushes buffered logs at exit; its error (e.g. syncing stderr) is
+	// not actionable here.
+	defer func() { _ = log.Default().Sync() }()
 
 	if cliMode {
 		RunCLI(version)
@@ -248,7 +252,7 @@ func Execute(version string) {
 	)
 
 	if err := operation.Run(transport, version); err != nil {
-		if err == context.Canceled {
+		if errors.Is(err, context.Canceled) {
 			log.Info("Server shutdown due to context cancellation")
 			return
 		}

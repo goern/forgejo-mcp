@@ -71,7 +71,7 @@ func ListOrgMembersFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	}
 	members, _, err := client.ListOrgMembership(orgName, opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("list org members err: %v", err))
+		return to.ErrorResult(fmt.Errorf("list org members err: %w", err))
 	}
 	return to.TextResult(members)
 }
@@ -93,7 +93,7 @@ func CheckOrgMembershipFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	}
 	isMember, _, err := client.CheckOrgMembership(orgName, user)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("check org membership err: %v", err))
+		return to.ErrorResult(fmt.Errorf("check org membership err: %w", err))
 	}
 	return to.TextResult(map[string]interface{}{
 		"org":       orgName,
@@ -119,7 +119,7 @@ func RemoveOrgMemberFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 	}
 	_, err = client.DeleteOrgMembership(orgName, user)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("remove org member err: %v", err))
+		return to.ErrorResult(fmt.Errorf("remove org member err: %w", err))
 	}
 	return to.TextResult(fmt.Sprintf("User '%s' removed from organization '%s'", user, orgName))
 }

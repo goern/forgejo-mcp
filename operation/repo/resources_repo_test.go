@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -107,7 +108,8 @@ func TestRepoResourceHandler_403(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for 403")
 	}
-	if re, ok := err.(*resource.ResourceError); ok {
+	var re *resource.ResourceError
+	if errors.As(err, &re) {
 		if re.Code != -32002 {
 			t.Errorf("expected code -32002, got %d", re.Code)
 		}
@@ -123,7 +125,8 @@ func TestRepoResourceHandler_404(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for 404")
 	}
-	if re, ok := err.(*resource.ResourceError); ok {
+	var re *resource.ResourceError
+	if errors.As(err, &re) {
 		if re.Code != -32003 {
 			t.Errorf("expected code -32003, got %d", re.Code)
 		}

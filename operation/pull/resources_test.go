@@ -3,6 +3,7 @@ package pull
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -273,7 +274,11 @@ func TestPRResourceHandler_NonNumericIndex(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for non-numeric index")
 	}
-	if re, ok := err.(*resource.ResourceError); ok && re.Code != -32602 {
+	var re *resource.ResourceError
+	if !errors.As(err, &re) {
+		t.Fatalf("expected *resource.ResourceError, got %T", err)
+	}
+	if re.Code != -32602 {
 		t.Errorf("expected -32602, got %d", re.Code)
 	}
 }
@@ -291,7 +296,11 @@ func TestPRResourceHandler_NotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for 404")
 	}
-	if re, ok := err.(*resource.ResourceError); ok && re.Code != -32003 {
+	var re *resource.ResourceError
+	if !errors.As(err, &re) {
+		t.Fatalf("expected *resource.ResourceError, got %T", err)
+	}
+	if re.Code != -32003 {
 		t.Errorf("expected -32003, got %d", re.Code)
 	}
 }

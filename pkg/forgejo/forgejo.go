@@ -115,7 +115,7 @@ func VerifyConnection() error {
 			log.DurationField("duration", duration),
 			log.ErrorField(err),
 		)
-		return fmt.Errorf("failed to connect to Forgejo instance at %s: %v", flag.URL, err)
+		return fmt.Errorf("failed to connect to Forgejo instance at %s: %w", flag.URL, err)
 	}
 
 	log.Info("Connection verification successful",
@@ -147,7 +147,7 @@ func HealthCheck() error {
 			log.DurationField("duration", duration),
 			log.ErrorField(err),
 		)
-		return fmt.Errorf("health check failed: %v", err)
+		return fmt.Errorf("health check failed: %w", err)
 	}
 
 	log.Debug("Health check successful",
