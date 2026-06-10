@@ -11,9 +11,11 @@ spec:
       type: string
       default: docker.io/library/golang:1.25
     - name: GOLANGCI_LINT_IMAGE
-      description: golangci-lint image (must be Go-version compatible with GO_IMAGE).
+      description: |
+        golangci-lint image (must be Go-version compatible with GO_IMAGE and
+        a v2.x release — .golangci.yml uses the version "2" config schema).
       type: string
-      default: docker.io/golangci/golangci-lint:v1.64-alpine
+      default: docker.io/golangci/golangci-lint:v2.12.2-alpine
     - name: RELEASE_TOOLS_IMAGE
       description: |
         Pre-built release-tools image containing govulncheck (and other tools).
@@ -23,9 +25,10 @@ spec:
     - name: LINT_REQUIRED
       description: |
         If "true", lint findings fail the build. If "false", lint runs but its
-        exit code is ignored (warn-only). Flip to "true" after baseline cleanup.
+        exit code is ignored (warn-only). Baseline was cleaned in dd9116f
+        (0 findings), so lint is enforced by default now.
       type: string
-      default: "false"
+      default: "true"
   workspaces:
     - name: source
       mountPath: /workspace/src
