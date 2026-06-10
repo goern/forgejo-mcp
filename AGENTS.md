@@ -64,6 +64,23 @@ When adding a new resource template, place it under `operation/<domain>/resource
 
 See `openspec/specs/mcp-resources-core/spec.md` for the full normative spec (added by this slice when the change archives).
 
+### Resource table
+
+| URI template | MIME | What it returns |
+|---|---|---|
+| `forgejo://owner/{owner}` | application/json | User or org profile |
+| `forgejo://repo/{owner}/{repo}` | application/json | Repository overview |
+| `forgejo://repo/{owner}/{repo}/commit/{sha}` | application/json + markdown | Commit metadata (sha must be 40 hex chars) |
+| `forgejo://repo/{owner}/{repo}/commit/{sha}/status` | application/json | Combined CI status |
+| `forgejo://repo/{owner}/{repo}/issue/{index}` | application/json + markdown | Issue with bounded comments (cap 30) |
+| `forgejo://repo/{owner}/{repo}/{kind}/{index}/comment/{id}` | application/json + markdown | Single comment |
+| `forgejo://repo/{owner}/{repo}/pr/{index}` | application/json + markdown | PR with bounded comments + reviews (cap 30) |
+| `forgejo://repo/{owner}/{repo}/branch_protections` | application/json | Bounded list of branch protection rules |
+| `forgejo://repo/{owner}/{repo}/branch_protection/{rule}` | application/json | Single branch protection rule |
+| `forgejo://repo/{owner}/{repo}/label/{id}` | application/json | Single repository label |
+| `forgejo://repo/{owner}/{repo}/labels{?page,limit}` | application/json | Bounded repo label list (cap 30, sentinel `list_repo_labels`) |
+| `forgejo://org/{org}/labels{?page,limit}` | application/json | Bounded org label list (cap 30, sentinel `list_org_labels`) |
+
 ## Blocked Features
 
 Some features are blocked on upstream API/SDK support. See `docs/plans/` for:

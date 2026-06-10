@@ -215,6 +215,14 @@ List all my repositories
 | `list_repo_milestones` | List milestones with their IDs (use with `update_issue`) |
 | `list_repo_labels` | List labels with their IDs. Merges org-level labels for org-owned repos (set `include_org_labels=false` to opt out). Each entry carries a `scope` field (`"repo"` or `"org"`). |
 | `list_org_labels` | List organization-level labels with their IDs (use with `add_issue_labels`, `remove_issue_labels`). |
+| `create_repo_label` | Create a repository label (`name`, `color` as 6-digit hex, optional `description`). Returns numeric `id` for immediate use in `add_issue_labels`. |
+| `edit_repo_label` | Edit a repository label (PATCH — only supplied fields change: `name`, `color`, `description`). |
+| `delete_repo_label` | Delete a repository label. Refuses by default when the label is in use (reports count); set `delete_mode=force` to override. |
+| `get_repo_label` | Get a single repository label by numeric `id`. |
+| `create_org_label` | Create an organization-level label. Same fields as `create_repo_label`. |
+| `edit_org_label` | Edit an organization-level label (PATCH semantics). |
+| `delete_org_label` | Delete an organization-level label. In-use guard counts across visible org repos (best-effort); `delete_mode=force` overrides. |
+| `get_org_label` | Get a single organization-level label by numeric `id`. |
 | **Comments** | |
 | `list_issue_comments` | List comments on an issue or PR |
 | `get_issue_comment` | Get a specific comment |
@@ -300,6 +308,9 @@ Resources that embed a list (issue, pr) cap the embedded array at 30 items. When
 | `forgejo://repo/{owner}/{repo}/issue/{index}` | application/json (+ text/markdown sidecar) | Issue metadata + rendered body + bounded recent comments (cap 30, sentinel names `list_issue_comments`). |
 | `forgejo://repo/{owner}/{repo}/{kind}/{index}/comment/{id}` | application/json (+ text/markdown sidecar) | Single comment by id; kind ∈ {issue, pr}. |
 | `forgejo://repo/{owner}/{repo}/pr/{index}` | application/json (+ text/markdown sidecar) | PR metadata, head/base refs, mergeability, bounded recent comments (cap 30, sentinel `list_issue_comments`) and reviews (cap 30, sentinel `list_pull_reviews`). |
+| `forgejo://repo/{owner}/{repo}/label/{id}` | application/json | Single repository label by numeric id. |
+| `forgejo://repo/{owner}/{repo}/labels{?page,limit}` | application/json | Bounded list of repository labels (cap 30, sentinel names `list_repo_labels`). |
+| `forgejo://org/{org}/labels{?page,limit}` | application/json | Bounded list of organization-level labels (cap 30, sentinel names `list_org_labels`). |
 
 ### Client Compatibility
 
