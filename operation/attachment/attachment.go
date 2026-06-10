@@ -488,7 +488,7 @@ func downloadResultFor(ctx context.Context, att *forgejo_sdk.Attachment) (*mcp.C
 		// blow past it, treat that the same as "too big" rather than failing.
 		if errors.Is(err, forgejo.ErrPayloadTooLarge) {
 			res.Inline = false
-			res.Reason = fmt.Sprintf("body exceeded inline cap during fetch; fetch browser_download_url with Authorization: token <TOKEN>")
+			res.Reason = "body exceeded inline cap during fetch; fetch browser_download_url with Authorization: token <TOKEN>"
 			return to.TextResult(res)
 		}
 		return to.ErrorResult(fmt.Errorf("download body err: %v", err))
