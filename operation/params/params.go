@@ -72,6 +72,8 @@ const (
 	RunNumber = "Filter by run number"
 	HeadSHA   = "Filter by HEAD SHA"
 	RunID     = "Run ID"
+	JobID     = "Workflow job ID"
+	Attempt   = "Workflow job attempt number"
 	Status    = "Filter by status (e.g. waiting, running, success, failure, cancelled)"
 
 	// Misc parameters

@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"codeberg.org/goern/forgejo-mcp/v2/pkg/flag"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
 	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -169,6 +170,8 @@ func setupListRunsMockServer(t *testing.T, response interface{}, statusCode int)
 		t.Fatalf("creating test client: %v", err)
 	}
 	forgejo.SetClientForTesting(client)
+	flag.URL = srv.URL
+	t.Cleanup(func() { flag.URL = "" })
 
 	return srv, &capturedPath
 }
@@ -312,5 +315,91 @@ func TestGetWorkflowRunFn_MissingRunID(t *testing.T) {
 	_, err := GetWorkflowRunFn(context.Background(), req)
 	if err == nil {
 		t.Fatal("expected error for missing run_id, got nil")
+	}
+}
+
+func TestListWorkflowRunJobsFn_ReturnsJobs(t *testing.T) {
+	mockResponse := []map[string]interface{}{
+		{
+			"id":      101,
+			"run_id":  42,
+			"attempt": 2,
+			"name":    "build",
+			"status":  "success",
+			"task_id": 555,
+			"runs_on": []string{"ubuntu-latest"},
+		},
+	}
+
+	srv, capturedPath := setupListRunsMockServer(t, mockResponse, http.StatusOK)
+	defer srv.Close()
+
+	req := newCallToolRequest(map[string]interface{}{
+		"owner":  "testowner",
+		"repo":   "testrepo",
+		"run_id": float64(42),
+	})
+
+	result, err := ListWorkflowRunJobsFn(context.Background(), req)
+	if err != nil {
+		t.Fatalf("ListWorkflowRunJobsFn returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("ListWorkflowRunJobsFn returned tool error")
+	}
+
+	expectedPath := "/api/v1/repos/testowner/testrepo/actions/runs/42/jobs"
+	if *capturedPath != expectedPath {
+		t.Errorf("wrong path: got %q, want %q", *capturedPath, expectedPath)
+	}
+}
+
+func TestGetWorkflowJobLogsFn_ReturnsTail(t *testing.T) {
+	srv, capturedPath := setupListRunsMockServer(t, "line1\nline2\nline3\n", http.StatusOK)
+	defer srv.Close()
+
+	req := newCallToolRequest(map[string]interface{}{
+		"owner":      "testowner",
+		"repo":       "testrepo",
+		"job_id":     float64(101),
+		"attempt":    float64(2),
+		"tail_lines": float64(2),
+	})
+
+	result, err := GetWorkflowJobLogsFn(context.Background(), req)
+	if err != nil {
+		t.Fatalf("GetWorkflowJobLogsFn returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("GetWorkflowJobLogsFn returned tool error")
+	}
+
+	expectedPath := "/api/v1/repos/testowner/testrepo/actions/jobs/101/logs"
+	if *capturedPath != expectedPath {
+		t.Errorf("wrong path: got %q, want %q", *capturedPath, expectedPath)
+	}
+}
+
+func TestGetWorkflowRunLogsFn_ReturnsZipMetadata(t *testing.T) {
+	srv, capturedPath := setupListRunsMockServer(t, "PK\x03\x04", http.StatusOK)
+	defer srv.Close()
+
+	req := newCallToolRequest(map[string]interface{}{
+		"owner":  "testowner",
+		"repo":   "testrepo",
+		"run_id": float64(42),
+	})
+
+	result, err := GetWorkflowRunLogsFn(context.Background(), req)
+	if err != nil {
+		t.Fatalf("GetWorkflowRunLogsFn returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("GetWorkflowRunLogsFn returned tool error")
+	}
+
+	expectedPath := "/api/v1/repos/testowner/testrepo/actions/runs/42/logs"
+	if *capturedPath != expectedPath {
+		t.Errorf("wrong path: got %q, want %q", *capturedPath, expectedPath)
 	}
 }

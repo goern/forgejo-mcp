@@ -262,6 +262,14 @@
       "description": "Get details of a specific workflow run"
     },
     {
+      "name": "get_workflow_job_logs",
+      "description": "Download plaintext logs for a single workflow job"
+    },
+    {
+      "name": "get_workflow_run_logs",
+      "description": "Download a ZIP archive of logs for a workflow run"
+    },
+    {
       "name": "issue_state_change",
       "description": "Change issue state"
     },
@@ -360,6 +368,10 @@
     {
       "name": "list_workflow_runs",
       "description": "List workflow runs for a repository"
+    },
+    {
+      "name": "list_workflow_run_jobs",
+      "description": "List jobs for a workflow run"
     },
     {
       "name": "mark_all_notifications_read",

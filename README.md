@@ -245,6 +245,9 @@ List all my repositories
 | `dispatch_workflow` | Trigger a workflow run via `workflow_dispatch` event |
 | `list_workflow_runs` | List workflow runs with optional filtering by status, event, or SHA |
 | `get_workflow_run` | Get details of a specific workflow run by ID |
+| `list_workflow_run_jobs` | List jobs for a workflow run with per-job status and log hints |
+| `get_workflow_job_logs` | Download plaintext logs for a single workflow job; supports attempt and tailing |
+| `get_workflow_run_logs` | Download a base64 ZIP of plaintext logs for every job in a workflow run |
 | **Organizations** | |
 | `search_org_teams` | Search for teams in an organization |
 | **Time Tracking** | |

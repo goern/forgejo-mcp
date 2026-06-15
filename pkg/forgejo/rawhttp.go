@@ -304,6 +304,44 @@ func DoRaw(ctx context.Context, pathOrURL string) ([]byte, string, error) {
 	return buf, ct, nil
 }
 
+// DoAPIRaw fetches raw bytes from a Forgejo REST API path, adding the
+// configured auth header. It is intended for non-JSON API endpoints such as
+// Actions log downloads. The response body is capped at MaxInlineDownloadBytes;
+// ErrPayloadTooLarge is returned if the body would exceed the cap.
+func DoAPIRaw(ctx context.Context, pathOrURL string) ([]byte, string, error) {
+	full, err := resolveURL(pathOrURL)
+	if err != nil {
+		return nil, "", err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, full, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("build request: %w", err)
+	}
+	setCommonHeaders(ctx, req)
+	req.Header.Set("Accept", "*/*")
+
+	resp, err := doRequest(ctx, req)
+	if err != nil {
+		return nil, "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, "", httpErrorFromResponse(req, resp)
+	}
+
+	limited := io.LimitReader(resp.Body, MaxInlineDownloadBytes+1)
+	buf, err := io.ReadAll(limited)
+	if err != nil {
+		return nil, "", fmt.Errorf("read body: %w", err)
+	}
+	if int64(len(buf)) > MaxInlineDownloadBytes {
+		return nil, "", ErrPayloadTooLarge
+	}
+	ct := resp.Header.Get("Content-Type")
+	return buf, ct, nil
+}
+
 // helper used by tests to validate URL construction directly.
 func init() {
 	// Validate at init that net/url accepts our base format if set.
