@@ -38,11 +38,11 @@ Hooks live at the repository level only in this change (org-level and admin-leve
 
 **Rationale**: Matches the normative `forgejo://` URI scheme established in `mcp-resources-core` (singular keyless segment for collection, singular + `/{id}` for entity).
 
-### D3: Secret masking — trust Forgejo's response
+### D3: Secret masking — explicit config-key allowlist
 
-**Decision**: Do not project the `secret` field from the SDK struct into any payload struct. The SDK's `Hook` type includes `Config map[string]string` where `"secret"` may appear. Exclude it explicitly from the MCP-visible payload.
+**Decision**: The MCP payload struct MUST define an explicit allowlist of config keys (`url`, `content_type`, `http_method`, `branch_filter`) copied individually from `Hook.Config`. It MUST NOT embed the raw `Config map[string]string`. This is the primary control. Secret masking by Forgejo server-side is defense-in-depth, not the primary control.
 
-**Rationale**: Forgejo already masks the secret server-side (returns `"secret": ""` or omits it). We add a second layer by not mapping it at all — prevents accidental future leakage if SDK behaviour changes.
+**Rationale**: `Hook.Config` is `map[string]string` — copying it wholesale carries `Config["secret"]` into the response regardless of Go struct tags or JSON omitempty. Struct-field omission does not remove a map key. The allowlist approach closes the leak path deterministically and is immune to future SDK changes that might surface the secret more prominently.
 
 ### D4: `test_repo_hook` — fire-and-forget
 
@@ -52,14 +52,14 @@ Hooks live at the repository level only in this change (org-level and admin-leve
 
 ### D5: Output bounding strategy for list
 
-**Decision**: Follow the exact pattern from `operation/issue/resources_label.go` — `page` and `limit` params, `resource.Bounded`, cap at `resource.EmbeddedListCap` (30), truncation sentinel naming `list_repo_hooks`.
+**Decision**: The `list_repo_hooks` tool is the unbounded enumeration path (mirrors `list_branch_protections`: no ceiling clamp, default limit 30). The `forgejo://repo/{owner}/{repo}/hooks` resource is the bounded path, capping at `resource.EmbeddedListCap` (30) using `resource.Bounded`, with a truncation sentinel naming `list_repo_hooks` as the escape hatch for >30 items.
 
-**Rationale**: Consistent with every other bounded list in the project.
+**Rationale**: Consistent with the two-path model established by `resources_label.go` (resource description: "Use list_repo_labels tool for the unbounded enumeration path"). Tool and resource serve different caller needs; they must not have conflicting ceilings on the same data. Sentinel total reflects the fetched window (cap+1 probe), not the repository-wide count — it signals "more exist", not how many.
 
 ## Risks / Trade-offs
 
 - [Risk] SDK `Hook.Config` is `map[string]string` — future SDK versions might expose `secret` more prominently. → Mitigation: explicit exclusion in the payload struct, not relying on JSON tag omitempty alone.
-- [Risk] `test_repo_hook` triggers a live HTTP request from the Forgejo server to the hook URL. → Mitigation: document in tool description; no mitigation in code needed.
+- [Risk] `test_repo_hook` triggers a live HTTP request from the Forgejo server to the hook URL. This operates against an already-registered URL (authorized by a prior `create_repo_hook` call), so it is not arbitrary SSRF-to-anywhere. Loop-abuse mitigation (rate limiting, confirmation guard) is deferred to a follow-up. The tool description MUST warn that each call triggers a live delivery from the Forgejo server.
 - [Risk] Hook IDs are `int64` but the URI path segment is a string. → Mitigation: `strconv.ParseInt` with error mapping in the URI parser.
 
 ## Open Questions

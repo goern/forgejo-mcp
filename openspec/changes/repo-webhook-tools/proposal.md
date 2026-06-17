@@ -12,8 +12,8 @@
   - `delete_repo_hook(owner, repo, id)` — delete a hook
   - `test_repo_hook(owner, repo, id)` — trigger a test delivery
 - Add two `forgejo://` resource templates:
-  - `forgejo://repo/{owner}/{repo}/hooks` — bounded embedded list of hooks
-  - `forgejo://repo/{owner}/{repo}/hooks/{id}` — single hook
+  - `forgejo://repo/{owner}/{repo}/hooks{?page,limit}` — bounded embedded list of hooks
+  - `forgejo://repo/{owner}/{repo}/hook/{id}` — single hook
 - `secret` is never echoed in tool results or resource reads (Forgejo masks it server-side; the MCP layer must not add it back)
 
 ## Capabilities

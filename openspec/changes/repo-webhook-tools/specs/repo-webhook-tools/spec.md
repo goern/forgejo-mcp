@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: List repository hooks
-The server SHALL expose a `list_repo_hooks` MCP tool that returns a bounded, paginated list of all webhooks registered on a repository. The tool MUST accept `owner`, `repo`, `page` (default 1), and `limit` (default 30, ceiling 50) parameters. The response MUST include a truncation sentinel and name the `list_repo_hooks` tool when the result set is capped.
+The server SHALL expose a `list_repo_hooks` MCP tool that returns a paginated list of all webhooks registered on a repository. The tool MUST accept `owner`, `repo`, `page` (default 1), and `limit` (default 30) parameters with no server-imposed ceiling (the tool is the unbounded enumeration path). The response MUST include a truncation sentinel naming the `list_repo_hooks` tool only when used from the resource path; the tool itself returns whatever the SDK page returns.
 
 #### Scenario: List hooks returns results
 - **WHEN** a client calls `list_repo_hooks` with a valid `owner`/`repo`
@@ -13,7 +13,7 @@ The server SHALL expose a `list_repo_hooks` MCP tool that returns a bounded, pag
 
 #### Scenario: List hooks truncation sentinel
 - **WHEN** the repository has more hooks than the requested `limit`
-- **THEN** the response includes `truncated: true` and a `list_tool: "list_repo_hooks"` sentinel
+- **THEN** the response includes `truncated: true` and a `list_tool: "list_repo_hooks"` sentinel signalling that more results exist; the sentinel does NOT report the total repository-wide hook count (it reflects the fetched window only)
 
 #### Scenario: List hooks on repo with no hooks
 - **WHEN** a client calls `list_repo_hooks` on a repository with zero hooks
@@ -46,8 +46,8 @@ The server SHALL expose a `create_repo_hook` MCP tool that registers a new webho
 - **THEN** the tool creates the hook with those settings and returns the hook object without the `secret` field
 
 #### Scenario: Secret not echoed
-- **WHEN** a hook is created or retrieved
-- **THEN** the `secret` field is absent from all tool and resource responses
+- **WHEN** a hook is created with `secret="SENTINEL"` and then retrieved via every tool and both resource templates
+- **THEN** the substring `SENTINEL` does NOT appear anywhere in any serialized response, including inside config maps, error messages, or any nested field
 
 ---
 
@@ -78,7 +78,7 @@ The server SHALL expose a `delete_repo_hook` MCP tool that removes a webhook by 
 ---
 
 ### Requirement: Test repository hook
-The server SHALL expose a `test_repo_hook` MCP tool that triggers a test delivery for a webhook.
+The server SHALL expose a `test_repo_hook` MCP tool that triggers a test delivery for a webhook. The tool description SHALL warn callers that each invocation triggers a live HTTP delivery from the Forgejo server to the registered hook URL.
 
 #### Scenario: Trigger test delivery
 - **WHEN** a client calls `test_repo_hook` with a valid `owner`, `repo`, and `id`
@@ -109,3 +109,7 @@ The server SHALL register a `forgejo://repo/{owner}/{repo}/hook/{id}` resource t
 #### Scenario: Read single hook resource with unknown id
 - **WHEN** a client reads `forgejo://repo/{owner}/{repo}/hook/99999` and the hook does not exist
 - **THEN** the resource returns an MCP not-found error via `MapForgejoError`
+
+#### Scenario: Read single hook resource with malformed id
+- **WHEN** a client reads `forgejo://repo/{owner}/{repo}/hook/abc` (non-numeric id)
+- **THEN** the resource returns an invalid-params error (-32602) from the URI parser, NOT a not-found error (-32003)
