@@ -1,3 +1,50 @@
+## [2.30.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.29.0...v2.30.0) (2026-06-17)
+
+### :sparkles: Features
+
+* ✨ add OpenSpec change for repo webhook tools (Codeberg [#136](https://codeberg.org/goern/forgejo-mcp/issues/136)) ([a896b4a](https://codeberg.org/goern/forgejo-mcp/commit/a896b4a6cacaf0d7ca5f514153b0eea9ef9c5c1a))
+* ✨ implement repo-webhook-tools (list/get/create/edit/delete/test tools + resources) ([fa64928](https://codeberg.org/goern/forgejo-mcp/commit/fa649287d10550da4ee53b9fa8dc7a6ac7a5b02f))
+* OpenSpec planning for repo webhook tools ([f0228dd](https://codeberg.org/goern/forgejo-mcp/commit/f0228dd7daf8fecfc4053191fb501ec859894f72))
+
+### :bug: Fixes
+
+* 🐛 address opsx:verify findings for repo-webhook-tools ([5719888](https://codeberg.org/goern/forgejo-mcp/commit/5719888f8f60064c36412ecbec00c1e92d106245))
+* 🐛 bug-hunt sweep — 9 issues across tool handlers and resources ([f3be12a](https://codeberg.org/goern/forgejo-mcp/commit/f3be12a1ba720390a8030497112a80730857fba3))
+* 🐛 register webhook domain in --cli list; add showboat demo ([e84c71d](https://codeberg.org/goern/forgejo-mcp/commit/e84c71d58a13e2e5556dcfe0a22912722a010a6b))
+* 🔧 apply battle-test patches C1-C7 to repo-webhook-tools artifacts ([94f5727](https://codeberg.org/goern/forgejo-mcp/commit/94f57273d51de3f73ce64e2fb627b068e6916489))
+* 🚨 clear golangci-lint v2 backlog (closes bead forgejo-mcp-hc9) ([dd9116f](https://codeberg.org/goern/forgejo-mcp/commit/dd9116fbca1e44865587fca4377ad919b9344d2f))
+
+### :memo: Documentation
+
+* 📝 add battle-test and journal for repo-webhook-tools OpenSpec ([458e476](https://codeberg.org/goern/forgejo-mcp/commit/458e47633bf5e12951773599f306aae0b5506b96))
+* 📝 link repo-webhook-tools demo from demos/README.md ([a9d74f6](https://codeberg.org/goern/forgejo-mcp/commit/a9d74f618f4e434328f93e74caf3af3a00b80240))
+* 📝 refresh showboat demo output after opsx:verify fixes ([105afa6](https://codeberg.org/goern/forgejo-mcp/commit/105afa6e319044882137ccfe3e653d304e51a0af))
+* 📝 tick all tasks.md checkboxes for repo-webhook-tools ([a870fa0](https://codeberg.org/goern/forgejo-mcp/commit/a870fa0fe127d86075ba44750183fa4ab7e9e3be))
+
+### :repeat: CI
+
+* 🚀 align tekton golangci-lint with v2 config; enforce lint ([698f0fc](https://codeberg.org/goern/forgejo-mcp/commit/698f0fc9745d32ab3fcf363460f6f5d2a906bd19))
+
+### :repeat: Chore
+
+* 🔥 remove golangci migration backup file (history has it) ([16dc358](https://codeberg.org/goern/forgejo-mcp/commit/16dc358acb3d65e42ab96e57e01121af82cb0efc))
+* 🔧 archive repo-webhook-tools openspec change ([e23c8b3](https://codeberg.org/goern/forgejo-mcp/commit/e23c8b3b5752251e0b3799f3a83cdaf4931e5476))
+* 🔧 close bead forgejo-mcp-9r4 (verified fixed in 748de51); file residue follow-up ([df21017](https://codeberg.org/goern/forgejo-mcp/commit/df21017c00710b23683edd0bf937928103c7f092))
+* 🔧 migrate .golangci.yml to v2 config; drop pointless Sprintf ([59c86b6](https://codeberg.org/goern/forgejo-mcp/commit/59c86b6a40d4e07cd4d0c603aa1e6d2995e5c957))
+* 🔧 stop tracking beads JSONL exports in git ([7d3fc3d](https://codeberg.org/goern/forgejo-mcp/commit/7d3fc3d008fc29927b8fa84e9a4ce903446efa0d))
+* **deps:** update quay.io/hummingbird/core-runtime:2.42 docker digest to 0cded49 ([4285f71](https://codeberg.org/goern/forgejo-mcp/commit/4285f7125ac6160aa559134c8c952d0810bf1595))
+* **deps:** update quay.io/hummingbird/core-runtime:2.42 docker digest to dcd72ea ([385a675](https://codeberg.org/goern/forgejo-mcp/commit/385a675e39c627b8221b3546ca0ef2376637a950))
+* **deps:** update quay.io/hummingbird/go:1.26.4-builder docker digest to 2057369 ([124f67e](https://codeberg.org/goern/forgejo-mcp/commit/124f67e62562381b7584615675bac33711b7f64f))
+* **deps:** update quay.io/hummingbird/go:1.26.4-builder docker digest to 5110b9a ([540275f](https://codeberg.org/goern/forgejo-mcp/commit/540275f0311acdeec6e0aa41bec8b39abb2a6015))
+* **deps:** update quay.io/hummingbird/go:1.26.4-builder docker digest to 6e77e0a ([93ee4f0](https://codeberg.org/goern/forgejo-mcp/commit/93ee4f025e9abada46577fb6a92ed8f093d889d0))
+* **deps:** update quay.io/hummingbird/go:1.26.4-builder docker digest to cc03ec2 ([34d31e3](https://codeberg.org/goern/forgejo-mcp/commit/34d31e30fe90a91f2813593da7cb261f5a85f0ff))
+* **deps:** update quay.io/hummingbird/go:1.26.4-builder docker digest to e6d96a9 ([6da9ada](https://codeberg.org/goern/forgejo-mcp/commit/6da9ada13f2ded39c529df431eed1a251e0fa1b3))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to 2057369 ([3c64cc7](https://codeberg.org/goern/forgejo-mcp/commit/3c64cc7a8a477b62ed08c3cde974911df1b18af2))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to 5110b9a ([c94019e](https://codeberg.org/goern/forgejo-mcp/commit/c94019e36c9df6cf5b256565a7a102210fbddaaa))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to cc03ec2 ([2476e5a](https://codeberg.org/goern/forgejo-mcp/commit/2476e5ac214fc4b96b2c692be9431af44f90595e))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to e6d96a9 ([4d50bb5](https://codeberg.org/goern/forgejo-mcp/commit/4d50bb5859cc68c687c39d0f0e3a698ff12ca6a4))
+* little updates ([4879140](https://codeberg.org/goern/forgejo-mcp/commit/48791400698c8d323b7bdaa872a3653479f3335d))
+
 ## [2.29.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.28.0...v2.29.0) (2026-06-10)
 
 ### :sparkles: Features
