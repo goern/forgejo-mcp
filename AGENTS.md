@@ -80,6 +80,8 @@ See `openspec/specs/mcp-resources-core/spec.md` for the full normative spec (add
 | `forgejo://repo/{owner}/{repo}/label/{id}` | application/json | Single repository label |
 | `forgejo://repo/{owner}/{repo}/labels{?page,limit}` | application/json | Bounded repo label list (cap 30, sentinel `list_repo_labels`) |
 | `forgejo://org/{org}/labels{?page,limit}` | application/json | Bounded org label list (cap 30, sentinel `list_org_labels`) |
+| `forgejo://repo/{owner}/{repo}/hooks` | application/json | Bounded list of repository webhooks (cap 30, sentinel `list_repo_hooks`; secret never returned) |
+| `forgejo://repo/{owner}/{repo}/hook/{id}` | application/json | Single repository webhook (secret never returned) |
 
 ## Blocked Features
 

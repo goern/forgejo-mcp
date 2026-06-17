@@ -340,6 +340,58 @@ func ParseOrgLabels(uri string) (OrgLabelsParams, error) {
 	return OrgLabelsParams{Org: parts[0]}, nil
 }
 
+// HookParams holds parsed fields from forgejo://repo/{owner}/{repo}/hook/{id}.
+type HookParams struct {
+	Owner string
+	Repo  string
+	ID    int64
+}
+
+// HooksParams holds parsed fields from forgejo://repo/{owner}/{repo}/hooks.
+type HooksParams struct {
+	Owner string
+	Repo  string
+}
+
+// ParseHook parses forgejo://repo/{owner}/{repo}/hook/{id}.
+// Returns ErrInvalidParams if the id is not numeric.
+func ParseHook(uri string) (HookParams, error) {
+	u, err := parseForgejoURI(uri)
+	if err != nil {
+		return HookParams{}, err
+	}
+	if u.Host != "repo" {
+		return HookParams{}, fmt.Errorf("%w: expected forgejo://repo/..., got %q", ErrInvalidParams, uri)
+	}
+	parts := splitPath(u.Path)
+	// parts: [owner, repo, "hook", id]
+	if len(parts) != 4 || parts[2] != "hook" {
+		return HookParams{}, fmt.Errorf("%w: expected forgejo://repo/{owner}/{repo}/hook/{id}, got %q", ErrInvalidParams, uri)
+	}
+	id, err := strconv.ParseInt(parts[3], 10, 64)
+	if err != nil {
+		return HookParams{}, fmt.Errorf("%w: invalid URI %q: id must be numeric", ErrInvalidParams, uri)
+	}
+	return HookParams{Owner: parts[0], Repo: parts[1], ID: id}, nil
+}
+
+// ParseHooks parses forgejo://repo/{owner}/{repo}/hooks.
+func ParseHooks(uri string) (HooksParams, error) {
+	u, err := parseForgejoURI(uri)
+	if err != nil {
+		return HooksParams{}, err
+	}
+	if u.Host != "repo" {
+		return HooksParams{}, fmt.Errorf("%w: expected forgejo://repo/..., got %q", ErrInvalidParams, uri)
+	}
+	parts := splitPath(u.Path)
+	// parts: [owner, repo, "hooks"]
+	if len(parts) != 3 || parts[2] != "hooks" {
+		return HooksParams{}, fmt.Errorf("%w: expected forgejo://repo/{owner}/{repo}/hooks, got %q", ErrInvalidParams, uri)
+	}
+	return HooksParams{Owner: parts[0], Repo: parts[1]}, nil
+}
+
 func parseForgejoURI(uri string) (*url.URL, error) {
 	u, err := url.Parse(uri)
 	if err != nil {
