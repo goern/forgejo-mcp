@@ -127,7 +127,7 @@ def main():
     pac_secret = oc_get_secret(PAC_SECRET_NAME, PAC_SECRET_KEY, PAC_SECRET_NS)
 
     el_secret_name = (
-        f"forgejo-mcp-eventlistener-webhook-{owner.lower()}-{repo.lower().replace('/', '-')}"
+        f"arena-forge-eventlistener-webhook-{owner.lower()}-{repo.lower().replace('/', '-')}"
     )
     print(f"  Reading EL secret {el_secret_name}/{EL_SECRET_KEY} ...")
     try:
