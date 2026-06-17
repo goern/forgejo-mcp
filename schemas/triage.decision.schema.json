@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codeberg.org/goern/forgejo-mcp/schemas/triage.decision.schema.json",
+  "title": "Triage decision payload (v1, pinned)",
+  "description": "The 'decision' object for the triage persona. Exactly one action; per-action required fields. Agent emits structured fields only — never rendered comment markdown.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["action", "clarity"],
+  "properties": {
+    "action": { "enum": ["insufficient", "sufficient", "blocked", "duplicate"] },
+    "clarity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["overall"],
+      "properties": {
+        "overall": { "type": "number", "minimum": 0, "maximum": 1 },
+        "reproduction": { "type": "number", "minimum": 0, "maximum": 1 },
+        "expectation": { "type": "number", "minimum": 0, "maximum": 1 },
+        "scope": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "clarification_questions": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "maxLength": 280 },
+      "minItems": 1,
+      "maxItems": 1,
+      "description": "Exactly one diagnostic question for the reporter. Structured field; the apply step renders it into a comment."
+    },
+    "triage_summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 600,
+      "description": "Neutral summary of the issue in the agent's own words (NOT a verbatim echo of issue text)."
+    },
+    "suggested_labels": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "maxItems": 4,
+      "uniqueItems": true,
+      "description": "Label names drawn ONLY from the repo's live vocabulary. Prompt restricts to <=1 type + <=1 area label."
+    },
+    "blocking_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL of the concrete open issue/PR that must land first (blocked action)."
+    },
+    "duplicate_of": {
+      "oneOf": [
+        {"type": "integer", "minimum": 1},
+        {"type": "string", "minLength": 1}
+      ],
+      "description": "Issue number (integer) or URL of the issue this duplicates."
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Match confidence for blocked/duplicate. The agent downgrades weak matches to 'insufficient' per the prompt; this records the kept match's confidence."
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "action": { "const": "sufficient" } }, "required": ["action"] },
+      "then": { "required": ["triage_summary", "suggested_labels"] }
+    },
+    {
+      "if": { "properties": { "action": { "const": "insufficient" } }, "required": ["action"] },
+      "then": { "required": ["clarification_questions"] }
+    },
+    {
+      "if": { "properties": { "action": { "const": "blocked" } }, "required": ["action"] },
+      "then": { "required": ["blocking_url", "triage_summary", "confidence"] }
+    },
+    {
+      "if": { "properties": { "action": { "const": "duplicate" } }, "required": ["action"] },
+      "then": { "required": ["duplicate_of", "confidence"] }
+    }
+  ]
+}

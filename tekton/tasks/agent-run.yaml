@@ -1,0 +1,46 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Task 2: the read-only agent step. Runs pi + ca-leash to drive a claude-code
+# worker with the persona manifest's model/tools, bounded by timeout + token cap.
+# Mounts ONLY the model API key — NO Forgejo write token, NO webhook secret.
+#
+# NOTE: `agent-image` MUST bundle pi, the ca-leash extension, and the claude-code
+# runtime. There is no such public image yet; build one and pin it here. The
+# image also needs python3 + jsonschema + PyYAML for pi_run.py (or bake them in).
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: forgejo-mcp-agent-run
+  labels:
+    app.kubernetes.io/part-of: forgejo-mcp
+spec:
+  params:
+    - { name: agent-image, type: string }
+    - { name: persona, type: string, default: triage }
+    - { name: timeout-seconds, type: string, default: "600" }
+    - { name: token-cap, type: string, default: "200000" }
+  workspaces:
+    - name: shared
+  steps:
+    - name: run-worker
+      image: $(params.agent-image)
+      imagePullPolicy: IfNotPresent
+      timeout: 12m
+      env:
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-mcp-pipeline-agent
+              key: ANTHROPIC_API_KEY
+        - name: HOME
+          value: /opt/ca-home
+      script: |
+        #!/bin/sh
+        set -eu
+        CA="$(workspaces.shared.path)/ca"
+        pip3 install --quiet --no-input jsonschema PyYAML 2>/dev/null || true
+        python3 "$CA/scripts/pi_run.py" \
+          --persona "$(params.persona)" \
+          --input "$(workspaces.shared.path)/input.json" \
+          --out "$(workspaces.shared.path)/decision.json" \
+          --timeout "$(params.timeout-seconds)" \
+          --token-cap "$(params.token-cap)"

@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Task 3: the trusted apply step — the ONLY task that holds a Forgejo WRITE
+# token. Validates the decision against the pinned schemas and applies it
+# (labels + rendered comment) deterministically. Renders comments itself; never
+# posts agent markdown verbatim.
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: forgejo-mcp-apply-decision
+  labels:
+    app.kubernetes.io/part-of: forgejo-mcp
+spec:
+  params:
+    - { name: tooling-image, type: string, default: "docker.io/library/python:3.12-slim" }
+    - { name: forgejo-url, type: string, default: "https://codeberg.org" }
+  workspaces:
+    - name: shared
+  results:
+    - name: outcome
+      description: apply outcome (applied | rejected:* | error:*)
+  steps:
+    - name: apply
+      image: $(params.tooling-image)
+      env:
+        - name: FORGEJO_URL
+          value: $(params.forgejo-url)
+        # The single write credential, scoped to the triage persona's
+        # appPermissions (issues:write). Present in NO other task.
+        - name: FORGEJO_WRITE_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-mcp-forgejo-write
+              key: token
+      script: |
+        #!/bin/sh
+        set -eu
+        pip install --quiet --no-input jsonschema PyYAML
+        CA="$(workspaces.shared.path)/ca"
+        python "$CA/scripts/apply_decision.py" \
+          --decision "$(workspaces.shared.path)/decision.json" \
+          --input "$(workspaces.shared.path)/input.json" \
+          --audit "$(workspaces.shared.path)/audit.json"
+        python - "$(workspaces.shared.path)/audit.json" "$(results.outcome.path)" <<'PY'
+        import json, sys
+        audit = json.load(open(sys.argv[1]))
+        open(sys.argv[2], "w").write(audit.get("outcome") or "unknown")
+        PY

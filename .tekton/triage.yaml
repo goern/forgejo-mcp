@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# PaC PipelineRun pointer for goern/forgejo-mcp.
+# Triggers on /triage comments from repo collaborators; Pipeline + Tasks are
+# remote-resolved from this repo so no in-cluster apply is needed.
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: triage
+  annotations:
+    pipelinesascode.tekton.dev/on-comment: "^/triage(\\s|$)"
+    pipelinesascode.tekton.dev/pipeline: "https://codeberg.org/goern/forgejo-mcp/raw/branch/main/tekton/pipeline-triage.yaml"
+    pipelinesascode.tekton.dev/task-1: "https://codeberg.org/goern/forgejo-mcp/raw/branch/main/tekton/tasks/prepare-context.yaml"
+    pipelinesascode.tekton.dev/task-2: "https://codeberg.org/goern/forgejo-mcp/raw/branch/main/tekton/tasks/agent-run.yaml"
+    pipelinesascode.tekton.dev/task-3: "https://codeberg.org/goern/forgejo-mcp/raw/branch/main/tekton/tasks/apply-decision.yaml"
+    pipelinesascode.tekton.dev/max-keep-runs: "5"
+spec:
+  pipelineRef:
+    name: forgejo-mcp-triage
+  params:
+    - { name: ca-repo-url, value: "https://codeberg.org/goern/forgejo-mcp" }
+    - { name: ca-repo-revision, value: "main" }
+    - { name: agent-image, value: "codeberg.org/goern/arena-forge-agent-image:latest" }
+    - { name: persona, value: "triage" }
+    - { name: repo-owner, value: "{{ repo_owner }}" }
+    - { name: repo-name, value: "{{ repo_name }}" }
+    - { name: issue-number, value: "{{ pull_request_number }}" }
+    - { name: author, value: "{{ sender }}" }
+    - { name: issue-url, value: "{{ repo_url }}/pulls/{{ pull_request_number }}" }
+    - { name: is-pull-request, value: "true" }
+    - { name: command-name, value: "/triage" }
+    - { name: forgejo-url, value: "https://codeberg.org" }
+  workspaces:
+    - name: shared
+      volumeClaimTemplate:
+        spec:
+          accessModes: [ReadWriteOnce]
+          resources:
+            requests:
+              storage: 1Gi

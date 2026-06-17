@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# >>> COPY THIS FILE TO THE TARGET REPO AS .tekton/triage.yaml <<<
+# It lives in goern/forgejo-mcp/.tekton/triage.yaml — PaC resolves the PipelineRun
+# from the repo that received the comment. The Pipeline + Tasks themselves are
+# pulled from THIS repo (forgejo-mcp) via the remote-resolver annotations,
+# so the per-target-repo footprint is just this one pointer file.
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: triage
+  annotations:
+    # Fire only on a comment whose body starts with /triage (v1 static binding).
+    pipelinesascode.tekton.dev/on-comment: "^/triage(\\s|$)"
+    # Resolve the Pipeline + Tasks remotely from forgejo-mcp (main).
+    pipelinesascode.tekton.dev/pipeline: "https://codeberg.org/goern/forgejo-mcp/raw/branch/main/tekton/pipeline-triage.yaml"
+    pipelinesascode.tekton.dev/task-1: "https://codeberg.org/goern/forgejo-mcp/raw/branch/main/tekton/tasks/prepare-context.yaml"
+    pipelinesascode.tekton.dev/task-2: "https://codeberg.org/goern/forgejo-mcp/raw/branch/main/tekton/tasks/agent-run.yaml"
+    pipelinesascode.tekton.dev/task-3: "https://codeberg.org/goern/forgejo-mcp/raw/branch/main/tekton/tasks/apply-decision.yaml"
+    pipelinesascode.tekton.dev/max-keep-runs: "5"
+spec:
+  pipelineRef:
+    name: forgejo-mcp-triage
+  params:
+    - { name: ca-repo-url, value: "https://codeberg.org/goern/forgejo-mcp" }
+    - { name: ca-repo-revision, value: "main" }
+    # Agent image: update tag on new build.
+    - { name: agent-image, value: "codeberg.org/goern/arena-forge-agent-image:latest" }
+    - { name: persona, value: "triage" }
+    # PaC dynamic variables for the triggering comment event.
+    # NOTE: PaC's gitea provider fires on-comment ONLY for PR comments; plain-issue
+    # triage is deferred (needs the EventListener path, see triage-plain-issues change).
+    - { name: repo-owner, value: "{{ repo_owner }}" }
+    - { name: repo-name, value: "{{ repo_name }}" }
+    - { name: issue-number, value: "{{ pull_request_number }}" }
+    - { name: author, value: "{{ sender }}" }
+    - { name: issue-url, value: "{{ repo_url }}/pulls/{{ pull_request_number }}" }
+    - { name: is-pull-request, value: "true" }
+    - { name: command-name, value: "/triage" }
+    - { name: forgejo-url, value: "https://codeberg.org" }
+  workspaces:
+    - name: shared
+      volumeClaimTemplate:
+        spec:
+          accessModes: [ReadWriteOnce]
+          resources:
+            requests:
+              storage: 1Gi

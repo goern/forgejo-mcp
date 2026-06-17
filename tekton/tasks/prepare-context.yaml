@@ -1,0 +1,68 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Task 1: in-pipeline author re-check (D5 defense-in-depth) + build input.json.
+# Clones this pipeline's source onto the shared workspace so later tasks reuse
+# the scripts, then runs the authoritative live collaborator check before any
+# tokens are spent. Mounts a READ-only Forgejo token only.
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: forgejo-mcp-prepare-context
+  labels:
+    app.kubernetes.io/part-of: forgejo-mcp
+spec:
+  params:
+    - { name: ca-repo-url, type: string }
+    - { name: ca-repo-revision, type: string, default: main }
+    - { name: tooling-image, type: string, default: "docker.io/library/python:3.12-slim" }
+    - { name: persona, type: string, default: triage }
+    - { name: repo-owner, type: string }
+    - { name: repo-name, type: string }
+    - { name: issue-number, type: string }
+    - { name: author, type: string }
+    - { name: comment-id, type: string, default: "" }
+    - { name: issue-url, type: string }
+    - { name: command-name, type: string }
+    - { name: command-args, type: string, default: "" }
+    - { name: is-pull-request, type: string, default: "false" }
+    - { name: forgejo-url, type: string, default: "https://codeberg.org" }
+  workspaces:
+    - name: shared
+  steps:
+    - name: clone-tooling
+      image: docker.io/alpine/git:latest
+      script: |
+        #!/bin/sh
+        set -eu
+        rm -rf "$(workspaces.shared.path)/ca"
+        git clone --depth 1 --branch "$(params.ca-repo-revision)" \
+          "$(params.ca-repo-url)" "$(workspaces.shared.path)/ca"
+    - name: gate-and-build
+      image: $(params.tooling-image)
+      env:
+        - name: FORGEJO_URL
+          value: $(params.forgejo-url)
+        - name: FORGEJO_READ_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-mcp-forgejo-read
+              key: token
+      script: |
+        #!/bin/sh
+        set -eu
+        pip install --quiet --no-input jsonschema PyYAML
+        CA="$(workspaces.shared.path)/ca"
+        PR_FLAG=""
+        [ "$(params.is-pull-request)" = "true" ] && PR_FLAG="--is-pull-request"
+        CID_FLAG=""
+        [ -n "$(params.comment-id)" ] && CID_FLAG="--comment-id $(params.comment-id)"
+        python "$CA/scripts/prepare_context.py" \
+          --persona "$(params.persona)" \
+          --owner "$(params.repo-owner)" \
+          --repo "$(params.repo-name)" \
+          --issue-number "$(params.issue-number)" \
+          --author "$(params.author)" \
+          --issue-url "$(params.issue-url)" \
+          --command-name "$(params.command-name)" \
+          --command-args "$(params.command-args)" \
+          $CID_FLAG $PR_FLAG \
+          --out "$(workspaces.shared.path)/input.json"

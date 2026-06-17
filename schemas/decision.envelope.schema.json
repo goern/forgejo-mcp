@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codeberg.org/goern/forgejo-mcp/schemas/decision.envelope.schema.json",
+  "title": "Agent decision envelope (v1, pinned)",
+  "description": "Outer envelope the agent emits. The 'decision' object is validated separately against the persona payload schema (v1: triage.decision.schema.json). additionalProperties:false applies OUTSIDE the decision object only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["persona", "status"],
+  "properties": {
+    "persona": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "status": { "enum": ["ok", "error"] },
+    "reasoning": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Short summary of how the decision was reached. Required when status=ok."
+    },
+    "decision": {
+      "type": "object",
+      "description": "Persona-specific payload. Shape is open here; validated against the triage payload schema by the apply step."
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["message"],
+      "properties": {
+        "kind": { "enum": ["timeout", "token_cap", "tool_error", "parse_error", "internal"] },
+        "message": { "type": "string", "minLength": 1 }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "ok" } }, "required": ["status"] },
+      "then": { "required": ["reasoning", "decision"] }
+    },
+    {
+      "if": { "properties": { "status": { "const": "error" } }, "required": ["status"] },
+      "then": { "required": ["error"] }
+    }
+  ]
+}

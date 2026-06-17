@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codeberg.org/goern/forgejo-mcp/schemas/input.schema.json",
+  "title": "Coding-agent pipeline INPUT context (v1, pinned)",
+  "description": "Read-only context handed to the agent step. Carries no credentials. The worker may fetch richer context (issue body, labels, related issues) itself via its read-only tools.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["persona", "event", "command", "inputs"],
+  "properties": {
+    "persona": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Selected persona name; v1 is always 'triage'."
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "repo", "kind", "issue_number", "author"],
+      "properties": {
+        "provider": { "const": "forgejo" },
+        "repo": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["owner", "name"],
+          "properties": {
+            "owner": { "type": "string", "minLength": 1 },
+            "name": { "type": "string", "minLength": 1 }
+          }
+        },
+        "kind": { "enum": ["issue_comment", "pull_request_comment"] },
+        "issue_number": { "type": "integer", "minimum": 1 },
+        "comment_id": { "type": "integer", "minimum": 1 },
+        "author": { "type": "string", "minLength": 1 },
+        "is_pull_request": { "type": "boolean" }
+      }
+    },
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^/[a-z][a-z0-9-]*$" },
+        "args": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "description": "Persona-declared named inputs. For triage: issue_url.",
+      "additionalProperties": false,
+      "required": ["issue_url"],
+      "properties": {
+        "issue_url": { "type": "string", "format": "uri" }
+      }
+    }
+  }
+}

@@ -1,0 +1,66 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# The triage pipeline: prepare-context -> agent-run -> apply-decision, sharing
+# one workspace that carries input.json, decision.json and audit.json between
+# steps. Per-step secret mounting lives in the Tasks (least privilege): read
+# token in step 1, API key in step 2, write token in step 3 only.
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: forgejo-mcp-triage
+  labels:
+    app.kubernetes.io/part-of: forgejo-mcp
+spec:
+  params:
+    - { name: ca-repo-url, type: string }
+    - { name: ca-repo-revision, type: string, default: main }
+    - { name: agent-image, type: string }
+    - { name: tooling-image, type: string, default: "docker.io/library/python:3.12-slim" }
+    - { name: persona, type: string, default: triage }
+    - { name: repo-owner, type: string }
+    - { name: repo-name, type: string }
+    - { name: issue-number, type: string }
+    - { name: author, type: string }
+    - { name: comment-id, type: string, default: "" }
+    - { name: issue-url, type: string }
+    - { name: command-name, type: string }
+    - { name: command-args, type: string, default: "" }
+    - { name: is-pull-request, type: string, default: "false" }
+    - { name: forgejo-url, type: string, default: "https://codeberg.org" }
+  workspaces:
+    - name: shared
+  tasks:
+    - name: prepare-context
+      taskRef: { name: forgejo-mcp-prepare-context }
+      workspaces:
+        - { name: shared, workspace: shared }
+      params:
+        - { name: ca-repo-url, value: $(params.ca-repo-url) }
+        - { name: ca-repo-revision, value: $(params.ca-repo-revision) }
+        - { name: tooling-image, value: $(params.tooling-image) }
+        - { name: persona, value: $(params.persona) }
+        - { name: repo-owner, value: $(params.repo-owner) }
+        - { name: repo-name, value: $(params.repo-name) }
+        - { name: issue-number, value: $(params.issue-number) }
+        - { name: author, value: $(params.author) }
+        - { name: comment-id, value: $(params.comment-id) }
+        - { name: issue-url, value: $(params.issue-url) }
+        - { name: command-name, value: $(params.command-name) }
+        - { name: command-args, value: $(params.command-args) }
+        - { name: is-pull-request, value: $(params.is-pull-request) }
+        - { name: forgejo-url, value: $(params.forgejo-url) }
+    - name: agent-run
+      runAfter: [prepare-context]
+      taskRef: { name: forgejo-mcp-agent-run }
+      workspaces:
+        - { name: shared, workspace: shared }
+      params:
+        - { name: agent-image, value: $(params.agent-image) }
+        - { name: persona, value: $(params.persona) }
+    - name: apply-decision
+      runAfter: [agent-run]
+      taskRef: { name: forgejo-mcp-apply-decision }
+      workspaces:
+        - { name: shared, workspace: shared }
+      params:
+        - { name: tooling-image, value: $(params.tooling-image) }
+        - { name: forgejo-url, value: $(params.forgejo-url) }

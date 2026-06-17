@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Intentionally applies NOTHING to the cluster.
+#
+# The Pipeline (pipeline-triage.yaml) and Tasks (tasks/*.yaml) are NOT applied
+# to op1st-pipelines — they are **remote-resolved** by Pipelines-as-Code from
+# this repo's raw URLs (see the pipelinesascode.tekton.dev/{pipeline,task-N}
+# annotations in .tekton/triage.yaml) and inlined into each PipelineRun.
+#
+# What the cluster actually needs for this project:
+#   - secrets (forgejo-mcp-forgejo-read/write, forgejo-mcp-pipeline-agent) — delivered by ArgoCD
+#   - the `.tekton/triage.yaml` pointer committed in THIS repo
+# None of that is applied from here.
+#
+# These task/pipeline YAMLs remain in the repo because they ARE the source the
+# remote resolver fetches — they are just not `kubectl apply`-ed.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources: []

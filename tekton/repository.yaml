@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# PaC Repository registering goern/forgejo-mcp with the existing Pipelines-as-Code
+# controller in op1st-pipelines. No EventListener — PaC's shared controller route
+# receives the Codeberg webhook, verifies the webhook secret, matches the
+# on-comment annotation, and enforces the collaborator policy before creating a
+# PipelineRun.
+#
+# The webhook secret + a token live in the existing `op1st-pipelines-tokens`
+# secret already used by the other PaC repos in this namespace.
+apiVersion: pipelinesascode.tekton.dev/v1alpha1
+kind: Repository
+metadata:
+  name: goern-forgejo-mcp-triage
+  namespace: op1st-pipelines
+  labels:
+    app.kubernetes.io/part-of: forgejo-mcp
+spec:
+  url: https://codeberg.org/goern/forgejo-mcp
+  git_provider:
+    type: gitea
+    url: https://codeberg.org
+    secret:
+      name: op1st-pipelines-tokens
+      key: token
+    webhook_secret:
+      name: op1st-pipelines-tokens
+      key: webhook-secret
+  settings:
+    # Only repo members/collaborators may trigger via GitOps comment. This is the
+    # PaC edge author gate; prepare-context re-checks against the live API.
+    policy:
+      pull_request: []        # not used by triage; comment-triggered only
+      ok_to_test: []
