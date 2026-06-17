@@ -1,6 +1,7 @@
 # Dolt database (managed by Dolt, not git)
 dolt/
 embeddeddolt/
+proxieddb/
 
 # Runtime files
 bd.sock
@@ -11,9 +12,6 @@ last-touched
 
 # Daemon runtime (lock, log, pid)
 daemon.*
-
-# Interactions log (runtime, not versioned)
-interactions.jsonl
 
 # Push state (runtime, per-machine)
 push-state.json
@@ -55,6 +53,10 @@ dolt-server.activity
 
 # Backup data (auto-exported JSONL, local-only)
 backup/
+
+# JSONL exports (auto-generated, local-only)
+issues.jsonl
+interactions.jsonl
 
 # Per-project environment file (Dolt connection config, GH#2520)
 .env
