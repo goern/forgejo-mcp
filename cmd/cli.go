@@ -56,6 +56,7 @@ func registerToolsWithDomains(s *server.MCPServer) {
 		{"attachment", operation.RegisterAttachmentTool},
 		{"release", operation.RegisterReleaseTool},
 		{"branch-protection", operation.RegisterBranchProtectionTool},
+		{"webhook", operation.RegisterHookTool},
 	}
 
 	for _, d := range domains {
