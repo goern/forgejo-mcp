@@ -46,3 +46,6 @@ secrets/
 
 .mcp.json
 references/labels-cache.md
+
+# Beads / Dolt files (added by bd init)
+.beads/proxieddb/
