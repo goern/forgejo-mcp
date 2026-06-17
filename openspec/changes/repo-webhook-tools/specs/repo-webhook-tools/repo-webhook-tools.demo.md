@@ -6,7 +6,7 @@
 *Captured: 2026-06-17 via Showboat dev*
 <!-- captured-for: PR #fa64928 -->
 <!-- captured-at: 2026-06-17 -->
-<!-- captured-against: a870fa0fe127d86075ba44750183fa4ab7e9e3be (main) -->
+<!-- captured-against: 5719888f8f60064c36412ecbec00c1e92d106245 (main) -->
 
 Proves the `repo-webhook-tools` capability — spec [`spec.md`](./spec.md) (change `repo-webhook-tools`).
 
@@ -35,7 +35,7 @@ WEBHOOK:
   delete_repo_hook                         Delete a repository webhook by ID
   edit_repo_hook                           Edit a repository webhook. Only fields you pass are changed; omitted fields are left untouched.
   get_repo_hook                            Get a single repository webhook by ID
-  list_repo_hooks                          List repository webhooks (bounded by page/limit, default 30 per page)
+  list_repo_hooks                          List repository webhooks. page/limit control pagination (default: page 1, limit 30); no server-imposed ceiling.
   test_repo_hook                           Trigger a test delivery for a repository webhook. WARNING: each call triggers a live HTTP delivery to the webhook URL.
 ```
 
@@ -71,28 +71,31 @@ grep -n "hookPayload" operation/hook/hook.go | head -15
 ```
 
 ```output
-106:// hookPayload is the safe MCP response — Config.secret is never included.
-108:type hookPayload struct {
-119:func safeHook(h *forgejo_sdk.Hook) hookPayload {
-120:	return hookPayload{
-136:	Hooks []hookPayload `json:"hooks"`
-166:	payloads := make([]hookPayload, len(hooks))
+108:// hookPayload is the safe MCP response — Config.secret is never included.
+110:type hookPayload struct {
+122:func safeHook(h *forgejo_sdk.Hook) hookPayload {
+123:	return hookPayload{
+140:	Hooks []hookPayload `json:"hooks"`
+170:	payloads := make([]hookPayload, len(hooks))
 ```
 
 ```bash
-sed -n "108,135p" operation/hook/hook.go
+sed -n "108,145p" operation/hook/hook.go
 ```
 
 ```output
+// hookPayload is the safe MCP response — Config.secret is never included.
+// D3: explicit allowlist of config keys copied individually from Hook.Config.
 type hookPayload struct {
-	ID           int64    `json:"id"`
-	Type         string   `json:"type"`
-	Active       bool     `json:"active"`
-	Events       []string `json:"events"`
-	URL          string   `json:"url"`
-	ContentType  string   `json:"content_type,omitempty"`
-	HTTPMethod   string   `json:"http_method,omitempty"`
-	BranchFilter string   `json:"branch_filter,omitempty"`
+	ID           int64     `json:"id"`
+	Type         string    `json:"type"`
+	Active       bool      `json:"active"`
+	Events       []string  `json:"events"`
+	URL          string    `json:"url"`
+	ContentType  string    `json:"content_type,omitempty"`
+	HTTPMethod   string    `json:"http_method,omitempty"`
+	BranchFilter string    `json:"branch_filter,omitempty"`
+	Created      time.Time `json:"created_at"`
 }
 
 func safeHook(h *forgejo_sdk.Hook) hookPayload {
@@ -105,6 +108,7 @@ func safeHook(h *forgejo_sdk.Hook) hookPayload {
 		ContentType:  h.Config["content_type"],
 		HTTPMethod:   h.Config["http_method"],
 		BranchFilter: h.Config["branch_filter"],
+		Created:      h.Created,
 	}
 }
 
@@ -112,9 +116,10 @@ type listRepoHooksResult struct {
 	Page  int           `json:"page"`
 	Limit int           `json:"limit"`
 	Count int           `json:"count"`
+	Hooks []hookPayload `json:"hooks"`
 ```
 
-No `secret` field appears anywhere in `hookPayload`: the struct copies individual config keys (`url`, `content_type`, `http_method`, `branch_filter`) by name — `h.Config["secret"]` is never read. All six tool handlers and both resource handlers call `safeHook()` exclusively.
+No `secret` field appears anywhere in `hookPayload`: the struct copies individual config keys (`url`, `content_type`, `http_method`, `branch_filter`) by name and copies `h.Created` directly — `h.Config["secret"]` is never read. All six tool handlers and both resource handlers call `safeHook()` exclusively.
 
 ```bash
 grep -c "safeHook\|hookPayload" operation/hook/hook.go && grep -c "safeHook" operation/hook/resources_hook.go && echo "all response paths use safeHook()"
