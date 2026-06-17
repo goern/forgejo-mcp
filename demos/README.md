@@ -167,6 +167,23 @@ It is co-located with its spec under `openspec/`, not in this folder.
 before merge, and whitelists a release bot to push tags — without
 relaxing protection for anyone else.
 
+### 10. Repository webhooks
+
+CRUD on a repository's webhooks — list, get, create, edit, delete, and trigger
+a test delivery. Two resource templates expose the hook collection and single
+hooks as `forgejo://` URIs. The core surface proof is **token-free**; it
+verifies tool registration, parameter validation, and the secret-exclusion
+guarantee through the CLI tool registry and source analysis. It is co-located
+with its spec under `openspec/`, not in this folder.
+
+| Demo | Tools | What it shows |
+|------|-------|---------------|
+| [../openspec/changes/repo-webhook-tools/specs/repo-webhook-tools/repo-webhook-tools.demo.md](../openspec/changes/repo-webhook-tools/specs/repo-webhook-tools/repo-webhook-tools.demo.md) | 6 tools — `list`/`get`/`create`/`edit`/`delete_repo_hook` + `test_repo_hook`; 2 resources — `forgejo://repo/{owner}/{repo}/hooks` + `.../hook/{id}` | Tool registration, required-param guards (all 6 tools), `safeHook()` explicit-allowlist proof that `secret` is never echoed, `test_repo_hook` live-delivery warning, URI parser `invalid-params` vs `not-found` distinction |
+
+**Use case.** An automation agent that registers a CI notification hook on
+every newly created repository, tests the delivery to confirm the endpoint is
+reachable, and removes stale hooks whose URLs no longer respond.
+
 ---
 
 ## Cross-cutting workflows
