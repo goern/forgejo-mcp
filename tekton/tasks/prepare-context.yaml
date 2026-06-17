@@ -44,7 +44,7 @@ spec:
         - name: FORGEJO_READ_TOKEN
           valueFrom:
             secretKeyRef:
-              name: forgejo-mcp-forgejo-read
+              name: arena-forge-forgejo-read
               key: token
       script: |
         #!/bin/sh

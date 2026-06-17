@@ -29,7 +29,7 @@ spec:
         - name: FORGEJO_WRITE_TOKEN
           valueFrom:
             secretKeyRef:
-              name: forgejo-mcp-forgejo-write
+              name: arena-forge-forgejo-write
               key: token
       script: |
         #!/bin/sh
