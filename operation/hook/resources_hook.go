@@ -105,7 +105,7 @@ func hooksResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]m
 	payload := hooksCollectionPayload{
 		Owner:     p.Owner,
 		Repo:      p.Repo,
-		Count:     len(hooks),
+		Count:     len(payloads),
 		Hooks:     payloads,
 		Truncated: bounded.Truncated,
 	}

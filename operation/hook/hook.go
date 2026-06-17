@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"codeberg.org/goern/forgejo-mcp/v2/operation/params"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
@@ -32,7 +33,7 @@ const (
 var (
 	ListRepoHooksTool = mcp.NewTool(
 		ListRepoHooksToolName,
-		mcp.WithDescription("List repository webhooks (bounded by page/limit, default 30 per page)"),
+		mcp.WithDescription("List repository webhooks. page/limit control pagination (default: page 1, limit 30); no server-imposed ceiling."),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithNumber("page", mcp.Required(), mcp.Description(params.Page), mcp.DefaultNumber(1), mcp.Min(1)),
@@ -53,6 +54,7 @@ var (
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithString("url", mcp.Required(), mcp.Description("Payload URL for the webhook")),
+		mcp.WithString("type", mcp.Description(`Webhook type (default "forgejo"; only "forgejo" is supported for repository hooks)`)),
 		mcp.WithString("content_type", mcp.Description(`Content type: "json" or "form" (default "json")`)),
 		mcp.WithString("secret", mcp.Description("HMAC secret for payload signing (write-only; not returned)")),
 		mcp.WithString("http_method", mcp.Description(`HTTP method: "POST" or "GET" (default "POST")`)),
@@ -106,14 +108,15 @@ func RegisterTools(s *server.MCPServer) {
 // hookPayload is the safe MCP response — Config.secret is never included.
 // D3: explicit allowlist of config keys copied individually from Hook.Config.
 type hookPayload struct {
-	ID           int64    `json:"id"`
-	Type         string   `json:"type"`
-	Active       bool     `json:"active"`
-	Events       []string `json:"events"`
-	URL          string   `json:"url"`
-	ContentType  string   `json:"content_type,omitempty"`
-	HTTPMethod   string   `json:"http_method,omitempty"`
-	BranchFilter string   `json:"branch_filter,omitempty"`
+	ID           int64     `json:"id"`
+	Type         string    `json:"type"`
+	Active       bool      `json:"active"`
+	Events       []string  `json:"events"`
+	URL          string    `json:"url"`
+	ContentType  string    `json:"content_type,omitempty"`
+	HTTPMethod   string    `json:"http_method,omitempty"`
+	BranchFilter string    `json:"branch_filter,omitempty"`
+	Created      time.Time `json:"created_at"`
 }
 
 func safeHook(h *forgejo_sdk.Hook) hookPayload {
@@ -126,6 +129,7 @@ func safeHook(h *forgejo_sdk.Hook) hookPayload {
 		ContentType:  h.Config["content_type"],
 		HTTPMethod:   h.Config["http_method"],
 		BranchFilter: h.Config["branch_filter"],
+		Created:      h.Created,
 	}
 }
 
@@ -220,8 +224,12 @@ func CreateRepoHookFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		config["http_method"] = v
 	}
 
+	hookType := forgejo_sdk.HookTypeForgejo
+	if v, ok := args["type"].(string); ok && v != "" {
+		hookType = forgejo_sdk.HookType(v)
+	}
 	opt := forgejo_sdk.CreateHookOption{
-		Type:   forgejo_sdk.HookTypeForgejo,
+		Type:   hookType,
 		Config: config,
 		Active: true,
 	}
