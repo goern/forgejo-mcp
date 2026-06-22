@@ -22,12 +22,12 @@ import (
 )
 
 const (
-	ListRepoHooksToolName   = "list_repo_hooks"
-	GetRepoHookToolName     = "get_repo_hook"
-	CreateRepoHookToolName  = "create_repo_hook"
-	EditRepoHookToolName    = "edit_repo_hook"
-	DeleteRepoHookToolName  = "delete_repo_hook"
-	TestRepoHookToolName    = "test_repo_hook"
+	ListRepoHooksToolName  = "list_repo_hooks"
+	GetRepoHookToolName    = "get_repo_hook"
+	CreateRepoHookToolName = "create_repo_hook"
+	EditRepoHookToolName   = "edit_repo_hook"
+	DeleteRepoHookToolName = "delete_repo_hook"
+	TestRepoHookToolName   = "test_repo_hook"
 )
 
 var (
