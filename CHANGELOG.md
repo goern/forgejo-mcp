@@ -1,3 +1,43 @@
+## [2.30.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.30.0...v2.30.1) (2026-06-30)
+
+### :bug: Fixes
+
+* some go formatting ([16f807c](https://codeberg.org/goern/forgejo-mcp/commit/16f807cfaf589f090fb4486530a526275653614d))
+
+### :repeat: Chore
+
+* 📊 snapshot release download counts ([48c37ee](https://codeberg.org/goern/forgejo-mcp/commit/48c37ee060d612ba0cd742a12587c9072f34ea8b))
+* 📊 snapshot release download counts ([992eb62](https://codeberg.org/goern/forgejo-mcp/commit/992eb629451498ae889ff3750e5b327a533d22cb))
+* **deps:** lock file maintenance ([e70cc24](https://codeberg.org/goern/forgejo-mcp/commit/e70cc24135fcc4135158287c3cb4905f1f2b66ad))
+* **deps:** update quay.io/hummingbird/core-runtime:2.42 docker digest to 02ca768 ([364f6dc](https://codeberg.org/goern/forgejo-mcp/commit/364f6dc4fe73941ea2e9294bfdb7df7c87b380fe))
+* **deps:** update quay.io/hummingbird/core-runtime:2.42 docker digest to 3fadedf ([51e0cc0](https://codeberg.org/goern/forgejo-mcp/commit/51e0cc081f9bb05db856dd98ab6eabf5c048eb7c))
+* **deps:** update quay.io/hummingbird/core-runtime:2.42 docker digest to 47c4393 ([1b07403](https://codeberg.org/goern/forgejo-mcp/commit/1b07403ce998e14edcd074ea9c0b317fe2bde749))
+* **deps:** update quay.io/hummingbird/core-runtime:2.42 docker digest to 4a79a53 ([d95eed7](https://codeberg.org/goern/forgejo-mcp/commit/d95eed7b776fd84f196b1d79fb43cba019993a68))
+* **deps:** update quay.io/hummingbird/core-runtime:2.42 docker digest to 6b67691 ([e406fdb](https://codeberg.org/goern/forgejo-mcp/commit/e406fdb72e5f1976066da250a1165d9ef31fdb80))
+* **deps:** update quay.io/hummingbird/core-runtime:2.42 docker digest to b9bbc03 ([29ae863](https://codeberg.org/goern/forgejo-mcp/commit/29ae863bfea620e73be3057a7c151e6713007164))
+* **deps:** update quay.io/hummingbird/core-runtime:2.42 docker digest to c77b76c ([3c655e0](https://codeberg.org/goern/forgejo-mcp/commit/3c655e01e6a5b7b00d00c83cbb6e349e38ffc064))
+* **deps:** update quay.io/hummingbird/go:1.26.4-builder docker digest to 1dbf14b ([e40512c](https://codeberg.org/goern/forgejo-mcp/commit/e40512cb8f1fdd35e4b12e83ec9bde3a592d78c1))
+* **deps:** update quay.io/hummingbird/go:1.26.4-builder docker digest to 2c1f6ee ([4ac6615](https://codeberg.org/goern/forgejo-mcp/commit/4ac661571d1638ec20aaaab118e1daa0c533afc7))
+* **deps:** update quay.io/hummingbird/go:1.26.4-builder docker digest to 37676d9 ([6f22c6a](https://codeberg.org/goern/forgejo-mcp/commit/6f22c6a1beb4f6218aa4b1bd0a59f934a7943371))
+* **deps:** update quay.io/hummingbird/go:1.26.4-builder docker digest to 41c5a58 ([47da694](https://codeberg.org/goern/forgejo-mcp/commit/47da6946e5dcc63bd262e9119058621c9e75e96e))
+* **deps:** update quay.io/hummingbird/go:1.26.4-builder docker digest to 4b5537d ([8fae6db](https://codeberg.org/goern/forgejo-mcp/commit/8fae6dbef6bf3ff755601efbfdacf121ca35370f))
+* **deps:** update quay.io/hummingbird/go:1.26.4-builder docker digest to 8615652 ([4241885](https://codeberg.org/goern/forgejo-mcp/commit/4241885b18cd61fe8ba3a0c9b594e444cb44d3f2))
+* **deps:** update quay.io/hummingbird/go:1.26.4-builder docker digest to 9508bfe ([91f8cbb](https://codeberg.org/goern/forgejo-mcp/commit/91f8cbb3d189775ae250335c339d295c3d023e64))
+* **deps:** update quay.io/hummingbird/go:1.26.4-builder docker digest to c3232e7 ([2de9295](https://codeberg.org/goern/forgejo-mcp/commit/2de929528c109496fa2821bec047a912c4c74ccf))
+* **deps:** update quay.io/hummingbird/go:1.26.4-builder docker digest to d444a0c ([afaf149](https://codeberg.org/goern/forgejo-mcp/commit/afaf14990764f6ab6b9e331b2f38a0c18cc0961f))
+* **deps:** update quay.io/hummingbird/go:1.26.4-builder docker digest to da4371f ([2d471e0](https://codeberg.org/goern/forgejo-mcp/commit/2d471e04c29665c92eae9edc86ae87ea3a4b05b1))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to 1dbf14b ([b8de258](https://codeberg.org/goern/forgejo-mcp/commit/b8de258b50a473f75d8cdaa34a1a4ec411506206))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to 2c1f6ee ([8cf823d](https://codeberg.org/goern/forgejo-mcp/commit/8cf823d9188070a3fb448bbd93ee62dd41926a81))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to 37676d9 ([8f2d734](https://codeberg.org/goern/forgejo-mcp/commit/8f2d7349dcc406fcae22f91bae50e0f8a0012b6a))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to 41c5a58 ([306e47b](https://codeberg.org/goern/forgejo-mcp/commit/306e47b61687a69e3c785c86d7c556af60aba329))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to 4b5537d ([ae73e67](https://codeberg.org/goern/forgejo-mcp/commit/ae73e67e300b1fbd63acc8aa8cf5f35a3ebb1bc5))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to 6c27dbf ([d0860b8](https://codeberg.org/goern/forgejo-mcp/commit/d0860b89127435fb78aa5f95f4a3b7b6fc767a9a))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to 8615652 ([113728e](https://codeberg.org/goern/forgejo-mcp/commit/113728e1d15b234e5690cc16a40e7ec24c521856))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to 9508bfe ([70fe096](https://codeberg.org/goern/forgejo-mcp/commit/70fe09675463526c55cddfd218f06821e935d8e8))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to c3232e7 ([cd45f13](https://codeberg.org/goern/forgejo-mcp/commit/cd45f134a3e665de64090d1e52a3fb5d4b9b8bf4))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to d444a0c ([e1e2502](https://codeberg.org/goern/forgejo-mcp/commit/e1e2502e96e5eca944807066b37551d6ac7b072f))
+* **deps:** update registry.access.redhat.com/hi/go:latest-builder docker digest to da4371f ([b223487](https://codeberg.org/goern/forgejo-mcp/commit/b2234878c70c9590c3e8f918cf186f265f57fe1e))
+
 ## [2.30.0](https://codeberg.org/goern/forgejo-mcp/compare/v2.29.0...v2.30.0) (2026-06-17)
 
 ### :sparkles: Features
