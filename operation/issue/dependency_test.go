@@ -310,8 +310,88 @@ func TestListIssueDependencies_HE_404IsEmpty(t *testing.T) {
 	if err != nil || res == nil || res.IsError {
 		t.Fatalf("expected 404 to be treated as empty list, got err=%v res=%+v", err, res)
 	}
-	if !strings.Contains(textOf(res), "[]") && !strings.Contains(textOf(res), "null") {
+	if !strings.Contains(textOf(res), "[]") {
 		t.Fatalf("expected empty result for 404, got %q", textOf(res))
+	}
+}
+
+func TestListIssueDependents_HE_404IsEmpty(t *testing.T) {
+	records := make([]recordedReq, 0, 2)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v1/version", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"version":"15.0.2+gitea-1.22.0"}`))
+	})
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		records = append(records, recordedReq{method: r.Method, path: r.URL.Path, rawBody: body})
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{}`))
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	flag.URL = srv.URL
+	flag.Token = "tkn"
+	flag.UserAgent = "test"
+
+	c, err := forgejo_sdk.NewClient(srv.URL,
+		forgejo_sdk.SetToken("tkn"),
+		forgejo_sdk.SetUserAgent("test"),
+	)
+	if err != nil {
+		t.Fatalf("failed to build SDK client for test: %v", err)
+	}
+	forgejo.SetClientForTesting(c)
+
+	res, err := ListIssueDependentsFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern",
+		"repo":  "forgejo-mcp",
+		"index": float64(42),
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("expected 404 to be treated as empty list, got err=%v res=%+v", err, res)
+	}
+	if !strings.Contains(textOf(res), "[]") {
+		t.Fatalf("expected empty result for 404, got %q", textOf(res))
+	}
+}
+
+func TestRemoveIssueDependency_HE_APIErrorSurfaces(t *testing.T) {
+	records := make([]recordedReq, 0, 2)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v1/version", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"version":"15.0.2+gitea-1.22.0"}`))
+	})
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		records = append(records, recordedReq{method: r.Method, path: r.URL.Path, rawBody: body})
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"message":"issue dependencies are disabled"}`))
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	flag.URL = srv.URL
+	flag.Token = "tkn"
+	flag.UserAgent = "test"
+
+	c, err := forgejo_sdk.NewClient(srv.URL,
+		forgejo_sdk.SetToken("tkn"),
+		forgejo_sdk.SetUserAgent("test"),
+	)
+	if err != nil {
+		t.Fatalf("failed to build SDK client for test: %v", err)
+	}
+	forgejo.SetClientForTesting(c)
+
+	_, err = RemoveIssueDependencyFn(context.Background(), makeReq(map[string]any{
+		"owner":            "goern",
+		"repo":             "forgejo-mcp",
+		"index":            float64(42),
+		"dependency_index": float64(7),
+	}))
+	if err == nil {
+		t.Fatal("expected API error to surface, got nil")
 	}
 }
 

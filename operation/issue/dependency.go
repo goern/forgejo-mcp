@@ -83,7 +83,7 @@ func ListIssueDependenciesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	index, _ := to.Float64(req.GetArguments()["index"])
 
 	path := fmt.Sprintf("/repos/%s/%s/issues/%d/dependencies", owner, repo, int64(index))
-	var issues []*forgejo_sdk.Issue
+	issues := []*forgejo_sdk.Issue{}
 	if err := forgejo.DoJSONList(ctx, http.MethodGet, path, &issues); err != nil {
 		return to.ErrorResult(fmt.Errorf("list issue dependencies err: %w", err))
 	}
@@ -97,7 +97,7 @@ func ListIssueDependentsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 	index, _ := to.Float64(req.GetArguments()["index"])
 
 	path := fmt.Sprintf("/repos/%s/%s/issues/%d/blocks", owner, repo, int64(index))
-	var issues []*forgejo_sdk.Issue
+	issues := []*forgejo_sdk.Issue{}
 	if err := forgejo.DoJSONList(ctx, http.MethodGet, path, &issues); err != nil {
 		return to.ErrorResult(fmt.Errorf("list issue dependents err: %w", err))
 	}
