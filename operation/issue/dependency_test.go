@@ -18,15 +18,15 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-// newDependenciesBackend stubs the endpoints used by issue-dependency tools.
-// Caller provides bodies/status for each path pattern. Defaults are 200 OK with an empty body.
+// newDependenciesBackend stubs the endpoints used by issue-dependency tools
+// on the forge.he-int.de API dialect.
 func newDependenciesBackend(t *testing.T) (*httptest.Server, *[]recordedReq) {
 	t.Helper()
 	records := make([]recordedReq, 0, 4)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/version", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"version":"11.0.0+gitea-1.22.0"}`))
+		_, _ = w.Write([]byte(`{"version":"15.0.2+gitea-1.22.0"}`))
 	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
@@ -52,7 +52,7 @@ func newDependenciesBackend(t *testing.T) (*httptest.Server, *[]recordedReq) {
 	return srv, &records
 }
 
-func TestListIssueDependencies_SendsGet(t *testing.T) {
+func TestListIssueDependencies_HE_SendsGetToDependencies(t *testing.T) {
 	_, records := newDependenciesBackend(t)
 
 	res, err := ListIssueDependenciesFn(context.Background(), makeReq(map[string]any{
@@ -77,7 +77,7 @@ func TestListIssueDependencies_SendsGet(t *testing.T) {
 	}
 }
 
-func TestListIssueDependents_SendsGetToBlocks(t *testing.T) {
+func TestListIssueDependents_HE_SendsGetToBlocks(t *testing.T) {
 	_, records := newDependenciesBackend(t)
 
 	res, err := ListIssueDependentsFn(context.Background(), makeReq(map[string]any{
@@ -99,7 +99,7 @@ func TestListIssueDependents_SendsGetToBlocks(t *testing.T) {
 	}
 }
 
-func TestAddIssueDependency_SendsPostWithBody(t *testing.T) {
+func TestAddIssueDependency_HE_SendsPostWithIssueMeta(t *testing.T) {
 	_, records := newDependenciesBackend(t)
 
 	res, err := AddIssueDependencyFn(context.Background(), makeReq(map[string]any{
@@ -125,15 +125,21 @@ func TestAddIssueDependency_SendsPostWithBody(t *testing.T) {
 	if err := json.Unmarshal(last.rawBody, &payload); err != nil {
 		t.Fatalf("invalid JSON body: %v\nbody: %s", err, last.rawBody)
 	}
-	if payload["dependency_issue_index"] != float64(7) {
-		t.Fatalf("expected dependency_issue_index=7, got %v", payload["dependency_issue_index"])
+	if payload["index"] != float64(7) {
+		t.Fatalf("expected index=7, got %v", payload["index"])
+	}
+	if payload["owner"] != "goern" {
+		t.Fatalf("expected owner=goern, got %v", payload["owner"])
+	}
+	if payload["repo"] != "forgejo-mcp" {
+		t.Fatalf("expected repo=forgejo-mcp, got %v", payload["repo"])
 	}
 	if !strings.Contains(textOf(res), "now depends on") {
 		t.Fatalf("expected success message, got %q", textOf(res))
 	}
 }
 
-func TestAddIssueDependency_SelfDependencyRejected(t *testing.T) {
+func TestAddIssueDependency_HE_SelfDependencyRejected(t *testing.T) {
 	_, records := newDependenciesBackend(t)
 
 	_, err := AddIssueDependencyFn(context.Background(), makeReq(map[string]any{
@@ -150,7 +156,7 @@ func TestAddIssueDependency_SelfDependencyRejected(t *testing.T) {
 	}
 }
 
-func TestRemoveIssueDependency_SendsDelete(t *testing.T) {
+func TestRemoveIssueDependency_HE_SendsDeleteWithIssueMeta(t *testing.T) {
 	_, records := newDependenciesBackend(t)
 
 	res, err := RemoveIssueDependencyFn(context.Background(), makeReq(map[string]any{
@@ -167,21 +173,32 @@ func TestRemoveIssueDependency_SendsDelete(t *testing.T) {
 	if last.method != http.MethodDelete {
 		t.Fatalf("expected DELETE, got %s", last.method)
 	}
-	want := "/api/v1/repos/goern/forgejo-mcp/issues/42/dependencies/7"
+	want := "/api/v1/repos/goern/forgejo-mcp/issues/42/dependencies"
 	if last.path != want {
 		t.Fatalf("unexpected path: got %s want %s", last.path, want)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(last.rawBody, &payload); err != nil {
+		t.Fatalf("invalid JSON body: %v\nbody: %s", err, last.rawBody)
+	}
+	if payload["index"] != float64(7) {
+		t.Fatalf("expected index=7, got %v", payload["index"])
+	}
+	if payload["owner"] != "goern" || payload["repo"] != "forgejo-mcp" {
+		t.Fatalf("expected owner/repo to match repo, got %v", payload)
 	}
 	if !strings.Contains(textOf(res), "Removed dependency") {
 		t.Fatalf("expected success message, got %q", textOf(res))
 	}
 }
 
-func TestListIssueDependencies_DecodesIssueList(t *testing.T) {
+func TestListIssueDependencies_HE_DecodesIssueList(t *testing.T) {
 	records := make([]recordedReq, 0, 2)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/version", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"version":"11.0.0+gitea-1.22.0"}`))
+		_, _ = w.Write([]byte(`{"version":"15.0.2+gitea-1.22.0"}`))
 	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
@@ -219,12 +236,12 @@ func TestListIssueDependencies_DecodesIssueList(t *testing.T) {
 	}
 }
 
-func TestListIssueDependencies_APIErrorSurfaces(t *testing.T) {
+func TestListIssueDependencies_HE_APIErrorSurfaces(t *testing.T) {
 	records := make([]recordedReq, 0, 2)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/version", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"version":"11.0.0+gitea-1.22.0"}`))
+		_, _ = w.Write([]byte(`{"version":"15.0.2+gitea-1.22.0"}`))
 	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
@@ -257,12 +274,12 @@ func TestListIssueDependencies_APIErrorSurfaces(t *testing.T) {
 	}
 }
 
-func TestListIssueDependencies_404IsEmpty(t *testing.T) {
+func TestListIssueDependencies_HE_404IsEmpty(t *testing.T) {
 	records := make([]recordedReq, 0, 2)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/version", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"version":"11.0.0+gitea-1.22.0"}`))
+		_, _ = w.Write([]byte(`{"version":"15.0.2+gitea-1.22.0"}`))
 	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)

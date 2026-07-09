@@ -60,8 +60,13 @@ var (
 	)
 )
 
-type addIssueDependencyBody struct {
-	DependencyIssueIndex int64 `json:"dependency_issue_index"`
+// issueMetaBody is the request body used by the forge.he-int.de API for the
+// dependency and blocks mutation endpoints. It requires owner, repo, and index
+// rather than a single dependency_issue_index field.
+type issueMetaBody struct {
+	Index int64  `json:"index"`
+	Owner string `json:"owner"`
+	Repo  string `json:"repo"`
 }
 
 func RegisterDependencyTool(s *server.MCPServer) {
@@ -111,7 +116,7 @@ func AddIssueDependencyFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	}
 
 	path := fmt.Sprintf("/repos/%s/%s/issues/%d/dependencies", owner, repo, int64(index))
-	body := addIssueDependencyBody{DependencyIssueIndex: int64(dependsOn)}
+	body := issueMetaBody{Index: int64(dependsOn), Owner: owner, Repo: repo}
 	if err := forgejo.DoJSON(ctx, http.MethodPost, path, body, nil); err != nil {
 		return to.ErrorResult(fmt.Errorf("add issue dependency err: %w", err))
 	}
@@ -125,8 +130,9 @@ func RemoveIssueDependencyFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	index, _ := to.Float64(req.GetArguments()["index"])
 	dependencyIndex, _ := to.Float64(req.GetArguments()["dependency_index"])
 
-	path := fmt.Sprintf("/repos/%s/%s/issues/%d/dependencies/%d", owner, repo, int64(index), int64(dependencyIndex))
-	if err := forgejo.DoJSON(ctx, http.MethodDelete, path, nil, nil); err != nil {
+	path := fmt.Sprintf("/repos/%s/%s/issues/%d/dependencies", owner, repo, int64(index))
+	body := issueMetaBody{Index: int64(dependencyIndex), Owner: owner, Repo: repo}
+	if err := forgejo.DoJSON(ctx, http.MethodDelete, path, body, nil); err != nil {
 		return to.ErrorResult(fmt.Errorf("remove issue dependency err: %w", err))
 	}
 	return to.TextResult(fmt.Sprintf("Removed dependency on issue #%d from issue #%d", int64(dependencyIndex), int64(index)))
