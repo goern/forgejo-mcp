@@ -27,18 +27,22 @@ const (
 var (
 	ListIssueDependenciesTool = mcp.NewTool(
 		ListIssueDependenciesToolName,
-		mcp.WithDescription("List issues that the given issue depends on. Returns an empty list if the issue has no dependencies. This tool fails if the repository has disabled issue dependencies."),
+		mcp.WithDescription("List issues that the given issue depends on. Pagination uses page (1-based) and limit (page size); the response echoes page and limit so callers can fetch the next page. Returns an empty list if the issue has no dependencies. This tool fails if the repository has disabled issue dependencies."),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.IssueIndex)),
+		mcp.WithNumber("page", mcp.Description(params.Page), mcp.DefaultNumber(1)),
+		mcp.WithNumber("limit", mcp.Description(params.Limit), mcp.DefaultNumber(20)),
 	)
 
 	ListIssueDependentsTool = mcp.NewTool(
 		ListIssueDependentsToolName,
-		mcp.WithDescription("List issues that depend on the given issue. Returns an empty list if no issue depends on it. This tool fails if the repository has disabled issue dependencies."),
+		mcp.WithDescription("List issues that depend on the given issue. Pagination uses page (1-based) and limit (page size); the response echoes page and limit so callers can fetch the next page. Returns an empty list if no issue depends on it. This tool fails if the repository has disabled issue dependencies."),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.IssueIndex)),
+		mcp.WithNumber("page", mcp.Description(params.Page), mcp.DefaultNumber(1)),
+		mcp.WithNumber("limit", mcp.Description(params.Limit), mcp.DefaultNumber(20)),
 	)
 
 	AddIssueDependencyTool = mcp.NewTool(
@@ -60,13 +64,22 @@ var (
 	)
 )
 
-// issueMetaBody is the request body used by the forge.he-int.de API for the
+// issueMetaBody is the Forgejo/Gitea IssueMeta request body used by the
 // dependency and blocks mutation endpoints. It requires owner, repo, and index
 // rather than a single dependency_issue_index field.
 type issueMetaBody struct {
 	Index int64  `json:"index"`
 	Owner string `json:"owner"`
 	Repo  string `json:"repo"`
+}
+
+// paginatedDependencyResult wraps a list of dependency issues with the page
+// metadata needed for resumability. The shape echoes the page/limit parameters
+// so callers can fetch the next page.
+type paginatedDependencyResult struct {
+	Page   int                  `json:"page"`
+	Limit  int                  `json:"limit"`
+	Issues []*forgejo_sdk.Issue `json:"issues"`
 }
 
 func RegisterDependencyTool(s *server.MCPServer) {
@@ -81,13 +94,14 @@ func ListIssueDependenciesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	owner, _ := req.GetArguments()["owner"].(string)
 	repo, _ := req.GetArguments()["repo"].(string)
 	index, _ := to.Float64(req.GetArguments()["index"])
+	page, limit := parsePageLimit(req.GetArguments())
 
-	path := fmt.Sprintf("/repos/%s/%s/issues/%d/dependencies", owner, repo, int64(index))
+	path := fmt.Sprintf("/repos/%s/%s/issues/%d/dependencies?page=%d&limit=%d", owner, repo, int64(index), page, limit)
 	issues := []*forgejo_sdk.Issue{}
 	if err := forgejo.DoJSONList(ctx, http.MethodGet, path, &issues); err != nil {
 		return to.ErrorResult(fmt.Errorf("list issue dependencies err: %w", err))
 	}
-	return to.TextResult(issues)
+	return to.TextResult(paginatedDependencyResult{Page: page, Limit: limit, Issues: issues})
 }
 
 func ListIssueDependentsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -95,13 +109,28 @@ func ListIssueDependentsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 	owner, _ := req.GetArguments()["owner"].(string)
 	repo, _ := req.GetArguments()["repo"].(string)
 	index, _ := to.Float64(req.GetArguments()["index"])
+	page, limit := parsePageLimit(req.GetArguments())
 
-	path := fmt.Sprintf("/repos/%s/%s/issues/%d/blocks", owner, repo, int64(index))
+	path := fmt.Sprintf("/repos/%s/%s/issues/%d/blocks?page=%d&limit=%d", owner, repo, int64(index), page, limit)
 	issues := []*forgejo_sdk.Issue{}
 	if err := forgejo.DoJSONList(ctx, http.MethodGet, path, &issues); err != nil {
 		return to.ErrorResult(fmt.Errorf("list issue dependents err: %w", err))
 	}
-	return to.TextResult(issues)
+	return to.TextResult(paginatedDependencyResult{Page: page, Limit: limit, Issues: issues})
+}
+
+func parsePageLimit(args map[string]any) (page, limit int) {
+	pageFloat, _ := to.Float64(args["page"])
+	page = int(pageFloat)
+	if page == 0 {
+		page = 1
+	}
+	limitFloat, _ := to.Float64(args["limit"])
+	limit = int(limitFloat)
+	if limit == 0 {
+		limit = 20
+	}
+	return page, limit
 }
 
 func AddIssueDependencyFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {

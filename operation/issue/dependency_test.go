@@ -18,8 +18,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-// newDependenciesBackend stubs the endpoints used by issue-dependency tools
-// on the forge.he-int.de API dialect.
+// newDependenciesBackend stubs the endpoints used by issue-dependency tools.
 func newDependenciesBackend(t *testing.T) (*httptest.Server, *[]recordedReq) {
 	t.Helper()
 	records := make([]recordedReq, 0, 4)
@@ -30,7 +29,7 @@ func newDependenciesBackend(t *testing.T) (*httptest.Server, *[]recordedReq) {
 	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
-		records = append(records, recordedReq{method: r.Method, path: r.URL.Path, rawBody: body})
+		records = append(records, recordedReq{method: r.Method, path: r.URL.Path, query: r.URL.RawQuery, rawBody: body})
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`[]`))
@@ -52,7 +51,7 @@ func newDependenciesBackend(t *testing.T) (*httptest.Server, *[]recordedReq) {
 	return srv, &records
 }
 
-func TestListIssueDependencies_HE_SendsGetToDependencies(t *testing.T) {
+func TestListIssueDependencies_SendsGetToDependencies(t *testing.T) {
 	_, records := newDependenciesBackend(t)
 
 	res, err := ListIssueDependenciesFn(context.Background(), makeReq(map[string]any{
@@ -75,9 +74,20 @@ func TestListIssueDependencies_HE_SendsGetToDependencies(t *testing.T) {
 	if last.path != want {
 		t.Fatalf("unexpected path: got %s want %s", last.path, want)
 	}
+	if !strings.Contains(last.query, "page=1") {
+		t.Fatalf("expected default page=1 in query, got %s", last.query)
+	}
+	if !strings.Contains(last.query, "limit=20") {
+		t.Fatalf("expected default limit=20 in query, got %s", last.query)
+	}
+
+	out := textOf(res)
+	if !strings.Contains(out, `"page":1`) || !strings.Contains(out, `"limit":20`) {
+		t.Fatalf("expected response to echo page/limit, got %q", out)
+	}
 }
 
-func TestListIssueDependents_HE_SendsGetToBlocks(t *testing.T) {
+func TestListIssueDependents_SendsGetToBlocks(t *testing.T) {
 	_, records := newDependenciesBackend(t)
 
 	res, err := ListIssueDependentsFn(context.Background(), makeReq(map[string]any{
@@ -97,9 +107,17 @@ func TestListIssueDependents_HE_SendsGetToBlocks(t *testing.T) {
 	if last.path != want {
 		t.Fatalf("unexpected path: got %s want %s", last.path, want)
 	}
+	if !strings.Contains(last.query, "page=1") || !strings.Contains(last.query, "limit=20") {
+		t.Fatalf("expected default page/limit in query, got %s", last.query)
+	}
+
+	out := textOf(res)
+	if !strings.Contains(out, `"page":1`) || !strings.Contains(out, `"limit":20`) {
+		t.Fatalf("expected response to echo page/limit, got %q", out)
+	}
 }
 
-func TestAddIssueDependency_HE_SendsPostWithIssueMeta(t *testing.T) {
+func TestAddIssueDependency_SendsPostWithIssueMeta(t *testing.T) {
 	_, records := newDependenciesBackend(t)
 
 	res, err := AddIssueDependencyFn(context.Background(), makeReq(map[string]any{
@@ -139,7 +157,7 @@ func TestAddIssueDependency_HE_SendsPostWithIssueMeta(t *testing.T) {
 	}
 }
 
-func TestAddIssueDependency_HE_SelfDependencyRejected(t *testing.T) {
+func TestAddIssueDependency_SelfDependencyRejected(t *testing.T) {
 	_, records := newDependenciesBackend(t)
 
 	_, err := AddIssueDependencyFn(context.Background(), makeReq(map[string]any{
@@ -156,7 +174,7 @@ func TestAddIssueDependency_HE_SelfDependencyRejected(t *testing.T) {
 	}
 }
 
-func TestRemoveIssueDependency_HE_SendsDeleteWithIssueMeta(t *testing.T) {
+func TestRemoveIssueDependency_SendsDeleteWithIssueMeta(t *testing.T) {
 	_, records := newDependenciesBackend(t)
 
 	res, err := RemoveIssueDependencyFn(context.Background(), makeReq(map[string]any{
@@ -193,7 +211,7 @@ func TestRemoveIssueDependency_HE_SendsDeleteWithIssueMeta(t *testing.T) {
 	}
 }
 
-func TestListIssueDependencies_HE_DecodesIssueList(t *testing.T) {
+func TestListIssueDependencies_DecodesIssueList(t *testing.T) {
 	records := make([]recordedReq, 0, 2)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/version", func(w http.ResponseWriter, _ *http.Request) {
@@ -202,7 +220,7 @@ func TestListIssueDependencies_HE_DecodesIssueList(t *testing.T) {
 	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
-		records = append(records, recordedReq{method: r.Method, path: r.URL.Path, rawBody: body})
+		records = append(records, recordedReq{method: r.Method, path: r.URL.Path, query: r.URL.RawQuery, rawBody: body})
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`[{"id":1,"number":7,"title":"dependency"}]`))
@@ -226,6 +244,8 @@ func TestListIssueDependencies_HE_DecodesIssueList(t *testing.T) {
 		"owner": "goern",
 		"repo":  "forgejo-mcp",
 		"index": float64(42),
+		"page":  float64(2),
+		"limit": float64(5),
 	}))
 	if err != nil || res == nil || res.IsError {
 		t.Fatalf("ListIssueDependenciesFn returned error: err=%v res=%+v", err, res)
@@ -234,9 +254,16 @@ func TestListIssueDependencies_HE_DecodesIssueList(t *testing.T) {
 	if !strings.Contains(out, `"number":7`) || !strings.Contains(out, `"title":"dependency"`) {
 		t.Fatalf("expected decoded issue list, got %q", out)
 	}
+	if !strings.Contains(out, `"page":2`) || !strings.Contains(out, `"limit":5`) {
+		t.Fatalf("expected response to echo requested page/limit, got %q", out)
+	}
+	last := records[len(records)-1]
+	if !strings.Contains(last.query, "page=2") || !strings.Contains(last.query, "limit=5") {
+		t.Fatalf("expected query params page=2&limit=5, got %s", last.query)
+	}
 }
 
-func TestListIssueDependencies_HE_APIErrorSurfaces(t *testing.T) {
+func TestListIssueDependencies_APIErrorSurfaces(t *testing.T) {
 	records := make([]recordedReq, 0, 2)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/version", func(w http.ResponseWriter, _ *http.Request) {
@@ -274,7 +301,7 @@ func TestListIssueDependencies_HE_APIErrorSurfaces(t *testing.T) {
 	}
 }
 
-func TestListIssueDependencies_HE_404IsEmpty(t *testing.T) {
+func TestListIssueDependencies_404IsEmpty(t *testing.T) {
 	records := make([]recordedReq, 0, 2)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/version", func(w http.ResponseWriter, _ *http.Request) {
@@ -310,12 +337,16 @@ func TestListIssueDependencies_HE_404IsEmpty(t *testing.T) {
 	if err != nil || res == nil || res.IsError {
 		t.Fatalf("expected 404 to be treated as empty list, got err=%v res=%+v", err, res)
 	}
-	if !strings.Contains(textOf(res), "[]") {
-		t.Fatalf("expected empty result for 404, got %q", textOf(res))
+	out := textOf(res)
+	if !strings.Contains(out, `"issues":[]`) {
+		t.Fatalf("expected empty result for 404, got %q", out)
+	}
+	if !strings.Contains(out, `"page":1`) || !strings.Contains(out, `"limit":20`) {
+		t.Fatalf("expected response to echo default page/limit, got %q", out)
 	}
 }
 
-func TestListIssueDependents_HE_404IsEmpty(t *testing.T) {
+func TestListIssueDependents_404IsEmpty(t *testing.T) {
 	records := make([]recordedReq, 0, 2)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/version", func(w http.ResponseWriter, _ *http.Request) {
@@ -351,12 +382,16 @@ func TestListIssueDependents_HE_404IsEmpty(t *testing.T) {
 	if err != nil || res == nil || res.IsError {
 		t.Fatalf("expected 404 to be treated as empty list, got err=%v res=%+v", err, res)
 	}
-	if !strings.Contains(textOf(res), "[]") {
-		t.Fatalf("expected empty result for 404, got %q", textOf(res))
+	out := textOf(res)
+	if !strings.Contains(out, `"issues":[]`) {
+		t.Fatalf("expected empty result for 404, got %q", out)
+	}
+	if !strings.Contains(out, `"page":1`) || !strings.Contains(out, `"limit":20`) {
+		t.Fatalf("expected response to echo default page/limit, got %q", out)
 	}
 }
 
-func TestRemoveIssueDependency_HE_APIErrorSurfaces(t *testing.T) {
+func TestRemoveIssueDependency_APIErrorSurfaces(t *testing.T) {
 	records := make([]recordedReq, 0, 2)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/version", func(w http.ResponseWriter, _ *http.Request) {

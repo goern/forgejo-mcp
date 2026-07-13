@@ -34,7 +34,7 @@ Add four dedicated MCP tools in the issue domain that mirror the Forgejo REST AP
 - **SDK gap**: The pinned `forgejo-sdk` v3.0.0 has no typed methods for dependencies. Use `pkg/forgejo.DoJSON` and `pkg/forgejo.DoJSONList` for the raw HTTP calls, consistent with other issue tools.
 - **Mutation request body**: The Forgejo dependency mutation endpoints accept an `IssueMeta` body (`{index, owner, repo}`). Send this body for both `add_issue_dependency` and `remove_issue_dependency`, with `index` being the dependency issue index.
 - **Response type**: The GET endpoints return an issue list. Decode them into the SDK's `Issue` type for reuse and consistency with other issue tools.
-- **No pagination parameters**: The API supports `page` and `limit`, but dependency lists are typically short. Return the complete list from both list tools to keep the interface simple and symmetrical.
+- **Pagination**: The list tools expose `page` and `limit` parameters and return a `paginatedDependencyResult` containing `page`, `limit`, and `issues`. This follows the repository's output-bounding requirement (see `docs/design/output-bounding.md`) and matches other bounded list tools.
 - **No resource changes**: The issue resource (`forgejo://repo/{owner}/{repo}/issue/{index}`) is intentionally unchanged. Dependencies are managed via tools, not embedded in the resource.
 - **Mutation response**: Return a simple text success message. Callers can explicitly list dependencies after mutation if needed.
 - **Error handling**: Pass through Forgejo errors using the existing `pkg/to.ErrorResult` and `pkg/forgejo` raw HTTP helpers. Pre-validate direct self-dependency on the client side to avoid a guaranteed server error; otherwise rely on the server for cycle detection. List endpoints treat 404 as an empty list.
@@ -44,15 +44,14 @@ Add four dedicated MCP tools in the issue domain that mirror the Forgejo REST AP
 ## Testing Decisions
 
 - Use the existing handler-level test seam (`httptest` backend + recorded requests) in the issue domain.
-- Test that `list_issue_dependencies` sends the correct GET request, decodes the issue list, and returns an empty list on 404.
-- Test that `list_issue_dependents` sends a GET to the `/blocks` endpoint and returns an empty list on 404.
+- Test that `list_issue_dependencies` sends the correct GET request with `page`/`limit`, decodes the issue list, echoes `page`/`limit` in the response, and returns an empty list on 404.
+- Test that `list_issue_dependents` sends a GET to the `/blocks` endpoint with `page`/`limit`, echoes `page`/`limit`, and returns an empty list on 404.
 - Test that `add_issue_dependency` sends a POST with an `IssueMeta` body containing `index`, `owner`, and `repo`, and rejects self-dependency before any HTTP call.
 - Test that `remove_issue_dependency` sends a DELETE with an `IssueMeta` body and surfaces API errors.
 - Test that API errors are surfaced to the caller from the list tools.
 
 ## Out of Scope
 
-- Adding pagination parameters to the list tools.
 - Updating the pinned `forgejo-sdk` to gain typed dependency methods.
 - Bulk add/remove operations; one dependency per call.
 - UI or visualization of dependency graphs.
@@ -63,3 +62,4 @@ Add four dedicated MCP tools in the issue domain that mirror the Forgejo REST AP
 - The Forgejo API dependency mutation endpoints use an `IssueMeta` body (`{index, owner, repo}`). An earlier implementation assumed a `dependency_issue_index` field, but live testing against Codeberg confirmed that the `IssueMeta` body is required.
 - All new Go files in this change must begin with the SPDX license header `// SPDX-License-Identifier: GPL-3.0-or-later`.
 - Cycle detection is intentionally left to the server; attempting to create a cycle may return a server error.
+- The PRD initially omitted pagination for simplicity; following repository standards (`docs/design/output-bounding.md` and `AGENTS.md`) the list tools expose `page`/`limit` and return a paginated result shape consistent with other bounded tools.
