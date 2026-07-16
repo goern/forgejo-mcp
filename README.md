@@ -245,6 +245,8 @@ List all my repositories
 | `dispatch_workflow` | Trigger a workflow run via `workflow_dispatch` event |
 | `list_workflow_runs` | List workflow runs with optional filtering by status, event, or SHA |
 | `get_workflow_run` | Get details of a specific workflow run by ID |
+| `list_action_run_jobs` | List jobs for a Forgejo v16+ workflow run with client-side `page` and `limit` bounds |
+| `get_action_job_logs` | Read a Forgejo v16+ job log with resumable `offset` and `max_bytes` bounds; defaults to the tail |
 | **Organizations** | |
 | `search_org_teams` | Search for teams in an organization |
 | **Time Tracking** | |
@@ -353,6 +355,17 @@ forgejo-mcp --cli list_workflow_runs \
 forgejo-mcp --cli list_workflow_runs \
   --args '{"owner":"goern","repo":"forgejo-mcp","status":"failure"}' \
   --output=text
+
+# List jobs and inspect the tail of a failed job (Forgejo v16+)
+forgejo-mcp --cli list_action_run_jobs \
+  --args '{"owner":"goern","repo":"forgejo-mcp","run_id":123}' \
+  --output=text
+forgejo-mcp --cli get_action_job_logs \
+  --args '{"owner":"goern","repo":"forgejo-mcp","job_id":456,"max_bytes":32768}' \
+  --output=text
+
+# Forgejo's run-wide ZIP log endpoint has no Range support. Enumerate jobs and
+# fetch their bounded plaintext logs instead.
 
 # Show a tool's parameters
 forgejo-mcp --cli create_issue --help

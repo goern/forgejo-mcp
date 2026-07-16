@@ -66,13 +66,17 @@ const (
 	ReviewComments = `Inline comments as JSON array, e.g. [{"path":"file.go","body":"Fix this","new_position":10}]`
 
 	// Actions parameters
-	Workflow  = "Workflow file or ID (e.g. main.yml)"
-	Inputs    = `Workflow inputs as JSON object (e.g. {"key": "value"})`
-	Event     = "Filter by event type (e.g. push, pull_request, workflow_dispatch)"
-	RunNumber = "Filter by run number"
-	HeadSHA   = "Filter by HEAD SHA"
-	RunID     = "Run ID"
-	Status    = "Filter by status (e.g. waiting, running, success, failure, cancelled)"
+	Workflow    = "Workflow file or ID (e.g. main.yml)"
+	Inputs      = `Workflow inputs as JSON object (e.g. {"key": "value"})`
+	Event       = "Filter by event type (e.g. push, pull_request, workflow_dispatch)"
+	RunNumber   = "Filter by run number"
+	HeadSHA     = "Filter by HEAD SHA"
+	RunID       = "Run ID"
+	JobID       = "Workflow job ID"
+	Attempt     = "1-based job attempt; omit for the latest attempt"
+	LogOffset   = "0-based byte offset; omit to return the tail of the log"
+	LogMaxBytes = "Maximum log bytes to return (default 32768, maximum 262144)"
+	Status      = "Filter by status (e.g. waiting, running, success, failure, cancelled)"
 
 	// Misc parameters
 	Description = "Description"

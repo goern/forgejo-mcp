@@ -16,12 +16,14 @@ import (
 )
 
 type capturedReq struct {
-	method string
-	path   string
-	auth   string
-	ua     string
-	ctype  string
-	body   []byte
+	method      string
+	path        string
+	auth        string
+	ua          string
+	ctype       string
+	accept      string
+	rangeHeader string
+	body        []byte
 }
 
 func newCaptureServer(t *testing.T, handler func(w http.ResponseWriter, r *http.Request, c *capturedReq)) (*httptest.Server, *capturedReq) {
@@ -33,6 +35,8 @@ func newCaptureServer(t *testing.T, handler func(w http.ResponseWriter, r *http.
 		c.auth = r.Header.Get("Authorization")
 		c.ua = r.Header.Get("User-Agent")
 		c.ctype = r.Header.Get("Content-Type")
+		c.accept = r.Header.Get("Accept")
+		c.rangeHeader = r.Header.Get("Range")
 		c.body, _ = io.ReadAll(r.Body)
 		handler(w, r, c)
 	}))
@@ -151,6 +155,55 @@ func TestDoJSONList_404IsEmpty(t *testing.T) {
 	}
 	if len(out) != 0 {
 		t.Fatalf("expected empty list, got %d", len(out))
+	}
+}
+
+func TestDoAPIRaw_RangedResponse(t *testing.T) {
+	_, captured := newCaptureServer(t, func(w http.ResponseWriter, r *http.Request, _ *capturedReq) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("Content-Range", "bytes 90-99/100")
+		w.WriteHeader(http.StatusPartialContent)
+		_, _ = w.Write([]byte("last bytes"))
+	})
+
+	resp, err := DoAPIRaw(
+		context.Background(),
+		"/repos/o/r/actions/jobs/7/logs?attempt=2",
+		"text/plain",
+		"bytes=-10",
+		10,
+	)
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if captured.path != "/api/v1/repos/o/r/actions/jobs/7/logs" {
+		t.Fatalf("path: %s", captured.path)
+	}
+	if captured.accept != "text/plain" {
+		t.Fatalf("accept: %s", captured.accept)
+	}
+	if captured.rangeHeader != "bytes=-10" {
+		t.Fatalf("range: %s", captured.rangeHeader)
+	}
+	if resp.StatusCode != http.StatusPartialContent {
+		t.Fatalf("status: %d", resp.StatusCode)
+	}
+	if resp.ContentRange != "bytes 90-99/100" {
+		t.Fatalf("content range: %s", resp.ContentRange)
+	}
+	if string(resp.Body) != "last bytes" {
+		t.Fatalf("body: %q", resp.Body)
+	}
+}
+
+func TestDoAPIRaw_RejectsBodyOverCallerBound(t *testing.T) {
+	newCaptureServer(t, func(w http.ResponseWriter, r *http.Request, _ *capturedReq) {
+		_, _ = w.Write([]byte("sixteen bytes!!!"))
+	})
+
+	_, err := DoAPIRaw(context.Background(), "/x", "text/plain", "bytes=0-7", 8)
+	if !errors.Is(err, ErrPayloadTooLarge) {
+		t.Fatalf("expected ErrPayloadTooLarge, got %v", err)
 	}
 }
 
