@@ -132,6 +132,9 @@ func TestGetActionJobLogsFn_DefaultsToTailAndPassesAttempt(t *testing.T) {
 	if !decoded.TruncatedBefore || decoded.TruncatedAfter || decoded.PreviousOffset == nil || *decoded.PreviousOffset != 36 {
 		t.Fatalf("unexpected continuation metadata: %+v", decoded)
 	}
+	if decoded.PreviousMaxBytes == nil || *decoded.PreviousMaxBytes != 32 {
+		t.Fatalf("unexpected previous chunk bound: %+v", decoded)
+	}
 	if decoded.BytesReturned != 32 || decoded.TotalBytes != 100 || decoded.Attempt != 2 {
 		t.Fatalf("unexpected result metadata: %+v", decoded)
 	}
@@ -163,6 +166,29 @@ func TestGetActionJobLogsFn_OffsetProvidesNextChunk(t *testing.T) {
 	}
 }
 
+func TestGetActionJobLogsFn_BoundsShortPreviousChunkWithoutOverlap(t *testing.T) {
+	setupActionAPIServer(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		w.Header().Set("Content-Range", "bytes 5-36/37")
+		w.WriteHeader(http.StatusPartialContent)
+		_, _ = w.Write([]byte(strings.Repeat("x", 32)))
+	})
+
+	result, err := GetActionJobLogsFn(context.Background(), newCallToolRequest(map[string]interface{}{
+		"owner": "o", "repo": "r", "job_id": float64(8), "max_bytes": float64(32),
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	decoded := decodeActionResult[actionJobLogResult](t, result)
+	if decoded.PreviousOffset == nil || *decoded.PreviousOffset != 0 {
+		t.Fatalf("unexpected previous offset: %+v", decoded)
+	}
+	if decoded.PreviousMaxBytes == nil || *decoded.PreviousMaxBytes != 5 {
+		t.Fatalf("previous chunk would overlap current content: %+v", decoded)
+	}
+}
+
 func TestGetActionJobLogsFn_HandlesEmptyLog(t *testing.T) {
 	setupActionAPIServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
@@ -179,7 +205,7 @@ func TestGetActionJobLogsFn_HandlesEmptyLog(t *testing.T) {
 	if decoded.Content != "" || decoded.StartByte != 0 || decoded.EndByte != -1 || decoded.TotalBytes != 0 {
 		t.Fatalf("unexpected empty log metadata: %+v", decoded)
 	}
-	if decoded.TruncatedBefore || decoded.TruncatedAfter || decoded.PreviousOffset != nil || decoded.NextOffset != nil {
+	if decoded.TruncatedBefore || decoded.TruncatedAfter || decoded.PreviousOffset != nil || decoded.PreviousMaxBytes != nil || decoded.NextOffset != nil {
 		t.Fatalf("empty log advertised continuation: %+v", decoded)
 	}
 }

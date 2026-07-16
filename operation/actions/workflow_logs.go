@@ -54,19 +54,20 @@ type actionRunJobsResult struct {
 }
 
 type actionJobLogResult struct {
-	JobID           int64  `json:"job_id"`
-	Attempt         int64  `json:"attempt,omitempty"`
-	Content         string `json:"content"`
-	ContentType     string `json:"content_type"`
-	ContentRange    string `json:"content_range"`
-	StartByte       int64  `json:"start_byte"`
-	EndByte         int64  `json:"end_byte"`
-	TotalBytes      int64  `json:"total_bytes"`
-	BytesReturned   int    `json:"bytes_returned"`
-	TruncatedBefore bool   `json:"truncated_before"`
-	TruncatedAfter  bool   `json:"truncated_after"`
-	PreviousOffset  *int64 `json:"previous_offset,omitempty"`
-	NextOffset      *int64 `json:"next_offset,omitempty"`
+	JobID            int64  `json:"job_id"`
+	Attempt          int64  `json:"attempt,omitempty"`
+	Content          string `json:"content"`
+	ContentType      string `json:"content_type"`
+	ContentRange     string `json:"content_range"`
+	StartByte        int64  `json:"start_byte"`
+	EndByte          int64  `json:"end_byte"`
+	TotalBytes       int64  `json:"total_bytes"`
+	BytesReturned    int    `json:"bytes_returned"`
+	TruncatedBefore  bool   `json:"truncated_before"`
+	TruncatedAfter   bool   `json:"truncated_after"`
+	PreviousOffset   *int64 `json:"previous_offset,omitempty"`
+	PreviousMaxBytes *int   `json:"previous_max_bytes,omitempty"`
+	NextOffset       *int64 `json:"next_offset,omitempty"`
 }
 
 var (
@@ -82,7 +83,7 @@ var (
 
 	GetActionJobLogsTool = mcp.NewTool(
 		GetActionJobLogsToolName,
-		mcp.WithDescription("Read a bounded byte range from a Forgejo v16+ workflow job's plaintext log. Omitting offset returns the tail. Use previous_offset or next_offset from the response to continue."),
+		mcp.WithDescription("Read a bounded byte range from a Forgejo v16+ workflow job's plaintext log. Omitting offset returns the tail. Continue backward with previous_offset and previous_max_bytes, or forward with next_offset."),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithNumber("job_id", mcp.Required(), mcp.Description(params.JobID), mcp.Min(1)),
@@ -204,8 +205,11 @@ func GetActionJobLogsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 		TruncatedAfter:  totalBytes > 0 && endByte+1 < totalBytes,
 	}
 	if result.TruncatedBefore {
-		previous := max(int64(0), startByte-int64(maxBytes))
+		previousBytes := min(int64(maxBytes), startByte)
+		previous := startByte - previousBytes
+		previousMaxBytes := int(previousBytes)
 		result.PreviousOffset = &previous
+		result.PreviousMaxBytes = &previousMaxBytes
 	}
 	if result.TruncatedAfter {
 		next := endByte + 1
