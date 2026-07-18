@@ -157,6 +157,54 @@ func TestAddIssueDependency_SendsPostWithIssueMeta(t *testing.T) {
 	}
 }
 
+func TestAddIssueDependency_CrossRepoBodyShape(t *testing.T) {
+	_, records := newDependenciesBackend(t)
+
+	res, err := AddIssueDependencyFn(context.Background(), makeReq(map[string]any{
+		"owner":            "goern",
+		"repo":             "forgejo-mcp",
+		"index":            float64(42),
+		"depends_on_index": float64(7),
+		"depends_on_owner": "other-org",
+		"depends_on_repo":  "other-repo",
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("AddIssueDependencyFn returned error: err=%v res=%+v", err, res)
+	}
+
+	last := (*records)[len(*records)-1]
+	want := "/api/v1/repos/goern/forgejo-mcp/issues/42/dependencies"
+	if last.path != want {
+		t.Fatalf("unexpected path: got %s want %s", last.path, want)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(last.rawBody, &payload); err != nil {
+		t.Fatalf("invalid JSON body: %v\nbody: %s", err, last.rawBody)
+	}
+	if payload["owner"] != "other-org" || payload["repo"] != "other-repo" || payload["index"] != float64(7) {
+		t.Fatalf("expected cross-repo IssueMeta body, got %v", payload)
+	}
+}
+
+func TestAddIssueDependency_CrossRepoSameIndexAllowed(t *testing.T) {
+	_, records := newDependenciesBackend(t)
+
+	// Same index in a DIFFERENT repo is not a self-dependency.
+	res, err := AddIssueDependencyFn(context.Background(), makeReq(map[string]any{
+		"owner":            "goern",
+		"repo":             "forgejo-mcp",
+		"index":            float64(42),
+		"depends_on_index": float64(42),
+		"depends_on_repo":  "other-repo",
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("expected cross-repo same-index to be allowed: err=%v res=%+v", err, res)
+	}
+	if len(*records) == 0 {
+		t.Fatal("expected an HTTP request for cross-repo same-index dependency")
+	}
+}
+
 func TestAddIssueDependency_SelfDependencyRejected(t *testing.T) {
 	_, records := newDependenciesBackend(t)
 
