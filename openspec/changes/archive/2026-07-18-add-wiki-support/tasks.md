@@ -64,5 +64,5 @@
 ## 7. Wrap-up
 
 - [x] 7.1 `make build` + full test suite pass
-- [ ] 7.2 Remove `Status/Blocked` label from Codeberg issue #32 and post a closing comment linking the change
+- [x] 7.2 Confirm `Status/Blocked` is absent from Codeberg issue #32 and post a closing comment linking PR #379
 - [x] 7.3 `openspec validate add-wiki-support --strict` passes; archive the change
