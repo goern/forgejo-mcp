@@ -19,6 +19,7 @@ import (
 	"codeberg.org/goern/forgejo-mcp/v2/operation/tracking"
 	"codeberg.org/goern/forgejo-mcp/v2/operation/user"
 	"codeberg.org/goern/forgejo-mcp/v2/operation/version"
+	"codeberg.org/goern/forgejo-mcp/v2/operation/wiki"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/flag"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/log"
@@ -47,6 +48,7 @@ func RegisterTool(s *server.MCPServer) {
 	RegisterReleaseTool(s)
 	RegisterBranchProtectionTool(s)
 	RegisterHookTool(s)
+	RegisterWikiTool(s)
 
 	log.Info("All MCP tools registered successfully")
 }
@@ -121,6 +123,11 @@ func RegisterBranchProtectionTool(s *server.MCPServer) {
 func RegisterHookTool(s *server.MCPServer) {
 	hook.RegisterTools(s)
 	log.Debug("Registered webhook tools")
+}
+
+func RegisterWikiTool(s *server.MCPServer) {
+	wiki.RegisterTool(s)
+	log.Debug("Registered wiki tools")
 }
 
 func extractToken(auth string) string {
@@ -240,7 +247,13 @@ func RegisterCoreResources(s *server.MCPServer) {
 	RegisterStatusResource(s)
 	RegisterBranchProtectionResources(s)
 	RegisterHookResources(s)
+	RegisterWikiResource(s)
 	log.Debug("Registered core resource templates")
+}
+
+func RegisterWikiResource(s *server.MCPServer) {
+	wiki.RegisterWikiResource(s)
+	log.Debug("Registered wiki resource template")
 }
 
 func RegisterLabelResources(s *server.MCPServer) {

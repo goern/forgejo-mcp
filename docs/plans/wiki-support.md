@@ -1,5 +1,8 @@
 # Wiki Support Implementation Plan for forgejo-mcp
 
+> **Superseded:** Wiki support is now implemented directly through the existing raw HTTP helpers
+> in `pkg/forgejo`; an upstream `forgejo-sdk` contribution is no longer a prerequisite.
+
 ## Summary
 
 Complete wiki support in forgejo-mcp requires wiki API methods in the upstream forgejo-sdk. This plan outlines the upstream contribution strategy and downstream integration.

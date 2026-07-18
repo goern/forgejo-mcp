@@ -82,12 +82,16 @@ See `openspec/specs/mcp-resources-core/spec.md` for the full normative spec (add
 | `forgejo://org/{org}/labels{?page,limit}` | application/json | Bounded org label list (cap 30, sentinel `list_org_labels`) |
 | `forgejo://repo/{owner}/{repo}/hooks` | application/json | Bounded list of repository webhooks (cap 30, sentinel `list_repo_hooks`; secret never returned) |
 | `forgejo://repo/{owner}/{repo}/hook/{id}` | application/json | Single repository webhook (secret never returned) |
+| `forgejo://repo/{owner}/{repo}/wiki/{pageName}` | application/json + markdown | Wiki page with bounded revisions; encode `/` in page names as `%2F` |
+
+Wiki tools live in `operation/wiki/`. `list_*` enumerates entities; `get_*` fetches one
+entity by its server-normalized name. Always reuse the `page_name` returned by create/list.
 
 ## Blocked Features
 
 Some features are blocked on upstream API/SDK support. See `docs/plans/` for:
 
-- `wiki-support.md` - Wiki API (blocked on forgejo-sdk)
+- `wiki-support.md` - historical SDK plan, superseded by the direct REST implementation
 - `projects-support.md` - Projects/Kanban API (blocked on Gitea 1.26.0)
 
 ## Repository Labels

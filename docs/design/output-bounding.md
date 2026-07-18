@@ -4,6 +4,10 @@ Architectural invariant for `forgejo-mcp` tool design. Any new tool that returns
 proportional to repository or upstream state MUST satisfy the rules below before
 landing.
 
+The same invariant applies to data-proportional MCP resource content blocks. Because
+`resources/read` has no caller-controlled range parameter, cap the block explicitly and include a
+marker naming a range- or page-bounded tool that retrieves the remainder.
+
 ## Why
 
 MCP tool outputs flow into an LLM context window. A single unbounded response

@@ -286,6 +286,13 @@ List all my repositories
 | `create_release_attachment` | Upload a new attachment to a release (base64 content) |
 | `edit_release_attachment` | Rename a release attachment |
 | `delete_release_attachment` | Delete a release attachment — destructive |
+| **Wiki** | |
+| `list_wiki_pages` | List pages using `page`/`limit`; returns `has_next`. |
+| `get_wiki_page` | Read decoded Markdown; optional `start_line`/`end_line`, always returns `total_lines`. |
+| `get_wiki_revisions` | List revision history using `page`/`limit`; returns `has_next`. |
+| `create_wiki_page` | Create a page and return its server-normalized `page_name`; an existing title is overwritten. |
+| `update_wiki_page` | Update content/title by normalized `page_name`; last writer wins. |
+| `delete_wiki_page` | Delete a page by normalized `page_name`. |
 | **Server** | |
 | `get_forgejo_mcp_server_version` | Get the MCP server version |
 
@@ -311,6 +318,7 @@ Resources that embed a list (issue, pr) cap the embedded array at 30 items. When
 | `forgejo://repo/{owner}/{repo}/label/{id}` | application/json | Single repository label by numeric id. |
 | `forgejo://repo/{owner}/{repo}/labels{?page,limit}` | application/json | Bounded list of repository labels (cap 30, sentinel names `list_repo_labels`). |
 | `forgejo://org/{org}/labels{?page,limit}` | application/json | Bounded list of organization-level labels (cap 30, sentinel names `list_org_labels`). |
+| `forgejo://repo/{owner}/{repo}/wiki/{pageName}` | application/json (+ text/markdown sidecar) | Wiki page with bounded revisions and Markdown capped at 1 MiB. Use the returned normalized page name; encode `/` as `%2F`. |
 
 ### Client Compatibility
 

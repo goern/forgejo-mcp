@@ -120,18 +120,18 @@ func GetFileContentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		return to.TextResult(string(rawBytes))
 	}
 
-	sliced, err := sliceLines(string(rawBytes), int(startF), int(endF))
+	sliced, err := SliceLines(string(rawBytes), int(startF), int(endF))
 	if err != nil {
 		return to.ErrorResult(err)
 	}
 	return to.TextResult(sliced)
 }
 
-// sliceLines returns the 1-indexed inclusive [start, end] line range
+// SliceLines returns the 1-indexed inclusive [start, end] line range
 // of content. start=0 means "from line 1"; end=0 means "to the last
 // line". Out-of-range values clamp; an inverted range after clamping
 // is reported as an error.
-func sliceLines(content string, start, end int) (string, error) {
+func SliceLines(content string, start, end int) (string, error) {
 	lines := strings.Split(content, "\n")
 	count := len(lines)
 
