@@ -44,15 +44,15 @@ func ParseWiki(uri string) (WikiParams, error) {
 	}
 	owner, err := url.PathUnescape(escapedParts[0])
 	if err != nil {
-		return WikiParams{}, fmt.Errorf("%w: invalid owner encoding: %v", ErrInvalidParams, err)
+		return WikiParams{}, fmt.Errorf("%w: invalid owner encoding: %w", ErrInvalidParams, err)
 	}
 	repo, err := url.PathUnescape(escapedParts[1])
 	if err != nil {
-		return WikiParams{}, fmt.Errorf("%w: invalid repo encoding: %v", ErrInvalidParams, err)
+		return WikiParams{}, fmt.Errorf("%w: invalid repo encoding: %w", ErrInvalidParams, err)
 	}
 	pageName, err := url.PathUnescape(escapedParts[3])
 	if err != nil {
-		return WikiParams{}, fmt.Errorf("%w: invalid page name encoding: %v", ErrInvalidParams, err)
+		return WikiParams{}, fmt.Errorf("%w: invalid page name encoding: %w", ErrInvalidParams, err)
 	}
 	if strings.TrimSpace(pageName) == "" {
 		return WikiParams{}, fmt.Errorf("%w: wiki page name must not be empty", ErrInvalidParams)

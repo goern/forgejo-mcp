@@ -290,7 +290,7 @@ List all my repositories
 | `list_wiki_pages` | List pages using `page`/`limit`; returns `has_next`. |
 | `get_wiki_page` | Read decoded Markdown; optional `start_line`/`end_line`, always returns `total_lines`. |
 | `get_wiki_revisions` | List revision history using `page`/`limit`; returns `has_next`. |
-| `create_wiki_page` | Create a page and return its server-normalized `page_name`; an existing title is overwritten. |
+| `create_wiki_page` | Create a page and return its server-normalized `page_name`; slash-separated titles are a flat subpage naming convention (no hierarchy and no automatic parent page), and an existing title is overwritten. |
 | `update_wiki_page` | Update content/title by normalized `page_name`; last writer wins. |
 | `delete_wiki_page` | Delete a page by normalized `page_name`. |
 | **Server** | |
@@ -318,7 +318,16 @@ Resources that embed a list (issue, pr) cap the embedded array at 30 items. When
 | `forgejo://repo/{owner}/{repo}/label/{id}` | application/json | Single repository label by numeric id. |
 | `forgejo://repo/{owner}/{repo}/labels{?page,limit}` | application/json | Bounded list of repository labels (cap 30, sentinel names `list_repo_labels`). |
 | `forgejo://org/{org}/labels{?page,limit}` | application/json | Bounded list of organization-level labels (cap 30, sentinel names `list_org_labels`). |
-| `forgejo://repo/{owner}/{repo}/wiki/{pageName}` | application/json (+ text/markdown sidecar) | Wiki page with bounded revisions and Markdown capped at 1 MiB. Use the returned normalized page name; encode `/` as `%2F`. |
+| `forgejo://repo/{owner}/{repo}/wiki/{pageName}` | application/json (+ text/markdown sidecar) | Wiki page with bounded revisions and Markdown capped at 1 MiB. Use the returned normalized `page_name`; encode a literal `/` as `%2F` and spaces as `%20` in the URI (do not double-encode an already normalized name). |
+
+Slash-separated titles such as `Guides/Setup` are useful as a subpage naming convention,
+but Forgejo stores the pages in a flat list: it neither creates `Guides` automatically nor
+records a parent-child relationship. Create the parent separately when readers need it, and
+always address subsequent calls with the normalized `page_name` returned by create or list.
+The wiki REST behavior documented here was live-tested against Forgejo
+`15.0.4+gitea-1.22.0`; the complete MCP demo was replayed successfully against
+`16.0.0+gitea-1.22.0`. This is the tested range, not a guarantee for every intermediate
+or differently proxied deployment.
 
 ### Client Compatibility
 

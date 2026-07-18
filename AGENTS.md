@@ -82,10 +82,12 @@ See `openspec/specs/mcp-resources-core/spec.md` for the full normative spec (add
 | `forgejo://org/{org}/labels{?page,limit}` | application/json | Bounded org label list (cap 30, sentinel `list_org_labels`) |
 | `forgejo://repo/{owner}/{repo}/hooks` | application/json | Bounded list of repository webhooks (cap 30, sentinel `list_repo_hooks`; secret never returned) |
 | `forgejo://repo/{owner}/{repo}/hook/{id}` | application/json | Single repository webhook (secret never returned) |
-| `forgejo://repo/{owner}/{repo}/wiki/{pageName}` | application/json + markdown | Wiki page with bounded revisions; encode `/` in page names as `%2F` |
+| `forgejo://repo/{owner}/{repo}/wiki/{pageName}` | application/json + markdown | Wiki page with bounded revisions; use the normalized `page_name`, encoding literal `/` as `%2F` and spaces as `%20` without double-encoding |
 
 Wiki tools live in `operation/wiki/`. `list_*` enumerates entities; `get_*` fetches one
 entity by its server-normalized name. Always reuse the `page_name` returned by create/list.
+Slash-separated titles are only a flat subpage naming convention: Forgejo does not create a
+parent page or store a parent-child relationship. Create any desired parent page separately.
 
 ## Blocked Features
 

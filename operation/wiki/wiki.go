@@ -54,7 +54,7 @@ var GetWikiRevisionsTool = mcp.NewTool(GetWikiRevisionsToolName,
 )
 
 var CreateWikiPageTool = mcp.NewTool(CreateWikiPageToolName,
-	mcp.WithDescription("Create a wiki page. Creating an existing title overwrites it. Use the returned page_name verbatim; never derive it from title."),
+	mcp.WithDescription("Create a wiki page. Slash-separated titles such as Parent/Child are a flat naming convention: Forgejo stores no parent-child relationship and does not create a parent page automatically. Creating an existing title overwrites it. Use the returned page_name verbatim; never derive it from title."),
 	mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 	mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 	mcp.WithString("title", mcp.Required(), mcp.Description(params.WikiTitle)),
@@ -99,25 +99,59 @@ func pagination(args map[string]any) (int, int) {
 	return page, limit
 }
 
+type wikiPageSummary struct {
+	Title    string `json:"title"`
+	PageName string `json:"page_name"`
+	SubURL   string `json:"sub_url"`
+}
+
+type wikiRevisionSummary struct {
+	SHA     string `json:"sha"`
+	Author  string `json:"author"`
+	Message string `json:"message"`
+}
+
+type wikiWriteResult struct {
+	Title     string `json:"title"`
+	PageName  string `json:"page_name"`
+	CommitSHA string `json:"commit_sha"`
+}
+
+func pageSummary(page forgejo.WikiPageMeta) wikiPageSummary {
+	return wikiPageSummary{Title: page.Title, PageName: page.SubURL, SubURL: page.SubURL}
+}
+
+func writeResult(page *forgejo.WikiPage) wikiWriteResult {
+	return wikiWriteResult{Title: page.Title, PageName: page.SubURL, CommitSHA: page.LastCommit.SHA}
+}
+
 func ListWikiPagesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called ListWikiPagesFn")
 	args := req.GetArguments()
 	owner, _ := args["owner"].(string)
 	repoName, _ := args["repo"].(string)
 	page, limit := pagination(args)
-	pages, err := forgejo.ListWikiPages(ctx, owner, repoName, page, limit+1)
+	pages, err := forgejo.ListWikiPages(ctx, owner, repoName, page, limit)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list wiki pages: %w", err))
 	}
-	hasNext := len(pages) > limit
-	if hasNext {
-		pages = pages[:limit]
+	hasNext := false
+	if len(pages) == limit {
+		next, err := forgejo.ListWikiPages(ctx, owner, repoName, page+1, limit)
+		if err != nil {
+			return to.ErrorResult(fmt.Errorf("probe next wiki page: %w", err))
+		}
+		hasNext = len(next) > 0
+	}
+	resultPages := make([]wikiPageSummary, len(pages))
+	for i, wikiPage := range pages {
+		resultPages[i] = pageSummary(wikiPage)
 	}
 	return to.TextResult(struct {
-		Pages   []forgejo.WikiPageMeta `json:"pages"`
-		Page    int                    `json:"page"`
-		HasNext bool                   `json:"has_next"`
-	}{pages, page, hasNext})
+		Pages   []wikiPageSummary `json:"pages"`
+		Page    int               `json:"page"`
+		HasNext bool              `json:"has_next"`
+	}{resultPages, page, hasNext})
 }
 
 func GetWikiPageFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -168,19 +202,27 @@ func GetWikiRevisionsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 	repoName, _ := args["repo"].(string)
 	pageName, _ := args["page_name"].(string)
 	page, limit := pagination(args)
-	revisions, err := forgejo.GetWikiPageRevisions(ctx, owner, repoName, pageName, page, limit+1)
+	revisions, err := forgejo.GetWikiPageRevisions(ctx, owner, repoName, pageName, page, limit)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get wiki revisions: %w", err))
 	}
-	hasNext := len(revisions.Commits) > limit
-	if hasNext {
-		revisions.Commits = revisions.Commits[:limit]
+	hasNext := false
+	if len(revisions.Commits) == limit {
+		next, err := forgejo.GetWikiPageRevisions(ctx, owner, repoName, pageName, page+1, limit)
+		if err != nil {
+			return to.ErrorResult(fmt.Errorf("probe next wiki revision page: %w", err))
+		}
+		hasNext = len(next.Commits) > 0
+	}
+	resultRevisions := make([]wikiRevisionSummary, len(revisions.Commits))
+	for i, revision := range revisions.Commits {
+		resultRevisions[i] = wikiRevisionSummary{SHA: revision.SHA, Author: revision.Author.Name, Message: revision.Message}
 	}
 	return to.TextResult(struct {
-		Revisions []forgejo.WikiCommit `json:"revisions"`
-		Page      int                  `json:"page"`
-		HasNext   bool                 `json:"has_next"`
-	}{revisions.Commits, page, hasNext})
+		Revisions []wikiRevisionSummary `json:"revisions"`
+		Page      int                   `json:"page"`
+		HasNext   bool                  `json:"has_next"`
+	}{resultRevisions, page, hasNext})
 }
 
 func CreateWikiPageFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -197,7 +239,7 @@ func CreateWikiPageFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("create wiki page: %w", err))
 	}
-	return to.TextResult(page)
+	return to.TextResult(writeResult(page))
 }
 
 func UpdateWikiPageFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -222,7 +264,7 @@ func UpdateWikiPageFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("update wiki page: %w", err))
 	}
-	return to.TextResult(page)
+	return to.TextResult(writeResult(page))
 }
 
 func DeleteWikiPageFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {

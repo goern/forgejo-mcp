@@ -1,5 +1,8 @@
-## ADDED Requirements
+# mcp-resource-wiki Specification
 
+## Purpose
+TBD - created by archiving change add-wiki-support. Update Purpose after archive.
+## Requirements
 ### Requirement: Wiki page resource template
 
 The server SHALL register a resource template with URI
@@ -12,6 +15,8 @@ it is self-describing in `resources/templates/list`. Because mcp-go rejects a
 literal-slash URI before the handler runs (see the parsing requirement), the description
 is the only place an agent learns the encoding rule and the `get_wiki_page` fallback for
 slash-bearing sub-pages; it SHALL state both.
+Slash-separated names are a flat naming convention, not a Forgejo hierarchy: creating
+`Guides/Setup` neither creates nor links a `Guides` page.
 
 #### Scenario: Template appears in templates list
 - **WHEN** a client issues `resources/templates/list`
@@ -126,10 +131,16 @@ match the regex and reaches `ParseWiki` normally.
 - **THEN** `ParseWiki` SHALL decode the page name to `Guides/Setup` (one segment)
 - **AND** SHALL NOT split it into separate path segments
 
-#### Scenario: Literal slash returns a guided error
+#### Scenario: Literal slash is rejected before resource dispatch
 - **WHEN** a client reads `forgejo://repo/goern/forgejo-mcp/wiki/Guides/Setup` with a
   literal slash
-- **THEN** the server SHALL return `-32602` with a message instructing the caller to
+- **THEN** mcp-go SHALL reject the URI because it does not match the template
+- **AND** the template description SHALL already have instructed the caller to
+  percent-encode `/` as `%2F` or use `get_wiki_page`
+
+#### Scenario: Direct parser use gives guided slash advice
+- **WHEN** `ParseWiki` is called directly with a literal-slash URI
+- **THEN** it SHALL return `-32602` with a message instructing the caller to
   percent-encode `/` as `%2F`
 
 ### Requirement: Wiki resource is documented for discovery

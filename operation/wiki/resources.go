@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"unicode/utf8"
 
 	"codeberg.org/goern/forgejo-mcp/v2/operation/resource"
 	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
@@ -20,7 +21,7 @@ func RegisterWikiResource(s *server.MCPServer) {
 		"forgejo://repo/{owner}/{repo}/wiki/{pageName}",
 		"Forgejo Wiki Page",
 		wikiResourceHandler,
-		mcp.WithTemplateDescription("Single wiki page metadata plus a text/markdown sidecar. URI: forgejo://repo/{owner}/{repo}/wiki/{pageName}. Use the server-normalized page name; percent-encode slash as %2F. If slash-bearing names cannot resolve through the resource, use get_wiki_page."),
+		mcp.WithTemplateDescription("Single wiki page metadata plus a text/markdown sidecar. URI: forgejo://repo/{owner}/{repo}/wiki/{pageName}. Use the server-normalized page name and percent-encode characters such as slash (%2F) and space (%20), for example Guides%2FGetting%20Started. If slash-bearing names cannot resolve through the resource, use get_wiki_page."),
 		mcp.WithTemplateMIMEType("application/json"),
 	)
 	log.Debug("Registered wiki resource template")
@@ -42,6 +43,7 @@ type wikiResourcePayload struct {
 	Truncated       bool              `json:"truncated,omitempty"`
 	RevisionCount   int               `json:"revision_count,omitempty"`
 	ListTool        string            `json:"list_tool,omitempty"`
+	Sentinel        string            `json:"sentinel,omitempty"`
 }
 
 func wikiResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
@@ -60,21 +62,30 @@ func wikiResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]mc
 	}
 
 	refs := make([]wikiRevisionRef, 0)
+	revisionIDs := make([]string, 0)
 	revisionCount := 0
 	if revisions, revisionErr := forgejo.GetWikiPageRevisions(ctx, p.Owner, p.Repo, p.PageName, 1, resource.EmbeddedListCap+1); revisionErr == nil {
 		revisionCount = revisions.Count
 		for _, revision := range revisions.Commits {
 			refs = append(refs, wikiRevisionRef{SHA: revision.SHA, Author: revision.Author.Name, Message: revision.Message})
+			revisionIDs = append(revisionIDs, revision.SHA)
 		}
 	}
-	truncated := len(refs) > resource.EmbeddedListCap || revisionCount > resource.EmbeddedListCap
+	bounded := resource.Bounded(revisionIDs, resource.EmbeddedListCap, GetWikiRevisionsToolName)
+	// The revisions endpoint returns the repository-wide count separately from the
+	// cap+1 window. Preserve that authoritative total in the shared sentinel.
+	if revisionCount > bounded.Total {
+		bounded.Total = revisionCount
+		bounded.Truncated = revisionCount > resource.EmbeddedListCap
+	}
 	if len(refs) > resource.EmbeddedListCap {
 		refs = refs[:resource.EmbeddedListCap]
 	}
-	payload := wikiResourcePayload{Owner: p.Owner, Repo: p.Repo, PageName: page.SubURL, Title: page.Title, CommitSHA: page.LastCommit.SHA, RecentRevisions: refs, Truncated: truncated}
-	if truncated {
-		payload.RevisionCount = revisionCount
-		payload.ListTool = GetWikiRevisionsToolName
+	payload := wikiResourcePayload{Owner: p.Owner, Repo: p.Repo, PageName: page.SubURL, Title: page.Title, CommitSHA: page.LastCommit.SHA, RecentRevisions: refs, Truncated: bounded.Truncated}
+	if bounded.Truncated {
+		payload.RevisionCount = bounded.Total
+		payload.ListTool = bounded.ListTool
+		payload.Sentinel = bounded.Sentinel()
 	}
 	jsonBytes, err := json.Marshal(payload)
 	if err != nil {
@@ -85,6 +96,9 @@ func wikiResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]mc
 	if len(markdown) > forgejo.MaxInlineDownloadBytes {
 		marker := "\n\n[truncated: use get_wiki_page with start_line/end_line to retrieve the remainder.]"
 		keep := forgejo.MaxInlineDownloadBytes - len(marker)
+		for keep > 0 && !utf8.RuneStart(markdown[keep]) {
+			keep--
+		}
 		markdown = markdown[:keep] + marker
 	}
 	return []mcp.ResourceContents{

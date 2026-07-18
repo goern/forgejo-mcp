@@ -86,10 +86,10 @@ registered, so no shipped behavior changes; existing tools and resources are unt
   use the new tools.
 - **Documentation**: README (tools + resources), `AGENTS.md`, `docs/plans/wiki-support.md`,
   CHANGELOG, and the `demo.md` showboat script.
-- **Load-bearing risk**: the base64 (`content_base64`) field name and the page-name URL
-  encoding (spaces → dashes) are asserted from the documented Gitea/Forgejo API and
-  must be confirmed against a live instance — captured as an explicit verification task,
-  not assumed.
+- **Verified wire behavior**: live testing against Forgejo `15.0.4+gitea-1.22.0`
+  confirmed the `content_base64` field, title normalization (spaces → dashes), encoded
+  slash round-trips, and the revisions response shape. Slash-separated names remain a
+  flat naming convention; Forgejo creates no parent page or hierarchy.
 - **Out of scope**: a wiki *index* resource (`forgejo://repo/{o}/{r}/wiki` listing all
   pages — enumeration stays the job of `list_wiki_pages`, matching the established
   "resources fetch single entities, tools enumerate" rule); wiki attachments; rendered
