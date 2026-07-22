@@ -5,7 +5,7 @@
 # Switch to `1.26-builder` or `1.26.3-builder` when Hummingbird publishes a specific tag.
 
 ARG HI_GO_TAG=latest-builder
-ARG HI_GO_DIGEST=sha256:eaad4f8e6aab2543848d3d5fb9a62836e4fc0be70b9df9d1134af318279fc2f3
+ARG HI_GO_DIGEST=sha256:1c1f746dd867fed8e979211e8ea474a38f1dbec87abb4e3ac41ad0c3d228f7f0
 ARG SYFT_VERSION=v1.44.0
 ARG SYFT_SHA256=0e91737aee2b5baf1d255b959630194a302335d848ff97bb07921eb6205b5f5a
 ARG GORELEASER_VERSION=v2.16.0
