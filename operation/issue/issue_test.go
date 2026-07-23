@@ -19,6 +19,7 @@ import (
 type recordedReq struct {
 	method  string
 	path    string
+	query   string
 	rawBody []byte
 }
 
@@ -36,6 +37,7 @@ func newPatchBackend(t *testing.T, respBody string) (*httptest.Server, *[]record
 		records = append(records, recordedReq{
 			method:  r.Method,
 			path:    r.URL.Path,
+			query:   r.URL.RawQuery,
 			rawBody: body,
 		})
 		w.Header().Set("Content-Type", "application/json")
