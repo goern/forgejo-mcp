@@ -42,6 +42,16 @@ type HTTPError struct {
 	wrapped    error
 }
 
+// RawAPIResponse contains a bounded response body and the headers needed to
+// resume ranged API reads.
+type RawAPIResponse struct {
+	Body          []byte
+	ContentType   string
+	ContentRange  string
+	ContentLength int64
+	StatusCode    int
+}
+
 func (e *HTTPError) Error() string {
 	return fmt.Sprintf("%s %s: %s: %s", e.Method, e.URL, e.Status, e.Body)
 }
@@ -205,6 +215,57 @@ func DoJSONList(ctx context.Context, method, pathOrURL string, out any) error {
 		return nil
 	}
 	return err
+}
+
+// DoAPIRaw performs an authenticated GET against an API path and reads at most
+// maxBytes. The optional byteRange value is sent as the HTTP Range header.
+// Callers must use response range metadata to make bounded reads resumable.
+func DoAPIRaw(ctx context.Context, pathOrURL, accept, byteRange string, maxBytes int64) (*RawAPIResponse, error) {
+	if maxBytes <= 0 {
+		return nil, fmt.Errorf("maxBytes must be positive")
+	}
+	full, err := resolveURL(pathOrURL)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, full, nil)
+	if err != nil {
+		return nil, fmt.Errorf("build request: %w", err)
+	}
+	setCommonHeaders(ctx, req)
+	if accept != "" {
+		req.Header.Set("Accept", accept)
+	}
+	if byteRange != "" {
+		req.Header.Set("Range", byteRange)
+	}
+
+	resp, err := doRequest(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, httpErrorFromResponse(req, resp)
+	}
+
+	limited := io.LimitReader(resp.Body, maxBytes+1)
+	body, err := io.ReadAll(limited)
+	if err != nil {
+		return nil, fmt.Errorf("read body: %w", err)
+	}
+	if int64(len(body)) > maxBytes {
+		return nil, ErrPayloadTooLarge
+	}
+
+	return &RawAPIResponse{
+		Body:          body,
+		ContentType:   resp.Header.Get("Content-Type"),
+		ContentRange:  resp.Header.Get("Content-Range"),
+		ContentLength: resp.ContentLength,
+		StatusCode:    resp.StatusCode,
+	}, nil
 }
 
 // quoteEscaper mirrors mime/multipart's internal escaper for filenames.

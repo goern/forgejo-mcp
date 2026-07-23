@@ -90,6 +90,10 @@
       "description": "Create branch"
     },
     {
+      "name": "create_branch_protection",
+      "description": "Create a branch protection rule (e.g. require status checks before merge)"
+    },
+    {
       "name": "create_comment_attachment",
       "description": "Upload a new attachment to an issue/PR comment."
     },
@@ -114,6 +118,10 @@
       "description": "Create an organization"
     },
     {
+      "name": "create_org_label",
+      "description": "Create an organization-level label. Returns the created label including its numeric id."
+    },
+    {
       "name": "create_org_team",
       "description": "Create a team in an organization"
     },
@@ -126,8 +134,24 @@
       "description": "Create a pull request review with optional inline comments"
     },
     {
+      "name": "create_release",
+      "description": "Create a release. If the tag does not yet exist, pass target_commitish so Forgejo creates the tag."
+    },
+    {
+      "name": "create_release_attachment",
+      "description": "Upload an attachment to a release."
+    },
+    {
       "name": "create_repo",
       "description": "Create repo"
+    },
+    {
+      "name": "create_repo_hook",
+      "description": "Create a repository webhook. The secret is accepted but never echoed in the response."
+    },
+    {
+      "name": "create_repo_label",
+      "description": "Create a repository label. Returns the created label including its numeric id."
     },
     {
       "name": "create_review_requests",
@@ -136,6 +160,10 @@
     {
       "name": "delete_branch",
       "description": "Delete branch"
+    },
+    {
+      "name": "delete_branch_protection",
+      "description": "Delete a branch protection rule by name"
     },
     {
       "name": "delete_comment_attachment",
@@ -162,8 +190,32 @@
       "description": "Delete an organization. WARNING: This is destructive and irreversible \u2014 all repos, teams, and data will be permanently r"
     },
     {
+      "name": "delete_org_label",
+      "description": "Delete an organization-level label. By default refuses if the label is in use; set delete_mode=force to override. Note: in-use count is best-effort over repos visible to the token and may under-count."
+    },
+    {
       "name": "delete_pull_review",
       "description": "Delete a pending pull request review"
+    },
+    {
+      "name": "delete_release",
+      "description": "Delete a release by numeric ID. Destructive."
+    },
+    {
+      "name": "delete_release_attachment",
+      "description": "Delete a release attachment. Destructive."
+    },
+    {
+      "name": "delete_release_by_tag",
+      "description": "Delete a release by tag name. Destructive \u2014 verify tag before calling."
+    },
+    {
+      "name": "delete_repo_hook",
+      "description": "Delete a repository webhook by ID"
+    },
+    {
+      "name": "delete_repo_label",
+      "description": "Delete a repository label. By default refuses if the label is in use; set delete_mode=force to override."
     },
     {
       "name": "delete_review_requests",
@@ -186,6 +238,14 @@
       "description": "Download an issue/PR attachment. Files at or above the inline cap return metadata + browser_download_url only; the calle"
     },
     {
+      "name": "download_release_attachment",
+      "description": "Download a release attachment. Files at or above the inline cap return metadata + browser_download_url only; the caller is expected to fetch that URL with the same auth token."
+    },
+    {
+      "name": "edit_branch_protection",
+      "description": "Edit a branch protection rule. Only fields you pass are changed; omitted fields are left untouched."
+    },
+    {
       "name": "edit_comment_attachment",
       "description": "Rename a comment attachment."
     },
@@ -202,8 +262,36 @@
       "description": "Edit organization settings"
     },
     {
+      "name": "edit_org_label",
+      "description": "Edit an organization-level label (PATCH \u2014 only supplied fields change). Providing no fields is an error."
+    },
+    {
+      "name": "edit_release",
+      "description": "Edit an existing release. Only fields supplied by the caller are sent to Forgejo."
+    },
+    {
+      "name": "edit_release_attachment",
+      "description": "Rename a release attachment."
+    },
+    {
+      "name": "edit_repo_hook",
+      "description": "Edit a repository webhook. Only fields you pass are changed; omitted fields are left untouched."
+    },
+    {
+      "name": "edit_repo_label",
+      "description": "Edit a repository label (PATCH \u2014 only supplied fields change). Providing no fields is an error."
+    },
+    {
       "name": "fork_repo",
       "description": "Fork repo"
+    },
+    {
+      "name": "get_action_job_logs",
+      "description": "Read a bounded byte range from a Forgejo v16+ workflow job log. Omitting offset returns the tail."
+    },
+    {
+      "name": "get_branch_protection",
+      "description": "Get a single branch protection rule by name"
     },
     {
       "name": "get_comment_attachment",
@@ -230,6 +318,10 @@
       "description": "Get comment by ID"
     },
     {
+      "name": "get_latest_release",
+      "description": "Get the latest non-draft, non-prerelease release."
+    },
+    {
       "name": "get_my_user_info",
       "description": "Get user info"
     },
@@ -240,6 +332,10 @@
     {
       "name": "get_org",
       "description": "Get organization details"
+    },
+    {
+      "name": "get_org_label",
+      "description": "Get a single organization-level label by ID."
     },
     {
       "name": "get_pull_request_by_index",
@@ -254,6 +350,26 @@
       "description": "Get a specific pull request review"
     },
     {
+      "name": "get_release_attachment",
+      "description": "Get metadata for a single release attachment."
+    },
+    {
+      "name": "get_release_by_id",
+      "description": "Get a release by numeric ID."
+    },
+    {
+      "name": "get_release_by_tag",
+      "description": "Get a release by tag name."
+    },
+    {
+      "name": "get_repo_hook",
+      "description": "Get a single repository webhook by ID"
+    },
+    {
+      "name": "get_repo_label",
+      "description": "Get a single repository label by ID."
+    },
+    {
       "name": "get_repo_tree",
       "description": "Get the Git tree of a repository. With recursive=true, returns the complete file tree in a single response (subject to t"
     },
@@ -266,8 +382,16 @@
       "description": "Change issue state"
     },
     {
+      "name": "list_action_run_jobs",
+      "description": "List jobs for a Forgejo v16+ workflow run with bounded client-side pagination."
+    },
+    {
       "name": "list_branches",
       "description": "List branches"
+    },
+    {
+      "name": "list_branch_protections",
+      "description": "List a repository's branch protection rules (bounded by page/limit)"
     },
     {
       "name": "list_comment_attachments",
@@ -302,6 +426,10 @@
       "description": "List tracked time entries for the authenticated user across all repositories"
     },
     {
+      "name": "list_org_labels",
+      "description": "List organization-level labels. Each label carries a scope field of \"org\"."
+    },
+    {
       "name": "list_org_members",
       "description": "List members of an organization"
     },
@@ -322,12 +450,24 @@
       "description": "List reviews for a pull request"
     },
     {
+      "name": "list_release_attachments",
+      "description": "List attachments on a release. The Forgejo API does not paginate this endpoint server-side, so the response is fetched in full and then sliced client-side; large attachment sets are still fully transferred from Forgejo before slicing."
+    },
+    {
+      "name": "list_releases",
+      "description": "List releases for a repository. The state filter is applied client-side after pagination, so result size may be smaller than limit even when more matches exist on later pages."
+    },
+    {
       "name": "list_repo_commits",
       "description": "List repo commits"
     },
     {
       "name": "list_repo_contents",
       "description": "List the files and directories at a given path in a repository. Use path=\"\" to list the repository root. Returns one lev"
+    },
+    {
+      "name": "list_repo_hooks",
+      "description": "List repository webhooks. page/limit control pagination (default: page 1, limit 30); no server-imposed ceiling."
     },
     {
       "name": "list_repo_issues",
@@ -420,6 +560,10 @@
     {
       "name": "submit_pull_review",
       "description": "Submit a pending pull request review"
+    },
+    {
+      "name": "test_repo_hook",
+      "description": "Trigger a test delivery for a repository webhook. WARNING: each call triggers a live HTTP delivery to the webhook URL."
     },
     {
       "name": "update_file",
