@@ -22,6 +22,44 @@ type RepoParams struct {
 	Repo  string
 }
 
+// WikiParams holds parsed fields from forgejo://repo/{owner}/{repo}/wiki/{pageName}.
+type WikiParams struct {
+	Owner    string
+	Repo     string
+	PageName string
+}
+
+// ParseWiki parses a wiki page URI while preserving an encoded slash in pageName.
+func ParseWiki(uri string) (WikiParams, error) {
+	u, err := parseForgejoURI(uri)
+	if err != nil {
+		return WikiParams{}, err
+	}
+	if u.Host != "repo" {
+		return WikiParams{}, fmt.Errorf("%w: expected forgejo://repo/..., got %q", ErrInvalidParams, uri)
+	}
+	escapedParts := splitPath(u.EscapedPath())
+	if len(escapedParts) != 4 || escapedParts[2] != "wiki" {
+		return WikiParams{}, fmt.Errorf("%w: expected forgejo://repo/{owner}/{repo}/wiki/{pageName}; percent-encode '/' in pageName as %%2F, got %q", ErrInvalidParams, uri)
+	}
+	owner, err := url.PathUnescape(escapedParts[0])
+	if err != nil {
+		return WikiParams{}, fmt.Errorf("%w: invalid owner encoding: %w", ErrInvalidParams, err)
+	}
+	repo, err := url.PathUnescape(escapedParts[1])
+	if err != nil {
+		return WikiParams{}, fmt.Errorf("%w: invalid repo encoding: %w", ErrInvalidParams, err)
+	}
+	pageName, err := url.PathUnescape(escapedParts[3])
+	if err != nil {
+		return WikiParams{}, fmt.Errorf("%w: invalid page name encoding: %w", ErrInvalidParams, err)
+	}
+	if strings.TrimSpace(pageName) == "" {
+		return WikiParams{}, fmt.Errorf("%w: wiki page name must not be empty", ErrInvalidParams)
+	}
+	return WikiParams{Owner: owner, Repo: repo, PageName: pageName}, nil
+}
+
 // CommitParams holds parsed fields from forgejo://repo/{owner}/{repo}/commit/{sha}.
 // SHA must be exactly 40 hex characters.
 type CommitParams struct {

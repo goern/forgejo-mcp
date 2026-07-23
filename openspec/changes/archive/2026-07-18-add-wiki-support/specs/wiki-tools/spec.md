@@ -26,11 +26,13 @@ It SHALL call `GET /repos/{owner}/{repo}/wiki/pages` via `DoJSONList` and return
 page's `title`, `page_name`, and `sub_url`, plus a `page` echo and a `has_next` boolean.
 
 Because the raw-HTTP helper does not expose response headers (so `X-Total-Count` /
-`Link` are unreachable), `has_next` SHALL be derived by **over-fetching one extra row**:
-the handler requests `limit + 1` items, sets `has_next = (rows_received > limit)`, and
-returns at most `limit` rows. This mirrors the existing embedded-list pattern in
-`operation/issue/resources.go`. A repository with no wiki SHALL return an empty list, not
-an error (the `404`→empty mapping is correct **only** for this list endpoint).
+`Link` are unreachable), `has_next` SHALL use a pagination-preserving next-page probe.
+The handler requests the current page with exactly `limit`. If fewer rows arrive,
+`has_next=false`. If exactly `limit` rows arrive, it requests `page+1` with the same
+`limit` and sets `has_next` according to whether the probe contains any rows. It MUST
+NOT request `limit+1`: Forgejo derives page offsets from the page size, and changing it
+causes later pages to skip rows. A repository with no wiki SHALL return an empty list,
+not an error (the `404`→empty mapping is correct **only** for this list endpoint).
 
 #### Scenario: Repository with pages
 - **WHEN** a client calls `list_wiki_pages` for a repo whose wiki has pages
@@ -41,7 +43,12 @@ an error (the `404`→empty mapping is correct **only** for this list endpoint).
 - **WHEN** a client calls `list_wiki_pages` with `limit=N` against a wiki with more than
   `N` pages
 - **THEN** the response SHALL contain exactly `N` pages
-- **AND** `has_next` SHALL be `true` (derived from the `N+1`-th over-fetched row)
+- **AND** `has_next` SHALL be `true` (derived from a non-empty same-limit next-page probe)
+
+#### Scenario: Pagination never changes the page size behind the caller's back
+- **WHEN** a client requests page 1 with `limit=30` from a 32-page wiki
+- **THEN** the current-page request and next-page probe SHALL both use `limit=30`
+- **AND** a subsequent client request for page 2 with `limit=30` SHALL begin at item 31
 
 #### Scenario: Repository without a wiki returns empty list
 - **WHEN** a client calls `list_wiki_pages` for a repo with no wiki (upstream `404`)
@@ -98,8 +105,8 @@ reported as an error, matching `sliceLines`.
 `get_wiki_revisions` SHALL accept required `owner`, `repo`, `page_name` and optional
 `page` / `limit` parameters, call `GET /repos/{owner}/{repo}/wiki/revisions/{pageName}`
 via `DoJSON` (**not** `DoJSONList`), and return each revision's `sha`, `author`, and
-`message`, plus the echoed `page` and a `has_next` boolean derived by the same `limit+1`
-over-fetch as `list_wiki_pages`.
+`message`, plus the echoed `page` and a `has_next` boolean derived by the same
+exact-limit, same-limit next-page probe as `list_wiki_pages`.
 
 Unlike `list_wiki_pages`, a `404` here means the page does not exist (every existing wiki
 page has at least one revision), so it SHALL be reported as a not-found error, **not** as
@@ -127,11 +134,10 @@ callers can address the page in subsequent calls. Callers SHALL use the returned
 (the server may transform it, e.g. spaces → dashes).
 
 The behavior of `POST …/wiki/new` against an already-existing title is fixed by live
-verification. If the upstream rejects a duplicate (e.g. `409`/`422`), `create_wiki_page`
-SHALL surface a guided error naming `update_wiki_page` as the way to modify an existing
-page (it SHALL NOT leak an opaque transport error). If the upstream instead overwrites,
-`create_wiki_page`'s description SHALL warn that creating an existing title replaces it,
-so callers do not silently clobber a page by confusing create with update.
+verification against Forgejo `15.0.4+gitea-1.22.0`: the upstream returned `201` and
+overwrote the existing page. `create_wiki_page`'s description SHALL therefore warn that
+creating an existing title replaces it, so callers do not silently clobber a page by
+confusing create with update.
 
 #### Scenario: Create with default message
 - **WHEN** a client calls `create_wiki_page` with a title and content but no message
@@ -141,10 +147,8 @@ so callers do not silently clobber a page by confusing create with update.
 
 #### Scenario: Create on an existing title is not a silent clobber
 - **WHEN** a client calls `create_wiki_page` with a `title` that already exists
-- **THEN** the tool SHALL either return a guided error pointing at `update_wiki_page`
-  (if the upstream rejects the duplicate)
-- **OR** report success only if the upstream's documented behavior is overwrite, in
-  which case the destructive replacement SHALL be stated in the tool description
+- **THEN** the tool SHALL report success
+- **AND** the destructive replacement SHALL be stated in the tool description
 
 ### Requirement: Update wiki page base64-encodes content and never silently renames
 
@@ -156,26 +160,21 @@ reachable under the same name after the edit. The mechanism that preserves the n
 (server-side retention vs. echoing the existing title) is fixed by live verification
 (see the live-verification tasks).
 
-`update_wiki_page` performs a read-modify-write whose last writer wins. Whether the
-upstream `PATCH …/wiki/page/{pageName}` accepts an optimistic-concurrency precondition
-(e.g. a base `commit_sha` / `If-Match`) is fixed by live verification. If the API accepts
-such a field, `update_wiki_page` SHALL accept an optional `last_commit_sha` parameter
-(sourced from `get_wiki_page`'s `commit_sha`) and forward it so a stale write is rejected
-rather than silently clobbering a concurrent edit. If the API accepts no precondition, the
-tool SHALL document the lost-update window in its description so callers know concurrent
-edits overwrite without warning. (This mirrors `update_file`/`delete_file`, which require
-a base `sha`.)
+`update_wiki_page` performs a read-modify-write whose last writer wins. The upstream
+`PATCH …/wiki/page/{pageName}` accepted no effective optimistic-concurrency precondition
+on the tested Forgejo: both a stale `last_commit_sha` body field and stale
+`If-Match` header still returned HTTP 200 and wrote the page. The tool SHALL document
+this lost-update window so callers know concurrent edits overwrite without warning.
 
 #### Scenario: Update without retitling preserves the page name
 - **WHEN** a client calls `update_wiki_page` with new content but no `title`
 - **THEN** the page SHALL remain reachable under its original `page_name` after the edit
 - **AND** the request body SHALL carry the base64-encoded new content
 
-#### Scenario: Stale update is rejected when the API supports a precondition
-- **WHEN** the upstream accepts a base-commit precondition
-- **AND** a client calls `update_wiki_page` with a `last_commit_sha` that is no longer current
-- **THEN** the tool SHALL surface the upstream conflict as an error
-- **AND** SHALL NOT silently overwrite the newer revision
+#### Scenario: Concurrent updates are explicitly last-writer-wins
+- **WHEN** two clients update the same wiki page concurrently
+- **THEN** the later accepted write MAY replace the earlier write without a conflict
+- **AND** the tool description SHALL warn callers about this behavior
 
 ### Requirement: Delete wiki page
 
@@ -211,6 +210,9 @@ review:
 - `get_wiki_page`'s description SHALL state that `total_lines` is always returned (with or
   without a range), so an agent can call once unbounded to learn the size, then request a
   `start_line`/`end_line` window for a large page.
+- `create_wiki_page`'s description SHALL state that slash-separated titles are a flat
+  subpage naming convention: Forgejo neither creates a parent page nor stores a
+  parent-child relationship.
 
 #### Scenario: README documents the bounds
 - **WHEN** a reader views the README tool table

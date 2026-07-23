@@ -46,17 +46,18 @@ be reusable verbatim on `get`/`update`/`delete`) rather than prescribing the esc
 mechanism up front.
 
 **Paging without response headers.** `DoJSON` returns only `error` and discards
-`resp.Header`, so `X-Total-Count` / `Link` are unreachable. `has_next` is therefore
-derived by **over-fetching one row**: request `limit+1`, return at most `limit`, set
-`has_next = rows_received > limit`. This reuses the exact pattern in
-`operation/issue/resources.go` and adds no new transport capability. The inference is
-sound **only if `limit+1` escapes the server's page-size ceiling**: the `issue` precedent
-sets `PageSize = cap+1` explicitly (issue/resources.go:99) precisely because the server
-default equals the cap and would otherwise clamp the `+1` away. So the wiki handler SHALL
-send `limit+1` as an explicit page size, compute `has_next` from the **effective returned
-row count** (never the requested `limit+1`), and pin the max `limit` to `ceiling-1` once
-task 5.3 learns the live ceiling — otherwise a full page at the ceiling would falsely
-report `has_next:false`.
+`resp.Header`, so `X-Total-Count` / `Link` are unreachable. A one-row over-fetch is
+**incorrect** for Forgejo's page-number pagination: changing `limit` also changes the
+offset of every later page. Live testing with 32 pages proved that requesting page 1
+with upstream `limit=31`, returning 30 rows, and then requesting page 2 with
+`limit=31` skips item 31 because page 2 starts at item 32.
+
+The handler therefore requests the current page with exactly the caller's `limit`. If
+the response is short, `has_next=false`. If it contains exactly `limit` rows, the
+handler makes a second request for `page+1` with the **same** `limit` and sets
+`has_next` according to whether that probe is non-empty. This preserves page boundaries
+and works when the total is an exact multiple of `limit`; the same algorithm applies to
+wiki revisions.
 
 A thin typed layer lives in `pkg/forgejo/wiki.go` (`WikiPage`, `WikiPageMeta`,
 `WikiCommit`, `ListWikiPages`, `GetWikiPage`, `GetWikiPageRevisions`, `CreateWikiPage`,
@@ -73,11 +74,10 @@ field on both read and write. Therefore:
 - **Write** (`create_wiki_page`, `update_wiki_page`): the caller passes plain markdown in
   `content`; the handler base64-encodes it into `content_base64`.
 
-This field name and the page-name URL rule are asserted from the documented API but
-**MUST be confirmed against a live instance** (tasks 5.1–5.6) before the change archives.
-If the live API differs, the spec deltas are corrected before sync. The
-`update_wiki_page` no-rename guarantee (task 5.5) and whether the page `GET` payload
-carries `commit_sha` (task 5.6) are gated the same way.
+Live verification against Forgejo `15.0.4+gitea-1.22.0` confirmed this field name,
+the page-name URL rule, and `commit_sha` in the page payload. It also established that
+a content-only PATCH renames a page to `unnamed`; `update_wiki_page` therefore reads the
+current page and echoes its title when the caller omits `title`.
 
 ## Decision 3 — output-bounding per response shape
 
@@ -131,6 +131,8 @@ New `ParseWiki(uri) (WikiParams, error)` in `operation/resource/parse.go`:
 
 Sub-pages are therefore reachable (via `%2F`), not silently lossy. The README/AGENTS
 entries document the percent-encoding rule for `/` and spaces.
+Forgejo does not model these names as a hierarchy: `Parent/Child` is a flat naming
+convention, and creating it neither creates nor links a `Parent` page.
 
 ## Decision 5 — discoverability is a first-class requirement
 
@@ -169,12 +171,14 @@ reviewer can replay it and a future reader sees the intended UX end to end.
 
 ## Risks / Open Questions
 
-- **base64 field name / page-name encoding** — verify live (tasks 5.1–5.2). Highest-impact
-  unknown; everything else is mechanical.
-- **`limit` ceiling** — Forgejo caps `limit` server-side. We cannot read `X-Total-Count`
-  (no header access), so `has_next` is derived by `limit+1` over-fetch; a server cap below
-  the requested `limit` still yields a correct `has_next` because the over-fetched row is
-  also subject to the cap. We document `limit` as advisory.
+- **base64 field name / page-name encoding** — resolved by live verification against
+  Forgejo `15.0.4+gitea-1.22.0`: `content_base64` round-trips, spaces normalize to
+  dashes, and the returned `%2F` form round-trips for slash-bearing names.
+- **Paging / `limit` ceiling** — paging was verified with 30 temporary pages and requests
+  up to `limit=50`, with no observed clamp or `Link` header. A subsequent 32-page test
+  falsified `limit+1` over-fetch because it changes later page offsets. The adopted
+  same-limit next-page probe preserves continuity. The exact server ceiling remains
+  unknown, so `limit` is advisory if an instance clamps it.
 - **Write auth** — wiki writes need a token with repo write + wiki enabled on the repo;
   `403` maps to `ErrUnauthorized` → MCP error, same as every other write tool. The demo
   notes the required token scope.
@@ -183,6 +187,10 @@ reviewer can replay it and a future reader sees the intended UX end to end.
   This change makes the wiki resource compliant regardless (1 MiB cap + marker), so it is
   not a blocker, but the cross-cutting doc-policy decision ("does the bounding contract
   formally cover resource content?") is logged for the maintainer to settle repo-wide.
+- **Concurrent writes** — the tested Forgejo accepted both a stale `last_commit_sha`
+  body field and stale `If-Match` header (HTTP 200); updates are last-writer-wins.
+- **Duplicate create** — creating an existing title returned HTTP 201 and replaced its
+  content; the tool description explicitly warns about this destructive behavior.
 
 ## Adversarial Review — 2026-05-31
 
@@ -197,7 +205,7 @@ single-word demo page (`Home`) that hid every multi-word / oversized / multi-cal
 | # | Load-bearing critique | Verdict | Fix (bound to an existing repo precedent) |
 |---|----------------------|---------|-------------------------------------------|
 | C1 | Page-name encoding self-contradicted (`url.PathEscape`→`%20` vs spaces→dashes) | CONCEDE-PATCH | Spec states round-trip-correctness; mechanism gated on live task 5.2; normative multi-word scenario added |
-| C2 | `has_next` not derivable — `DoJSON` discards `resp.Header` | CONCEDE-PATCH | `limit+1` over-fetch (`issue/resources.go`); no transport change |
+| C2 | `has_next` not derivable — `DoJSON` discards `resp.Header` | CONCEDE-PATCH, later live-corrected | Initial `limit+1` over-fetch was falsified because page offsets depend on limit; use an exact-limit current-page request plus a same-limit `page+1` probe when full |
 | C3 | `404`→empty wrong for `get_wiki_revisions` (existing page always has ≥1 commit) | CONCEDE-PATCH | `DoJSON` not `DoJSONList`; not-found scenario added; 404 asymmetry documented |
 | C4 | `update` title-default silently renames a spaced page | CONCEDE-PATCH | Outcome-based "MUST NOT silently rename"; mechanism gated on new task 5.5 |
 | C5 | Sub-page `/` names → opaque `-32602`; `%2F` would pre-split on decoded path | CONCEDE-PATCH | Parse page name from **escaped** path; strict 4-seg parser; `%2F` scenario + guided error |

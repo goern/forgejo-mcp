@@ -443,6 +443,8 @@
 
 ### Added
 
+- Six wiki tools for page CRUD, bounded reads and revision history, plus the
+  `forgejo://repo/{owner}/{repo}/wiki/{pageName}` resource template.
 - MCP resource templates: 7 URI-addressable read surfaces (`forgejo://owner`, `forgejo://repo`, `forgejo://repo/.../commit`, `.../commit/.../status`, `.../issue`, `.../{kind}/.../comment`, `.../pr`). Coexists with the existing tool surface — no tool removed. Embedded lists capped at 30 items with truncation sentinel.
 
 ## [2.25.1](https://codeberg.org/goern/forgejo-mcp/compare/v2.25.0...v2.25.1) (2026-05-26)

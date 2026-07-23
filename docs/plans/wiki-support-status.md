@@ -1,29 +1,25 @@
 # Wiki Support Status
 
-**Status**: Pending upstream dependency
+**Status**: Implemented through the existing authenticated raw-HTTP layer
 
-## Why Wiki Support Is Not Yet Available
+Wiki support no longer depends on adding wiki methods to `forgejo-sdk`. The MCP server
+uses the same direct REST helpers already employed when the SDK does not expose a Forgejo
+endpoint.
 
-Wiki tools (list, get, create, update, delete wiki pages) are planned but currently blocked by a missing dependency in the [forgejo-sdk](https://codeberg.org/mvdkleijn/forgejo-sdk).
+The implementation provides six tools:
 
-The SDK (v2.0.0-v2.2.0) does not yet include wiki API methods. Rather than implementing a workaround with raw HTTP calls, we prefer to:
+- `list_wiki_pages`
+- `get_wiki_page`
+- `get_wiki_revisions`
+- `create_wiki_page`
+- `update_wiki_page`
+- `delete_wiki_page`
 
-1. Contribute the wiki methods upstream to forgejo-sdk
-2. Integrate them cleanly into forgejo-mcp once released
+It also registers the resource template
+`forgejo://repo/{owner}/{repo}/wiki/{pageName}`. Use the server-normalized `page_name`
+returned by list/create operations. Percent-encode `/` in slash-separated names as
+`%2F` when constructing a resource URI.
 
-This approach ensures better maintainability and consistency with other operations.
-
-## Tracking
-
-- **Feature request**: See [wiki-support.md](./wiki-support.md) for the full implementation plan
-- **Upstream contribution**: Pending PR to forgejo-sdk
-
-## Workaround
-
-If you need wiki functionality now, you can use the Forgejo API directly:
-
-- `GET /api/v1/repos/{owner}/{repo}/wiki/pages`
-- `GET /api/v1/repos/{owner}/{repo}/wiki/page/{pageName}`
-- `POST /api/v1/repos/{owner}/{repo}/wiki/new`
-- `PATCH /api/v1/repos/{owner}/{repo}/wiki/page/{pageName}`
-- `DELETE /api/v1/repos/{owner}/{repo}/wiki/page/{pageName}`
+See [wiki-support.md](./wiki-support.md) for the superseded SDK contribution plan and
+`openspec/changes/add-wiki-support/` for the implementation contract and verification
+record.
