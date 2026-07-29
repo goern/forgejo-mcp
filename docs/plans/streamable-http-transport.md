@@ -1,6 +1,6 @@
 # Streamable HTTP Transport Support
 
-**Issue**: [#99](https://codeberg.org/goern/forgejo-mcp/issues/99)
+**Issue**: [#99](https://forgejo.b4mad.net/agentic-forges/forgejo-mcp/issues/99)
 **Branch**: `feature/streamable-http-transport`
 
 ## Summary

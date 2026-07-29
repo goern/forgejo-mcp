@@ -1,6 +1,6 @@
 # Reply to Review Comment — Implementation Plan
 
-**Issue**: [#98](https://codeberg.org/goern/forgejo-mcp/issues/98)
+**Issue**: [#98](https://forgejo.b4mad.net/agentic-forges/forgejo-mcp/issues/98)
 **Branch**: `feature/reply-to-review-comment`
 
 ## Summary

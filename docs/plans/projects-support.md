@@ -1,7 +1,7 @@
 # Projects Support Implementation Plan for forgejo-mcp
 
 ## Issue Reference
-- **Issue**: [#42 - Add support for Projects](https://codeberg.org/goern/forgejo-mcp/issues/42)
+- **Issue**: [#42 - Add support for Projects](https://forgejo.b4mad.net/agentic-forges/forgejo-mcp/issues/42)
 - **Requester**: BasdP (Bas du Pré)
 - **Use Case**: "Let AI clean up my projects, for instance to ask it to sort the project board by milestone"
 

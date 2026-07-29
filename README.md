@@ -1,5 +1,18 @@
 # Forgejo MCP Server
 
+> **📦 This project has moved.** Development, issues, releases, and container
+> images now live at
+> **<https://forgejo.b4mad.net/agentic-forges/forgejo-mcp>**.
+> The Codeberg repository at `codeberg.org/goern/forgejo-mcp` remains only as a
+> read-only mirror, and its container registry no longer publishes images —
+> pull from `forgejo.b4mad.net/agentic-forges/forgejo-mcp` instead. Issue
+> numbers are preserved across the move. Contributions from humans **and**
+> AI agents are welcome at the new location.
+>
+> ```bash
+> git clone https://forgejo.b4mad.net/agentic-forges/forgejo-mcp.git
+> ```
+
 Connect your AI assistant to Forgejo repositories. Manage issues, pull requests, files, and more through natural language.
 
 ## What It Does
@@ -20,7 +33,7 @@ Forgejo MCP Server is an integration plugin that connects Forgejo with [Model Co
 **Option A: Using Go (Recommended)**
 
 ```bash
-git clone https://codeberg.org/goern/forgejo-mcp.git
+git clone https://forgejo.b4mad.net/agentic-forges/forgejo-mcp.git
 cd forgejo-mcp
 go install .
 ```
@@ -31,7 +44,7 @@ Ensure `$GOPATH/bin` (typically `~/go/bin`) is in your PATH.
 
 **Option B: Download Binary**
 
-Download the latest release from the [releases page](https://codeberg.org/goern/forgejo-mcp/releases).
+Download the latest release from the [releases page](https://forgejo.b4mad.net/agentic-forges/forgejo-mcp/releases).
 
 For Arch Linux, use your favorite AUR helper:
 
@@ -56,17 +69,17 @@ yay -S forgejo-mcp-bin  # uses pre-built binary
 **Option D: Container image**
 
 A signed multi-stage OCI image is published on every release to
-`codeberg.org/goern/forgejo-mcp`. Run the server without building from source:
+`forgejo.b4mad.net/agentic-forges/forgejo-mcp`. Run the server without building from source:
 
 ```bash
 # Latest release
 podman run --rm -i \
   -e FORGEJO_ACCESS_TOKEN="<your personal access token>" \
-  codeberg.org/goern/forgejo-mcp:latest \
+  forgejo.b4mad.net/agentic-forges/forgejo-mcp:latest \
   --transport stdio --url https://your-forgejo-instance.org
 
 # Or pin a specific version
-podman run --rm -i codeberg.org/goern/forgejo-mcp:v2.24.0 --help
+podman run --rm -i forgejo.b4mad.net/agentic-forges/forgejo-mcp:v2.24.0 --help
 ```
 
 | Tag             | Meaning                                                         |
@@ -492,7 +505,7 @@ its signature, and the binary archive:
 ```bash
 TAG=v2.23.1
 VERSION="${TAG#v}"
-BASE="https://codeberg.org/goern/forgejo-mcp/releases/download/${TAG}"
+BASE="https://forgejo.b4mad.net/agentic-forges/forgejo-mcp/releases/download/${TAG}"
 
 curl -sSfLO "${BASE}/forgejo-mcp_${VERSION}_checksums.txt"
 curl -sSfLO "${BASE}/forgejo-mcp_${VERSION}_checksums.txt.sig"
@@ -561,7 +574,7 @@ Tekton Chains builder.
 
 ### 6. Verify the container image
 
-The `codeberg.org/goern/forgejo-mcp` application image ([Option D](#1-install))
+The `forgejo.b4mad.net/agentic-forges/forgejo-mcp` application image ([Option D](#1-install))
 is signed by the same `cosign-signing-key-images` key as the release-tools
 image, carries an attached CycloneDX SBOM, and gets SLSA v1.0 provenance from
 Tekton Chains. Reuse the `cosign-images.pub` key fetched above.
@@ -572,7 +585,7 @@ Verify the signature:
 IMAGE_TAG=v2.24.0   # substitute the release you are pulling
 cosign verify \
   --key cosign-images.pub \
-  "codeberg.org/goern/forgejo-mcp:${IMAGE_TAG}" \
+  "forgejo.b4mad.net/agentic-forges/forgejo-mcp:${IMAGE_TAG}" \
   | jq .
 ```
 
@@ -582,7 +595,7 @@ Verify the SLSA provenance attestation:
 cosign verify-attestation \
   --type slsaprovenance \
   --key cosign-images.pub \
-  "codeberg.org/goern/forgejo-mcp:${IMAGE_TAG}" \
+  "forgejo.b4mad.net/agentic-forges/forgejo-mcp:${IMAGE_TAG}" \
   | jq .
 ```
 
@@ -592,7 +605,7 @@ Verify and download the signed CycloneDX SBOM attestation:
 cosign verify-attestation \
   --type cyclonedx \
   --key cosign-images.pub \
-  "codeberg.org/goern/forgejo-mcp:${IMAGE_TAG}" \
+  "forgejo.b4mad.net/agentic-forges/forgejo-mcp:${IMAGE_TAG}" \
   | jq -r '.payload | @base64d | fromjson | .predicate' > forgejo-mcp.cdx.json
 ```
 
@@ -642,8 +655,8 @@ forgejo-mcp --user-agent "forgejo-mcp/1.0.0" --transport sse --url <url> --token
 
 ## Getting Help
 
-- [Report issues](https://codeberg.org/goern/forgejo-mcp/issues)
-- [View source code](https://codeberg.org/goern/forgejo-mcp)
+- [Report issues](https://forgejo.b4mad.net/agentic-forges/forgejo-mcp/issues)
+- [View source code](https://forgejo.b4mad.net/agentic-forges/forgejo-mcp)
 
 This repository is also mirrored on [Radicle](https://radicle.xyz/) — a peer-to-peer code collaboration network. Clone via:
 
@@ -657,7 +670,7 @@ See [DEVELOPER.md](DEVELOPER.md) for build instructions, architecture overview, 
 
 ## Known Issues
 
-- **`go install ...@latest` fails** — The `go.mod` contains a `replace` directive (for a forked Forgejo SDK), which prevents remote `go install`. Use the clone-and-build workflow shown in [Quick Start](#quick-start) instead. Tracked in [#67](https://codeberg.org/goern/forgejo-mcp/issues/67).
+- **`go install ...@latest` fails** — The `go.mod` contains a `replace` directive (for a forked Forgejo SDK), which prevents remote `go install`. Use the clone-and-build workflow shown in [Quick Start](#quick-start) instead. Tracked in [#67](https://forgejo.b4mad.net/agentic-forges/forgejo-mcp/issues/67).
 
 ## Contributors
 

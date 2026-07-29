@@ -133,7 +133,7 @@ RUN ln -sf /usr/local/lib/node_modules/@fission-ai/openspec/bin/openspec.js /usr
  && chmod +x /usr/local/lib/node_modules/@fission-ai/openspec/bin/openspec.js
 
 # OCI image labels
-LABEL org.opencontainers.image.source="https://codeberg.org/goern/forgejo-mcp" \
+LABEL org.opencontainers.image.source="https://forgejo.b4mad.net/agentic-forges/forgejo-mcp" \
       org.opencontainers.image.version="${GORELEASER_VERSION}" \
       org.opencontainers.image.vendor="Operate First, by #B4mad" \
       org.opencontainers.image.licenses="Apache-2.0" \

@@ -11,9 +11,9 @@
 # Usage: hack/snapshot-downloads.sh [owner/repo] [output.jsonl]
 set -eu
 
-REPO="${1:-goern/forgejo-mcp}"
+REPO="${1:-agentic-forges/forgejo-mcp}"
 OUT="${2:-docs/downloads/downloads.jsonl}"
-API="${FORGEJO_API:-https://codeberg.org/api/v1}"
+API="${FORGEJO_API:-https://forgejo.b4mad.net/api/v1}"
 TODAY="$(date -u +%F)"
 
 mkdir -p "$(dirname "$OUT")"

@@ -76,7 +76,7 @@ The runner's threat surface reduces to "untrusted text input fed to Claude," whi
 **Choice:** download the binary from the project's Codeberg releases via `curl`, pinned to a version supplied as a workflow input (`forgejo_mcp_version`, default = latest stable tag at workflow release time).
 
 ```bash
-curl -fsSL "https://codeberg.org/goern/forgejo-mcp/releases/download/${VERSION}/forgejo-mcp_${VERSION#v}_linux_amd64.tar.gz" \
+curl -fsSL "https://forgejo.b4mad.net/agentic-forges/forgejo-mcp/releases/download/${VERSION}/forgejo-mcp_${VERSION#v}_linux_amd64.tar.gz" \
   | tar -xz -C "$RUNNER_TEMP"
 ```
 

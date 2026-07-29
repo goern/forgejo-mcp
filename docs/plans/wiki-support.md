@@ -261,7 +261,7 @@ Copy the following comment to submit to the Codeberg feature request:
 
 **Summary**: Add wiki page management methods to the forgejo-sdk.
 
-**Background**: The [forgejo-mcp](https://codeberg.org/goern/forgejo-mcp) project provides an MCP (Model Context Protocol) server for Forgejo integration. We're implementing wiki support but discovered that the forgejo-sdk (v2.0.0-v2.2.0) doesn't include wiki page API methods.
+**Background**: The [forgejo-mcp](https://forgejo.b4mad.net/agentic-forges/forgejo-mcp) project provides an MCP (Model Context Protocol) server for Forgejo integration. We're implementing wiki support but discovered that the forgejo-sdk (v2.0.0-v2.2.0) doesn't include wiki page API methods.
 
 **Forgejo/Gitea Wiki API endpoints exist and are documented**:
 
