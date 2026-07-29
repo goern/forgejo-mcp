@@ -29,10 +29,10 @@ spec:
     - name: REPO
       description: Repo slug owner/name (e.g. goern/forgejo-mcp).
       type: string
-    - name: CODEBERG_API
-      description: Codeberg API base URL.
+    - name: FORGE_API
+      description: Forgejo API base URL.
       type: string
-      default: https://codeberg.org/api/v1
+      default: https://forgejo.b4mad.net/api/v1
     - name: PLATFORMS
       description: |
         Space-separated list of `goos/goarch` pairs to pack. Default
@@ -51,7 +51,7 @@ spec:
         - name: GITEA_TOKEN
           valueFrom:
             secretKeyRef:
-              name: op1st-release-token
+              name: b4mad-release-token
               key: token
       script: |
         #!/usr/bin/env bash
@@ -60,7 +60,7 @@ spec:
         TAG="$(params.TAG)"
         VERSION="${TAG#v}"
         REPO="$(params.REPO)"
-        API="$(params.CODEBERG_API)"
+        API="$(params.FORGE_API)"
 
         RELEASE_ID=$(curl -fsSL \
           -H "Authorization: token ${GITEA_TOKEN}" \

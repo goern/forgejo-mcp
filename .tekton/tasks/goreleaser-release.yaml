@@ -56,7 +56,7 @@ spec:
         - name: GITEA_TOKEN
           valueFrom:
             secretKeyRef:
-              name: op1st-release-token
+              name: b4mad-release-token
               key: token
       script: |
         #!/usr/bin/env bash

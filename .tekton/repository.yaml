@@ -1,19 +1,20 @@
 apiVersion: pipelinesascode.tekton.dev/v1alpha1
 kind: Repository
 metadata:
-  name: codeberg-org-goern-forgejo-mcp
+  name: forgejo-b4mad-agentic-forges-forgejo-mcp
   namespace: op1st-pipelines
 spec:
-  url: https://codeberg.org/goern/forgejo-mcp
+  url: https://forgejo.b4mad.net/agentic-forges/forgejo-mcp
   git_provider:
-    url: https://codeberg.org
-    # Reuses the per-repo PAT secret originally created for
-    # codeberg-runner-openshift. The underlying Codeberg token must carry
-    # read:repository + write:repository.status scope on goern/forgejo-mcp.
+    type: forgejo
+    url: https://forgejo.b4mad.net
+    # Per-instance PaC credentials for forgejo.b4mad.net, mirroring the working
+    # feeldata-dev/forgejo-feeldata-app Repository. The token must carry
+    # read:repository + write:repository scope on agentic-forges/forgejo-mcp
+    # so PaC can report commit status back.
     secret:
-      name: codeberg-runner-openshift-pac
+      name: forgejo-b4mad
       key: provider.token
-    # Webhook secret is shared at org level by op1st-pipelines.
     webhook_secret:
-      name: codeberg-org-op1st-pipelines
+      name: forgejo-b4mad
       key: webhook.secret

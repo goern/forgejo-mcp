@@ -28,22 +28,27 @@ metadata:
     # IMAGE_DIGEST pipeline results below and attaches a cosign attestation
     # binding the image digest → PipelineRun → git commit → builder identity.
     # Verify with: cosign verify-attestation --type slsaprovenance \
-    #   --key cosign-images.pub codeberg.org/goern/forgejo-mcp:<tag>
+    #   --key cosign-images.pub forgejo.b4mad.net/agentic-forges/forgejo-mcp:<tag>
     chains.tekton.dev/transparency-upload: "true"
-    # dn0 — App OCI image publish (decided 2026-06-01):
-    # Registry: codeberg.org/goern/forgejo-mcp (mirrors the signed-binary
-    # release namespace). Tags: vMAJOR.MINOR.PATCH + latest (promote-image-tag).
-    # Single-arch amd64 (reuses release-tools-build-image, which is not a
-    # manifest-list build). Image build runs in parallel with goreleaser — it
-    # compiles its own binary inside the Containerfile and only depends on
-    # resolve-tag.
+    # dn0 — App OCI image publish (decided 2026-06-01,
+    # repointed to forgejo.b4mad.net 2026-07-29):
+    # Registry: forgejo.b4mad.net/agentic-forges/forgejo-mcp (mirrors the
+    # signed-binary release namespace). Tags: vMAJOR.MINOR.PATCH + latest
+    # (promote-image-tag). Single-arch amd64 (reuses release-tools-build-image,
+    # which is not a manifest-list build). Image build runs in parallel with
+    # goreleaser — it compiles its own binary inside the Containerfile and only
+    # depends on resolve-tag.
     # Required Secrets in op1st-pipelines (operator-confirmable preconditions):
-    #   - codeberg-pusher           (dockerconfigjson — push auth). Its PAT MUST
-    #     carry `write:package` on goern/forgejo-mcp. The cluster cannot validate
-    #     token scope; confirm once via the Codeberg UI before the first vX.Y.Z
-    #     tag. The release-tools image proved this Secret can push to codeberg.org,
-    #     but that auth targets the operate-first org — package-write on goern is
-    #     a SEPARATE grant that must be present on the same PAT identity.
+    #   - forgejo-pusher            (dockerconfigjson — push auth for
+    #     forgejo.b4mad.net). Identity b4mad-release-bot, PAT scope
+    #     `write:package`, granted repo write via the agentic-forges
+    #     `release-bots` team (repo.packages + repo.releases). Verified
+    #     2026-07-29 via /v2/token scope introspection; a real push is the only
+    #     end-to-end proof.
+    #   - b4mad-release-token       (key `token` — Forgejo PAT used by
+    #     goreleaser, cosign-sign-release, and mcpb-pack to create the release
+    #     and upload assets. Needs write:repository on
+    #     agentic-forges/forgejo-mcp.)
     #   - cosign-signing-key-images (cosign.key/.password — optional: false,
     #     fail-closed). A missing key fails the run; no tag is ever promoted.
 spec:
@@ -76,7 +81,8 @@ spec:
       - name: registry-credentials
         description: |
           Kubernetes Secret containing .dockerconfigjson (or config.json) with
-          push credentials for codeberg.org/goern/forgejo-mcp. Used by the
+          push credentials for forgejo.b4mad.net/agentic-forges/forgejo-mcp.
+          Used by the
           image push, cosign-sign, SBOM-attach, and tag-promote tasks.
     tasks:
       - name: fetch-source
@@ -138,7 +144,7 @@ spec:
           - name: TAG
             value: $(tasks.resolve-tag.results.tag)
           - name: REPO
-            value: goern/forgejo-mcp
+            value: agentic-forges/forgejo-mcp
 
       - name: mcpb-pack
         runAfter:
@@ -152,9 +158,10 @@ spec:
           - name: TAG
             value: $(tasks.resolve-tag.results.tag)
           - name: REPO
-            value: goern/forgejo-mcp
+            value: agentic-forges/forgejo-mcp
 
-      # dn0 — App OCI image (codeberg.org/goern/forgejo-mcp). Reuses the
+      # dn0 — App OCI image (forgejo.b4mad.net/agentic-forges/forgejo-mcp).
+      # Reuses the
       # release-tools image tasks. The Containerfile compiles its own binary, so
       # it is logically independent of goreleaser. It MUST NOT run in parallel
       # with the goreleaser-family tasks, however: build-image runs buildah
@@ -204,7 +211,7 @@ spec:
           - name: IMAGE
             value: "forgejo-mcp:$(tasks.resolve-tag.results.tag)"
           - name: REGISTRY_IMAGE
-            value: "codeberg.org/goern/forgejo-mcp"
+            value: "forgejo.b4mad.net/agentic-forges/forgejo-mcp"
           - name: TAG
             value: $(tasks.resolve-tag.results.tag)
 
@@ -255,7 +262,7 @@ spec:
           - name: TAG
             value: $(tasks.resolve-tag.results.tag)
           - name: REGISTRY_IMAGE
-            value: "codeberg.org/goern/forgejo-mcp"
+            value: "forgejo.b4mad.net/agentic-forges/forgejo-mcp"
 
     # Fail-closed cleanup (bd forgejo-mcp-9r4): if attach-image-sbom did not
     # succeed — which also covers a skipped attach when cosign-sign failed
@@ -275,7 +282,7 @@ spec:
             workspace: registry-credentials
         params:
           - name: REGISTRY_IMAGE
-            value: "codeberg.org/goern/forgejo-mcp"
+            value: "forgejo.b4mad.net/agentic-forges/forgejo-mcp"
           - name: TAG
             value: $(tasks.resolve-tag.results.tag)
 
@@ -294,11 +301,11 @@ spec:
               storage: 12Gi
     - name: registry-credentials
       secret:
-        # dn0 (decided 2026-06-01): push to codeberg.org/goern/forgejo-mcp.
-        # Reuse the existing codeberg-pusher dockerconfigjson Secret in
-        # op1st-pipelines. Its auth covers codeberg.org, but for push to the
-        # goern namespace to succeed the underlying PAT MUST carry
-        # `write:package` on goern/forgejo-mcp — a separate grant from the
-        # operate-first package-write the release-tools image relies on.
-        # Operator confirms out-of-band (cluster cannot validate token scope).
-        secretName: codeberg-pusher
+        # Repointed 2026-07-29: push to
+        # forgejo.b4mad.net/agentic-forges/forgejo-mcp using the forgejo-pusher
+        # dockerconfigjson Secret in op1st-pipelines (identity
+        # b4mad-release-bot). Package write on the agentic-forges org is a
+        # SEPARATE grant from the PAT's `write:package` scope — the bot is a
+        # member of the `release-bots` team (repo.packages + repo.releases,
+        # permission write) scoped to this repo.
+        secretName: forgejo-pusher

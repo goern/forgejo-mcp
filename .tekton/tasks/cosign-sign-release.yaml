@@ -34,10 +34,10 @@ spec:
     - name: REPO
       description: Repo slug owner/name (e.g. goern/forgejo-mcp).
       type: string
-    - name: CODEBERG_API
-      description: Codeberg API base URL.
+    - name: FORGE_API
+      description: Forgejo API base URL.
       type: string
-      default: https://codeberg.org/api/v1
+      default: https://forgejo.b4mad.net/api/v1
   workspaces:
     - name: source
       mountPath: /workspace/src
@@ -89,7 +89,7 @@ spec:
         - name: GITEA_TOKEN
           valueFrom:
             secretKeyRef:
-              name: op1st-release-token
+              name: b4mad-release-token
               key: token
       script: |
         #!/usr/bin/env bash
@@ -103,7 +103,7 @@ spec:
         fi
         RELEASE_ID=$(curl -fsSL \
           -H "Authorization: token ${GITEA_TOKEN}" \
-          "$(params.CODEBERG_API)/repos/$(params.REPO)/releases/tags/${TAG}" \
+          "$(params.FORGE_API)/repos/$(params.REPO)/releases/tags/${TAG}" \
           | jq -r '.id')
         if [ -z "$RELEASE_ID" ] || [ "$RELEASE_ID" = "null" ]; then
           echo "ERROR: Could not resolve release ID for tag ${TAG}" >&2
@@ -113,4 +113,4 @@ spec:
         curl -fsSL -X POST \
           -H "Authorization: token ${GITEA_TOKEN}" \
           -F "attachment=@${SIG}" \
-          "$(params.CODEBERG_API)/repos/$(params.REPO)/releases/${RELEASE_ID}/assets?name=${ASSET_NAME}"
+          "$(params.FORGE_API)/repos/$(params.REPO)/releases/${RELEASE_ID}/assets?name=${ASSET_NAME}"
