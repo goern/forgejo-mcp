@@ -28,11 +28,13 @@ metadata:
     # IMAGE_DIGEST pipeline results below and attaches a cosign attestation
     # binding the image digest → PipelineRun → git commit → builder identity.
     # Verify with: cosign verify-attestation --type slsaprovenance \
-    #   --key cosign-images.pub forgejo.b4mad.net/agentic-forges/forgejo-mcp:<tag>
+    #   --key cosign-images.pub git.b4mad.industries/agentic-forges/forgejo-mcp:<tag>
     chains.tekton.dev/transparency-upload: "true"
-    # dn0 — App OCI image publish (decided 2026-06-01,
-    # repointed to forgejo.b4mad.net 2026-07-29):
-    # Registry: forgejo.b4mad.net/agentic-forges/forgejo-mcp (mirrors the
+    # dn0 — App OCI image publish (decided 2026-06-01; repointed off the
+    # previous registry to the b4mad forge 2026-07-29, which was renamed
+    # forgejo.b4mad.net -> git.b4mad.industries the same day — same instance,
+    # same registry, both names still route /v2/):
+    # Registry: git.b4mad.industries/agentic-forges/forgejo-mcp (mirrors the
     # signed-binary release namespace). Tags: vMAJOR.MINOR.PATCH + latest
     # (promote-image-tag). Single-arch amd64 (reuses release-tools-build-image,
     # which is not a manifest-list build). Image build runs in parallel with
@@ -40,7 +42,7 @@ metadata:
     # depends on resolve-tag.
     # Required Secrets in op1st-pipelines (operator-confirmable preconditions):
     #   - forgejo-pusher            (dockerconfigjson — push auth for
-    #     forgejo.b4mad.net). Identity b4mad-release-bot, PAT scope
+    #     git.b4mad.industries). Identity b4mad-release-bot, PAT scope
     #     `write:package`, granted repo write via the agentic-forges
     #     `release-bots` team (repo.packages + repo.releases). Verified
     #     2026-07-29 via /v2/token scope introspection; a real push is the only
@@ -81,7 +83,7 @@ spec:
       - name: registry-credentials
         description: |
           Kubernetes Secret containing .dockerconfigjson (or config.json) with
-          push credentials for forgejo.b4mad.net/agentic-forges/forgejo-mcp.
+          push credentials for git.b4mad.industries/agentic-forges/forgejo-mcp.
           Used by the
           image push, cosign-sign, SBOM-attach, and tag-promote tasks.
     tasks:
@@ -160,7 +162,7 @@ spec:
           - name: REPO
             value: agentic-forges/forgejo-mcp
 
-      # dn0 — App OCI image (forgejo.b4mad.net/agentic-forges/forgejo-mcp).
+      # dn0 — App OCI image (git.b4mad.industries/agentic-forges/forgejo-mcp).
       # Reuses the
       # release-tools image tasks. The Containerfile compiles its own binary, so
       # it is logically independent of goreleaser. It MUST NOT run in parallel
@@ -211,7 +213,7 @@ spec:
           - name: IMAGE
             value: "forgejo-mcp:$(tasks.resolve-tag.results.tag)"
           - name: REGISTRY_IMAGE
-            value: "forgejo.b4mad.net/agentic-forges/forgejo-mcp"
+            value: "git.b4mad.industries/agentic-forges/forgejo-mcp"
           - name: TAG
             value: $(tasks.resolve-tag.results.tag)
 
@@ -262,7 +264,7 @@ spec:
           - name: TAG
             value: $(tasks.resolve-tag.results.tag)
           - name: REGISTRY_IMAGE
-            value: "forgejo.b4mad.net/agentic-forges/forgejo-mcp"
+            value: "git.b4mad.industries/agentic-forges/forgejo-mcp"
 
     # Fail-closed cleanup (bd forgejo-mcp-9r4): if attach-image-sbom did not
     # succeed — which also covers a skipped attach when cosign-sign failed
@@ -282,7 +284,7 @@ spec:
             workspace: registry-credentials
         params:
           - name: REGISTRY_IMAGE
-            value: "forgejo.b4mad.net/agentic-forges/forgejo-mcp"
+            value: "git.b4mad.industries/agentic-forges/forgejo-mcp"
           - name: TAG
             value: $(tasks.resolve-tag.results.tag)
 
@@ -302,7 +304,7 @@ spec:
     - name: registry-credentials
       secret:
         # Repointed 2026-07-29: push to
-        # forgejo.b4mad.net/agentic-forges/forgejo-mcp using the forgejo-pusher
+        # git.b4mad.industries/agentic-forges/forgejo-mcp using the forgejo-pusher
         # dockerconfigjson Secret in op1st-pipelines (identity
         # b4mad-release-bot). Package write on the agentic-forges org is a
         # SEPARATE grant from the PAT's `write:package` scope — the bot is a

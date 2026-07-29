@@ -1,14 +1,28 @@
 apiVersion: pipelinesascode.tekton.dev/v1alpha1
 kind: Repository
 metadata:
+  # Historical name, from when the forge answered to forgejo.b4mad.net. Do NOT
+  # "fix" it to match the new hostname: renaming a Repository CR creates a new
+  # object and orphans the one PaC is already using, along with its secrets.
+  # The name is arbitrary; only spec.url below has to be right.
   name: forgejo-b4mad-agentic-forges-forgejo-mcp
   namespace: op1st-pipelines
 spec:
-  url: https://forgejo.b4mad.net/agentic-forges/forgejo-mcp
+  # MUST equal the repository URL Forgejo puts in the webhook payload, or PaC
+  # silently matches nothing and tag pushes stop triggering releases.
+  #
+  # ⚠️ VERIFY THIS BEFORE RELYING ON A RELEASE. As of 2026-07-29 the two
+  # sources of truth disagreed: the API reported git.b4mad.industries as
+  # clone_url/html_url from both hostnames, but the last observed webhook
+  # (feeldata-dev, 15:32Z) still carried forgejo.b4mad.net. Whichever the
+  # payload actually says is what belongs here. Read it off a real run:
+  #   oc get pipelinerun -A -o jsonpath=\
+  #     '{range .items[*]}{.metadata.annotations.pipelinesascode\.tekton\.dev/repo-url}{"\n"}{end}'
+  url: https://git.b4mad.industries/agentic-forges/forgejo-mcp
   git_provider:
     type: forgejo
-    url: https://forgejo.b4mad.net
-    # Per-instance PaC credentials for forgejo.b4mad.net, mirroring the working
+    url: https://git.b4mad.industries
+    # Per-instance PaC credentials for git.b4mad.industries, mirroring the working
     # feeldata-dev/forgejo-feeldata-app Repository. The token must carry
     # read:repository + write:repository scope on agentic-forges/forgejo-mcp
     # so PaC can report commit status back.

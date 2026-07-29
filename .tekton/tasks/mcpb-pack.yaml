@@ -32,7 +32,7 @@ spec:
     - name: FORGE_API
       description: Forgejo API base URL.
       type: string
-      default: https://forgejo.b4mad.net/api/v1
+      default: https://git.b4mad.industries/api/v1
     - name: PLATFORMS
       description: |
         Space-separated list of `goos/goarch` pairs to pack. Default

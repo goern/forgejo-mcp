@@ -2,15 +2,26 @@
 
 > **📦 This project has moved.** Development, issues, releases, and container
 > images now live at
-> **<https://forgejo.b4mad.net/agentic-forges/forgejo-mcp>**.
+> **<https://git.b4mad.industries/agentic-forges/forgejo-mcp>**.
 > The Codeberg repository at `codeberg.org/goern/forgejo-mcp` remains only as a
 > read-only mirror, and its container registry no longer publishes images —
-> pull from `forgejo.b4mad.net/agentic-forges/forgejo-mcp` instead. Issue
+> pull from `git.b4mad.industries/agentic-forges/forgejo-mcp` instead. Issue
 > numbers are preserved across the move. Contributions from humans **and**
 > AI agents are welcome at the new location.
 >
 > ```bash
-> git clone https://forgejo.b4mad.net/agentic-forges/forgejo-mcp.git
+> git clone https://git.b4mad.industries/agentic-forges/forgejo-mcp.git
+> ```
+>
+> If you have a remote or a bookmark pointing at `forgejo.b4mad.net`, that is
+> the **same** forge under its previous name — renamed 2026-07-29, not moved
+> again. The old name still resolves and serves port 2222 with the same host
+> key, so existing clones keep working; repoint them at your leisure:
+>
+> ```bash
+> git remote set-url origin \
+>   ssh://git@git.b4mad.industries:2222/agentic-forges/forgejo-mcp.git
+> ssh-keyscan -p 2222 git.b4mad.industries >> ~/.ssh/known_hosts
 > ```
 
 Connect your AI assistant to Forgejo repositories. Manage issues, pull requests, files, and more through natural language.
@@ -33,7 +44,7 @@ Forgejo MCP Server is an integration plugin that connects Forgejo with [Model Co
 **Option A: Using Go (Recommended)**
 
 ```bash
-git clone https://forgejo.b4mad.net/agentic-forges/forgejo-mcp.git
+git clone https://git.b4mad.industries/agentic-forges/forgejo-mcp.git
 cd forgejo-mcp
 go install .
 ```
@@ -44,7 +55,7 @@ Ensure `$GOPATH/bin` (typically `~/go/bin`) is in your PATH.
 
 **Option B: Download Binary**
 
-Download the latest release from the [releases page](https://forgejo.b4mad.net/agentic-forges/forgejo-mcp/releases).
+Download the latest release from the [releases page](https://git.b4mad.industries/agentic-forges/forgejo-mcp/releases).
 
 For Arch Linux, use your favorite AUR helper:
 
@@ -69,17 +80,17 @@ yay -S forgejo-mcp-bin  # uses pre-built binary
 **Option D: Container image**
 
 A signed multi-stage OCI image is published on every release to
-`forgejo.b4mad.net/agentic-forges/forgejo-mcp`. Run the server without building from source:
+`git.b4mad.industries/agentic-forges/forgejo-mcp`. Run the server without building from source:
 
 ```bash
 # Latest release
 podman run --rm -i \
   -e FORGEJO_ACCESS_TOKEN="<your personal access token>" \
-  forgejo.b4mad.net/agentic-forges/forgejo-mcp:latest \
+  git.b4mad.industries/agentic-forges/forgejo-mcp:latest \
   --transport stdio --url https://your-forgejo-instance.org
 
 # Or pin a specific version
-podman run --rm -i forgejo.b4mad.net/agentic-forges/forgejo-mcp:v2.24.0 --help
+podman run --rm -i git.b4mad.industries/agentic-forges/forgejo-mcp:v2.24.0 --help
 ```
 
 | Tag             | Meaning                                                         |
@@ -505,7 +516,7 @@ its signature, and the binary archive:
 ```bash
 TAG=v2.23.1
 VERSION="${TAG#v}"
-BASE="https://forgejo.b4mad.net/agentic-forges/forgejo-mcp/releases/download/${TAG}"
+BASE="https://git.b4mad.industries/agentic-forges/forgejo-mcp/releases/download/${TAG}"
 
 curl -sSfLO "${BASE}/forgejo-mcp_${VERSION}_checksums.txt"
 curl -sSfLO "${BASE}/forgejo-mcp_${VERSION}_checksums.txt.sig"
@@ -574,7 +585,7 @@ Tekton Chains builder.
 
 ### 6. Verify the container image
 
-The `forgejo.b4mad.net/agentic-forges/forgejo-mcp` application image ([Option D](#1-install))
+The `git.b4mad.industries/agentic-forges/forgejo-mcp` application image ([Option D](#1-install))
 is signed by the same `cosign-signing-key-images` key as the release-tools
 image, carries an attached CycloneDX SBOM, and gets SLSA v1.0 provenance from
 Tekton Chains. Reuse the `cosign-images.pub` key fetched above.
@@ -585,7 +596,7 @@ Verify the signature:
 IMAGE_TAG=v2.24.0   # substitute the release you are pulling
 cosign verify \
   --key cosign-images.pub \
-  "forgejo.b4mad.net/agentic-forges/forgejo-mcp:${IMAGE_TAG}" \
+  "git.b4mad.industries/agentic-forges/forgejo-mcp:${IMAGE_TAG}" \
   | jq .
 ```
 
@@ -595,7 +606,7 @@ Verify the SLSA provenance attestation:
 cosign verify-attestation \
   --type slsaprovenance \
   --key cosign-images.pub \
-  "forgejo.b4mad.net/agentic-forges/forgejo-mcp:${IMAGE_TAG}" \
+  "git.b4mad.industries/agentic-forges/forgejo-mcp:${IMAGE_TAG}" \
   | jq .
 ```
 
@@ -605,7 +616,7 @@ Verify and download the signed CycloneDX SBOM attestation:
 cosign verify-attestation \
   --type cyclonedx \
   --key cosign-images.pub \
-  "forgejo.b4mad.net/agentic-forges/forgejo-mcp:${IMAGE_TAG}" \
+  "git.b4mad.industries/agentic-forges/forgejo-mcp:${IMAGE_TAG}" \
   | jq -r '.payload | @base64d | fromjson | .predicate' > forgejo-mcp.cdx.json
 ```
 
@@ -655,8 +666,8 @@ forgejo-mcp --user-agent "forgejo-mcp/1.0.0" --transport sse --url <url> --token
 
 ## Getting Help
 
-- [Report issues](https://forgejo.b4mad.net/agentic-forges/forgejo-mcp/issues)
-- [View source code](https://forgejo.b4mad.net/agentic-forges/forgejo-mcp)
+- [Report issues](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues)
+- [View source code](https://git.b4mad.industries/agentic-forges/forgejo-mcp)
 
 This repository is also mirrored on [Radicle](https://radicle.xyz/) — a peer-to-peer code collaboration network. Clone via:
 
@@ -670,7 +681,7 @@ See [DEVELOPER.md](DEVELOPER.md) for build instructions, architecture overview, 
 
 ## Known Issues
 
-- **`go install ...@latest` fails** — The `go.mod` contains a `replace` directive (for a forked Forgejo SDK), which prevents remote `go install`. Use the clone-and-build workflow shown in [Quick Start](#quick-start) instead. Tracked in [#67](https://forgejo.b4mad.net/agentic-forges/forgejo-mcp/issues/67).
+- **`go install ...@latest` fails** — The `go.mod` contains a `replace` directive (for a forked Forgejo SDK), which prevents remote `go install`. Use the clone-and-build workflow shown in [Quick Start](#quick-start) instead. Tracked in [#67](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/67).
 
 ## Contributors
 

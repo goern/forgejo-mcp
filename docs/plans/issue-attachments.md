@@ -1,6 +1,6 @@
 # Issue & Comment Attachments — Implementation Plan
 
-**Issue**: [#106](https://forgejo.b4mad.net/agentic-forges/forgejo-mcp/issues/106)
+**Issue**: [#106](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/106)
 **Branch**: `feature/issue-attachments` *(suggested)*
 
 ## Summary
@@ -151,7 +151,7 @@ Constant:
 const MaxInlineDownloadBytes = 1 * 1024 * 1024 // 1 MiB
 ```
 
-Rationale for the 1 MiB cap and the always-include-URL contract: discussion on issue #106 (comments [13701827](https://forgejo.b4mad.net/agentic-forges/forgejo-mcp/issues/106#issuecomment-13701827), [13703888](https://forgejo.b4mad.net/agentic-forges/forgejo-mcp/issues/106#issuecomment-13703888)). For files over the cap, the LLM is expected to fall through to a direct authenticated fetch of `browser_download_url`; this avoids both context-bloat from large base64 payloads and the tmpfile-hygiene / cross-container permission problems that a `save_to_path` parameter would introduce.
+Rationale for the 1 MiB cap and the always-include-URL contract: discussion on issue #106 (comments [13701827](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/106#issuecomment-13701827), [13703888](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/106#issuecomment-13703888)). For files over the cap, the LLM is expected to fall through to a direct authenticated fetch of `browser_download_url`; this avoids both context-bloat from large base64 payloads and the tmpfile-hygiene / cross-container permission problems that a `save_to_path` parameter would introduce.
 
 ### Registration
 

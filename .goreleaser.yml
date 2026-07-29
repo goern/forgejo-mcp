@@ -44,5 +44,5 @@ sboms:
       - 'cyclonedx-json=$document'
 
 gitea_urls:
-  api: https://forgejo.b4mad.net/api/v1
-  download: https://forgejo.b4mad.net
+  api: https://git.b4mad.industries/api/v1
+  download: https://git.b4mad.industries

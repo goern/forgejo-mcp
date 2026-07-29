@@ -4,18 +4,18 @@
   "display_name": "Forgejo",
   "version": "2.20.0",
   "description": "Connect Claude to Codeberg/Forgejo: issues, pull requests, files, branches, labels, milestones, workflows, time tracking, and more.",
-  "long_description": "Wraps the forgejo-mcp server (https://forgejo.b4mad.net/agentic-forges/forgejo-mcp) as a Claude desktop Extension. Exposes the full Forgejo REST API surface to Claude via MCP \u2014 issues, pull requests, repositories, branches, files, comments, labels, milestones, workflows (Forgejo Actions), time tracking, and attachments. Compatible with Codeberg.org out of the box; configure the URL field for self-hosted Forgejo instances.\n\nServer binary by goern (https://forgejo.b4mad.net/goern). Initial extension packaging contributed by Whetstone (https://codeberg.org/whetstone); the server binary itself is unchanged.",
+  "long_description": "Wraps the forgejo-mcp server (https://git.b4mad.industries/agentic-forges/forgejo-mcp) as a Claude desktop Extension. Exposes the full Forgejo REST API surface to Claude via MCP \u2014 issues, pull requests, repositories, branches, files, comments, labels, milestones, workflows (Forgejo Actions), time tracking, and attachments. Compatible with Codeberg.org out of the box; configure the URL field for self-hosted Forgejo instances.\n\nServer binary by goern (https://git.b4mad.industries/goern). Initial extension packaging contributed by Whetstone (https://codeberg.org/whetstone); the server binary itself is unchanged.",
   "author": {
     "name": "goern",
-    "url": "https://forgejo.b4mad.net/goern"
+    "url": "https://git.b4mad.industries/goern"
   },
   "repository": {
     "type": "git",
-    "url": "https://forgejo.b4mad.net/agentic-forges/forgejo-mcp"
+    "url": "https://git.b4mad.industries/agentic-forges/forgejo-mcp"
   },
-  "homepage": "https://forgejo.b4mad.net/agentic-forges/forgejo-mcp",
-  "documentation": "https://forgejo.b4mad.net/agentic-forges/forgejo-mcp/src/branch/main/README.md",
-  "support": "https://forgejo.b4mad.net/agentic-forges/forgejo-mcp/issues",
+  "homepage": "https://git.b4mad.industries/agentic-forges/forgejo-mcp",
+  "documentation": "https://git.b4mad.industries/agentic-forges/forgejo-mcp/src/branch/main/README.md",
+  "support": "https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues",
   "license": "MIT",
   "keywords": [
     "forgejo",

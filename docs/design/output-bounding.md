@@ -14,7 +14,7 @@ MCP tool outputs flow into an LLM context window. A single unbounded response
 (diff, file content, commit list, log stream) can blow the window or silently
 truncate at the transport envelope. The caller then sees partial data with no
 signal and no way to fetch the remainder. Issue
-[#124](https://forgejo.b4mad.net/agentic-forges/forgejo-mcp/issues/124) surfaced this on
+[#124](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/124) surfaced this on
 `get_pull_request_diff`, `get_file_content`, `list_pull_request_files`,
 `list_pull_reviews`. This document generalizes the fix.
 
@@ -95,5 +95,5 @@ If any answer is "none" or "unclear", the tool is not ready to merge.
 
 ## Retrofitting existing tools
 
-Tracked as the umbrella in [#124](https://forgejo.b4mad.net/agentic-forges/forgejo-mcp/issues/124).
+Tracked as the umbrella in [#124](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/124).
 Sub-issues should target one tool at a time and reference this document.

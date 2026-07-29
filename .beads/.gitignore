@@ -25,6 +25,8 @@ push-state.json
 # Local version tracking (prevents upgrade notification spam after git ops)
 .local_version
 
+proxied_server_client_info.json
+
 # Worktree redirect file (contains relative path to main repo's .beads/)
 # Must not be committed as paths would be wrong in other clones
 redirect
@@ -34,6 +36,7 @@ redirect
 .sync.lock
 export-state/
 export-state.json
+last_pull
 
 # Ephemeral store (SQLite - wisps/molecules, intentionally not versioned)
 ephemeral.sqlite3
@@ -48,15 +51,14 @@ dolt-server.lock
 dolt-server.port
 dolt-server.activity
 
+# Debug-mode pprof artifacts (written when dolt.debug: true in config.yaml)
+dolt-pprof/
+
 # Corrupt backup directories (created by bd doctor --fix recovery)
 *.corrupt.backup/
 
 # Backup data (auto-exported JSONL, local-only)
 backup/
-
-# JSONL exports (auto-generated, local-only)
-issues.jsonl
-interactions.jsonl
 
 # Per-project environment file (Dolt connection config, GH#2520)
 .env

@@ -37,7 +37,7 @@ spec:
     - name: FORGE_API
       description: Forgejo API base URL.
       type: string
-      default: https://forgejo.b4mad.net/api/v1
+      default: https://git.b4mad.industries/api/v1
   workspaces:
     - name: source
       mountPath: /workspace/src
