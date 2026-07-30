@@ -35,7 +35,7 @@ Forgejo MCP Server is an integration plugin that connects Forgejo with [Model Co
 - "Create an issue titled 'Bug in login page'"
 - "Show me open pull requests in my-org/my-repo"
 - "Get the contents of README.md from the main branch"
-- "Show me the latest Actions workflow runs in goern/forgejo-mcp"
+- "Show me the latest Actions workflow runs in agentic-forges/forgejo-mcp"
 
 ## Quick Start
 
