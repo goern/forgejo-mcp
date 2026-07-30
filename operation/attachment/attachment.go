@@ -4,11 +4,14 @@
 package attachment
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"time"
 
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation/params"
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/forgejo"
@@ -19,6 +22,35 @@ import (
 	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+)
+
+// Upload safety limits — see coordination#106. Multiple agents reported
+// create_*_attachment failing with "illegal base64 data" at a variable byte
+// offset (~1.5KB-4.9KB observed) and, once, hanging a caller for ~30
+// minutes. A size-sweep repro against the real stdio transport (see
+// test/transport/sweep_test.go) found no corruption or hang in this server
+// for payloads from 1KB to 100KB — the root cause is upstream of this
+// process (the calling MCP client/harness), not in this server's read,
+// decode, or upload path. These two guards exist regardless, as defense in
+// depth: they bound worst-case behavior for a huge or malformed content
+// argument (whatever produced it) so a broken upload always fails fast with
+// a clear, actionable error instead of hanging or failing with a bare
+// stdlib error message.
+const (
+	// maxAttachmentContentB64Bytes caps the base64 `content` argument
+	// accepted by create_issue_attachment / create_comment_attachment.
+	// 64MiB of raw file data is ~85MiB of base64; comment/issue attachments
+	// have no legitimate reason to be anywhere near that, so this exists
+	// only to reject a runaway/malformed argument immediately rather than
+	// paying to allocate and decode it first.
+	maxAttachmentContentB64Bytes = 90 * 1024 * 1024
+
+	// attachmentUploadTimeout bounds the multipart upload call so a stuck
+	// network path fails with a clear, specific error well inside the
+	// caller's own patience, instead of running to the underlying HTTP
+	// client's 60s timeout (or beyond, if something upstream never returns
+	// control at all).
+	attachmentUploadTimeout = 45 * time.Second
 )
 
 const (
@@ -256,16 +288,19 @@ func CreateIssueAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 		return to.ErrorResult(fmt.Errorf("index: %w", err))
 	}
 	mimeType, _ := args["mime_type"].(string)
-	reader, filename, err := upload.Open(upload.SourceFromArguments(args))
+	reader, filename, err := openAttachmentSource(args)
 	if err != nil {
 		return to.ErrorResult(err)
 	}
 	defer reader.Close()
 
+	uploadCtx, cancel := context.WithTimeout(ctx, attachmentUploadTimeout)
+	defer cancel()
+
 	var att forgejo_sdk.Attachment
 	path := forgejo.APIPath("repos", owner, repo, "issues", int64(index), "assets")
-	if err := forgejo.DoMultipart(ctx, http.MethodPost, path, multipartFieldName, filename, mimeType, reader, &att); err != nil {
-		return to.ErrorResult(fmt.Errorf("create issue attachment err: %w", err))
+	if err := forgejo.DoMultipart(uploadCtx, http.MethodPost, path, multipartFieldName, filename, mimeType, reader, &att); err != nil {
+		return to.ErrorResult(fmt.Errorf("create issue attachment err: %w", wrapUploadTimeout(uploadCtx, err)))
 	}
 	return to.TextResult(att)
 }
@@ -386,16 +421,19 @@ func CreateCommentAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*m
 		return to.ErrorResult(fmt.Errorf("comment_id: %w", err))
 	}
 	mimeType, _ := args["mime_type"].(string)
-	reader, filename, err := upload.Open(upload.SourceFromArguments(args))
+	reader, filename, err := openAttachmentSource(args)
 	if err != nil {
 		return to.ErrorResult(err)
 	}
 	defer reader.Close()
 
+	uploadCtx, cancel := context.WithTimeout(ctx, attachmentUploadTimeout)
+	defer cancel()
+
 	var att forgejo_sdk.Attachment
 	path := forgejo.APIPath("repos", owner, repo, "issues", "comments", int64(cid), "assets")
-	if err := forgejo.DoMultipart(ctx, http.MethodPost, path, multipartFieldName, filename, mimeType, reader, &att); err != nil {
-		return to.ErrorResult(fmt.Errorf("create comment attachment err: %w", err))
+	if err := forgejo.DoMultipart(uploadCtx, http.MethodPost, path, multipartFieldName, filename, mimeType, reader, &att); err != nil {
+		return to.ErrorResult(fmt.Errorf("create comment attachment err: %w", wrapUploadTimeout(uploadCtx, err)))
 	}
 	return to.TextResult(att)
 }
@@ -443,6 +481,64 @@ func DeleteCommentAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*m
 		return to.ErrorResult(fmt.Errorf("delete comment attachment err: %w", err))
 	}
 	return to.TextResult(map[string]string{"status": "deleted"})
+}
+
+// decodeAttachmentContent validates and decodes the base64 `content`
+// argument for create_issue_attachment / create_comment_attachment.
+//
+// It rejects oversized input before decoding (see maxAttachmentContentB64Bytes)
+// and, on a base64 decode failure, reports the received length alongside the
+// stdlib error. That length is the single most useful diagnostic for
+// coordination#106-shaped reports: it tells the next person hitting this
+// immediately how many bytes THIS SERVER actually received, so they can
+// compare against what they sent and see at a glance whether the payload
+// was already truncated before it reached this process (a transport-layer
+// problem upstream of this repo) — without needing to re-run the whole
+// investigation.
+func decodeAttachmentContent(content string) ([]byte, error) {
+	if len(content) > maxAttachmentContentB64Bytes {
+		return nil, fmt.Errorf("content too large: %d base64 bytes exceeds the %d byte limit", len(content), maxAttachmentContentB64Bytes)
+	}
+	raw, err := base64.StdEncoding.DecodeString(content)
+	if err != nil {
+		return nil, fmt.Errorf("content must be base64-encoded (received %d bytes): %w", len(content), err)
+	}
+	return raw, nil
+}
+
+// openAttachmentSource resolves an attachment upload source from the raw MCP
+// arguments. Base64 `content` is decoded here, through decodeAttachmentContent,
+// so the coordination#106 size cap and diagnostic still apply — pkg/upload's
+// own base64 branch has neither, since it predates that hardening. A
+// `file_path` source is delegated entirely to upload.Open, which carries the
+// FORGEJO_MCP_ALLOW_FILE_PATH_UPLOAD / FORGEJO_MCP_UPLOAD_ROOT gate.
+func openAttachmentSource(args map[string]any) (io.ReadCloser, string, error) {
+	source := upload.SourceFromArguments(args)
+	if source.Content != nil {
+		if source.FilePath != nil {
+			return nil, "", fmt.Errorf("exactly one of content or file_path is required")
+		}
+		if source.Filename == "" {
+			return nil, "", fmt.Errorf("filename is required when content is used")
+		}
+		raw, err := decodeAttachmentContent(*source.Content)
+		if err != nil {
+			return nil, "", err
+		}
+		return io.NopCloser(bytes.NewReader(raw)), source.Filename, nil
+	}
+	return upload.Open(source)
+}
+
+// wrapUploadTimeout annotates err with a clear, specific message when the
+// upload's own context deadline (attachmentUploadTimeout) is what ended the
+// call, so a caller sees "upload timed out after 45s" instead of a bare
+// "context deadline exceeded" buried inside an HTTP transport error.
+func wrapUploadTimeout(ctx context.Context, err error) error {
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return fmt.Errorf("upload timed out after %s: %w", attachmentUploadTimeout, err)
+	}
+	return err
 }
 
 // --- shared helpers ---------------------------------------------------------

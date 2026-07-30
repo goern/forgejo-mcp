@@ -406,6 +406,45 @@ func TestCreateIssueAttachmentFn_RejectsNonBase64(t *testing.T) {
 	}
 }
 
+// TestCreateIssueAttachmentFn_RejectsNonBase64_ReportsReceivedLength covers
+// the coordination#106 diagnostic improvement: a decode failure must report
+// how many bytes THIS SERVER received, so a caller can tell at a glance
+// whether truncation happened upstream of this process.
+func TestCreateIssueAttachmentFn_RejectsNonBase64_ReportsReceivedLength(t *testing.T) {
+	newBackend(t)
+	content := "not base64!!!"
+	_, err := CreateIssueAttachmentFn(context.Background(), req(map[string]any{
+		"owner": "o", "repo": "r", "index": 3.0,
+		"content": content, "filename": "f.bin",
+	}))
+	if err == nil {
+		t.Fatalf("expected error for non-base64 content")
+	}
+	wantFragment := fmt.Sprintf("received %d bytes", len(content))
+	if !strings.Contains(err.Error(), wantFragment) {
+		t.Fatalf("error %q does not report received length (want fragment %q)", err.Error(), wantFragment)
+	}
+}
+
+// TestCreateCommentAttachmentFn_RejectsOversizedContent covers the
+// coordination#106 defense-in-depth guard: a runaway/malformed content
+// argument must be rejected immediately, before decode or upload is
+// attempted, with a clear size-limit error.
+func TestCreateCommentAttachmentFn_RejectsOversizedContent(t *testing.T) {
+	newBackend(t)
+	huge := strings.Repeat("A", maxAttachmentContentB64Bytes+1)
+	_, err := CreateCommentAttachmentFn(context.Background(), req(map[string]any{
+		"owner": "o", "repo": "r", "comment_id": 1.0,
+		"content": huge, "filename": "f.bin",
+	}))
+	if err == nil {
+		t.Fatalf("expected error for oversized content")
+	}
+	if !strings.Contains(err.Error(), "too large") {
+		t.Fatalf("expected a size-limit error, got: %v", err)
+	}
+}
+
 func TestCreateIssueAttachmentFn_RequiresFilename(t *testing.T) {
 	newBackend(t)
 	_, err := CreateIssueAttachmentFn(context.Background(), req(map[string]any{
