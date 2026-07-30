@@ -42,7 +42,7 @@ metadata:
     # depends on resolve-tag.
     # Required Secrets in op1st-pipelines (operator-confirmable preconditions):
     #   - forgejo-pusher            (dockerconfigjson — push auth for
-    #     git.b4mad.industries). Identity b4mad-release-bot, PAT scope
+    #     git.b4mad.industries). Identity b4mad-release-agent, PAT scope
     #     `write:package`, granted repo write via the agentic-forges
     #     `release-bots` team (repo.packages + repo.releases). Verified
     #     2026-07-29 via /v2/token scope introspection; a real push is the only
@@ -306,8 +306,14 @@ spec:
         # Repointed 2026-07-29: push to
         # git.b4mad.industries/agentic-forges/forgejo-mcp using the forgejo-pusher
         # dockerconfigjson Secret in op1st-pipelines (identity
-        # b4mad-release-bot). Package write on the agentic-forges org is a
-        # SEPARATE grant from the PAT's `write:package` scope — the bot is a
-        # member of the `release-bots` team (repo.packages + repo.releases,
-        # permission write) scoped to this repo.
+        # b4mad-release-agent, user id 17). Package write on the
+        # agentic-forges org is a SEPARATE grant from the PAT's
+        # `write:package` scope — the agent is a member of the `release-bots`
+        # team (repo.packages + repo.releases, permission write) scoped to
+        # this repo.
+        #
+        # The username in the dockerconfigjson is cosmetic: the forge resolves
+        # the identity from the PAT alone (verified 2026-07-30 — an arbitrary
+        # username with this token still returns a push-scoped /v2/ JWT for
+        # user 17). Renaming the account therefore does not invalidate it.
         secretName: forgejo-pusher

@@ -128,7 +128,8 @@ visible from `oc get secret`). Operator must confirm once on Codeberg UI:
   `write:repository` on `goern/forgejo-mcp` (covers release publish +
   asset upload). Read-only PaC tokens like `codeberg-runner-openshift-pac`
   do **not** suffice.
-- The PAT identity (e.g. `b4mad-release-bot`) is whoever should appear as
+- The PAT identity (e.g. `b4mad-release-agent`, renamed from
+  `b4mad-release-bot` on 2026-07-30) is whoever should appear as
   release author in the Codeberg UI.
 - `cosign-signing-key.cosign.pub` in `op1st-pipelines` matches the
   normative public key at
