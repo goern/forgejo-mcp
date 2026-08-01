@@ -4,7 +4,6 @@
         "config:best-practices",
         "default:automergeDigest",
         "mergeConfidence:all-badges",
-        ":rebaseStalePrs",
         ":enableVulnerabilityAlertsWithLabel('security')"
     ],
     "enabled": true,
@@ -13,9 +12,10 @@
         "docker-compose",
         "dockerfile"
     ],
-    "automergeSchedule": [
-        "* * * * *"
+    "description": [
+        "rebaseWhen is deliberately NOT ':rebaseStalePrs'. main advances several times a day from its own digest automerges, so rebase-on-stale force-pushed every open PR roughly hourly, and each new head SHA re-fired both PaC PipelineRuns. PR #359 burned 26 green runs over 10 days that way without a single line changing. Rebase only when a PR genuinely cannot merge."
     ],
+    "rebaseWhen": "conflicted",
     "packageRules": [
         {
             "description": "Automerge container image patch, minor, and digest updates; hold major for review",
@@ -27,6 +27,17 @@
                 "patch",
                 "digest",
                 "pin"
+            ],
+            "automerge": true
+        },
+        {
+            "description": "Automerge npm patch and minor updates; hold major for review. Without this, npm PRs matched no automerge rule at all and sat open until a human noticed them.",
+            "matchManagers": [
+                "npm"
+            ],
+            "matchUpdateTypes": [
+                "minor",
+                "patch"
             ],
             "automerge": true
         }
