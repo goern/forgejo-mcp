@@ -1,0 +1,54 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Triage persona manifest.
+# Declares HOW the worker runs. The prompt (prompts/triage.md) declares WHAT it
+# does and its output contract. Adding another task = new yaml + md, no pipeline
+# change (see agent-persona spec).
+name: triage
+description: >-
+  Read a Codeberg/Forgejo issue and its repo context, then emit a structured
+  triage decision (one action: insufficient | sufficient | blocked | duplicate)
+  with clarity scores and label suggestions. Read-only; never mutates the repo.
+
+# Runtime driver. pi consumes this via PI_CLAUDE_RUNTIME_DRIVER; claude-code is
+# the default worker, claude-cli is a same-surface swap.
+driver: claude-code
+
+# Provider-qualified model id (NOT a bare name). Sonnet for triage because
+# duplicate/blocked detection needs real reasoning and the duplicate action has
+# a precision floor (see issue-triage-task quality bar).
+model: anthropic/claude-sonnet-4-6
+thinkingLevel: medium
+
+# Tool allowlist for the pi BRAIN. The brain orchestrates a read-only claude-code
+# peer (ca-leash peer_* tools) and reads the input; it does NOT touch the repo
+# itself. The peer reaches the repo through the read-only, tokenless forgejo MCP
+# server (.mcp.json baked at /opt/ca-peer) — so the actual repo reads are the
+# peer's, gated by having no write credential anywhere in this step.
+tools:
+  - read          # read input.json / local files
+  - peer_start    # start the read-only claude-code peer
+  - peer_ask      # ask it for findings
+  - peer_history  # inspect its replies
+  - peer_stop     # tear it down
+
+# What the worker does + its output contract.
+prompt: .castra/prompts/triage.md
+
+# Named inputs the pipeline must provide in input.json.
+inputs:
+  issue_url:
+    required: true
+    description: Canonical URL of the issue/PR being triaged.
+
+# v1 pins the single triage payload schema; per-persona indirection arrives with
+# task #2 (design D7).
+decisionSchema: schemas/triage.decision.schema.json
+
+# Least-privilege Forgejo scopes the trusted apply step may use for THIS persona.
+# This is the ceiling: the apply step cannot mutate beyond what is declared here.
+# Triage writes labels + a comment on issues; everything else is read.
+appPermissions:
+  issues: write
+  pull_requests: read
+  contents: read
+  metadata: read

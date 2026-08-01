@@ -25,6 +25,19 @@
                 "https://codeberg.org"
             ],
             "env": {}
+        },
+        "b4mad": {
+            "type": "stdio",
+            "command": "/home/goern/go/bin/forgejo-mcp",
+            "args": [
+                "-transport",
+                "stdio",
+                "-token",
+                "${B4MAD_ACCESS_TOKEN}",
+                "-url",
+                "https://git.b4mad.industries"
+            ],
+            "env": {}
         }
     }
 }
