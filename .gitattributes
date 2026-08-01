@@ -1,3 +1,8 @@
 
 # Use bd merge for beads JSONL files
 .beads/issues.jsonl merge=beads
+
+# Vendored agent skills. Tracked on purpose — skills-lock.json pins no commit,
+# so these files are the only reviewable record of what our agents are told to
+# do. Marked generated so they collapse in diffs and stay out of review noise.
+.agents/** linguist-generated=true
