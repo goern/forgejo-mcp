@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/flag"
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/forgejo"
@@ -442,6 +443,81 @@ func TestCreateCommentAttachmentFn_RejectsOversizedContent(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "too large") {
 		t.Fatalf("expected a size-limit error, got: %v", err)
+	}
+}
+
+// withShortUploadTimeout shrinks attachmentUploadTimeout for the duration of
+// a test, restoring the production 45s value on cleanup. See coordination#106:
+// the fix wraps create_*_attachment uploads in a context timeout so a stuck
+// network path can never again present as an unbounded hang; these tests
+// prove that path actually fires and bounds wall-clock time, rather than
+// just asserting the constant exists.
+func withShortUploadTimeout(t *testing.T, d time.Duration) {
+	t.Helper()
+	orig := attachmentUploadTimeout
+	attachmentUploadTimeout = d
+	t.Cleanup(func() { attachmentUploadTimeout = orig })
+}
+
+// hangingHandler never writes a response; it blocks until the request
+// context is canceled (i.e. until the client-side upload timeout fires),
+// simulating a stuck network path / unresponsive Codeberg backend.
+func hangingHandler(w http.ResponseWriter, r *http.Request) {
+	<-r.Context().Done()
+}
+
+func TestCreateIssueAttachmentFn_UploadTimeout(t *testing.T) {
+	withShortUploadTimeout(t, 100*time.Millisecond)
+	newBackend(t, route{
+		method:     http.MethodPost,
+		pathPrefix: "/api/v1/repos/o/r/issues/3/assets",
+		handler:    hangingHandler,
+	})
+
+	start := time.Now()
+	_, err := CreateIssueAttachmentFn(context.Background(), req(map[string]any{
+		"owner": "o", "repo": "r", "index": 3.0,
+		"content": base64.StdEncoding.EncodeToString([]byte("hang me")), "filename": "f.bin",
+	}))
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatalf("expected a timeout error, got nil (upload should not hang forever)")
+	}
+	if !strings.Contains(err.Error(), "upload timed out after") {
+		t.Fatalf("expected a clear upload-timeout error, got: %v", err)
+	}
+	// Generous bound (10x the injected timeout) to absorb scheduler jitter
+	// while still proving the call returned promptly rather than hanging
+	// for the production 45s (or indefinitely, as in the original report).
+	if elapsed > time.Second {
+		t.Fatalf("upload took %s to time out; want well under the injected 100ms bound (bounded, not hung)", elapsed)
+	}
+}
+
+func TestCreateCommentAttachmentFn_UploadTimeout(t *testing.T) {
+	withShortUploadTimeout(t, 100*time.Millisecond)
+	newBackend(t, route{
+		method:     http.MethodPost,
+		pathPrefix: "/api/v1/repos/o/r/issues/comments/1/assets",
+		handler:    hangingHandler,
+	})
+
+	start := time.Now()
+	_, err := CreateCommentAttachmentFn(context.Background(), req(map[string]any{
+		"owner": "o", "repo": "r", "comment_id": 1.0,
+		"content": base64.StdEncoding.EncodeToString([]byte("hang me")), "filename": "f.bin",
+	}))
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatalf("expected a timeout error, got nil (upload should not hang forever)")
+	}
+	if !strings.Contains(err.Error(), "upload timed out after") {
+		t.Fatalf("expected a clear upload-timeout error, got: %v", err)
+	}
+	if elapsed > time.Second {
+		t.Fatalf("upload took %s to time out; want well under the injected 100ms bound (bounded, not hung)", elapsed)
 	}
 }
 

@@ -45,13 +45,18 @@ const (
 	// paying to allocate and decode it first.
 	maxAttachmentContentB64Bytes = 90 * 1024 * 1024
 
-	// attachmentUploadTimeout bounds the multipart upload call so a stuck
-	// network path fails with a clear, specific error well inside the
+	// defaultAttachmentUploadTimeout bounds the multipart upload call so a
+	// stuck network path fails with a clear, specific error well inside the
 	// caller's own patience, instead of running to the underlying HTTP
 	// client's 60s timeout (or beyond, if something upstream never returns
 	// control at all).
-	attachmentUploadTimeout = 45 * time.Second
+	defaultAttachmentUploadTimeout = 45 * time.Second
 )
+
+// attachmentUploadTimeout is a var (not const) so tests can shrink it to
+// exercise the timeout path without a real 45s wait; production code never
+// reassigns it, so it always behaves as the 45s constant above.
+var attachmentUploadTimeout = defaultAttachmentUploadTimeout
 
 const (
 	// Issue-scoped tool names
