@@ -668,6 +668,7 @@ forgejo-mcp --user-agent "forgejo-mcp/1.0.0" --transport sse --url <url> --token
 
 - [Report issues](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues)
 - [View source code](https://git.b4mad.industries/agentic-forges/forgejo-mcp)
+- [Chat on Matrix](https://matrix.to/#/%23forgejo-mcp:b4mad.net) — `#forgejo-mcp:b4mad.net`
 
 This repository is also mirrored on [Radicle](https://radicle.xyz/) — a peer-to-peer code collaboration network. Clone via:
 
