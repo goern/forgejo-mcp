@@ -11,7 +11,11 @@
         "npm",
         "docker-compose",
         "dockerfile",
+        "gomod",
         "custom.regex"
+    ],
+    "postUpdateOptions": [
+        "gomodTidy"
     ],
     "customManagers": [
         {
@@ -53,6 +57,28 @@
                 "patch"
             ],
             "automerge": true
+        },
+        {
+            "description": "Automerge Go module patch and minor updates; hold major for review. Only the three direct requires are in scope: Renovate disables gomod indirect deps by default, and `go mod tidy` (postUpdateOptions gomodTidy) keeps the indirect block consistent, so enabling them would only produce a PR per go-openapi/swag submodule for no gain.",
+            "matchManagers": [
+                "gomod"
+            ],
+            "matchUpdateTypes": [
+                "minor",
+                "patch"
+            ],
+            "automerge": true
+        },
+        {
+            "description": "The Go toolchain line in go.mod is not a dependency bump -- moving it changes the language version the whole module compiles against, and it has to move together with the builder image in the Containerfile. Always a human.",
+            "matchDatasources": [
+                "golang-version"
+            ],
+            "automerge": false,
+            "labels": [
+                "Kind/Enhancement",
+                "go-toolchain-bump"
+            ]
         },
         {
             "description": "release-tools toolchain bumps (npm tools and the annotated version ARGs) — PR only, never automerged. These land in the image that cuts every release, so they get a human. Also migrated from the dead image/release-tools/renovate.json.",
