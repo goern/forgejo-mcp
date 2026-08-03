@@ -10,8 +10,15 @@ ARG SYFT_VERSION=v1.44.0
 ARG SYFT_SHA256=0e91737aee2b5baf1d255b959630194a302335d848ff97bb07921eb6205b5f5a
 ARG GORELEASER_VERSION=v2.16.0
 ARG GORELEASER_SHA256=eaae05b5eba07533bd0f06846b68c808399504784df00c62eb219541fc04e5e2
+# SYFT_VERSION and GORELEASER_VERSION are intentionally NOT annotated for
+# Renovate: each is paired with a hand-recorded *_SHA256 above, which Renovate
+# cannot recompute, so a version-only PR would ship an image that fails its own
+# `sha256sum -c` gate. Bump those two by hand, checksum and all.
+# renovate: datasource=github-releases depName=sigstore/cosign
 ARG COSIGN_VERSION=v3.0.6
+# GOVULNCHECK_VERSION is a floating `latest` — nothing for Renovate to pin.
 ARG GOVULNCHECK_VERSION=latest
+# renovate: datasource=go depName=github.com/google/go-licenses
 ARG GO_LICENSES_VERSION=v1.6.0
 ARG MCPB_VERSION=2.1.2
 

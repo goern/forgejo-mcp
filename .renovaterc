@@ -10,7 +10,20 @@
     "enabledManagers": [
         "npm",
         "docker-compose",
-        "dockerfile"
+        "dockerfile",
+        "custom.regex"
+    ],
+    "customManagers": [
+        {
+            "customType": "regex",
+            "description": "Version ARGs in image/release-tools/Containerfile annotated with a renovate comment. Only tools whose version is the single source of truth are annotated: SYFT_VERSION and GORELEASER_VERSION are deliberately left out because each is paired with a hand-recorded *_SHA256 ARG that Renovate cannot recompute, so a version-only bump would ship a Containerfile that fails its own checksum gate.",
+            "managerFilePatterns": [
+                "/(^|/)Containerfile$/"
+            ],
+            "matchStrings": [
+                "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+ARG \\w+_VERSION=(?<currentValue>\\S+)"
+            ]
+        }
     ],
     "description": [
         "rebaseWhen is deliberately NOT ':rebaseStalePrs'. main advances several times a day from its own digest automerges, so rebase-on-stale force-pushed every open PR roughly hourly, and each new head SHA re-fired both PaC PipelineRuns. PR #359 burned 26 green runs over 10 days that way without a single line changing. Rebase only when a PR genuinely cannot merge."
@@ -40,6 +53,35 @@
                 "patch"
             ],
             "automerge": true
+        },
+        {
+            "description": "release-tools toolchain bumps (npm tools and the annotated version ARGs) — PR only, never automerged. These land in the image that cuts every release, so they get a human. Also migrated from the dead image/release-tools/renovate.json.",
+            "matchFileNames": [
+                "image/release-tools/npm/package.json",
+                "image/release-tools/Containerfile"
+            ],
+            "automerge": false,
+            "labels": [
+                "Kind/Enhancement",
+                "release-tools/tool-bump"
+            ]
+        },
+        {
+            "description": "release-tools base image — manual review required; the tag is floating (latest-builder), so a digest bump can move the Go toolchain under the release pipeline without any version signal. Migrated here from image/release-tools/renovate.json, which Renovate never read: only the repository-root config file is loaded, so that file's rules had been dead since it was written and this image was being digest-automerged by the generic docker rule above. When Hummingbird publishes a specific MAJOR.MINOR-builder tag, switch to it and drop this rule.",
+            "matchFileNames": [
+                "image/release-tools/Containerfile"
+            ],
+            "matchPackageNames": [
+                "registry.access.redhat.com/hi/go"
+            ],
+            "automerge": false,
+            "reviewers": [
+                "goern"
+            ],
+            "labels": [
+                "Kind/Enhancement",
+                "release-tools/base-image-bump"
+            ]
         }
     ]
 }
