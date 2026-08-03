@@ -19,7 +19,7 @@ ARG COSIGN_VERSION=v3.0.6
 # GOVULNCHECK_VERSION is a floating `latest` — nothing for Renovate to pin.
 ARG GOVULNCHECK_VERSION=latest
 # renovate: datasource=go depName=github.com/google/go-licenses
-ARG GO_LICENSES_VERSION=v1.6.0
+ARG GO_LICENSES_VERSION=v2.0.1
 ARG MCPB_VERSION=2.1.2
 
 # ---------------------------------------------------------------------------
