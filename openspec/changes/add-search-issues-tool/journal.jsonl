@@ -1,0 +1,4 @@
+{"ts":"2026-08-04T14:24:01Z","phase":"any","event":"turn.start","input":"Battle-test proposal and design"}
+{"ts":"2026-08-04T14:24:01Z","phase":"any","event":"agent.spawned","kind":"battle-test","count":"2"}
+{"ts":"2026-08-04T14:30:59Z","phase":"authoring","event":"artifact.added","ref":"battle-test.md"}
+{"ts":"2026-08-04T14:31:00Z","phase":"any","event":"turn.end","output":"Battle-test complete; see battle-test.md"}
