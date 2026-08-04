@@ -3,10 +3,9 @@ kind: PipelineRun
 metadata:
   name: forgejo-mcp-release-tools-on-tag-publish
   annotations:
-    pipelinesascode.tekton.dev/on-event: "[push]"
-    pipelinesascode.tekton.dev/on-target-branch: "[refs/tags/release-tools/v*]"
-    # A1 tag-isolation + belt-and-suspenders (older PaC versions may not
-    # enforce on-target-branch prefix correctly): CEL re-checks the full ref.
+    # A1 tag-isolation. Matching is CEL-only: PaC ignores
+    # on-event/on-target-branch entirely whenever on-cel-expression is
+    # present, so the expression checks the full ref itself.
     pipelinesascode.tekton.dev/on-cel-expression: |
       event == "push" && target_branch.matches("^refs/tags/release-tools/v.*")
     pipelinesascode.tekton.dev/task: "[git-clone, .tekton/release-tools/tasks/resolve-release-tools-tag.yaml, .tekton/release-tools/tasks/build-image.yaml, .tekton/release-tools/tasks/push-image-by-digest.yaml, .tekton/release-tools/tasks/cosign-sign-image-by-digest.yaml, .tekton/release-tools/tasks/cosign-attach-sbom.yaml, .tekton/release-tools/tasks/promote-image-tag.yaml, .tekton/release-tools/tasks/delete-tag-on-failure.yaml]"
