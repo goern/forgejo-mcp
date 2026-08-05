@@ -17,8 +17,8 @@ echo "Building ${IMAGE_NAME}:${IMAGE_TAG} from ${SCRIPT_DIR}"
 podman build \
     --file "${SCRIPT_DIR}/Containerfile" \
     --tag "${IMAGE_NAME}:${IMAGE_TAG}" \
-    --build-arg HI_GO_TAG=latest-builder \
-    --build-arg HI_GO_DIGEST=sha256:d8c8b702b8a54150e8fdca86753f581d98c551ab8a3fd429886d4ddd4e949894 \
+    --build-arg HI_GO_TAG=1.25.10-builder \
+    --build-arg HI_GO_DIGEST=sha256:1a99d42f555db97455998945faf3c797c1f65ce1b92e4d9952a589446d114d6c \
     --build-arg SYFT_VERSION=v1.44.0 \
     --build-arg GORELEASER_VERSION=v2.16.0 \
     --build-arg COSIGN_VERSION=v3.0.6 \

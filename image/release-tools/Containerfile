@@ -1,11 +1,11 @@
 # release-tools image
 # Versions are pinned via ARGs sourced from VERSIONS.md.
 # Base: Project Hummingbird hi/go (registry.access.redhat.com/hi/go)
-# TAG-FLOATING RISK: only `latest-builder` is available from Hummingbird as of 2026-05-25.
-# Switch to `1.26-builder` or `1.26.3-builder` when Hummingbird publishes a specific tag.
+# Pinned to a specific version tag (not `latest-builder`) so Renovate has a
+# version signal to automerge on, per .renovaterc's release-tools/base-image-bump rule.
 
-ARG HI_GO_TAG=latest-builder
-ARG HI_GO_DIGEST=sha256:c2c7b0e204a331eb392a60cc1fcdeade8cf881f682f8370e5668c5c70d723328
+ARG HI_GO_TAG=1.25.10-builder
+ARG HI_GO_DIGEST=sha256:1a99d42f555db97455998945faf3c797c1f65ce1b92e4d9952a589446d114d6c
 ARG SYFT_VERSION=v1.44.0
 ARG SYFT_SHA256=0e91737aee2b5baf1d255b959630194a302335d848ff97bb07921eb6205b5f5a
 ARG GORELEASER_VERSION=v2.16.0

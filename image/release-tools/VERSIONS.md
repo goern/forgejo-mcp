@@ -7,9 +7,9 @@ Update this file, then regenerate `npm/package-lock.json` and rebuild the image.
 
 | Image | Tag | Digest | Notes |
 |---|---|---|---|
-| `registry.access.redhat.com/hi/go` | `latest-builder` | `sha256:d8c8b702b8a54150e8fdca86753f581d98c551ab8a3fd429886d4ddd4e949894` | **TAG-FLOATING RISK**: Hummingbird has not published a specific `MAJOR.MINOR-builder` tag as of 2026-05-25; only `latest-builder` is available. Upgrade to a pinned `1.26-builder` or `1.26.3-builder` tag when Hummingbird publishes one. Track at https://catalog.redhat.com/software/containers/hi/go/. |
+| `registry.access.redhat.com/hi/go` | `1.25.10-builder` | `sha256:1a99d42f555db97455998945faf3c797c1f65ce1b92e4d9952a589446d114d6c` | Pinned to a specific `MAJOR.MINOR.PATCH-builder` tag published by Hummingbird, replacing the earlier floating `latest-builder`. Track at https://catalog.redhat.com/software/containers/hi/go/. |
 
-Go version shipped: `1.26.3` (from image label `org.opencontainers.image.version`)
+Go version shipped: `1.25.10` (from tag)
 
 ## Tools Installed via Build Stage (compiled/fetched)
 
