@@ -3,6 +3,7 @@ package issue
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -346,5 +347,691 @@ func TestUpdateIssue_NoAssigneeFieldsOmitsAssignees(t *testing.T) {
 		if arr, isArr := v.([]any); isArr && len(arr) > 0 {
 			t.Fatalf("expected no assignees set, got %v", v)
 		}
+	}
+}
+
+// newQueryBackend serves /api/v1/version for SDK startup and dispatches every
+// other request to handler, recording each request's method/path/query. Unlike
+// newPatchBackend, the caller's handler can inspect the query (e.g. page) and
+// answer differently per request — needed to simulate the has_next probe,
+// where page and page+1 must return different bodies.
+func newQueryBackend(t *testing.T, handler func(w http.ResponseWriter, r *http.Request, records *[]recordedReq)) (*httptest.Server, *[]recordedReq) {
+	t.Helper()
+	records := make([]recordedReq, 0, 4)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v1/version", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"version":"11.0.0+gitea-1.22.0"}`))
+	})
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		records = append(records, recordedReq{method: r.Method, path: r.URL.Path, query: r.URL.RawQuery, rawBody: body})
+		w.Header().Set("Content-Type", "application/json")
+		handler(w, r, &records)
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	flag.URL = srv.URL
+	flag.Token = "tkn"
+	flag.UserAgent = "test"
+
+	c, err := forgejo_sdk.NewClient(srv.URL,
+		forgejo_sdk.SetToken("tkn"),
+		forgejo_sdk.SetUserAgent("test"),
+	)
+	if err != nil {
+		t.Fatalf("failed to build SDK client for test: %v", err)
+	}
+	forgejo.SetClientForTesting(c)
+	return srv, &records
+}
+
+// pageFromQuery extracts the "page" query parameter, defaulting to "1" when absent
+// (matching the SDK's own default).
+func pageFromQuery(r *http.Request) string {
+	p := r.URL.Query().Get("page")
+	if p == "" {
+		return "1"
+	}
+	return p
+}
+
+func TestSearchIssues_OwnerFilterAndMultiRepo(t *testing.T) {
+	_, records := newQueryBackend(t, func(w http.ResponseWriter, r *http.Request, _ *[]recordedReq) {
+		if pageFromQuery(r) == "2" {
+			_, _ = w.Write([]byte(`[]`))
+			return
+		}
+		if r.URL.Query().Get("owner") != "goern" {
+			t.Fatalf("expected owner query filter, got %s", r.URL.RawQuery)
+		}
+		_, _ = w.Write([]byte(`[
+			{"id":1,"number":1,"title":"one","repository":{"full_name":"goern/repo-a"}},
+			{"id":2,"number":2,"title":"two","repository":{"full_name":"goern/repo-b"}}]`))
+	})
+
+	res, err := SearchIssuesFn(context.Background(), makeReq(map[string]any{"owner": "goern"}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("SearchIssuesFn err: %v res=%+v", err, res)
+	}
+	text := textOf(res)
+	if !strings.Contains(text, "repo-a") || !strings.Contains(text, "repo-b") {
+		t.Fatalf("expected issues from multiple repos, got %s", text)
+	}
+	if len(*records) == 0 {
+		t.Fatal("expected at least one request to backend")
+	}
+}
+
+func TestSearchIssues_EnvelopeShape(t *testing.T) {
+	_, _ = newQueryBackend(t, func(w http.ResponseWriter, r *http.Request, _ *[]recordedReq) {
+		if pageFromQuery(r) == "2" {
+			_, _ = w.Write([]byte(`[]`))
+			return
+		}
+		_, _ = w.Write([]byte(`[{"id":1,"number":1,"title":"one"},{"id":2,"number":2,"title":"two"}]`))
+	})
+
+	res, err := SearchIssuesFn(context.Background(), makeReq(map[string]any{"owner": "goern"}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("SearchIssuesFn err: %v res=%+v", err, res)
+	}
+	var wrapper struct {
+		Result struct {
+			Issues  []map[string]any `json:"issues"`
+			Page    int              `json:"page"`
+			Limit   int              `json:"limit"`
+			Count   int              `json:"count"`
+			HasNext bool             `json:"has_next"`
+		} `json:"Result"`
+	}
+	if err := json.Unmarshal([]byte(textOf(res)), &wrapper); err != nil {
+		t.Fatalf("invalid envelope JSON: %v\nbody: %s", err, textOf(res))
+	}
+	envelope := wrapper.Result
+	if envelope.Page != 1 || envelope.Limit != 20 {
+		t.Fatalf("expected default page=1 limit=20, got page=%d limit=%d", envelope.Page, envelope.Limit)
+	}
+	if envelope.Count != len(envelope.Issues) {
+		t.Fatalf("count %d does not match issues length %d", envelope.Count, len(envelope.Issues))
+	}
+	if envelope.Count != 2 {
+		t.Fatalf("expected 2 issues, got %d", envelope.Count)
+	}
+}
+
+func TestSearchIssues_HasNextTrueWhenProbeReturnsRows(t *testing.T) {
+	_, records := newQueryBackend(t, func(w http.ResponseWriter, r *http.Request, _ *[]recordedReq) {
+		if pageFromQuery(r) == "2" {
+			_, _ = w.Write([]byte(`[{"id":3,"number":3,"title":"three"}]`))
+			return
+		}
+		_, _ = w.Write([]byte(`[{"id":1,"number":1,"title":"one"}]`))
+	})
+
+	res, err := SearchIssuesFn(context.Background(), makeReq(map[string]any{"owner": "goern", "limit": float64(1)}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("SearchIssuesFn err: %v res=%+v", err, res)
+	}
+	if !strings.Contains(textOf(res), `"has_next":true`) {
+		t.Fatalf("expected has_next true, got %s", textOf(res))
+	}
+	// Current page + probe page.
+	if len(*records) != 2 {
+		t.Fatalf("expected 2 requests (page + probe), got %d", len(*records))
+	}
+}
+
+func TestSearchIssues_HasNextFalseWhenProbeReturnsNoRows(t *testing.T) {
+	_, _ = newQueryBackend(t, func(w http.ResponseWriter, r *http.Request, _ *[]recordedReq) {
+		if pageFromQuery(r) == "2" {
+			_, _ = w.Write([]byte(`[]`))
+			return
+		}
+		_, _ = w.Write([]byte(`[{"id":1,"number":1,"title":"one"}]`))
+	})
+
+	res, err := SearchIssuesFn(context.Background(), makeReq(map[string]any{"owner": "goern"}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("SearchIssuesFn err: %v res=%+v", err, res)
+	}
+	if !strings.Contains(textOf(res), `"has_next":false`) {
+		t.Fatalf("expected has_next false, got %s", textOf(res))
+	}
+}
+
+func TestSearchIssues_HasNextFalseOnEmptyPage(t *testing.T) {
+	_, records := newQueryBackend(t, func(w http.ResponseWriter, _ *http.Request, _ *[]recordedReq) {
+		_, _ = w.Write([]byte(`[]`))
+	})
+
+	res, err := SearchIssuesFn(context.Background(), makeReq(map[string]any{"owner": "goern"}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("SearchIssuesFn err: %v res=%+v", err, res)
+	}
+	if !strings.Contains(textOf(res), `"has_next":false`) || !strings.Contains(textOf(res), `"count":0`) {
+		t.Fatalf("expected empty page with has_next false, got %s", textOf(res))
+	}
+	// No probe should be made when the page itself is empty.
+	if len(*records) != 1 {
+		t.Fatalf("expected exactly 1 request (no probe on empty page), got %d", len(*records))
+	}
+}
+
+func TestSearchIssues_DefaultPagingAndClamping(t *testing.T) {
+	_, records := newQueryBackend(t, func(w http.ResponseWriter, r *http.Request, _ *[]recordedReq) {
+		if pageFromQuery(r) == "2" {
+			_, _ = w.Write([]byte(`[]`))
+			return
+		}
+		if r.URL.Query().Get("limit") != "20" || r.URL.Query().Get("page") != "1" {
+			t.Fatalf("expected clamped page=1 limit=20, got %s", r.URL.RawQuery)
+		}
+		_, _ = w.Write([]byte(`[{"id":1,"number":1,"title":"one"}]`))
+	})
+
+	res, err := SearchIssuesFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern", "page": float64(0), "limit": float64(-5),
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("SearchIssuesFn err: %v res=%+v", err, res)
+	}
+	if !strings.Contains(textOf(res), `"page":1`) || !strings.Contains(textOf(res), `"limit":20`) {
+		t.Fatalf("expected reported page=1 limit=20, got %s", textOf(res))
+	}
+	if len(*records) == 0 {
+		t.Fatal("expected at least one request")
+	}
+}
+
+func TestSearchIssues_CallerRaisedLimit(t *testing.T) {
+	_, records := newQueryBackend(t, func(w http.ResponseWriter, r *http.Request, _ *[]recordedReq) {
+		if pageFromQuery(r) == "2" {
+			_, _ = w.Write([]byte(`[]`))
+			return
+		}
+		if r.URL.Query().Get("limit") != "50" {
+			t.Fatalf("expected limit=50, got %s", r.URL.RawQuery)
+		}
+		_, _ = w.Write([]byte(`[{"id":1,"number":1,"title":"one"}]`))
+	})
+
+	res, err := SearchIssuesFn(context.Background(), makeReq(map[string]any{"owner": "goern", "limit": float64(50)}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("SearchIssuesFn err: %v res=%+v", err, res)
+	}
+	if !strings.Contains(textOf(res), `"limit":50`) {
+		t.Fatalf("expected reported limit=50, got %s", textOf(res))
+	}
+	if len(*records) == 0 {
+		t.Fatal("expected at least one request")
+	}
+}
+
+func TestSearchIssues_MissingOwnerErrorsWithoutUpstreamCall(t *testing.T) {
+	_, records := newQueryBackend(t, func(w http.ResponseWriter, _ *http.Request, _ *[]recordedReq) {
+		_, _ = w.Write([]byte(`[]`))
+	})
+
+	res, err := SearchIssuesFn(context.Background(), makeReq(map[string]any{}))
+	if res != nil {
+		t.Fatalf("expected nil result on error, got %+v", res)
+	}
+	if err == nil || !strings.Contains(err.Error(), "owner") {
+		t.Fatalf("expected error naming owner, got %v", err)
+	}
+	if len(*records) != 0 {
+		t.Fatalf("expected no upstream request, got %d", len(*records))
+	}
+
+	res, err = SearchIssuesFn(context.Background(), makeReq(map[string]any{"owner": ""}))
+	if res != nil {
+		t.Fatalf("expected nil result on error, got %+v", res)
+	}
+	if err == nil || !strings.Contains(err.Error(), "owner") {
+		t.Fatalf("expected error naming owner for empty owner, got %v", err)
+	}
+	if len(*records) != 0 {
+		t.Fatalf("expected no upstream request for empty owner, got %d", len(*records))
+	}
+}
+
+func TestSearchIssues_FilterPassThrough(t *testing.T) {
+	_, records := newQueryBackend(t, func(w http.ResponseWriter, r *http.Request, _ *[]recordedReq) {
+		if pageFromQuery(r) == "2" {
+			_, _ = w.Write([]byte(`[]`))
+			return
+		}
+		q := r.URL.Query()
+		if q.Get("state") != "closed" {
+			t.Fatalf("expected state=closed, got %s", r.URL.RawQuery)
+		}
+		if q.Get("labels") != "bug,triage" {
+			t.Fatalf("expected labels passthrough, got %s", r.URL.RawQuery)
+		}
+		if q.Get("q") != "crash" {
+			t.Fatalf("expected q passthrough, got %s", r.URL.RawQuery)
+		}
+		// type is unconditionally emitted by the SDK, but empty when omitted.
+		if !q.Has("type") || q.Get("type") != "" {
+			t.Fatalf("expected type present and empty, got %s", r.URL.RawQuery)
+		}
+		// Filters the caller omitted must carry no value at all.
+		for _, name := range []string{"created_by", "assigned_by", "mentioned_by", "milestones", "team"} {
+			if q.Has(name) {
+				t.Fatalf("expected %s to be absent, got %s", name, r.URL.RawQuery)
+			}
+		}
+		_, _ = w.Write([]byte(`[{"id":1,"number":1,"title":"one"}]`))
+	})
+
+	res, err := SearchIssuesFn(context.Background(), makeReq(map[string]any{
+		"owner":  "goern",
+		"state":  "closed",
+		"labels": "bug,triage",
+		"q":      "crash",
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("SearchIssuesFn err: %v res=%+v", err, res)
+	}
+	if len(*records) == 0 {
+		t.Fatal("expected at least one request")
+	}
+}
+
+// TestSearchIssues_AllOptionalFiltersPassThrough covers the remaining
+// pass-through filters (type, milestones, created_by, assigned_by,
+// mentioned_by), including the "excluding pull requests" scenario.
+func TestSearchIssues_AllOptionalFiltersPassThrough(t *testing.T) {
+	_, records := newQueryBackend(t, func(w http.ResponseWriter, r *http.Request, _ *[]recordedReq) {
+		if pageFromQuery(r) == "2" {
+			_, _ = w.Write([]byte(`[]`))
+			return
+		}
+		q := r.URL.Query()
+		if q.Get("type") != "issues" {
+			t.Fatalf("expected type=issues, got %s", r.URL.RawQuery)
+		}
+		if q.Get("milestones") != "v1,v2" {
+			t.Fatalf("expected milestones passthrough, got %s", r.URL.RawQuery)
+		}
+		if q.Get("created_by") != "alice" {
+			t.Fatalf("expected created_by passthrough, got %s", r.URL.RawQuery)
+		}
+		if q.Get("assigned_by") != "bob" {
+			t.Fatalf("expected assigned_by passthrough, got %s", r.URL.RawQuery)
+		}
+		if q.Get("mentioned_by") != "carol" {
+			t.Fatalf("expected mentioned_by passthrough, got %s", r.URL.RawQuery)
+		}
+		// The tool never sets opt.Team, so the SDK's "team" bug (design
+		// Decision 5) cannot fire here even though MentionedBy is set.
+		if q.Has("team") {
+			t.Fatalf("expected no team key since the tool never sets opt.Team, got %s", r.URL.RawQuery)
+		}
+		_, _ = w.Write([]byte(`[{"id":1,"number":1,"title":"one","pull_request":null}]`))
+	})
+
+	res, err := SearchIssuesFn(context.Background(), makeReq(map[string]any{
+		"owner":        "goern",
+		"type":         "issues",
+		"milestones":   "v1,v2",
+		"created_by":   "alice",
+		"assigned_by":  "bob",
+		"mentioned_by": "carol",
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("SearchIssuesFn err: %v res=%+v", err, res)
+	}
+	if len(*records) == 0 {
+		t.Fatal("expected at least one request")
+	}
+}
+
+// TestSearchIssues_ClampedPageStillSignalsContinuation is the clamping
+// falsifier from battle-test.md: an instance clamping limit=100 down to 50
+// results must still report has_next true when a further page exists. The
+// count == limit heuristic gets this wrong; the same-limit probe does not.
+func TestSearchIssues_ClampedPageStillSignalsContinuation(t *testing.T) {
+	_, records := newQueryBackend(t, func(w http.ResponseWriter, r *http.Request, _ *[]recordedReq) {
+		if pageFromQuery(r) == "2" {
+			// Further matching issues exist beyond the clamped page.
+			_, _ = w.Write([]byte(`[{"id":51,"number":51,"title":"extra"}]`))
+			return
+		}
+		if r.URL.Query().Get("limit") != "100" {
+			t.Fatalf("expected requested limit=100, got %s", r.URL.RawQuery)
+		}
+		// Simulate the instance clamping at MAX_RESPONSE_ITEMS=50: 50 issues
+		// come back even though the caller asked for 100.
+		issues := make([]string, 0, 50)
+		for i := 1; i <= 50; i++ {
+			issues = append(issues, fmt.Sprintf(`{"id":%d,"number":%d,"title":"issue-%d"}`, i, i, i))
+		}
+		_, _ = w.Write([]byte("[" + strings.Join(issues, ",") + "]"))
+	})
+
+	res, err := SearchIssuesFn(context.Background(), makeReq(map[string]any{"owner": "goern", "limit": float64(100)}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("SearchIssuesFn err: %v res=%+v", err, res)
+	}
+	text := textOf(res)
+	if !strings.Contains(text, `"count":50`) {
+		t.Fatalf("expected count=50 (clamped), got %s", text)
+	}
+	if !strings.Contains(text, `"has_next":true`) {
+		t.Fatalf("count==limit heuristic would report false here; probe must report has_next true, got %s", text)
+	}
+	if len(*records) != 2 {
+		t.Fatalf("expected page request + probe, got %d", len(*records))
+	}
+}
+
+func TestSearchIssues_ClientErrorPropagates(t *testing.T) {
+	// No backend at all: forgejo.Client construction against an unreachable
+	// URL surfaces as an error before any ListIssues call.
+	flag.URL = "http://127.0.0.1:0"
+	flag.Token = "tkn"
+	res, err := SearchIssuesFn(context.Background(), makeReq(map[string]any{"owner": "goern"}))
+	if res != nil {
+		t.Fatalf("expected nil result on error, got %+v", res)
+	}
+	if err == nil {
+		t.Fatal("expected error when client cannot be built")
+	}
+}
+
+func TestSearchIssues_ListIssuesErrorPropagates(t *testing.T) {
+	_, _ = newQueryBackend(t, func(w http.ResponseWriter, _ *http.Request, _ *[]recordedReq) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"message":"boom"}`))
+	})
+	res, err := SearchIssuesFn(context.Background(), makeReq(map[string]any{"owner": "goern"}))
+	if res != nil {
+		t.Fatalf("expected nil result on error, got %+v", res)
+	}
+	if err == nil || !strings.Contains(err.Error(), "search issues err") {
+		t.Fatalf("expected wrapped search issues error, got %v", err)
+	}
+}
+
+func TestSearchIssues_ProbeErrorPropagates(t *testing.T) {
+	_, _ = newQueryBackend(t, func(w http.ResponseWriter, r *http.Request, _ *[]recordedReq) {
+		if pageFromQuery(r) == "2" {
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`{"message":"boom"}`))
+			return
+		}
+		_, _ = w.Write([]byte(`[{"id":1,"number":1,"title":"one"}]`))
+	})
+	res, err := SearchIssuesFn(context.Background(), makeReq(map[string]any{"owner": "goern"}))
+	if res != nil {
+		t.Fatalf("expected nil result on error, got %+v", res)
+	}
+	if err == nil || !strings.Contains(err.Error(), "probe next issues page err") {
+		t.Fatalf("expected wrapped probe error, got %v", err)
+	}
+}
+
+func TestListRepoIssues_EmptyRepoNamesSearchIssues(t *testing.T) {
+	_, records := newQueryBackend(t, func(w http.ResponseWriter, _ *http.Request, _ *[]recordedReq) {
+		_, _ = w.Write([]byte(`[]`))
+	})
+	res, err := ListRepoIssuesFn(context.Background(), makeReq(map[string]any{"owner": "goern", "repo": ""}))
+	if res != nil {
+		t.Fatalf("expected nil result for empty repo, got %+v", res)
+	}
+	if err == nil {
+		t.Fatal("expected error for empty repo")
+	}
+	text := err.Error()
+	if !strings.Contains(text, "repo") {
+		t.Fatalf("expected error to name repo, got %s", text)
+	}
+	if !strings.Contains(text, "search_issues") {
+		t.Fatalf("expected error to mention search_issues, got %s", text)
+	}
+	if strings.Contains(text, "path segment") {
+		t.Fatalf("expected no SDK-internal wording, got %s", text)
+	}
+	if len(*records) != 0 {
+		t.Fatalf("expected no upstream request, got %d", len(*records))
+	}
+}
+
+func TestListRepoIssues_EmptyOwnerErrorsAndWellFormedCallUnchanged(t *testing.T) {
+	_, records := newQueryBackend(t, func(w http.ResponseWriter, _ *http.Request, _ *[]recordedReq) {
+		_, _ = w.Write([]byte(`[{"id":1,"number":1,"title":"one"}]`))
+	})
+
+	res, err := ListRepoIssuesFn(context.Background(), makeReq(map[string]any{"owner": "", "repo": "forgejo-mcp"}))
+	if res != nil {
+		t.Fatalf("expected nil result for empty owner, got %+v", res)
+	}
+	if err == nil || !strings.Contains(err.Error(), "owner") {
+		t.Fatalf("expected error naming owner for empty owner, got %v", err)
+	}
+	if len(*records) != 0 {
+		t.Fatalf("expected no upstream request for empty owner, got %d", len(*records))
+	}
+
+	res, err = ListRepoIssuesFn(context.Background(), makeReq(map[string]any{"owner": "goern", "repo": "forgejo-mcp"}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("well-formed call should be unaffected, got err=%v res=%+v", err, res)
+	}
+	if !strings.Contains(textOf(res), `"title":"one"`) {
+		t.Fatalf("expected issue payload unchanged, got %s", textOf(res))
+	}
+	if len(*records) != 1 {
+		t.Fatalf("expected exactly one upstream request for well-formed call, got %d", len(*records))
+	}
+}
+
+// The tests below cover the remaining simple wrapper handlers so package
+// coverage reflects the state of the code this change touches, not just the
+// two functions changed directly.
+
+func TestGetIssueByIndexFn(t *testing.T) {
+	_, records := newPatchBackend(t, `{"id":1,"number":42,"title":"hello"}`)
+	res, err := GetIssueByIndexFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern", "repo": "forgejo-mcp", "index": float64(42),
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("GetIssueByIndexFn err: %v res=%+v", err, res)
+	}
+	if !strings.Contains(textOf(res), `"title":"hello"`) {
+		t.Fatalf("unexpected result: %s", textOf(res))
+	}
+	if len(*records) != 1 {
+		t.Fatalf("expected one request, got %d", len(*records))
+	}
+}
+
+func TestCreateIssueFn(t *testing.T) {
+	_, records := newPatchBackend(t, `{"id":1,"number":1,"title":"new issue"}`)
+	res, err := CreateIssueFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern", "repo": "forgejo-mcp", "title": "new issue", "body": "body text",
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("CreateIssueFn err: %v res=%+v", err, res)
+	}
+	if !strings.Contains(textOf(res), `"title":"new issue"`) {
+		t.Fatalf("unexpected result: %s", textOf(res))
+	}
+	if len(*records) != 1 {
+		t.Fatalf("expected one request, got %d", len(*records))
+	}
+}
+
+func TestCreateIssueCommentFn(t *testing.T) {
+	_, records := newPatchBackend(t, `{"id":1,"body":"a comment"}`)
+	res, err := CreateIssueCommentFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern", "repo": "forgejo-mcp", "index": float64(1), "body": "a comment",
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("CreateIssueCommentFn err: %v res=%+v", err, res)
+	}
+	if !strings.Contains(textOf(res), `"body":"a comment"`) {
+		t.Fatalf("unexpected result: %s", textOf(res))
+	}
+	if len(*records) != 1 {
+		t.Fatalf("expected one request, got %d", len(*records))
+	}
+}
+
+func TestAddIssueLabelsFn(t *testing.T) {
+	// AddIssueLabels (POST .../labels) returns a label list; the trailing
+	// GetIssue call returns the refreshed issue. Distinguish by method.
+	_, records := newQueryBackend(t, func(w http.ResponseWriter, r *http.Request, _ *[]recordedReq) {
+		if r.Method == http.MethodPost {
+			_, _ = w.Write([]byte(`[{"id":5},{"id":6}]`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"id":1,"number":1,"labels":[{"id":5},{"id":6}]}`))
+	})
+	res, err := AddIssueLabelsFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern", "repo": "forgejo-mcp", "index": float64(1), "labels": "5,6",
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("AddIssueLabelsFn err: %v res=%+v", err, res)
+	}
+	// Two calls: AddIssueLabels then GetIssue to return the refreshed issue.
+	if len(*records) != 2 {
+		t.Fatalf("expected two requests, got %d", len(*records))
+	}
+}
+
+func TestAddIssueLabelsFn_InvalidLabelID(t *testing.T) {
+	_, _ = newPatchBackend(t, `{"id":1}`)
+	res, err := AddIssueLabelsFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern", "repo": "forgejo-mcp", "index": float64(1), "labels": "not-a-number",
+	}))
+	if res != nil {
+		t.Fatalf("expected nil result on invalid label ID, got %+v", res)
+	}
+	if err == nil {
+		t.Fatal("expected error for non-numeric label ID")
+	}
+}
+
+func TestRemoveIssueLabelsFn(t *testing.T) {
+	_, records := newPatchBackend(t, `{"id":1,"number":1,"labels":[]}`)
+	res, err := RemoveIssueLabelsFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern", "repo": "forgejo-mcp", "index": float64(1), "labels": "5",
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("RemoveIssueLabelsFn err: %v res=%+v", err, res)
+	}
+	// Two calls: DeleteIssueLabel then GetIssue to return the refreshed issue.
+	if len(*records) != 2 {
+		t.Fatalf("expected two requests, got %d", len(*records))
+	}
+}
+
+func TestIssueStateChangeFn(t *testing.T) {
+	_, records := newPatchBackend(t, `{"id":1,"number":1,"state":"closed"}`)
+	res, err := IssueStateChangeFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern", "repo": "forgejo-mcp", "index": float64(1), "state": "closed",
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("IssueStateChangeFn err: %v res=%+v", err, res)
+	}
+	if len(*records) != 1 {
+		t.Fatalf("expected one request, got %d", len(*records))
+	}
+
+	res, err = IssueStateChangeFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern", "repo": "forgejo-mcp", "index": float64(1), "state": "bogus",
+	}))
+	if res != nil {
+		t.Fatalf("expected nil result for invalid state, got %+v", res)
+	}
+	if err == nil {
+		t.Fatal("expected error for invalid state")
+	}
+}
+
+func TestListIssueCommentsFn(t *testing.T) {
+	_, records := newPatchBackend(t, `[{"id":1,"body":"c1"},{"id":2,"body":"c2"}]`)
+	res, err := ListIssueCommentsFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern", "repo": "forgejo-mcp", "index": float64(1),
+		"since": "2024-01-01T00:00:00Z", "before": "2024-06-01T00:00:00Z",
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("ListIssueCommentsFn err: %v res=%+v", err, res)
+	}
+	if !strings.Contains(textOf(res), `"body":"c1"`) {
+		t.Fatalf("unexpected result: %s", textOf(res))
+	}
+	if len(*records) != 1 {
+		t.Fatalf("expected one request, got %d", len(*records))
+	}
+}
+
+func TestListIssueCommentsFn_InvalidSince(t *testing.T) {
+	_, _ = newPatchBackend(t, `[]`)
+	res, err := ListIssueCommentsFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern", "repo": "forgejo-mcp", "index": float64(1), "since": "not-a-time",
+	}))
+	if res != nil {
+		t.Fatalf("expected nil result for invalid since, got %+v", res)
+	}
+	if err == nil {
+		t.Fatal("expected error for invalid since time")
+	}
+}
+
+func TestGetIssueCommentFn(t *testing.T) {
+	_, records := newPatchBackend(t, `{"id":9,"body":"a comment"}`)
+	res, err := GetIssueCommentFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern", "repo": "forgejo-mcp", "comment_id": float64(9),
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("GetIssueCommentFn err: %v res=%+v", err, res)
+	}
+	if len(*records) != 1 {
+		t.Fatalf("expected one request, got %d", len(*records))
+	}
+}
+
+func TestEditIssueCommentFn(t *testing.T) {
+	_, records := newPatchBackend(t, `{"id":9,"body":"updated"}`)
+	res, err := EditIssueCommentFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern", "repo": "forgejo-mcp", "comment_id": float64(9), "body": "updated",
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("EditIssueCommentFn err: %v res=%+v", err, res)
+	}
+	if len(*records) != 1 {
+		t.Fatalf("expected one request, got %d", len(*records))
+	}
+}
+
+func TestDeleteIssueCommentFn(t *testing.T) {
+	_, records := newPatchBackend(t, ``)
+	res, err := DeleteIssueCommentFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern", "repo": "forgejo-mcp", "comment_id": float64(9),
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("DeleteIssueCommentFn err: %v res=%+v", err, res)
+	}
+	if len(*records) != 1 {
+		t.Fatalf("expected one request, got %d", len(*records))
+	}
+}
+
+func TestListRepoMilestonesFn(t *testing.T) {
+	_, records := newPatchBackend(t, `[{"id":1,"title":"v1"}]`)
+	res, err := ListRepoMilestonesFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern", "repo": "forgejo-mcp",
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("ListRepoMilestonesFn err: %v res=%+v", err, res)
+	}
+	if !strings.Contains(textOf(res), `"title":"v1"`) {
+		t.Fatalf("unexpected result: %s", textOf(res))
+	}
+	if len(*records) != 1 {
+		t.Fatalf("expected one request, got %d", len(*records))
 	}
 }

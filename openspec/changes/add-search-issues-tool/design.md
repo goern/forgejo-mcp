@@ -129,6 +129,9 @@ Exposing a `team` parameter would present it as ours: callers would filter by te
 mention-filtered results with no error. Omitted until fixed upstream; file separately against
 forgejo-sdk.
 
+Draft issue text is at `openspec/changes/add-search-issues-tool/upstream-sdk-issue.md`. It is
+not filed — a human files it.
+
 ### 6. Owner is required
 
 Making `owner` optional would allow an unscoped instance-wide search whose result size no

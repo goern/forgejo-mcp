@@ -64,6 +64,7 @@ const (
 	ListRepoMilestonesToolName = "list_repo_milestones"
 	ListRepoLabelsToolName     = "list_repo_labels"
 	ListOrgLabelsToolName      = "list_org_labels"
+	SearchIssuesToolName       = "search_issues"
 )
 
 var (
@@ -210,6 +211,26 @@ var (
 		mcp.WithNumber("page", mcp.Description(params.Page), mcp.DefaultNumber(1)),
 		mcp.WithNumber("limit", mcp.Description(params.Limit), mcp.DefaultNumber(100)),
 	)
+
+	SearchIssuesTool = mcp.NewTool(
+		SearchIssuesToolName,
+		mcp.WithDescription("Search issues across every repository belonging to one owner (organization or user), without naming a repo. "+
+			"Returns a response envelope {issues, page, limit, count, has_next} rather than a bare array. "+
+			"has_next true means a further page may exist; re-issue the call with page incremented to fetch it. "+
+			"Each issue identifies its source repository only via its html_url/url field; there is no separate repository field. "+
+			"Use list_repo_issues instead when the repo is already known."),
+		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
+		mcp.WithString("state", mcp.Description("State (open|closed|all)"), mcp.DefaultString("open")),
+		mcp.WithString("type", mcp.Description("Type (issues|pulls)")),
+		mcp.WithString("labels", mcp.Description("Labels (comma-separated); OR semantics — an issue matching any listed label is returned")),
+		mcp.WithString("milestones", mcp.Description("Milestone names/IDs (comma-separated)")),
+		mcp.WithString("q", mcp.Description(params.Keyword+" (matches issue title, body, and comments)")),
+		mcp.WithString("created_by", mcp.Description("Filter by creator username")),
+		mcp.WithString("assigned_by", mcp.Description("Filter by assignee username")),
+		mcp.WithString("mentioned_by", mcp.Description("Filter by mentioned username")),
+		mcp.WithNumber("page", mcp.Description(params.Page), mcp.DefaultNumber(1)),
+		mcp.WithNumber("limit", mcp.Description(params.Limit), mcp.DefaultNumber(20)),
+	)
 )
 
 func RegisterTool(s *server.MCPServer) {
@@ -228,6 +249,7 @@ func RegisterTool(s *server.MCPServer) {
 	s.AddTool(ListRepoMilestonesTool, ListRepoMilestonesFn)
 	s.AddTool(ListRepoLabelsTool, ListRepoLabelsFn)
 	s.AddTool(ListOrgLabelsTool, ListOrgLabelsFn)
+	s.AddTool(SearchIssuesTool, SearchIssuesFn)
 	RegisterLabelTool(s)
 	RegisterDependencyTool(s)
 }
@@ -253,6 +275,12 @@ func ListRepoIssuesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	log.Debugf("Called ListRepoIssuesFn")
 	owner, _ := req.GetArguments()["owner"].(string)
 	repo, _ := req.GetArguments()["repo"].(string)
+	if owner == "" {
+		return to.ErrorResult(fmt.Errorf("owner is required"))
+	}
+	if repo == "" {
+		return to.ErrorResult(fmt.Errorf("repo is required; for owner-wide listing across repositories use search_issues instead"))
+	}
 	state, ok := req.GetArguments()["state"].(string)
 	if !ok {
 		state = "open"
@@ -304,6 +332,108 @@ func ListRepoIssuesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		return to.ErrorResult(fmt.Errorf("get issues list err: %w", err))
 	}
 	return to.TextResult(issues)
+}
+
+// searchIssuesEnvelope is the response shape for search_issues: the issues
+// together with a continuation signal, per docs/design/output-bounding.md.
+type searchIssuesEnvelope struct {
+	Issues  []*forgejo_sdk.Issue `json:"issues"`
+	Page    int                  `json:"page"`
+	Limit   int                  `json:"limit"`
+	Count   int                  `json:"count"`
+	HasNext bool                 `json:"has_next"`
+}
+
+func SearchIssuesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Debugf("Called SearchIssuesFn")
+	args := req.GetArguments()
+	owner, _ := args["owner"].(string)
+	if owner == "" {
+		return to.ErrorResult(fmt.Errorf("owner is required"))
+	}
+
+	state, ok := args["state"].(string)
+	if !ok || state == "" {
+		state = "open"
+	}
+	issueType, _ := args["type"].(string)
+	labels, _ := args["labels"].(string)
+	milestones, _ := args["milestones"].(string)
+	keyword, _ := args["q"].(string)
+	createdBy, _ := args["created_by"].(string)
+	assignedBy, _ := args["assigned_by"].(string)
+	mentionedBy, _ := args["mentioned_by"].(string)
+
+	page, _ := to.Float64(args["page"])
+	if page < 1 {
+		page = 1
+	}
+	limit, _ := to.Float64(args["limit"])
+	if limit < 1 {
+		limit = 20
+	}
+
+	opt := forgejo_sdk.ListIssueOption{
+		Owner: owner,
+		State: forgejo_sdk.StateType(state),
+		ListOptions: forgejo_sdk.ListOptions{
+			Page:     int(page),
+			PageSize: int(limit),
+		},
+	}
+	if issueType != "" {
+		opt.Type = forgejo_sdk.IssueType(issueType)
+	}
+	if labels != "" {
+		opt.Labels = strings.Split(labels, ",")
+	}
+	if milestones != "" {
+		opt.Milestones = strings.Split(milestones, ",")
+	}
+	if keyword != "" {
+		opt.KeyWord = keyword
+	}
+	if createdBy != "" {
+		opt.CreatedBy = createdBy
+	}
+	if assignedBy != "" {
+		opt.AssignedBy = assignedBy
+	}
+	if mentionedBy != "" {
+		opt.MentionedBy = mentionedBy
+	}
+
+	client, err := forgejo.Client(ctx)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	issues, _, err := client.ListIssues(opt)
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("search issues err: %w", err))
+	}
+	count := len(issues)
+
+	// Same-limit next-page probe (design Decision 3): never limit+1, since
+	// Forgejo derives page offsets from page size and a changed page size
+	// would make later pages skip rows.
+	hasNext := false
+	if count > 0 {
+		probeOpt := opt
+		probeOpt.Page = int(page) + 1
+		nextIssues, _, err := client.ListIssues(probeOpt)
+		if err != nil {
+			return to.ErrorResult(fmt.Errorf("probe next issues page err: %w", err))
+		}
+		hasNext = len(nextIssues) > 0
+	}
+
+	return to.TextResult(searchIssuesEnvelope{
+		Issues:  issues,
+		Page:    int(page),
+		Limit:   int(limit),
+		Count:   count,
+		HasNext: hasNext,
+	})
 }
 
 func CreateIssueFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {

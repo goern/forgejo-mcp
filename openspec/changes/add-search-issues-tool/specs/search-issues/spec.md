@@ -116,7 +116,9 @@ owner scope. Filter parameters shared with `list_repo_issues` SHALL keep the sam
 value formats, and defaults.
 
 `state` SHALL default to `open`. `labels` and `milestones` SHALL accept comma-separated
-values.
+values. Comma-separated `labels` SHALL be matched with OR semantics: an issue carrying any
+one of the listed labels is returned. `q` SHALL match against issue title, body, and
+comments, not title alone.
 
 Filters the caller omits SHALL be left unset on `ListIssueOption`. Note that the SDK emits
 `type` unconditionally (forgejo-sdk v3 `issue.go:124`), so an omitted `type` reaches the wire
