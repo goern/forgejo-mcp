@@ -1,3 +1,41 @@
+## [2.32.0](https://git.b4mad.industries/agentic-forges/forgejo-mcp/compare/v2.31.0...v2.32.0) (2026-08-06)
+
+### :sparkles: Features
+
+* ✨ add search_issues for org-wide issue search ([2470d6f](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/2470d6ff38cea69add1d180f15d1c05e73b0eaf0))
+* 🔧 let Renovate track the Go module dependencies ([dbe018f](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/dbe018f5f5c6231a4f3b5c2f108c94651740662a))
+
+### :bug: Fixes
+
+* 🐛 enforce the instance pagination ceiling in search_issues ([32f0dda](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/32f0dda45acf12c033a7da5d447f84e43c794a40)), closes [#458](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/458)
+* 🔧 fold the dead release-tools Renovate config into the root ([11863e1](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/11863e1c97c02be2cde263833ccc1291629ab25b))
+* **deps:** update module github.com/mark3labs/mcp-go to v0.57.0 ([37e4923](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/37e4923706e6b6cd4a4a631cd574fbc3435c059b))
+* **deps:** update module go.uber.org/zap to v1.28.0 ([c8e8ebf](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/c8e8ebf9409aac8f1c38d2e760598e4a4e67dc0e))
+
+### :memo: Documentation
+
+* 📝 add openspec change add-search-issues-tool ([4f5e458](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/4f5e458d76476747ababe0fffb7af17fe6a73e17)), closes [#452](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/452)
+
+### :repeat: CI
+
+* 🚨 drop PaC annotations that on-cel-expression overrides ([c78b332](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/c78b33208a0b761689726a1b6a146af780475535))
+
+### :repeat: Chore
+
+* 🔧 archive add-search-issues-tool and sync its specs ([2822ccf](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/2822ccfd2d7f7baa4521d5c34a2b839fb692f641)), closes [#458](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/458) [#452](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/452) [#458](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/458)
+* 🔧 enable semantic-release driving for this repo ([c7cf825](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/c7cf8257c22d9de626352e0f86bdf83de6b6e2cd))
+* 🔧 pin release-tools base image to a versioned tag ([fabbc2d](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/fabbc2de7b8627b2c3ed9e6bbaed97725e2f05b6))
+* **deps:** update dependency sigstore/cosign to v3.1.2 ([884461e](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/884461e2555ca354434850b0a6051bbd99cca952))
+* **deps:** update dependency sigstore/cosign to v3.1.3 ([2f7150a](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/2f7150a7c85557b2f0e9f9be9bbaff1225c7a6f9))
+* **deps:** update module github.com/google/go-licenses to v2 ([8fcd322](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/8fcd322262d8eeeecc4db9cb2c1c4c0ccde82ae0))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to 58b11e4 ([90339f8](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/90339f8e061cac08490aa131517ed1ffacf038bd))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to cbcd782 ([74700fd](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/74700fd77b1c960e3fbce22f48fc764e474361bf))
+* **deps:** update quay.io/hummingbird/go:1.26.5-builder docker digest to b163b54 ([89cbecb](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/89cbecba38ebae55ac0d8e3362e2254200b948cb))
+* **deps:** update quay.io/hummingbird/go:1.26.5-builder docker digest to bed8c1b ([b0cf075](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/b0cf075c0e261942315f2fc8939530623ac62a57))
+* **deps:** update quay.io/hummingbird/go:1.26.5-builder docker digest to fe0672d ([2bc56fd](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/2bc56fd780e6706809a502d8c539c5f56da7b7b3))
+* **deps:** update registry.access.redhat.com/hi/go docker tag to v1.26.5 ([cdac10e](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/cdac10e9e3cecafe5c0e3abef4880284e7e24c69))
+* **deps:** update registry.access.redhat.com/hi/go:1.26.5-builder docker digest to fe0672d ([6732c18](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/6732c1826d24d976e396064b6466da9f90404656))
+
 ## [2.31.0](https://git.b4mad.industries/agentic-forges/forgejo-mcp/compare/v2.30.2...v2.31.0) (2026-08-01)
 
 ### :sparkles: Features
