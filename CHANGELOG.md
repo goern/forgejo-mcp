@@ -1,3 +1,19 @@
+## [2.32.1](https://git.b4mad.industries/agentic-forges/forgejo-mcp/compare/v2.32.0...v2.32.1) (2026-08-06)
+
+### :bug: Fixes
+
+* 🐛 move Repository CR out of .tekton/ so PaC can resolve PipelineRuns ([ac51b0f](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/ac51b0fc12eb2a3146600408d66ff784759c8e3f))
+* 🐛 rename Go module path to git.b4mad.industries ([2f20def](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/2f20def2527c896f3e20d3f18f707f2fbd725b43))
+
+### :barber: Code-style
+
+* 🎨 gofmt import order after module path rename ([6578126](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/657812609b407fa447d19b3b70619241aa1ef50e))
+
+### :repeat: Chore
+
+* 🔧 add gofmt pre-commit hook ([dc7b733](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/dc7b7334a46140ad908f222fe7a993d6282af61a))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to a68f467 ([6648a90](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/6648a90e03cf864c0b04c56278d14408ccfc58a4))
+
 ## [2.32.0](https://git.b4mad.industries/agentic-forges/forgejo-mcp/compare/v2.31.0...v2.32.0) (2026-08-06)
 
 ### :sparkles: Features
