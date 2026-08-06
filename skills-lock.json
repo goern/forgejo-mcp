@@ -42,6 +42,30 @@
       "sourceType": "github",
       "skillPath": "skills/caveman-stats/SKILL.md",
       "computedHash": "47ce2de3d6cb39a75047b5c962e4eb3da15594e7397c94103e9a104d42626553"
+    },
+    "done-with": {
+      "source": "goern/bead-workflow-skills",
+      "sourceType": "github",
+      "skillPath": "skills/done-with/SKILL.md",
+      "computedHash": "8ba71fedd33577044e9cd2ef11ababd2a9575eed43cf30ba1a3b44e13fd4c68e"
+    },
+    "work-on": {
+      "source": "goern/bead-workflow-skills",
+      "sourceType": "github",
+      "skillPath": "skills/work-on/SKILL.md",
+      "computedHash": "ff4c5c91e4467e5d098ef39b51d9bc61b257ad555e07f06d0b66c95d5518e77c"
+    },
+    "worktrunk": {
+      "source": "max-sixty/worktrunk",
+      "sourceType": "github",
+      "skillPath": "skills/worktrunk/SKILL.md",
+      "computedHash": "e61441be9d3673bce61c9f9478fcee21e96239d270b02348480ffa2314f172c5"
+    },
+    "wt-switch-create": {
+      "source": "max-sixty/worktrunk",
+      "sourceType": "github",
+      "skillPath": "skills/wt-switch-create/SKILL.md",
+      "computedHash": "796db886726df2330e896ca8939789a1fc52143ecc4d4be660974bf1a78581f6"
     }
   }
 }

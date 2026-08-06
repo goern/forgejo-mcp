@@ -737,6 +737,7 @@ Issue reporters and discussion participants who shaped the direction of the proj
 | [janbaer](https://codeberg.org/janbaer) | Filed #98 (reply to review comment) |
 | [fraschm98](https://codeberg.org/fraschm98) | Early issue reports |
 | [heathen711](https://codeberg.org/heathen711) | Filed #106 (issue/comment attachments — since implemented); shaped the 1 MiB inline cap + `browser_download_url` fall-through design |
+| [chris420](https://git.b4mad.industries/chris420) (Chris Oloff) | Filed #452 (org-wide issue search — since implemented as `search_issues`); design review on PR #458 that replaced the next-page probe with instance-ceiling enforcement, and caught the response envelope misreporting its own `limit` |
 
 ### Cyborg contributors
 

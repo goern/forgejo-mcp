@@ -18,6 +18,7 @@ main.go → cmd/cmd.go (CLI parsing) → operation/operation.go (tool registrati
 ```
 
 Key directories:
+
 - `operation/` - MCP tool definitions and handlers by domain
 - `pkg/forgejo/` - Singleton Forgejo SDK client wrapper
 - `pkg/to/` - Response formatting helpers
@@ -67,7 +68,7 @@ See `openspec/specs/mcp-resources-core/spec.md` for the full normative spec (add
 ### Resource table
 
 | URI template | MIME | What it returns |
-|---|---|---|
+| --- | --- | --- |
 | `forgejo://owner/{owner}` | application/json | User or org profile |
 | `forgejo://repo/{owner}/{repo}` | application/json | Repository overview |
 | `forgejo://repo/{owner}/{repo}/commit/{sha}` | application/json + markdown | Commit metadata (sha must be 40 hex chars) |
@@ -101,7 +102,7 @@ Some features are blocked on upstream API/SDK support. See `docs/plans/` for:
 Labels for goern/forgejo-mcp on Codeberg:
 
 | ID | Name | Color | Description |
-|----|------|-------|-------------|
+| ---- | ------ | ------- | ------------- |
 | 335058 | Kind/Feature | 0288d1 | New functionality |
 | 335061 | Kind/Enhancement | 84b6eb | Improve existing functionality |
 | 335091 | Status/Blocked | 880e4f | Something is blocking this issue or pull request |
@@ -151,19 +152,36 @@ bd close <id>         # Complete work
 2. **Run quality gates** (if code changed) - Tests, linters, builds
 3. **Update issue status** - Close finished work, update in-progress items
 4. **PUSH TO REMOTE** - This is MANDATORY:
+
    ```bash
    git pull --rebase
    bd dolt push
    git push
    git status  # MUST show "up to date with origin"
    ```
+
 5. **Clean up** - Clear stashes, prune remote branches
 6. **Verify** - All changes committed AND pushed
 7. **Hand off** - Provide context for next session
 
 **CRITICAL RULES:**
+
 - Work is NOT complete until `git push` succeeds
 - NEVER stop before pushing - that leaves work stranded locally
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
 <!-- END BEADS INTEGRATION -->
+
+## Attribution Requirements
+
+AI agents must disclose what tool and model they are using in the "Assisted-by" commit footer:
+
+```text
+Assisted-by: [Model Name] via [Tool Name]
+```
+
+Example:
+
+```text
+Assisted-by: GLM 4.6 via Claude Code
+```
