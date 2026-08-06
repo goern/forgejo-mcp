@@ -80,31 +80,68 @@ caller-controlled range parameter and must smuggle the signal into content. A to
 `page` / `limit` parameters has no such constraint, and a sentinel inside a JSON array
 corrupts the array's type.
 
-### 3. `has_next` by same-limit next-page probe; no `total_count`
+### 3. Instance ceiling is discovered, not guessed; `has_next` follows from that
 
-**Chosen:** empty page → false; otherwise request `page+1` at the **same** `limit` and set
-`has_next` from whether the probe returned rows. Never `limit+1`.
+**Superseded 2026-08-06.** The paragraph below this note is what shipped in draft PR #458 and
+is kept, struck through in spirit, so the reasoning failure is visible rather than quietly
+edited away. [chris420](https://git.b4mad.industries/agentic-forges/forgejo-mcp/pulls/458#issuecomment-5533),
+who reported the original issue (#452), reviewed #458 and falsified its central premise: the
+"Alternative considered" paragraph below claims the `MAX_RESPONSE_ITEMS` ceiling "can only
+guess at an admin-set value". That is false. `GET /api/v1/settings/api` returns
+`{"max_response_items": N, ...}` **unauthenticated**, and forgejo-sdk v3 already wraps it as
+`(*Client).GetGlobalAPISettings()` (`settings.go`). We conceded the point publicly
+([issuecomment-5535](https://git.b4mad.industries/agentic-forges/forgejo-mcp/pulls/458#issuecomment-5535))
+rather than defend it.
 
-With no parsed `X-Total-Count`, a `total_count` field could only be fabricated.
+**Original text (now superseded):**
 
-The obvious cheap rule — `has_next = (count == limit)` — is **unsound here**, and this is the
-central correctness decision of the change. Because nothing clamps `limit` client-side (see
-Context), an instance with `MAX_RESPONSE_ITEMS=50` answers a `limit=100` request with 50
-issues. `count != limit`, so the cheap rule reports `has_next` false *while more data exists*
-and the caller stops paging. That is a false **negative** — silent truncation, which
-`docs/design/output-bounding.md` sub-rule 1 exists to forbid.
+> **Chosen:** empty page → false; otherwise request `page+1` at the **same** `limit` and set
+> `has_next` from whether the probe returned rows. Never `limit+1`.
+>
+> With no parsed `X-Total-Count`, a `total_count` field could only be fabricated.
+>
+> The obvious cheap rule — `has_next = (count == limit)` — is **unsound here**, and this is the
+> central correctness decision of the change. Because nothing clamps `limit` client-side (see
+> Context), an instance with `MAX_RESPONSE_ITEMS=50` answers a `limit=100` request with 50
+> issues. `count != limit`, so the cheap rule reports `has_next` false *while more data exists*
+> and the caller stops paging. That is a false **negative** — silent truncation, which
+> `docs/design/output-bounding.md` sub-rule 1 exists to forbid.
+>
+> *Alternative considered:* clamp `limit` client-side to a documented ceiling and keep the
+> count-based rule. Rejected — the ceiling can only guess at an admin-set value, and any guess
+> above the real `MAX_RESPONSE_ITEMS` reintroduces the same false negative.
 
-`openspec/specs/wiki-tools/spec.md:31-38` already fixes this for `list_wiki_pages` with a
-pagination-preserving probe, including the `limit+1` prohibition: Forgejo derives page offsets
-from page size, so changing it makes later pages skip rows. This change inherits that rule and
-**widens** it. The wiki trigger is "probe on a full page", which carries the same clamping
-defect; `list_wiki_pages` escapes it only because its `limit` defaults to the server page size
-and is never raised past the clamp. `search_issues` advertises a `limit` callers can set above
-the clamp, so it must probe on any non-empty page.
+**Chosen (revised):** fetch and cache the instance's `max_response_items` via
+`GetGlobalAPISettings()`, keyed on the instance base URL (not on any particular `*forgejo.Client`
+value — `pkg/forgejo.Client(ctx)` hands out a fresh ephemeral client whenever a token is present
+in the context, so a per-client cache would refetch on every call). When the ceiling is known:
 
-*Alternative considered:* clamp `limit` client-side to a documented ceiling and keep the
-count-based rule. Rejected — the ceiling can only guess at an admin-set value, and any guess
-above the real `MAX_RESPONSE_ITEMS` reintroduces the same false negative.
+- A caller `limit` above the ceiling is **rejected before the upstream call**, with an error
+  naming both the requested limit and the ceiling (e.g. "limit 100 exceeds this instance's
+  maximum of 50 (max_response_items); retry with limit <= 50"). The number must be in the
+  message — the audience is an LLM agent, and the retry has to be self-correcting.
+- Because the rejection guarantees the *effective* limit sent upstream never exceeds the
+  ceiling, the request is always honored in full, and the count-based rule this decision
+  previously rejected becomes sound again: `has_next = (count == effectiveLimit)`. It was only
+  unsound because nothing clamped `limit` client-side; something now does, by refusing rather
+  than silently truncating.
+- The probe survives as a **fallback for when the ceiling is unknown** (settings endpoint
+  unreachable, non-2xx, or too old to have it) — that question is open with chris420, and a
+  restrictive instance is exactly the case the probe still has to cover. It keeps its original
+  rules where it runs: request `page+1` at the **same** `limit`, never `limit+1` (Forgejo
+  derives page offsets from page size, so changing it makes later pages skip rows), and
+  `has_next` false on an empty page.
+- A failed ceiling lookup MUST be treated as "unknown", never as a ceiling of `0` — a zero
+  ceiling would reject every request.
+
+The response also now reports the limit **actually sent upstream** (`effectiveLimit`), sourced
+from the same variable used to build the SDK call, rather than recomputing the requested value
+independently at the point the envelope is built. Before this fix, `issue.go:433` set
+`Limit: int(limit)` from the raw requested value: a `limit=100` call against a `50`-ceiling
+instance got 50 rows back but reported `limit: 100`, violating the "response reports the value
+actually used" requirement in `specs/search-issues/spec.md`. That specific mismatch cannot
+occur post-fix, since a `limit=100` request against a known `50` ceiling is now rejected before
+it reaches the SDK at all.
 
 *Alternative considered:* parse the `X-Total-Count` header off the SDK's `*Response`.
 Deferred — reaching past the SDK's typed surface into raw headers for one field is a
@@ -128,6 +165,9 @@ cannot silently regress to leaking SDK internals.
 Exposing a `team` parameter would present it as ours: callers would filter by team and get
 mention-filtered results with no error. Omitted until fixed upstream; file separately against
 forgejo-sdk.
+
+Draft issue text is at `openspec/changes/add-search-issues-tool/upstream-sdk-issue.md`. It is
+not filed — a human files it.
 
 ### 6. Owner is required
 

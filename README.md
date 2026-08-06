@@ -230,6 +230,7 @@ List all my repositories
 | `list_repo_commits` | List commits in a repository |
 | **Issues** | |
 | `list_repo_issues` | List issues in a repository (page/limit) |
+| `search_issues` | Search issues across every repository of one owner (page/limit); returns `{issues,page,limit,count,has_next}` |
 | `get_issue_by_index` | Get a specific issue |
 | `create_issue` | Create a new issue |
 | `add_issue_labels` | Add labels to an issue (requires numeric label IDs) |
