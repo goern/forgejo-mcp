@@ -15,7 +15,7 @@ ARG GORELEASER_SHA256=eaae05b5eba07533bd0f06846b68c808399504784df00c62eb219541fc
 # cannot recompute, so a version-only PR would ship an image that fails its own
 # `sha256sum -c` gate. Bump those two by hand, checksum and all.
 # renovate: datasource=github-releases depName=sigstore/cosign
-ARG COSIGN_VERSION=v3.1.2
+ARG COSIGN_VERSION=v3.1.3
 # GOVULNCHECK_VERSION is a floating `latest` — nothing for Renovate to pin.
 ARG GOVULNCHECK_VERSION=latest
 # renovate: datasource=go depName=github.com/google/go-licenses
