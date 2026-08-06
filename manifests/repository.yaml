@@ -1,3 +1,10 @@
+# Apply this by hand; it is cluster state, not part of a run:
+#   oc apply -f manifests/repository.yaml
+#
+# It must NOT live in .tekton/. PaC parses every file under that directory with
+# a scheme that only knows Tekton kinds, so a Repository CR there fails to
+# decode and takes the whole PipelineRun resolution down with it:
+#   no kind "Repository" is registered for version "pipelinesascode.tekton.dev/v1alpha1"
 apiVersion: pipelinesascode.tekton.dev/v1alpha1
 kind: Repository
 metadata:

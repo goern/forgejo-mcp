@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
 	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/forgejo"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 

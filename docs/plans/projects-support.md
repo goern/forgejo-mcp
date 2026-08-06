@@ -123,7 +123,7 @@ func (c *Client) ListProjectBoards(projectID int64, opts ListOptions) ([]*Projec
 
 **Register in `/operation/operation.go`:**
 ```go
-import "codeberg.org/goern/forgejo-mcp/operation/project"
+import "git.b4mad.industries/agentic-forges/forgejo-mcp/v2/operation/project"
 
 func RegisterTool(s *server.MCPServer) {
     // ... existing registrations

@@ -1,5 +1,5 @@
 // Package race_test reproduces the "concurrent map writes" panic from
-// https://codeberg.org/goern/forgejo-mcp/issues/76
+// https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/76
 //
 // Run:  go test -race -count=10 -timeout 120s ./test/race/
 package race_test
@@ -13,9 +13,9 @@ import (
 	"sync"
 	"testing"
 
-	"codeberg.org/goern/forgejo-mcp/v2/operation"
-	flagPkg "codeberg.org/goern/forgejo-mcp/v2/pkg/flag"
-	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/operation"
+	flagPkg "git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/flag"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/forgejo"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"

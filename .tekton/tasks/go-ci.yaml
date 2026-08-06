@@ -139,4 +139,4 @@ spec:
         go install github.com/google/go-licenses@v1.6.0
         go-licenses check ./... \
           --disallowed_types=forbidden,restricted \
-          --ignore=codeberg.org/goern/forgejo-mcp
+          --ignore=git.b4mad.industries/agentic-forges/forgejo-mcp

@@ -13,8 +13,8 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"codeberg.org/goern/forgejo-mcp/v2/operation/resource"
-	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/operation/resource"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/forgejo"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 

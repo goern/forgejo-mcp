@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"codeberg.org/goern/forgejo-mcp/v2/pkg/flag"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/flag"
 
 	"github.com/mark3labs/mcp-go/mcp"
 )

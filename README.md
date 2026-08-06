@@ -51,7 +51,12 @@ go install .
 
 Ensure `$GOPATH/bin` (typically `~/go/bin`) is in your PATH.
 
-> **Note:** `go install codeberg.org/goern/forgejo-mcp/v2@latest` does not work currently. See [Known Issues](#known-issues).
+> **Note:** `go install` from the module path works from the first release
+> after the module was renamed (see [Known Issues](#known-issues)):
+>
+> ```bash
+> go install git.b4mad.industries/agentic-forges/forgejo-mcp/v2@latest
+> ```
 
 **Option B: Download Binary**
 
@@ -683,7 +688,17 @@ See [DEVELOPER.md](DEVELOPER.md) for build instructions, architecture overview, 
 
 ## Known Issues
 
-- **`go install ...@latest` fails** — The `go.mod` contains a `replace` directive (for a forked Forgejo SDK), which prevents remote `go install`. Use the clone-and-build workflow shown in [Quick Start](#quick-start) instead. Tracked in [#67](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/67).
+- **`go install ...@latest` needs a post-rename release** — The Go module path
+  was `codeberg.org/goern/forgejo-mcp/v2` until the forge move; Go resolves
+  modules by the path declared in `go.mod`, so the
+  `git.b4mad.industries/...` path only becomes installable once a release is
+  tagged carrying the renamed `go.mod`. Until then, use the clone-and-build
+  workflow shown in [Quick Start](#quick-start). The old
+  `go install codeberg.org/goern/forgejo-mcp/v2@latest` still resolves against
+  the read-only Codeberg mirror, but that mirror lags behind the current
+  release — do not rely on it. The earlier `replace`-directive blocker
+  ([#67](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/67)) is
+  gone; `go.mod` no longer contains one.
 
 ## Contributors
 
