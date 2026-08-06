@@ -1,13 +1,3 @@
-# forgejo-mcp task recipes.
-#
-# The canonical build tooling is `make` (see Makefile). This justfile holds
-# auxiliary recipes that the Make targets don't cover. Run `just --list`.
-
-# Validate anchored Showboat demos against their specs (see .claude/skills/showboat).
-check-demos:
-    ./scripts/ci/check-spec-demo-anchors.sh
-
-# >>> enable-semantic-release v0.0.0-dev sha256:e55873e3d94b (managed block — do not edit) >>>
 # Release tasks, installed by the enable-semantic-release skill.
 #
 # `just release` cuts a real release; everything else here exists so that the
@@ -23,8 +13,8 @@ check-demos:
 # `set shell` and no `default` recipe, because this block is appended to a
 # justfile that may already have both and just rejects a duplicate setting.
 
-sr_namespace := "b4mad-forgejo"
-sr_agent     := "b4mad-release-agent"
+sr_namespace := "@@NAMESPACE@@"
+sr_agent     := "@@AGENT@@"
 sr_repo_url  := `git remote get-url origin`
 sr_slug      := `git remote get-url origin | sed -E 's#.*:[0-9]+/##; s#\.git$##'`
 sr_repo      := `git remote get-url origin | sed -E 's#.*/##; s#\.git$##'`
@@ -142,7 +132,7 @@ _semantic-release-run kind args:
     # the Release object — so it is /g, and a no-op in the repo it ships from.
     sed -e "s|name: semantic-release-dry-run\$|name: $job|" \
         -e "s|^          args: .*|          args: $argv|" \
-        -e "s|agentic-forges/forge-agents|{{sr_slug}}|g" \
+        -e "s|@@MANIFEST_HOME_SLUG@@|{{sr_slug}}|g" \
         {{sr_manifest}} | oc -n {{sr_namespace}} create -f -
 
     echo "waiting…"
@@ -183,4 +173,3 @@ clean-jobs:
     echo "$jobs"
     read -rp "delete these? [y/N] " a
     [ "$a" = "y" ] && oc -n {{sr_namespace}} delete $jobs || echo "left alone"
-# <<< enable-semantic-release v0.0.0-dev sha256:e55873e3d94b <<<

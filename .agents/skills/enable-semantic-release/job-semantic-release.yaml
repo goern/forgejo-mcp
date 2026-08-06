@@ -1,0 +1,238 @@
+# The cluster-side equivalent of
+#
+#   podman run --rm -ti --userns=keep-id:uid=1001,gid=0 \
+#     -v $(pwd):/workspace:Z \
+#     -v …/tmp.d/codeberg.org:/opt/app-root/src/.gnupg:Z \
+#     -v …/b4mad-renovate/dot-ssh/:/opt/app-root/src/.ssh:Z \
+#     git.b4mad.industries/agentic-forges/semantic-release:v1.8.0 --debug --no-ci --dry-run
+#
+# with three host bind-mounts replaced:
+#
+#   $(pwd)   -> an emptyDir that an initContainer clones REPO_URL into
+#   .gnupg   -> imported from the agent Secret into an emptyDir (see WHY below)
+#   .ssh     -> assembled from the agent Secret into an emptyDir
+#
+# WHY not mount the Secret straight onto ~/.gnupg and ~/.ssh: a Secret volume is
+# a read-only tmpfs, and gpg insists on a WRITABLE 0700 home (it creates
+# trustdb.gpg, random_seed and lockfiles on every invocation). So the Secret is
+# mounted at /secrets and an initContainer materialises both dot-dirs from it.
+#
+# ⚠️ Two things must be true before this runs — see openshift/README.md:
+#   1. Secret forgejo-agent-b4mad-release-agent must exist. As of 2026-07-29 it does
+#      NOT: b4mad-release-agent predates create-forge-agent.py and has neither an SSH
+#      nor a GPG key. Backfill it first (Systems-3ywf).
+#   2. The key the image names (0x9AFBDCD702A142D8) is not on the account —
+#      b4mad-release-agent has no GPG key at all. So the signing key is derived
+#      from whatever the backfill puts in the Secret, not restated here;
+#      signing with a key the account does not own yields commits Forgejo
+#      shows as UNVERIFIED, which is the failure signing exists to prevent.
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: semantic-release-dry-run
+  namespace: b4mad-forgejo
+  labels:
+    app.kubernetes.io/name: semantic-release
+    app.kubernetes.io/managed-by: forge-agents
+spec:
+  # A release run is not idempotent. Never retry it behind our back — if it
+  # fails, a human reads the log and decides.
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: semantic-release
+    spec:
+      restartPolicy: Never
+
+      initContainers:
+        # ------------------------------------------------------------------ #
+        # 1. Turn the Secret into the two dot-dirs the tool expects.
+        # ------------------------------------------------------------------ #
+        - name: credentials
+          image: git.b4mad.industries/agentic-forges/semantic-release:v1.8.0
+          command: ["/bin/bash", "-euo", "pipefail", "-c"]
+          args:
+            - |
+              # --- GnuPG ---------------------------------------------------
+              # $GNUPGHOME is a SUBDIRECTORY of the emptyDir, not its root, and
+              # the consumers mount it back with subPath. The mountpoint itself
+              # is created by kubelet as root:$fsGroup 0775, and under the
+              # restricted SCC this container is neither root nor the owner, so
+              # chmod'ing it is EPERM. A directory we create ourselves we own.
+              install -d -m 0700 "$GNUPGHOME"
+              # Matches the gpg.conf documented in the image's README: batch
+              # signing has no tty to prompt on.
+              printf 'no-greeting\npinentry-mode loopback\n' > "$GNUPGHOME/gpg.conf"
+              gpg --batch --import /secrets/gpg-privatekey
+              # Ownertrust is not needed to SIGN, but an untrusted key makes gpg
+              # noisy on every verify; make it ultimate to keep --debug readable.
+              gpg --batch --with-colons --list-secret-keys \
+                | awk -F: '/^fpr:/ {print $10 ":6:"; exit}' \
+                | gpg --batch --import-ownertrust
+              gpg --batch --list-secret-keys
+
+              # --- git config ----------------------------------------------
+              # The image's ~/.gitconfig hard-codes a signing key
+              # (0x9AFBDCD702A142D8) that is on no account at all. Rather than
+              # hard-code THIS agent's
+              # fingerprint in a second place — where it would go stale on the
+              # next key rotation — derive it from the key we just imported and
+              # point GIT_CONFIG_GLOBAL at the result. Everything the image set
+              # globally is restated here, because this file REPLACES it.
+              fpr=$(gpg --batch --with-colons --list-secret-keys \
+                      | awk -F: '/^fpr:/ {print $10; exit}')
+              cat > /gitconfig/gitconfig <<EOF
+              [safe]
+                  directory = /workspace
+              [commit]
+                  gpgsign = true
+              [tag]
+                  gpgSign = true
+              [user]
+                  signingkey = 0x${fpr}
+              EOF
+
+              # --- SSH -----------------------------------------------------
+              # Same subdirectory trick as $GNUPGHOME above, same reason.
+              install -d -m 0700 /ssh/home
+              install -m 0600 /secrets/ssh-privatekey /ssh/home/id_ed25519
+              cat > /ssh/home/config <<'EOF'
+              Host git.b4mad.industries
+                Port 2222
+                User git
+                IdentityFile ~/.ssh/id_ed25519
+                IdentitiesOnly yes
+                StrictHostKeyChecking yes
+              EOF
+              chmod 0600 /ssh/home/config
+
+              # Pin the host key by FINGERPRINT rather than shipping the key
+              # blob: keyscan output is only trustworthy if it matches the
+              # fingerprint we already know, so verify and fail closed.
+              ssh-keyscan -p 2222 -t rsa git.b4mad.industries > /ssh/home/known_hosts 2>/dev/null
+              got=$(ssh-keygen -lf /ssh/home/known_hosts | awk '{print $2}')
+              if [ "$got" != "$EXPECTED_HOST_KEY" ]; then
+                echo "host key mismatch: got $got, expected $EXPECTED_HOST_KEY" >&2
+                exit 1
+              fi
+              chmod 0644 /ssh/home/known_hosts
+          env:
+            - name: GNUPGHOME
+              value: /gnupg/home
+            # SHA256:LFo9… is git.b4mad.industries' RSA key, unchanged across
+            # the forgejo.b4mad.net -> git.b4mad.industries rename.
+            - name: EXPECTED_HOST_KEY
+              value: SHA256:LFo9B+TvN+sXwkUBW58RxU4QVyqk8rRaohW5UPFiuYw
+          volumeMounts:
+            - { name: agent-credentials, mountPath: /secrets, readOnly: true }
+            - { name: gnupg, mountPath: /gnupg }
+            - { name: ssh, mountPath: /ssh }
+            - { name: gitconfig, mountPath: /gitconfig }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { cpu: 200m, memory: 256Mi }
+
+        # ------------------------------------------------------------------ #
+        # 2. Provide the /workspace that `-v $(pwd):/workspace` provided locally.
+        # ------------------------------------------------------------------ #
+        - name: clone
+          image: git.b4mad.industries/agentic-forges/semantic-release:v1.8.0
+          command: ["/bin/bash", "-euo", "pipefail", "-c"]
+          args:
+            - |
+              git clone --branch "$REPO_REF" "$REPO_URL" /workspace
+              git -C /workspace log --oneline -1
+          env:
+            - name: REPO_URL
+              value: ssh://git@git.b4mad.industries:2222/agentic-forges/forge-agents.git
+            - name: REPO_REF
+              value: main
+            - name: GIT_SSH_COMMAND
+              value: ssh -F /opt/app-root/src/.ssh/config
+          volumeMounts:
+            - { name: ssh, mountPath: /opt/app-root/src/.ssh, subPath: home }
+            - { name: workspace, mountPath: /workspace }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { cpu: 200m, memory: 512Mi }
+
+      containers:
+        - name: semantic-release
+          image: git.b4mad.industries/agentic-forges/semantic-release:v1.8.0
+          # ENTRYPOINT is `npx semantic-release`; args are its flags, exactly as
+          # in the podman invocation. Drop --dry-run to actually cut a release.
+          args: ["--debug", "--no-ci", "--dry-run"]
+          env:
+            # These OVERRIDE the image, which still bakes in the account's old
+            # name (b4mad-release-bot, renamed to b4mad-release-agent on
+            # 2026-07-30). Without the override every release commit would be
+            # attributed to a name the forge no longer knows.
+            # The signing key comes from the gitconfig the initContainer wrote.
+            - name: GIT_CONFIG_GLOBAL
+              value: /gitconfig/gitconfig
+            - name: GIT_AUTHOR_NAME
+              value: b4mad-release-agent
+            - name: GIT_AUTHOR_EMAIL
+              value: release-bot@b4mad.net
+            - name: GIT_COMMITTER_NAME
+              value: b4mad-release-agent
+            - name: GIT_COMMITTER_EMAIL
+              value: release-bot@b4mad.net
+            - name: GIT_SSH_COMMAND
+              value: ssh -F /opt/app-root/src/.ssh/config
+            # The Forgejo API credential, added 2026-08-02. It reverses what
+            # stood here before — "the whole run needs exactly one credential,
+            # the SSH key it pushes the tag with; a PAT would be an unused
+            # secret, and an unused secret is a secret nobody notices has
+            # leaked". That argument was right about UNUSED. The token below is
+            # used: forge-agents' .releaserc now runs
+            # @ribbon-studios/semantic-release-forgejo (shipped since image
+            # v1.8.0 — the old note here said no such plugin existed, and is
+            # stale), which creates the Release object and uploads the
+            # enable-semantic-release skill tarball to it.
+            #
+            # ⚠️ Read this before reusing the manifest for another repo: the
+            # token is mounted for EVERY repo this Job releases, and it is only
+            # earned by the ones whose .releaserc actually publishes to the
+            # forge. For a repo that just wants a CHANGELOG and a tag, delete
+            # these three and the old reasoning applies again unchanged.
+            - name: FORGEJO_URL
+              value: https://git.b4mad.industries
+            # The plugin reads the slug from the environment, not from the git
+            # remote. Same owner/repo as REPO_URL above, and the one `sed` that
+            # retargets this manifest rewrites both — which is why the string
+            # is spelled identically in the two places.
+            - name: FORGEJO_REPOSITORY
+              value: agentic-forges/forge-agents
+            - name: FORGEJO_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: forgejo-agent-b4mad-release-agent
+                  key: token
+          volumeMounts:
+            - { name: workspace, mountPath: /workspace }
+            # subPath, so these land as the 0700 dirs the credentials
+            # initContainer made — not the group-writable emptyDir roots.
+            - { name: gnupg, mountPath: /opt/app-root/src/.gnupg, subPath: home }
+            - { name: ssh, mountPath: /opt/app-root/src/.ssh, subPath: home }
+            - { name: gitconfig, mountPath: /gitconfig }
+          resources:
+            requests: { cpu: 250m, memory: 512Mi }
+            limits: { cpu: "1", memory: 2Gi }
+
+      volumes:
+        - name: agent-credentials
+          secret:
+            secretName: forgejo-agent-b4mad-release-agent
+            defaultMode: 0400
+        - name: gnupg
+          emptyDir: {}
+        - name: ssh
+          emptyDir: {}
+        - name: gitconfig
+          emptyDir: {}
+        - name: workspace
+          emptyDir: {}
