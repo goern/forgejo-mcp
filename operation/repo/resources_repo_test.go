@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"codeberg.org/goern/forgejo-mcp/v2/operation/resource"
-	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/operation/resource"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/forgejo"
 
 	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -49,7 +49,7 @@ func TestRepoResourceHandler_HappyPath(t *testing.T) {
 			"login": "goern",
 		},
 		"description":       "MCP server for Forgejo",
-		"html_url":          "https://codeberg.org/goern/forgejo-mcp",
+		"html_url":          "https://git.b4mad.industries/agentic-forges/forgejo-mcp",
 		"default_branch":    "main",
 		"fork":              false,
 		"archived":          false,

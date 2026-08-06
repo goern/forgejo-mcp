@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/forgejo"
 	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
 	"github.com/mark3labs/mcp-go/mcp"
 )

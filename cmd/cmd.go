@@ -8,9 +8,9 @@ import (
 	"net/url"
 	"os"
 
-	"codeberg.org/goern/forgejo-mcp/v2/operation"
-	flagPkg "codeberg.org/goern/forgejo-mcp/v2/pkg/flag"
-	"codeberg.org/goern/forgejo-mcp/v2/pkg/log"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/operation"
+	flagPkg "git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/flag"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/log"
 )
 
 var (

@@ -1,4 +1,4 @@
-module codeberg.org/goern/forgejo-mcp/v2
+module git.b4mad.industries/agentic-forges/forgejo-mcp/v2
 
 go 1.25.5
 

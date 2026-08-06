@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"codeberg.org/goern/forgejo-mcp/v2/pkg/flag"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/flag"
 )
 
 func TestClient_WithContextToken(t *testing.T) {

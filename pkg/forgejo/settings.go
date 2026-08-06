@@ -6,7 +6,7 @@ import (
 	"context"
 	"sync"
 
-	"codeberg.org/goern/forgejo-mcp/v2/pkg/flag"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/flag"
 )
 
 // settingsCacheEntry holds a cached, resolved pagination ceiling for one

@@ -9,9 +9,9 @@ import (
 	"fmt"
 	"unicode/utf8"
 
-	"codeberg.org/goern/forgejo-mcp/v2/operation/resource"
-	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
-	"codeberg.org/goern/forgejo-mcp/v2/pkg/log"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/operation/resource"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/forgejo"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/log"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
