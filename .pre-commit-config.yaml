@@ -6,6 +6,16 @@ repos:
 
   - repo: local
     hooks:
+      - id: gofmt
+        name: gofmt
+        description: >-
+          Rewrite unformatted Go files. Mirrors the gofmt-check step in
+          .tekton/tasks/go-ci.yaml so import-order drift fails here instead
+          of in CI.
+        entry: gofmt -l -w
+        language: system
+        types: [go]
+
       - id: check-demos
         name: check anchored spec demos
         description: Validate anchored Showboat demos against their specs.
