@@ -3,10 +3,10 @@
 *2026-08-05T13:22:09Z by Showboat dev*
 <!-- showboat-id: 5b860b18-d953-4c57-b3ab-cb855e993de0 -->
 
-*Captured: 2026-08-05 via Showboat dev*
-<!-- captured-for: PR pending -->
-<!-- captured-at: 2026-08-05 -->
-<!-- captured-against: worktree-x8v (72ed65cf33fc7e7c99842e8fca09ee9423e212ca) -->
+*Captured: 2026-08-06 via Showboat dev*
+<!-- captured-for: PR pending (revises PR #458 per chris420's review, issuecomment-5533/5535) -->
+<!-- captured-at: 2026-08-06 -->
+<!-- captured-against: worktree-x8v (2470d6ff38cea69add1d180f15d1c05e73b0eaf0 + uncommitted F1-F4 changes) -->
 
 Proves the `search-issues` capability — spec [`spec.md`](./spec.md) (change `add-search-issues-tool`), issue [`#452`](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/452).
 
@@ -154,23 +154,45 @@ ${FORGEJO_MCP_BIN:-./forgejo-mcp} --cli search_issues --args '{"owner":"agentic-
 }
 ```
 
-## Scenario: Caller raises the bound
+## Scenario: Caller raises the bound within the ceiling
 
-Spec: *`limit` 100 against an owner with more than 20 matching issues* → *up to 100 issues are returned in one response, and the count may be lower if the instance clamps `limit` at `MAX_RESPONSE_ITEMS`.* Closed issues/PRs on this org exceed 20, so `state=closed` exercises the raised bound. This instance clamps at 50 — the response reports `limit` 100 (the value the caller asked for) but `count` 50 (what the instance actually returned), which doubles as live proof of the clamp.
+Spec (revised, see design.md Decision 3): *`limit` raised toward an instance's known ceiling* → *up to that many issues are returned in one response, and the envelope reports the effective (actually-sent) limit.* This instance's `max_response_items` is 50 (`GET /api/v1/settings/api`, confirmed below), so `limit=50` is the largest value this org's closed-issue set can exercise without being rejected. Closed issues/PRs on this org exceed 20, so `state=closed` exercises the raised bound.
 
 ```bash
-${FORGEJO_MCP_BIN:-./forgejo-mcp} --cli search_issues --args '{"owner":"agentic-forges","state":"closed","limit":100}' --output json 2>/dev/null \
+curl -s "https://git.b4mad.industries/api/v1/settings/api"
+echo "---"
+${FORGEJO_MCP_BIN:-./forgejo-mcp} --cli search_issues --args '{"owner":"agentic-forges","state":"closed","limit":50}' --output json 2>/dev/null \
   | jq -r '.[0].text | fromjson | .Result | {page,limit,count,has_next}'
 
 ```
 
 ```output
+{"max_response_items":50,"default_paging_num":30,"default_git_trees_per_page":1000,"default_max_blob_size":10485760}
+---
 {
   "page": 1,
-  "limit": 100,
+  "limit": 50,
   "count": 50,
   "has_next": true
 }
+```
+
+`limit` in the envelope is 50 — the effective limit actually sent upstream, sourced from the same value used to build the request, matching what the caller asked for since 50 does not exceed the ceiling.
+
+## Scenario: Caller exceeds a known ceiling
+
+Spec (added by design.md Decision 3, revised — [chris420's review](https://git.b4mad.industries/agentic-forges/forgejo-mcp/pulls/458#issuecomment-5533) of draft PR #458): *`limit` above a known instance ceiling* → *the tool returns an error naming both the requested limit and the ceiling, before any upstream search request.* This replaces the old behaviour (silently clamping and reporting the *requested* value with a mismatched `count`) with a rejection whose message is self-correcting for an LLM caller: it names the exact retry value.
+
+```bash
+${FORGEJO_MCP_BIN:-./forgejo-mcp} --cli search_issues --args '{"owner":"agentic-forges","state":"closed","limit":100}' 2>&1 \
+  | grep -o "limit 100 exceeds this instance's maximum of 50 (max_response_items); retry with limit <= 50" | head -1
+echo "exit was error (no upstream search request logged above)"
+
+```
+
+```output
+limit 100 exceeds this instance's maximum of 50 (max_response_items); retry with limit <= 50
+exit was error (no upstream search request logged above)
 ```
 
 ## Scenario: Caller pages forward
@@ -269,36 +291,13 @@ ${FORGEJO_MCP_BIN:-./forgejo-mcp} --cli search_issues --args '{"owner":"agentic-
 }
 ```
 
-## Scenario: Clamped page still signals continuation
+## Scenario: Full page under a known ceiling still signals continuation
 
-Spec: *a call with `limit` 100 is answered with 50 issues because the instance clamps at `MAX_RESPONSE_ITEMS`, and further matching issues exist* → *`has_next` is true.* Unlike the caveat in the task brief, this instance genuinely clamps at 50 (see the "Caller raises the bound" capture above), so this is a **live** capture, not a test-citation fallback. `page=1` and `page=2` both return exactly 50 rows with `has_next` still true, confirming the probe (page+1 at the same `limit`) keeps firing rather than being fooled by the clamp.
+Spec (revised, see design.md Decision 3 and `specs/search-issues/spec.md`'s "Resumable response envelope" requirement): *the instance's ceiling is known, a call with an accepted `limit` returns exactly `limit` issues, and further matching issues exist* → *`has_next` is true, and no next-page probe request is made.* This supersedes the old "Clamped page still signals continuation" scenario below: on this instance the ceiling is always known (`GET /api/v1/settings/api` succeeds), so a `limit=100` request is now rejected outright (see "Caller exceeds a known ceiling" above) rather than silently clamped to 50 — the mismatched-envelope failure mode that scenario demonstrated can no longer be reached live against this instance.
 
-```bash
-echo "page 1 (limit=100 requested):"
-${FORGEJO_MCP_BIN:-./forgejo-mcp} --cli search_issues --args '{"owner":"agentic-forges","state":"closed","limit":100,"page":1}' --output json 2>/dev/null \
-  | jq -r '.[0].text | fromjson | .Result | {page,limit,count,has_next}'
-echo "page 2 (same limit, clamp still in effect):"
-${FORGEJO_MCP_BIN:-./forgejo-mcp} --cli search_issues --args '{"owner":"agentic-forges","state":"closed","limit":100,"page":2}' --output json 2>/dev/null \
-  | jq -r '.[0].text | fromjson | .Result | {page,limit,count,has_next}'
+The `limit=50` capture under "Caller raises the bound within the ceiling" above already is this scenario's evidence: a full page (`count` 50 == `limit` 50) reports `has_next: true` under a known ceiling. The server's request log (not shown by the `--cli` surface, which logs only client-side events) is not something this demo can capture, so the "no probe request was made" half of the claim is proven in code instead: `TestSearchIssues_LimitEqualsKnownCeilingAccepted` in `operation/issue/issue_test.go` asserts the upstream request count is exactly 1 for this exact case (`limit == ceiling`, using an httptest backend that fails the test if a second request arrives).
 
-```
-
-```output
-page 1 (limit=100 requested):
-{
-  "page": 1,
-  "limit": 100,
-  "count": 50,
-  "has_next": true
-}
-page 2 (same limit, clamp still in effect):
-{
-  "page": 2,
-  "limit": 100,
-  "count": 50,
-  "has_next": true
-}
-```
+The former "clamped short page still signals has_next" failure mode is now covered by unit tests instead of a live capture: `TestSearchIssues_ClampedPageStillSignalsContinuation` and `TestSearchIssues_SettingsFailureNeverBecomesZeroCeiling` exercise the unknown-ceiling fallback (settings endpoint unreachable/403) that this scenario now only applies to — there is no way to force this live instance's settings endpoint to fail without a write/config change, which is out of scope for a read-only demo.
 
 ## Scenario: Envelope always present
 

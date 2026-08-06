@@ -36,18 +36,39 @@ by any bound the caller cannot control.
 
 `page` SHALL default to 1 and `limit` SHALL default to 20, matching `list_repo_issues`.
 
+The server SHALL attempt to discover the instance's pagination ceiling
+(`max_response_items`, via `GET /api/v1/settings/api`) and cache it per instance. When the
+ceiling is known and the effective `limit` (after defaulting) exceeds it, the tool SHALL
+return an error, before making any upstream search request, naming both the requested limit
+and the ceiling. When the ceiling cannot be determined (endpoint unreachable, non-2xx, or the
+instance predates the endpoint), the tool SHALL proceed without rejecting on `limit`; a failed
+lookup SHALL be treated as "ceiling unknown", never as a ceiling of 0.
+
 #### Scenario: Default bound applied
 
 - **WHEN** `search_issues` is called without `page` or `limit`
 - **THEN** at most 20 issues are returned
 - **AND** the response reports `page` 1 and `limit` 20
 
-#### Scenario: Caller raises the bound
+#### Scenario: Caller raises the bound within the ceiling
 
-- **WHEN** `search_issues` is called with `limit` 100 against an owner with more than 20
-      matching issues
-- **THEN** up to 100 issues are returned in one response
-- **AND** the count may be lower if the instance clamps `limit` at `MAX_RESPONSE_ITEMS`
+- **WHEN** `search_issues` is called with `limit` 50 against an instance whose known ceiling is
+      50 or higher, and an owner with more than 20 matching issues
+- **THEN** up to 50 issues are returned in one response
+- **AND** the response reports `limit` 50
+
+#### Scenario: Caller exceeds a known ceiling
+
+- **WHEN** `search_issues` is called with `limit` 100 against an instance whose known ceiling
+      (`max_response_items`) is 50
+- **THEN** the tool returns an error naming both `100` and `50`
+- **AND** no upstream search request is made
+
+#### Scenario: Ceiling unknown
+
+- **WHEN** `search_issues` is called with `limit` 100 and the instance's `max_response_items`
+      cannot be determined
+- **THEN** the request proceeds without a client-side limit rejection
 
 #### Scenario: Caller pages forward
 
@@ -67,46 +88,66 @@ by any bound the caller cannot control.
 with a continuation signal: the `page` and `limit` actually used, the `count` of issues in
 this response, and a boolean `has_next`.
 
-`has_next` SHALL be derived by a pagination-preserving next-page probe. When `count` is 0,
-`has_next` SHALL be false. Otherwise the handler SHALL request `page+1` at the **same**
-`limit` and set `has_next` according to whether the probe returned any issues.
+`limit` in the envelope SHALL report the value actually sent to the upstream search request
+(the effective limit), sourced from the same value used to build that request, not
+recomputed independently from the caller's raw input.
 
-The probe MUST NOT request `limit+1`: Forgejo derives page offsets from the page size, and
-changing it causes later pages to skip rows.
+`has_next` derivation depends on whether the instance's pagination ceiling is known:
 
-`has_next` SHALL NOT be inferred from `count == limit`. The instance may clamp `limit` at its
-`MAX_RESPONSE_ITEMS` setting, so a clamped short page would falsely signal the end of the
-data. This is the rule `openspec/specs/wiki-tools/spec.md:31-38` establishes for
-`list_wiki_pages`, widened here from "probe on a full page" to "probe on any non-empty page"
-for that reason — `list_wiki_pages` defaults `limit` to the server page size and never raises
-it past the clamp, whereas `search_issues` advertises a `limit` callers can set above it.
+- When the ceiling is known, the Caller-controlled bound requirement guarantees the effective
+  `limit` never exceeds it, so the request is always honored in full and `has_next` SHALL be
+  `count == limit`.
+- When the ceiling is unknown, `has_next` SHALL be derived by a pagination-preserving
+  next-page probe: when `count` is 0, `has_next` SHALL be false; otherwise the handler SHALL
+  request `page+1` at the **same** `limit` and set `has_next` according to whether the probe
+  returned any issues. The probe MUST NOT request `limit+1`: Forgejo derives page offsets from
+  the page size, and changing it causes later pages to skip rows. This is the rule
+  `openspec/specs/wiki-tools/spec.md:31-38` establishes for `list_wiki_pages`, widened here
+  from "probe on a full page" to "probe on any non-empty page", because `search_issues`
+  advertises a `limit` callers can set above the (here, unconfirmed) ceiling.
+
+The probe SHALL NOT run when the ceiling is known and the request was accepted: a short page
+is unambiguous in that case (the limit was honored in full, so nothing was clamped), and
+running it would cost an unnecessary upstream request.
 
 The tool SHALL NOT report a total result count, because the upstream response does not carry
 one that the client parses.
 
-#### Scenario: More results available
+#### Scenario: More results available (ceiling unknown)
 
-- **WHEN** a call returns issues and the next-page probe at the same `limit` returns at least
-      one issue
+- **WHEN** the instance's ceiling is unknown, a call returns issues, and the next-page probe
+      at the same `limit` returns at least one issue
 - **THEN** `has_next` is true
 - **AND** the caller can retrieve the remainder by re-issuing the call with `page` incremented
 
-#### Scenario: Last page reached
+#### Scenario: Last page reached (ceiling unknown)
 
-- **WHEN** a call returns no issues, or the next-page probe at the same `limit` returns none
+- **WHEN** the instance's ceiling is unknown and a call returns no issues, or the next-page
+      probe at the same `limit` returns none
 - **THEN** `has_next` is false
 
-#### Scenario: Clamped page still signals continuation
+#### Scenario: Full page under a known ceiling still signals continuation
 
-- **WHEN** a call with `limit` 100 is answered with 50 issues because the instance clamps at
-      `MAX_RESPONSE_ITEMS`, and further matching issues exist
+- **WHEN** the instance's ceiling is known, a call with an accepted `limit` returns exactly
+      `limit` issues, and further matching issues exist
 - **THEN** `has_next` is true
+- **AND** no next-page probe request is made
+
+#### Scenario: Clamped page still signals continuation (unknown-ceiling fallback only)
+
+- **WHEN** the instance's ceiling is unknown, a call with `limit` 100 is answered with 50
+      issues because the instance silently clamps at its own `MAX_RESPONSE_ITEMS`, and
+      further matching issues exist
+- **THEN** `has_next` is true, as determined by the next-page probe
+- **AND** this scenario cannot occur when the ceiling is known, because a `limit` that would
+      be clamped is rejected before the upstream call (see Caller-controlled bound)
 
 #### Scenario: Envelope always present
 
 - **WHEN** any successful `search_issues` call completes
 - **THEN** the response object contains `issues`, `page`, `limit`, `count`, and `has_next`
 - **AND** `count` equals the length of `issues`
+- **AND** `limit` equals the value actually sent upstream
 
 ### Requirement: Search filters
 

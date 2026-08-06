@@ -372,13 +372,33 @@ func SearchIssuesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 	if limit < 1 {
 		limit = 20
 	}
+	requestedLimit := int(limit)
+
+	// Instance pagination ceiling (design.md Decision 3): known ceilings are
+	// enforced by rejecting an over-ceiling request before the upstream call
+	// rather than silently clamping it, so the response never claims a limit
+	// larger than what was actually applied. An unknown ceiling (settings
+	// endpoint unreachable/403) falls back to the same-limit next-page probe
+	// below.
+	ceiling, ceilingKnown := forgejo.MaxResponseItems(ctx)
+	if ceilingKnown && requestedLimit > ceiling {
+		return to.ErrorResult(fmt.Errorf(
+			"limit %d exceeds this instance's maximum of %d (max_response_items); retry with limit <= %d",
+			requestedLimit, ceiling, ceiling,
+		))
+	}
+	// effectiveLimit is the limit actually sent upstream. It feeds both the
+	// SDK call and the response envelope from the same variable so the two
+	// can never diverge; see the effective-limit reporting requirement in
+	// specs/search-issues/spec.md.
+	effectiveLimit := requestedLimit
 
 	opt := forgejo_sdk.ListIssueOption{
 		Owner: owner,
 		State: forgejo_sdk.StateType(state),
 		ListOptions: forgejo_sdk.ListOptions{
 			Page:     int(page),
-			PageSize: int(limit),
+			PageSize: effectiveLimit,
 		},
 	}
 	if issueType != "" {
@@ -413,11 +433,19 @@ func SearchIssuesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 	}
 	count := len(issues)
 
-	// Same-limit next-page probe (design Decision 3): never limit+1, since
-	// Forgejo derives page offsets from page size and a changed page size
-	// would make later pages skip rows.
-	hasNext := false
-	if count > 0 {
+	// has_next (design.md Decision 3, revised): when the ceiling is known,
+	// the rejection above guarantees effectiveLimit <= ceiling, so the
+	// request was honored in full and the simple count == limit rule is
+	// sound again — a full page may have more, a short page cannot. That
+	// rule was unsound only because nothing clamped limit client-side; now
+	// something does. When the ceiling is unknown, fall back to the
+	// same-limit next-page probe: never limit+1, since Forgejo derives page
+	// offsets from page size and a changed page size would make later pages
+	// skip rows.
+	var hasNext bool
+	if ceilingKnown {
+		hasNext = count == effectiveLimit
+	} else if count > 0 {
 		probeOpt := opt
 		probeOpt.Page = int(page) + 1
 		nextIssues, _, err := client.ListIssues(probeOpt)
@@ -430,7 +458,7 @@ func SearchIssuesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 	return to.TextResult(searchIssuesEnvelope{
 		Issues:  issues,
 		Page:    int(page),
-		Limit:   int(limit),
+		Limit:   effectiveLimit,
 		Count:   count,
 		HasNext: hasNext,
 	})

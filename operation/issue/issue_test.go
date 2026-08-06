@@ -355,13 +355,46 @@ func TestUpdateIssue_NoAssigneeFieldsOmitsAssignees(t *testing.T) {
 // newPatchBackend, the caller's handler can inspect the query (e.g. page) and
 // answer differently per request — needed to simulate the has_next probe,
 // where page and page+1 must return different bodies.
+//
+// /api/v1/settings/api is served separately (not routed through handler, and
+// not recorded in *records) and defaults to 404, so the instance ceiling is
+// "unknown" and every existing caller of newQueryBackend keeps exercising the
+// probe-based fallback path exactly as before. Use newQueryBackendWithSettings
+// to test the known-ceiling path.
 func newQueryBackend(t *testing.T, handler func(w http.ResponseWriter, r *http.Request, records *[]recordedReq)) (*httptest.Server, *[]recordedReq) {
 	t.Helper()
+	return newQueryBackendWithSettings(t, http.StatusNotFound, "", handler)
+}
+
+// newQueryBackendWithSettings is newQueryBackend with a configurable
+// /api/v1/settings/api response, so tests can exercise the known-ceiling
+// path. settingsStatus 0 defaults to 404 (ceiling unknown). The settings
+// request itself is never appended to *records, matching how /api/v1/version
+// is already excluded — both are SDK-internal plumbing, not the search
+// request under test.
+func newQueryBackendWithSettings(
+	t *testing.T,
+	settingsStatus int,
+	settingsBody string,
+	handler func(w http.ResponseWriter, r *http.Request, records *[]recordedReq),
+) (*httptest.Server, *[]recordedReq) {
+	t.Helper()
 	records := make([]recordedReq, 0, 4)
+	if settingsStatus == 0 {
+		settingsStatus = http.StatusNotFound
+	}
+	if settingsBody == "" {
+		settingsBody = `{"message":"not found"}`
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/version", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"version":"11.0.0+gitea-1.22.0"}`))
+	})
+	mux.HandleFunc("/api/v1/settings/api", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(settingsStatus)
+		_, _ = w.Write([]byte(settingsBody))
 	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
@@ -382,9 +415,15 @@ func newQueryBackend(t *testing.T, handler func(w http.ResponseWriter, r *http.R
 	if err != nil {
 		t.Fatalf("failed to build SDK client for test: %v", err)
 	}
+	// Resets the cached MaxResponseItems ceiling too, so one test's ceiling
+	// (or lack thereof) never leaks into the next.
 	forgejo.SetClientForTesting(c)
 	return srv, &records
 }
+
+// knownCeilingBody is the /api/v1/settings/api response body used by tests
+// that need a known instance pagination ceiling of 50.
+const knownCeilingBody = `{"max_response_items":50,"default_paging_num":30,"default_git_trees_per_page":1000,"default_max_blob_size":10485760}`
 
 // pageFromQuery extracts the "page" query parameter, defaulting to "1" when absent
 // (matching the SDK's own default).
@@ -689,9 +728,17 @@ func TestSearchIssues_AllOptionalFiltersPassThrough(t *testing.T) {
 }
 
 // TestSearchIssues_ClampedPageStillSignalsContinuation is the clamping
-// falsifier from battle-test.md: an instance clamping limit=100 down to 50
-// results must still report has_next true when a further page exists. The
-// count == limit heuristic gets this wrong; the same-limit probe does not.
+// falsifier from battle-test.md: an instance silently clamping limit=100
+// down to 50 results must still report has_next true when a further page
+// exists. The count == limit heuristic gets this wrong; the same-limit probe
+// does not.
+//
+// This scenario is now specifically the UNKNOWN-ceiling fallback path: when
+// the instance ceiling is known, a limit that would be clamped is rejected
+// before the upstream call (see TestSearchIssues_LimitAboveKnownCeilingRejected),
+// so this exact mismatch cannot occur there. newQueryBackend's settings
+// endpoint 404s by default, so this test still exercises "ceiling unknown"
+// without any change.
 func TestSearchIssues_ClampedPageStillSignalsContinuation(t *testing.T) {
 	_, records := newQueryBackend(t, func(w http.ResponseWriter, r *http.Request, _ *[]recordedReq) {
 		if pageFromQuery(r) == "2" {
@@ -724,6 +771,175 @@ func TestSearchIssues_ClampedPageStillSignalsContinuation(t *testing.T) {
 	}
 	if len(*records) != 2 {
 		t.Fatalf("expected page request + probe, got %d", len(*records))
+	}
+}
+
+// TestSearchIssues_LimitAboveKnownCeilingRejected is the case chris420's
+// review (PR #458 issuecomment-5533) argued for: when the ceiling is
+// discoverable, an over-ceiling limit must be rejected before the upstream
+// call, not silently truncated with a misleading envelope. The error must
+// name both the requested limit and the ceiling so an LLM caller can
+// self-correct the retry.
+func TestSearchIssues_LimitAboveKnownCeilingRejected(t *testing.T) {
+	_, records := newQueryBackendWithSettings(t, http.StatusOK, knownCeilingBody,
+		func(w http.ResponseWriter, _ *http.Request, _ *[]recordedReq) {
+			t.Fatal("no upstream search request expected when limit exceeds the known ceiling")
+		},
+	)
+
+	res, err := SearchIssuesFn(context.Background(), makeReq(map[string]any{"owner": "goern", "limit": float64(100)}))
+	if res != nil {
+		t.Fatalf("expected nil result on rejection, got %+v", res)
+	}
+	if err == nil {
+		t.Fatal("expected an error when limit exceeds the known ceiling")
+	}
+	if !strings.Contains(err.Error(), "100") || !strings.Contains(err.Error(), "50") {
+		t.Fatalf("expected error naming both the requested limit (100) and the ceiling (50), got %v", err)
+	}
+	if len(*records) != 0 {
+		t.Fatalf("expected no upstream search request, got %d", len(*records))
+	}
+}
+
+// TestSearchIssues_LimitEqualsKnownCeilingAccepted asserts the boundary:
+// limit == ceiling is accepted, not rejected.
+func TestSearchIssues_LimitEqualsKnownCeilingAccepted(t *testing.T) {
+	_, records := newQueryBackendWithSettings(t, http.StatusOK, knownCeilingBody,
+		func(w http.ResponseWriter, r *http.Request, _ *[]recordedReq) {
+			if r.URL.Query().Get("limit") != "50" {
+				t.Fatalf("expected limit=50, got %s", r.URL.RawQuery)
+			}
+			issues := make([]string, 0, 50)
+			for i := 1; i <= 50; i++ {
+				issues = append(issues, fmt.Sprintf(`{"id":%d,"number":%d,"title":"issue-%d"}`, i, i, i))
+			}
+			_, _ = w.Write([]byte("[" + strings.Join(issues, ",") + "]"))
+		},
+	)
+
+	res, err := SearchIssuesFn(context.Background(), makeReq(map[string]any{"owner": "goern", "limit": float64(50)}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("SearchIssuesFn err: %v res=%+v", err, res)
+	}
+	text := textOf(res)
+	if !strings.Contains(text, `"limit":50`) {
+		t.Fatalf("expected reported limit=50, got %s", text)
+	}
+	if !strings.Contains(text, `"count":50`) {
+		t.Fatalf("expected count=50, got %s", text)
+	}
+	// Full page under a known, honored ceiling: count == limit is sound here
+	// (see design.md Decision 3, revised), so has_next must be true without
+	// a probe.
+	if !strings.Contains(text, `"has_next":true`) {
+		t.Fatalf("expected has_next=true for a full page under a known ceiling, got %s", text)
+	}
+	if len(*records) != 1 {
+		t.Fatalf("expected exactly 1 request (no probe when ceiling is known), got %d", len(*records))
+	}
+}
+
+// TestSearchIssues_LimitBelowKnownCeilingAccepted covers the ordinary
+// below-ceiling case and its no-probe, short-page has_next=false semantics.
+func TestSearchIssues_LimitBelowKnownCeilingAccepted(t *testing.T) {
+	_, records := newQueryBackendWithSettings(t, http.StatusOK, knownCeilingBody,
+		func(w http.ResponseWriter, r *http.Request, _ *[]recordedReq) {
+			if r.URL.Query().Get("limit") != "10" {
+				t.Fatalf("expected limit=10, got %s", r.URL.RawQuery)
+			}
+			_, _ = w.Write([]byte(`[{"id":1,"number":1,"title":"one"}]`))
+		},
+	)
+
+	res, err := SearchIssuesFn(context.Background(), makeReq(map[string]any{"owner": "goern", "limit": float64(10)}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("SearchIssuesFn err: %v res=%+v", err, res)
+	}
+	text := textOf(res)
+	if !strings.Contains(text, `"limit":10`) {
+		t.Fatalf("expected reported limit=10, got %s", text)
+	}
+	if !strings.Contains(text, `"has_next":false`) {
+		t.Fatalf("expected has_next=false for a short page (count < limit), got %s", text)
+	}
+	if len(*records) != 1 {
+		t.Fatalf("expected exactly 1 request (no probe when ceiling is known), got %d", len(*records))
+	}
+}
+
+// TestSearchIssues_EffectiveLimitReported is the direct regression test for
+// the bug chris420 found: issue.go used to report `Limit: int(limit)` (the
+// raw requested value) in the envelope regardless of what was actually sent
+// upstream. Under this design, an over-ceiling request is rejected outright
+// (see TestSearchIssues_LimitAboveKnownCeilingRejected), so the specific
+// "limit=100 reported, 50 rows returned" mismatch can no longer reach a
+// successful envelope at all — this test pins that down for the accepted
+// case: the envelope's `limit` must equal the value actually sent upstream,
+// sourced from the same variable, not recomputed independently.
+func TestSearchIssues_EffectiveLimitReported(t *testing.T) {
+	_, records := newQueryBackendWithSettings(t, http.StatusOK, knownCeilingBody,
+		func(w http.ResponseWriter, r *http.Request, _ *[]recordedReq) {
+			// The instance ceiling is 50; the request below asks for 50 and
+			// must be honored and reported as 50, never mutated en route.
+			if r.URL.Query().Get("limit") != "50" {
+				t.Fatalf("expected effective limit 50 sent upstream, got %s", r.URL.RawQuery)
+			}
+			issues := make([]string, 0, 50)
+			for i := 1; i <= 50; i++ {
+				issues = append(issues, fmt.Sprintf(`{"id":%d,"number":%d,"title":"issue-%d"}`, i, i, i))
+			}
+			_, _ = w.Write([]byte("[" + strings.Join(issues, ",") + "]"))
+		},
+	)
+
+	res, err := SearchIssuesFn(context.Background(), makeReq(map[string]any{"owner": "goern", "limit": float64(50)}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("SearchIssuesFn err: %v res=%+v", err, res)
+	}
+	var wrapper struct {
+		Result struct {
+			Limit int `json:"limit"`
+			Count int `json:"count"`
+		} `json:"Result"`
+	}
+	if err := json.Unmarshal([]byte(textOf(res)), &wrapper); err != nil {
+		t.Fatalf("invalid envelope JSON: %v\nbody: %s", err, textOf(res))
+	}
+	if wrapper.Result.Limit != 50 {
+		t.Fatalf("expected envelope limit=50 (the effective, actually-sent limit), got %d", wrapper.Result.Limit)
+	}
+	if len(*records) != 1 {
+		t.Fatalf("expected exactly 1 upstream request, got %d", len(*records))
+	}
+}
+
+// TestSearchIssues_SettingsFailureNeverBecomesZeroCeiling asserts that a
+// broken /api/v1/settings/api endpoint (500, not merely 403/404) is treated
+// as "ceiling unknown" and falls back to the probe, rather than being
+// misread as a ceiling of 0 — a zero ceiling would reject every request,
+// including this one for a modest limit of 5.
+func TestSearchIssues_SettingsFailureNeverBecomesZeroCeiling(t *testing.T) {
+	_, records := newQueryBackendWithSettings(t, http.StatusInternalServerError, `{"message":"boom"}`,
+		func(w http.ResponseWriter, r *http.Request, _ *[]recordedReq) {
+			if pageFromQuery(r) == "2" {
+				_, _ = w.Write([]byte(`[]`))
+				return
+			}
+			_, _ = w.Write([]byte(`[{"id":1,"number":1,"title":"one"}]`))
+		},
+	)
+
+	res, err := SearchIssuesFn(context.Background(), makeReq(map[string]any{"owner": "goern", "limit": float64(5)}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("expected success (ceiling unknown, not zero), got err=%v res=%+v", err, res)
+	}
+	if !strings.Contains(textOf(res), `"limit":5`) {
+		t.Fatalf("expected reported limit=5, got %s", textOf(res))
+	}
+	// Ceiling unknown -> fallback probe still runs: page + probe.
+	if len(*records) != 2 {
+		t.Fatalf("expected page request + probe (ceiling unknown fallback), got %d", len(*records))
 	}
 }
 
