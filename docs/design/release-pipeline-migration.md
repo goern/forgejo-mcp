@@ -34,7 +34,8 @@ Forgejo Actions workflow that runs on Codeberg's hosted runner whenever a
 Parallel to this, the project already uses op1st Tekton (OpenShift
 Pipelines + Pipelines-as-Code) for PR and push-to-main CI, registered in
 namespace `op1st-pipelines` via the `Repository` CR
-`.tekton/repository.yaml`. The open bead **forgejo-mcp-td8** captures the
+`manifests/repository.yaml` (applied by hand — it must stay out of
+`.tekton/`, which PaC decodes with a Tekton-only scheme). The open bead **forgejo-mcp-td8** captures the
 follow-up decision of which CI gate (Forgejo Actions vs Tekton) becomes
 canonical for PRs; release follows the same direction once that lands.
 
