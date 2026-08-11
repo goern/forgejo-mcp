@@ -61,6 +61,7 @@ type issueResourcePayload struct {
 	CreatedAt      string       `json:"created_at"`
 	UpdatedAt      string       `json:"updated_at"`
 	ClosedAt       string       `json:"closed_at,omitempty"`
+	DueDate        string       `json:"due_date,omitempty"`
 	Labels         []string     `json:"labels"`
 	Assignees      []string     `json:"assignees"`
 	Milestone      string       `json:"milestone,omitempty"`
@@ -143,6 +144,10 @@ func issueResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]m
 	if iss.Closed != nil {
 		closedAt = iss.Closed.Format("2006-01-02T15:04:05Z07:00")
 	}
+	dueDate := ""
+	if iss.Deadline != nil {
+		dueDate = iss.Deadline.Format("2006-01-02T15:04:05Z07:00")
+	}
 
 	payload := issueResourcePayload{
 		Owner:          params.Owner,
@@ -154,6 +159,7 @@ func issueResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]m
 		CreatedAt:      iss.Created.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt:      iss.Updated.Format("2006-01-02T15:04:05Z07:00"),
 		ClosedAt:       closedAt,
+		DueDate:        dueDate,
 		Labels:         labels,
 		Assignees:      assignees,
 		Milestone:      milestone,
