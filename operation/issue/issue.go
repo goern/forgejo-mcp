@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -17,6 +18,26 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
+
+// issueSortValues are the Forgejo API's valid `sort` values for
+// GET /repos/{owner}/{repo}/issues (see routers/api/v1/repo/issue.go's
+// ListIssues swagger comment). "nearduedate"/"farduedate" are what daikon#93
+// needs for EDF selection; the SDK (codeberg.org/mvdkleijn/forgejo-sdk v3.0.0)
+// has no Sort field on ListIssueOption, so this list is duplicated here
+// rather than sourced from the SDK.
+var issueSortValues = []string{
+	"relevance", "latest", "oldest", "recentupdate", "leastupdate",
+	"mostcomment", "leastcomment", "nearduedate", "farduedate",
+}
+
+func isValidIssueSort(s string) bool {
+	for _, v := range issueSortValues {
+		if s == v {
+			return true
+		}
+	}
+	return false
+}
 
 // ScopedLabel wraps forgejo_sdk.Label with a scope marker so callers of
 // list_repo_labels and list_org_labels can tell repo- and org-scoped
@@ -85,6 +106,7 @@ var (
 		mcp.WithString("type", mcp.Description("Type (issues|pulls)")),
 		mcp.WithString("milestones", mcp.Description("Milestone names/IDs (comma-separated)")),
 		mcp.WithString("labels", mcp.Description("Labels (comma-separated)")),
+		mcp.WithString("sort", mcp.Description("Server-side sort order. One of: relevance, latest, oldest, recentupdate, leastupdate, mostcomment, leastcomment, nearduedate, farduedate. Default is the API's own default (latest).")),
 		mcp.WithNumber("page", mcp.Description(params.Page), mcp.DefaultNumber(1)),
 		mcp.WithNumber("limit", mcp.Description(params.Limit), mcp.DefaultNumber(20)),
 	)
@@ -118,6 +140,8 @@ var (
 		mcp.WithString("assignee", mcp.Description("Assignee username (convenience for a single user; equivalent to a one-element 'assignees')")),
 		mcp.WithString("assignees", mcp.Description("Assignee usernames (comma-separated). Overrides 'assignee' if both are set. Pass an empty string to clear all assignees.")),
 		mcp.WithString("milestone", mcp.Description(params.Milestone)),
+		mcp.WithString("due_date", mcp.Description("Set the issue's due date (RFC3339, e.g. 2026-08-20T00:00:00Z). Ignored if 'clear_due_date' is also true — set exactly one of the two.")),
+		mcp.WithBoolean("clear_due_date", mcp.Description("Clear the issue's due date. Mutually exclusive with 'due_date'.")),
 	)
 
 	AddIssueLabelsTools = mcp.NewTool(
@@ -288,6 +312,7 @@ func ListRepoIssuesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	issueType, _ := req.GetArguments()["type"].(string)
 	milestones, _ := req.GetArguments()["milestones"].(string)
 	labels, _ := req.GetArguments()["labels"].(string)
+	sort, _ := req.GetArguments()["sort"].(string)
 	page, _ := to.Float64(req.GetArguments()["page"])
 	if page == 0 {
 		page = 1
@@ -295,6 +320,10 @@ func ListRepoIssuesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	limit, _ := to.Float64(req.GetArguments()["limit"])
 	if limit == 0 {
 		limit = 20
+	}
+
+	if sort != "" && !isValidIssueSort(sort) {
+		return to.ErrorResult(fmt.Errorf("invalid sort %q: must be one of %s", sort, strings.Join(issueSortValues, ", ")))
 	}
 
 	// Create ListIssueOption according to the Forgejo API
@@ -321,6 +350,22 @@ func ListRepoIssuesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	// Set labels if provided
 	if labels != "" {
 		opt.Labels = strings.Split(labels, ",")
+	}
+
+	// The Forgejo API supports `sort` server-side on this endpoint (including
+	// nearduedate/farduedate — see routers/api/v1/repo/issue.go's ListIssues
+	// swagger comment), but the vendored SDK's ListIssueOption has no Sort
+	// field to carry it (v3.0.0 QueryEncode never emits &sort=...). Go around
+	// the SDK client with the raw-HTTP helper for this one param, same
+	// pattern as fetchOrgLabels above.
+	if sort != "" {
+		query := opt.QueryEncode() + "&sort=" + url.QueryEscape(sort)
+		path := fmt.Sprintf("/repos/%s/%s/issues?%s", owner, repo, query)
+		var issues []*forgejo_sdk.Issue
+		if err := forgejo.DoJSONList(ctx, http.MethodGet, path, &issues); err != nil {
+			return to.ErrorResult(fmt.Errorf("get issues list err: %w", err))
+		}
+		return to.TextResult(issues)
 	}
 
 	client, err := forgejo.Client(ctx)
@@ -517,6 +562,8 @@ func UpdateIssueFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	assignee, _ := req.GetArguments()["assignee"].(string)
 	assigneesRaw, assigneesProvided := req.GetArguments()["assignees"].(string)
 	milestone, _ := req.GetArguments()["milestone"].(string)
+	dueDate, _ := req.GetArguments()["due_date"].(string)
+	clearDueDate, _ := req.GetArguments()["clear_due_date"].(bool)
 
 	opt := forgejo_sdk.EditIssueOption{}
 
@@ -541,6 +588,23 @@ func UpdateIssueFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 			return to.ErrorResult(fmt.Errorf("invalid milestone ID: %w", err))
 		}
 		opt.Milestone = &milestoneID
+	}
+	// due_date / clear_due_date map to the Forgejo API's due_date / unset_due_date
+	// EditIssueOption fields (routers/api/v1/repo/issue.go's EditIssue: setting
+	// unset_due_date=true clears the deadline; due_date sets it; both absent
+	// leaves it unchanged). Mutually exclusive — ambiguous intent otherwise.
+	switch {
+	case clearDueDate && dueDate != "":
+		return to.ErrorResult(fmt.Errorf("cannot set 'due_date' and 'clear_due_date' at the same time"))
+	case clearDueDate:
+		remove := true
+		opt.RemoveDeadline = &remove
+	case dueDate != "":
+		parsed, err := time.Parse(time.RFC3339, dueDate)
+		if err != nil {
+			return to.ErrorResult(fmt.Errorf("invalid due_date format (expected RFC3339): %w", err))
+		}
+		opt.Deadline = &parsed
 	}
 
 	client, err := forgejo.Client(ctx)

@@ -1254,3 +1254,152 @@ func TestListRepoMilestonesFn(t *testing.T) {
 		t.Fatalf("expected one request, got %d", len(*records))
 	}
 }
+
+// --- daikon#93: due_date read/write/sort ---
+
+func TestUpdateIssue_DueDateSet(t *testing.T) {
+	_, records := newPatchBackend(t, `{"id":1,"number":42}`)
+
+	res, err := UpdateIssueFn(context.Background(), makeReq(map[string]any{
+		"owner":    "goern",
+		"repo":     "forgejo-mcp",
+		"index":    float64(42),
+		"due_date": "2026-08-20T00:00:00Z",
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("UpdateIssueFn returned error: err=%v res=%+v", err, res)
+	}
+
+	last := (*records)[len(*records)-1]
+	var payload map[string]any
+	if err := json.Unmarshal(last.rawBody, &payload); err != nil {
+		t.Fatalf("invalid JSON body: %v\nbody: %s", err, last.rawBody)
+	}
+	dueDate, ok := payload["due_date"].(string)
+	if !ok || !strings.HasPrefix(dueDate, "2026-08-20") {
+		t.Fatalf("expected due_date=2026-08-20..., got %v", payload["due_date"])
+	}
+	if v, ok := payload["unset_due_date"]; ok && v != nil {
+		t.Fatalf("expected no unset_due_date field, got %v", v)
+	}
+}
+
+func TestUpdateIssue_DueDateClear(t *testing.T) {
+	_, records := newPatchBackend(t, `{"id":1,"number":42}`)
+
+	res, err := UpdateIssueFn(context.Background(), makeReq(map[string]any{
+		"owner":          "goern",
+		"repo":           "forgejo-mcp",
+		"index":          float64(42),
+		"clear_due_date": true,
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("UpdateIssueFn returned error: err=%v res=%+v", err, res)
+	}
+
+	last := (*records)[len(*records)-1]
+	var payload map[string]any
+	if err := json.Unmarshal(last.rawBody, &payload); err != nil {
+		t.Fatalf("invalid JSON body: %v\nbody: %s", err, last.rawBody)
+	}
+	if v, ok := payload["unset_due_date"].(bool); !ok || !v {
+		t.Fatalf("expected unset_due_date=true, got %v", payload["unset_due_date"])
+	}
+	if v, ok := payload["due_date"]; ok && v != nil {
+		t.Fatalf("expected no due_date field when clearing, got %v", v)
+	}
+}
+
+func TestUpdateIssue_DueDateSetAndClearConflict(t *testing.T) {
+	res, err := UpdateIssueFn(context.Background(), makeReq(map[string]any{
+		"owner":          "goern",
+		"repo":           "forgejo-mcp",
+		"index":          float64(42),
+		"due_date":       "2026-08-20T00:00:00Z",
+		"clear_due_date": true,
+	}))
+	if err == nil {
+		t.Fatalf("expected error when due_date and clear_due_date both set, got res=%+v", res)
+	}
+}
+
+func TestUpdateIssue_DueDateInvalidFormat(t *testing.T) {
+	res, err := UpdateIssueFn(context.Background(), makeReq(map[string]any{
+		"owner":    "goern",
+		"repo":     "forgejo-mcp",
+		"index":    float64(42),
+		"due_date": "not-a-date",
+	}))
+	if err == nil {
+		t.Fatalf("expected error for invalid due_date format, got res=%+v", res)
+	}
+}
+
+func TestGetIssueByIndex_DueDatePassesThrough(t *testing.T) {
+	srv, _ := newPatchBackend(t, `{"id":1,"number":42,"due_date":"2026-08-20T23:59:59Z"}`)
+	_ = srv
+
+	res, err := GetIssueByIndexFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern",
+		"repo":  "forgejo-mcp",
+		"index": float64(42),
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("GetIssueByIndexFn returned error: err=%v res=%+v", err, res)
+	}
+	text := textResultString(t, res)
+	if !strings.Contains(text, "2026-08-20") {
+		t.Fatalf("expected due_date to pass through in response, got: %s", text)
+	}
+}
+
+func TestListRepoIssues_SortNearDueDate(t *testing.T) {
+	srv, records := newPatchBackend(t, `[{"id":1,"number":42,"due_date":"2026-08-20T23:59:59Z"}]`)
+	_ = srv
+
+	res, err := ListRepoIssuesFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern",
+		"repo":  "forgejo-mcp",
+		"sort":  "nearduedate",
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("ListRepoIssuesFn returned error: err=%v res=%+v", err, res)
+	}
+
+	last := (*records)[len(*records)-1]
+	if last.method != http.MethodGet {
+		t.Fatalf("expected GET, got %s", last.method)
+	}
+	if !strings.Contains(last.query, "sort=nearduedate") {
+		t.Fatalf("expected sort=nearduedate in query, got: %s", last.query)
+	}
+	text := textResultString(t, res)
+	if !strings.Contains(text, "2026-08-20") {
+		t.Fatalf("expected due_date to pass through in response, got: %s", text)
+	}
+}
+
+func TestListRepoIssues_SortInvalidRejected(t *testing.T) {
+	res, err := ListRepoIssuesFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern",
+		"repo":  "forgejo-mcp",
+		"sort":  "not-a-real-sort",
+	}))
+	if err == nil {
+		t.Fatalf("expected error for invalid sort value, got res=%+v", res)
+	}
+}
+
+// textResultString extracts the text payload from an mcp.CallToolResult
+// built by pkg/to.TextResult (a single text content block).
+func textResultString(t *testing.T, res *mcp.CallToolResult) string {
+	t.Helper()
+	if len(res.Content) == 0 {
+		t.Fatalf("result has no content")
+	}
+	tc, ok := mcp.AsTextContent(res.Content[0])
+	if !ok {
+		t.Fatalf("result content is not text: %+v", res.Content[0])
+	}
+	return tc.Text
+}
