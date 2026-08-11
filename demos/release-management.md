@@ -240,11 +240,22 @@ B64=$(base64 -w0 dist/forgejo-mcp.tar.gz)
   --args "{\"owner\":\"goern\",\"repo\":\"forgejo-mcp\",\"release_id\":12345,\"content\":\"$B64\",\"filename\":\"forgejo-mcp.tar.gz\",\"mime_type\":\"application/gzip\"}"
 ```
 
-The base64 step happens client-side; the tool decodes and streams the bytes through `multipart/form-data` to Forgejo. Invalid base64 is rejected before any SDK call:
+The base64 step happens client-side; the tool decodes and streams the bytes through `multipart/form-data` to Forgejo. Invalid base64 is rejected before any Forgejo request:
 
 ```output
 Error: tool execution failed: content must be base64-encoded: ...
 ```
+
+For build artifacts already present on the `forgejo-mcp` host, upload directly
+from a path and avoid sending base64 through MCP:
+
+```bash
+./forgejo-mcp --cli create_release_attachment \
+  --args '{"owner":"goern","repo":"forgejo-mcp","release_id":12345,"file_path":"dist/forgejo-mcp.tar.gz","mime_type":"application/gzip"}'
+```
+
+Relative paths resolve from the server process working directory. `filename`
+is optional for path uploads and overrides the path basename when supplied.
 
 ### 11. Rename an asset
 

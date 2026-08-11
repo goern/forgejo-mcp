@@ -9,6 +9,8 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -414,6 +416,39 @@ func TestCreateReleaseAttachmentFn_HappyPath(t *testing.T) {
 	got, _ := io.ReadAll(part)
 	if string(got) != raw {
 		t.Fatalf("payload: %q", got)
+	}
+}
+
+func TestCreateReleaseAttachmentFn_UsesFilePathAndFilenameOverride(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "original.bin")
+	if err := os.WriteFile(path, []byte("release file"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	records := newBackend(t, route{
+		method:     http.MethodPost,
+		pathPrefix: "/api/v1/repos/o/r/releases/1/assets",
+		handler: func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write([]byte(`{"id":100,"name":"override.bin"}`))
+		},
+	})
+	if _, err := CreateReleaseAttachmentFn(context.Background(), req(map[string]any{
+		"owner": "o", "repo": "r", "release_id": 1.0,
+		"file_path": path, "filename": "override.bin",
+	})); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	_, params, err := mime.ParseMediaType((*records)[0].ctype)
+	if err != nil {
+		t.Fatal(err)
+	}
+	part, err := multipart.NewReader(strings.NewReader(string((*records)[0].rawBody)), params["boundary"]).NextPart()
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload, _ := io.ReadAll(part)
+	if part.FileName() != "override.bin" || string(payload) != "release file" {
+		t.Fatalf("filename=%q payload=%q", part.FileName(), payload)
 	}
 }
 

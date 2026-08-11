@@ -1,22 +1,21 @@
 // Package release registers MCP tools for Forgejo releases and their
 // attachments. The Forgejo SDK provides every endpoint we wrap, so this
-// package uses forgejo.Client(ctx) directly (no raw HTTP fallback) — except
-// for download_release_attachment, which fetches the browser_download_url
-// through forgejo.DoRaw to share the inline-size cap with the issue/comment
-// attachment download path.
+// package uses forgejo.Client(ctx) directly except where the shared raw HTTP
+// helpers provide consistent streaming or download bounds across domains.
 package release
 
 import (
-	"bytes"
 	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/operation/params"
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/forgejo"
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/log"
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/to"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/upload"
 
 	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -164,12 +163,13 @@ var (
 
 	CreateReleaseAttachmentTool = mcp.NewTool(
 		CreateReleaseAttachmentToolName,
-		mcp.WithDescription("Upload an attachment to a release."),
+		mcp.WithDescription("Upload an attachment to a release from exactly one of base64 content or a file path on the forgejo-mcp host."),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithNumber("release_id", mcp.Required(), mcp.Description(params.ReleaseID)),
-		mcp.WithString("content", mcp.Required(), mcp.Description(params.AttachmentContent)),
-		mcp.WithString("filename", mcp.Required(), mcp.Description(params.AttachmentFilename)),
+		mcp.WithString("content", mcp.Description(params.AttachmentContent)),
+		mcp.WithString("file_path", mcp.Description(params.AttachmentFilePath)),
+		mcp.WithString("filename", mcp.Description(params.AttachmentFilename)),
 		mcp.WithString("mime_type", mcp.Description(params.AttachmentMIME)),
 	)
 
@@ -567,30 +567,19 @@ func CreateReleaseAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*m
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("release_id: %w", err))
 	}
-	content, _ := args["content"].(string)
-	filename, _ := args["filename"].(string)
-	// mime_type is accepted for parity with issue/comment attachments, but
-	// the SDK's CreateReleaseAttachment derives content type from the
-	// filename and does not forward an explicit hint.
-	_, _ = args["mime_type"].(string)
-
-	if filename == "" {
-		return to.ErrorResult(fmt.Errorf("filename is required"))
-	}
-	raw, err := base64.StdEncoding.DecodeString(content)
-	if err != nil {
-		return to.ErrorResult(fmt.Errorf("content must be base64-encoded: %w", err))
-	}
-
-	client, err := forgejo.Client(ctx)
+	mimeType, _ := args["mime_type"].(string)
+	reader, filename, err := upload.Open(upload.SourceFromArguments(args))
 	if err != nil {
 		return to.ErrorResult(err)
 	}
-	att, _, err := client.CreateReleaseAttachment(owner, repo, int64(rid), bytes.NewReader(raw), filename)
-	if err != nil {
+	defer reader.Close()
+
+	var att forgejo_sdk.Attachment
+	path := fmt.Sprintf("/repos/%s/%s/releases/%d/assets", owner, repo, int64(rid))
+	if err := forgejo.DoMultipart(ctx, http.MethodPost, path, "attachment", filename, mimeType, reader, &att); err != nil {
 		return to.ErrorResult(fmt.Errorf("create release attachment err: %w", err))
 	}
-	return to.TextResult(att)
+	return to.TextResult(&att)
 }
 
 func EditReleaseAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {

@@ -279,35 +279,22 @@ func DoMultipart(ctx context.Context, method, pathOrURL, fieldName, filename, mi
 		return err
 	}
 
-	body := &bytes.Buffer{}
-	mw := multipart.NewWriter(body)
+	pipeReader, pipeWriter := io.Pipe()
+	multipartWriter := multipart.NewWriter(pipeWriter)
+	contentType := multipartWriter.FormDataContentType()
 
-	h := textproto.MIMEHeader{}
-	h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="%s"`,
-		quoteEscaper.Replace(fieldName), quoteEscaper.Replace(filename)))
-	if mimeType != "" {
-		h.Set("Content-Type", mimeType)
-	} else {
-		h.Set("Content-Type", "application/octet-stream")
-	}
-	part, err := mw.CreatePart(h)
+	req, err := http.NewRequestWithContext(ctx, method, full, pipeReader)
 	if err != nil {
-		return fmt.Errorf("create multipart part: %w", err)
-	}
-	if _, err := io.Copy(part, r); err != nil {
-		return fmt.Errorf("copy file into part: %w", err)
-	}
-	if err := mw.Close(); err != nil {
-		return fmt.Errorf("close multipart writer: %w", err)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, method, full, body)
-	if err != nil {
+		_ = pipeReader.Close()
+		_ = pipeWriter.Close()
 		return fmt.Errorf("build request: %w", err)
 	}
+	go writeMultipart(pipeWriter, multipartWriter, fieldName, filename, mimeType, r)
+
 	setCommonHeaders(ctx, req)
-	req.Header.Set("Content-Type", mw.FormDataContentType())
+	req.Header.Set("Content-Type", contentType)
 	resp, err := doRequest(ctx, req)
+	_ = pipeReader.Close()
 	if err != nil {
 		return err
 	}
@@ -324,6 +311,29 @@ func DoMultipart(ctx context.Context, method, pathOrURL, fieldName, filename, mi
 		return fmt.Errorf("decode response: %w", err)
 	}
 	return nil
+}
+
+func writeMultipart(pipeWriter *io.PipeWriter, multipartWriter *multipart.Writer, fieldName, filename, mimeType string, r io.Reader) {
+	h := textproto.MIMEHeader{}
+	h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="%s"`,
+		quoteEscaper.Replace(fieldName), quoteEscaper.Replace(filename)))
+	if mimeType != "" {
+		h.Set("Content-Type", mimeType)
+	} else {
+		h.Set("Content-Type", "application/octet-stream")
+	}
+	part, err := multipartWriter.CreatePart(h)
+	if err == nil {
+		_, err = io.Copy(part, r)
+	}
+	if err == nil {
+		err = multipartWriter.Close()
+	}
+	if err != nil {
+		_ = pipeWriter.CloseWithError(err)
+		return
+	}
+	_ = pipeWriter.Close()
 }
 
 // DoRaw fetches bytes from a URL (absolute or relative-to-flag.URL with no

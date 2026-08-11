@@ -10,7 +10,7 @@ Six MCP tools cover the full attachment lifecycle on issues and pull requests, c
 - `list_issue_attachments` — Enumerate attachments on an issue/PR.
 - `get_issue_attachment` — Fetch metadata for a single attachment.
 - `download_issue_attachment` — Pull the bytes (inline if < 1 MiB; metadata + URL otherwise).
-- `create_issue_attachment` — Upload a new attachment from base64 content.
+- `create_issue_attachment` — Upload a new attachment from base64 content or a file on the MCP host.
 - `edit_issue_attachment` — Rename an attachment.
 - `delete_issue_attachment` — Remove an attachment.
 
@@ -33,6 +33,17 @@ B64=$(base64 -w0 /tmp/demo.txt)
 ./forgejo-mcp --cli create_issue_attachment \
   --args "{\"owner\":\"goern\",\"repo\":\"forgejo-mcp\",\"index\":108,\"content\":\"$B64\",\"filename\":\"demo-notes.txt\",\"mime_type\":\"text/plain\"}"
 ```
+
+Alternatively, let `forgejo-mcp` read the file directly from its host:
+
+```bash
+./forgejo-mcp --cli create_issue_attachment \
+  --args '{"owner":"goern","repo":"forgejo-mcp","index":108,"file_path":"/tmp/demo.txt","mime_type":"text/plain"}'
+```
+
+`file_path` is resolved on the machine running `forgejo-mcp`, not on the MCP
+client. Relative paths resolve from the server process working directory. The
+path basename is used as the attachment name unless `filename` overrides it.
 
 ```output
 [

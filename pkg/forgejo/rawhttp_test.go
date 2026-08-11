@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/flag"
 )
@@ -271,6 +272,72 @@ func TestDoMultipart_DefaultMimeOctetStream(t *testing.T) {
 	}
 	if got := part.Header.Get("Content-Type"); got != "application/octet-stream" {
 		t.Fatalf("expected default octet-stream, got %s", got)
+	}
+}
+
+type gatedReader struct {
+	started <-chan struct{}
+	reader  io.Reader
+}
+
+type failingReader struct{}
+
+func (failingReader) Read([]byte) (int, error) {
+	return 0, errors.New("read failed")
+}
+
+type contextReader struct {
+	ctx context.Context
+}
+
+func (r contextReader) Read([]byte) (int, error) {
+	<-r.ctx.Done()
+	return 0, r.ctx.Err()
+}
+
+func (r *gatedReader) Read(p []byte) (int, error) {
+	<-r.started
+	return r.reader.Read(p)
+}
+
+func TestDoMultipartStreamsAfterRequestStarts(t *testing.T) {
+	requestStarted := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		close(requestStarted)
+		_, _ = io.Copy(io.Discard, r.Body)
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	t.Cleanup(srv.Close)
+	flag.URL = srv.URL
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	reader := &gatedReader{started: requestStarted, reader: strings.NewReader("streamed")}
+	if err := DoMultipart(ctx, http.MethodPost, "/x", "attachment", "x.bin", "", reader, nil); err != nil {
+		t.Fatalf("streaming upload failed: %v", err)
+	}
+}
+
+func TestDoMultipartPropagatesReaderError(t *testing.T) {
+	newCaptureServer(t, func(w http.ResponseWriter, r *http.Request, _ *capturedReq) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{}`))
+	})
+	err := DoMultipart(context.Background(), http.MethodPost, "/x", "attachment", "x.bin", "", failingReader{}, nil)
+	if err == nil || !strings.Contains(err.Error(), "read failed") {
+		t.Fatalf("expected reader error, got %v", err)
+	}
+}
+
+func TestDoMultipartHonorsContextCancellation(t *testing.T) {
+	newCaptureServer(t, func(w http.ResponseWriter, r *http.Request, _ *capturedReq) {
+		w.WriteHeader(http.StatusOK)
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	time.AfterFunc(20*time.Millisecond, cancel)
+	err := DoMultipart(ctx, http.MethodPost, "/x", "attachment", "x.bin", "", contextReader{ctx: ctx}, nil)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context cancellation, got %v", err)
 	}
 }
 

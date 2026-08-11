@@ -10,6 +10,8 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -341,6 +343,56 @@ func TestCreateIssueAttachmentFn_DecodesBase64AndUsesMultipart(t *testing.T) {
 	}
 }
 
+func TestCreateIssueAttachmentFn_UsesFilePathAndBasename(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "from-path.bin")
+	if err := os.WriteFile(path, []byte("path payload"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	records := newBackend(t, route{
+		method:     http.MethodPost,
+		pathPrefix: "/api/v1/repos/o/r/issues/3/assets",
+		handler: func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write([]byte(`{"id":112,"name":"from-path.bin"}`))
+		},
+	})
+	if _, err := CreateIssueAttachmentFn(context.Background(), req(map[string]any{
+		"owner": "o", "repo": "r", "index": 3.0, "file_path": path,
+	})); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	_, params, err := mime.ParseMediaType((*records.records)[0].ctype)
+	if err != nil {
+		t.Fatal(err)
+	}
+	part, err := multipart.NewReader(strings.NewReader(string((*records.records)[0].rawBody)), params["boundary"]).NextPart()
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload, _ := io.ReadAll(part)
+	if part.FileName() != "from-path.bin" || string(payload) != "path payload" {
+		t.Fatalf("filename=%q payload=%q", part.FileName(), payload)
+	}
+}
+
+func TestCreateIssueAttachmentFn_RejectsBothSources(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "file.txt")
+	if err := os.WriteFile(path, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	backend := newBackend(t)
+	_, err := CreateIssueAttachmentFn(context.Background(), req(map[string]any{
+		"owner": "o", "repo": "r", "index": 3.0,
+		"content": "", "file_path": path, "filename": "empty.txt",
+	}))
+	if err == nil || !strings.Contains(err.Error(), "exactly one") {
+		t.Fatalf("expected exclusive-source error, got %v", err)
+	}
+	if len(*backend.records) != 0 {
+		t.Fatalf("backend called for invalid input")
+	}
+}
+
 func TestCreateIssueAttachmentFn_RejectsNonBase64(t *testing.T) {
 	newBackend(t)
 	_, err := CreateIssueAttachmentFn(context.Background(), req(map[string]any{
@@ -524,6 +576,28 @@ func TestCommentAttachmentLifecycle_Smoke(t *testing.T) {
 	if !listCalled || !createCalled || !getCalled || !editCalled || !deleteCalled || !downloadByteFetch {
 		t.Fatalf("not all comment endpoints exercised: list=%v create=%v get=%v edit=%v delete=%v download=%v",
 			listCalled, createCalled, getCalled, editCalled, deleteCalled, downloadByteFetch)
+	}
+}
+
+func TestCreateCommentAttachmentFn_UsesFilePath(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "comment.txt")
+	if err := os.WriteFile(path, []byte("comment file"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	backend := newBackend(t, route{
+		method:     http.MethodPost,
+		pathPrefix: "/api/v1/repos/o/r/issues/comments/55/assets",
+		handler: func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write([]byte(`{"id":11,"name":"comment.txt"}`))
+		},
+	})
+	if _, err := CreateCommentAttachmentFn(context.Background(), req(map[string]any{
+		"owner": "o", "repo": "r", "comment_id": 55.0, "file_path": path,
+	})); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if len(*backend.records) != 1 || !strings.Contains(string((*backend.records)[0].rawBody), "comment file") {
+		t.Fatalf("file payload was not uploaded")
 	}
 }
 
