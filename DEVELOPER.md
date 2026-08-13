@@ -187,6 +187,34 @@ Run with debug mode to troubleshoot issues:
 FORGEJO_DEBUG=true ./forgejo-mcp --transport stdio --url <url> --token <token>
 ```
 
+## OpenSpec conventions
+
+Change deltas live in `openspec/changes/<change>/specs/<capability>/spec.md` and
+are gated by `openspec validate --all --strict` in CI
+(`.tekton/tasks/openspec-validate.yaml`).
+
+**Requirement statements go on one unwrapped line.** `openspec` only inspects the
+first physical line of a requirement paragraph when it looks for `SHALL`/`MUST`,
+so a hard-wrapped statement is rejected with
+`ADDED "<name>" must contain SHALL or MUST` even when the rest of the paragraph
+is full of `SHALL`s.
+
+```markdown
+### Requirement: Attachment upload source
+
+The `create_issue_attachment` and `create_release_attachment` tools SHALL accept optional string arguments `content` and `file_path` and SHALL require exactly one argument key to be present.
+```
+
+`.editorconfig` disables `max_line_length` under `openspec/` so editors do not
+re-wrap these paragraphs. Run the gate locally before pushing:
+
+```bash
+scripts/ci/openspec-validate.sh
+```
+
+It also runs as a pre-commit hook (`openspec-validate`) and skips with a warning
+if `openspec` is not installed.
+
 ## Blocked Features
 
 Some planned features are blocked on upstream API or SDK support:

@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Editor defaults for this repository.
+#
+# The openspec section is load-bearing, not cosmetic: `openspec validate
+# --strict` only inspects the FIRST physical line of a requirement paragraph
+# when looking for SHALL/MUST. An editor that hard-wraps markdown at 80
+# columns can push the keyword onto line two and turn a correct requirement
+# into a CI failure. Turning the line limit off there keeps editors from
+# re-wrapping those paragraphs. See DEVELOPER.md, "OpenSpec conventions".
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.go]
+indent_style = tab
+
+[*.{yaml,yml,json,toml}]
+indent_style = space
+indent_size = 2
+
+[*.sh]
+indent_style = space
+indent_size = 2
+
+[*.md]
+# Two trailing spaces are a hard line break in markdown.
+trim_trailing_whitespace = false
+
+[openspec/**.md]
+# Requirement statements go on one unwrapped line — do not auto-wrap.
+max_line_length = off
+trim_trailing_whitespace = false

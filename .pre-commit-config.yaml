@@ -16,6 +16,17 @@ repos:
         language: system
         types: [go]
 
+      - id: openspec-validate
+        name: openspec validate --all --strict
+        description: >-
+          Mirrors the validate step in .tekton/tasks/openspec-validate.yaml so
+          a malformed change delta fails here instead of in CI. Skips when
+          openspec is not installed.
+        entry: scripts/ci/openspec-validate.sh
+        language: script
+        pass_filenames: false
+        files: ^(openspec/.*\.md|openspec/config\.yaml|scripts/ci/openspec-validate\.sh)$
+
       - id: check-demos
         name: check anchored spec demos
         description: Validate anchored Showboat demos against their specs.
