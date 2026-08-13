@@ -215,6 +215,35 @@ scripts/ci/openspec-validate.sh
 It also runs as a pre-commit hook (`openspec-validate`) and skips with a warning
 if `openspec` is not installed.
 
+## Reviewing a pull request: confirm CI actually ran
+
+Pipelines-as-Code will not start a PipelineRun for an author who is not listed
+in `OWNERS`. When it declines, it leaves exactly one commit status on the head
+SHA:
+
+```
+op1st Pipelines as Code   pending   Pending approval, waiting for an /ok-to-test
+```
+
+There are no red checks — because there are no checks. **"Not red" is not
+"green."** A maintainer must comment `/ok-to-test` on the PR before any
+pipeline runs.
+
+Do not check this by eye. Run the gate:
+
+```bash
+scripts/ci/check-pr-ci-ran.sh <pr-number>
+scripts/ci/check-pr-ci-ran.sh --sha <commit-sha>
+```
+
+It reads the forge's combined-status API for the PR head and exits non-zero
+when CI never ran, is still awaiting `/ok-to-test`, or reported a non-success
+context. It skips with a warning if `curl` or `jq` is missing. Set
+`FORGEJO_URL` for another instance and `FORGEJO_TOKEN` for a private repo.
+
+This is a reviewer-side gate, not a pre-commit hook: no local file change
+implies it, so there is nothing for `pre-commit` to key on.
+
 ## Blocked Features
 
 Some planned features are blocked on upstream API or SDK support:
