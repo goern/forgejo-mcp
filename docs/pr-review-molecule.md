@@ -39,9 +39,15 @@ bd children <epic-id>        # the eleven steps
 bd graph <epic-id>           # dependency DAG — what unblocks what
 ```
 
-The chain is: triage → reproduce → diagnose → {comment_fix, harden}; comment_fix
-→ demo → state; harden → commit; everything → closeout. `followups` is
-independent and can run any time.
+The chain is: triage → {assign, reproduce}; reproduce → diagnose →
+{comment_fix, harden}; comment_fix → demo → state; harden → commit; everything
+→ closeout. `followups` is independent and can run any time.
+
+`assign` runs in parallel with the technical work on purpose: ownership and
+review requests should land within minutes of triage, not after the
+investigation. It is also where you confirm CI actually ran — for an author who
+is not in `OWNERS`, Pipelines-as-Code may never have started, and "no red
+checks" then means "no checks".
 
 ## 3. Work the beads
 

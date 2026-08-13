@@ -21,6 +21,16 @@
     },
 
     {
+      "key": "assign",
+      "type": "task",
+      "priority": 1,
+      "parent_key": "epic",
+      "title": "PR #{{PR}}: assign an owner and request review",
+      "labels": ["pr-review"],
+      "description": "A labelled PR with no owner is a PR nobody is accountable for. Do this immediately after triage, before the technical work — it is what stops a contributor PR from ageing quietly.\n\nASSIGN a maintainer (the person who will shepherd it to merge, not necessarily the person reviewing right now):\n  mcp__b4mad__update_pull_request owner=agentic-forges repo=forgejo-mcp index={{PR}} assignee=<username>\n\nREQUEST REVIEW from the humans (or teams) whose sign-off it actually needs:\n  mcp__b4mad__create_review_requests owner=agentic-forges repo=forgejo-mcp index={{PR}} reviewers=<comma,separated>\n  mcp__b4mad__create_review_requests ... team_reviewers=<team>\n  mcp__b4mad__delete_review_requests ... to retract a request that turned out wrong\n\nWho: consult the repo's OWNERS file (Prow-style, read from the DEFAULT branch). It currently lists approvers goern, byteflavour, b4mad-renovate, op1st-gitops. Do not invent reviewers; if it is not obvious, assign the default maintainer and say in the handoff that reviewer choice needs a human.\n\nCHECK CI ACTUALLY RAN — this is the trap with external contributors. OWNERS is what Pipelines-as-Code uses to decide who may trigger a PipelineRun without a maintainer's approval. If the PR author is NOT listed there, the pipelines may never have started, and 'no red checks' means 'no checks', not 'passing'. A maintainer must comment '/ok-to-test' first. Verify runs exist for the PR head SHA before concluding anything about its CI state.\n\nDONE: assignee set; reviewers requested or explicitly deferred to a human; CI confirmed to have actually run against the head SHA."
+    },
+
+    {
       "key": "reproduce",
       "type": "task",
       "priority": 1,
@@ -113,7 +123,9 @@
 
   "_edges_comment": "from_key DEPENDS ON to_key (to_key must close first). Read each line as 'X waits for Y'. Verify after editing with: bd graph <epic-id> --compact — triage must be layer 0 and closeout last.",
   "edges": [
+    {"from_key": "assign",      "to_key": "triage",      "type": "blocks"},
     {"from_key": "reproduce",   "to_key": "triage",      "type": "blocks"},
+    {"from_key": "closeout",    "to_key": "assign",      "type": "blocks"},
     {"from_key": "diagnose",    "to_key": "reproduce",   "type": "blocks"},
     {"from_key": "comment_fix", "to_key": "diagnose",    "type": "blocks"},
     {"from_key": "harden",      "to_key": "diagnose",    "type": "blocks"},
