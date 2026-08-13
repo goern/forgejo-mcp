@@ -111,17 +111,18 @@
     }
   ],
 
+  "_edges_comment": "from_key DEPENDS ON to_key (to_key must close first). Read each line as 'X waits for Y'. Verify after editing with: bd graph <epic-id> --compact — triage must be layer 0 and closeout last.",
   "edges": [
-    {"from_key": "triage",      "to_key": "reproduce",   "type": "blocks"},
-    {"from_key": "reproduce",   "to_key": "diagnose",    "type": "blocks"},
-    {"from_key": "diagnose",    "to_key": "comment_fix", "type": "blocks"},
-    {"from_key": "diagnose",    "to_key": "harden",      "type": "blocks"},
-    {"from_key": "comment_fix", "to_key": "demo",        "type": "blocks"},
-    {"from_key": "comment_fix", "to_key": "state",       "type": "blocks"},
-    {"from_key": "demo",        "to_key": "state",       "type": "blocks"},
-    {"from_key": "harden",      "to_key": "commit",      "type": "blocks"},
-    {"from_key": "commit",      "to_key": "closeout",    "type": "blocks"},
-    {"from_key": "state",       "to_key": "closeout",    "type": "blocks"},
-    {"from_key": "followups",   "to_key": "closeout",    "type": "blocks"}
+    {"from_key": "reproduce",   "to_key": "triage",      "type": "blocks"},
+    {"from_key": "diagnose",    "to_key": "reproduce",   "type": "blocks"},
+    {"from_key": "comment_fix", "to_key": "diagnose",    "type": "blocks"},
+    {"from_key": "harden",      "to_key": "diagnose",    "type": "blocks"},
+    {"from_key": "demo",        "to_key": "comment_fix", "type": "blocks"},
+    {"from_key": "state",       "to_key": "comment_fix", "type": "blocks"},
+    {"from_key": "state",       "to_key": "demo",        "type": "blocks"},
+    {"from_key": "commit",      "to_key": "harden",      "type": "blocks"},
+    {"from_key": "closeout",    "to_key": "commit",      "type": "blocks"},
+    {"from_key": "closeout",    "to_key": "state",       "type": "blocks"},
+    {"from_key": "closeout",    "to_key": "followups",   "type": "blocks"}
   ]
 }

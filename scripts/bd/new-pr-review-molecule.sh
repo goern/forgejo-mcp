@@ -40,8 +40,8 @@ fi
 RESOLVED="$(mktemp -t pr-review-molecule.XXXXXX.json)"
 trap 'rm -f "$RESOLVED"' EXIT INT TERM
 
-# Substitute {{PR}}, and drop the "_comment" line: JSON has no comment syntax,
-# so the SPDX header lives in that key and bd would warn about it on every run.
-sed -e "s/{{PR}}/$PR/g" -e '/^  "_comment":/d' "$PLAN" >"$RESOLVED"
+# Substitute {{PR}}, and drop the "_*comment" lines: JSON has no comment syntax,
+# so notes live in those keys and bd would warn about them on every run.
+sed -e "s/{{PR}}/$PR/g" -e '/^  "_[a-z_]*comment":/d' "$PLAN" >"$RESOLVED"
 
 bd -C "$ROOT" create --graph "$RESOLVED" "$@"
