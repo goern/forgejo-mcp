@@ -1,0 +1,127 @@
+{
+  "_comment": "SPDX-License-Identifier: GPL-3.0-or-later — PR review molecule template. Instantiate with scripts/bd/new-pr-review-molecule.sh <PR-NUMBER>. Every {{PR}} is substituted with the PR number.",
+  "nodes": [
+    {
+      "key": "epic",
+      "type": "epic",
+      "priority": 1,
+      "title": "Review PR #{{PR}} (contributor PR review molecule)",
+      "labels": ["pr-review", "molecule"],
+      "description": "End-to-end review of an external contributor PR on agentic-forges/forgejo-mcp, from triage to hardening.\n\nRun the children in dependency order; each names the skill, agent, or castra command that does the work. Three standing rules apply throughout:\n\n1. DETERMINISM (CLAUDE.md): if a step can be a shell script or a git hook, make it one. Do not leave a recurring check to an agent's attention.\n2. The contributor is a guest. Diagnose before asking. Never hand someone an error message they could have read themselves — hand them the cause and the fix.\n3. CASTRA IS THE FORGE-SIDE ARM (castra v0.3.0, .castra/ in this repo, 'castra --help'). It is forge-agnostic and already knows this repo's conventions: use it for the per-issue bot-active mutex, isolated persona worktrees, run-status comments, and the label vocabulary. An interactive session and the castra bot can both be holding this PR — coordinate through the mutex rather than racing.\n\nSource: distilled from the review of PR #481 (feat(attachments): accept local file paths) on 2026-08-13."
+    },
+
+    {
+      "key": "triage",
+      "type": "task",
+      "priority": 1,
+      "parent_key": "epic",
+      "title": "PR #{{PR}}: triage and classify",
+      "labels": ["pr-review"],
+      "description": "Take the PR, then give it its Kind/* and Priority/* labels.\n\nCASTRA FIRST — claim the PR before touching it:\n  castra label ...          # acquire the per-issue bot-active mutex (castra:bot-active). See 'castra label --help'; releasing it is the closeout step.\n  castra issue view <PR-URL>\n  castra pr review-threads <PR-URL>   # inline review comments the MCP issue-comment list does NOT show\nSkipping review-threads is how you end up repeating a point a human already made inline.\n\nOptionally hand the whole read to the packaged persona instead of doing it by hand — it is read-only, holds no write credential, and returns a structured verdict (one of insufficient|sufficient|blocked|duplicate) with clarity scores and candidate labels:\n  castra persona-run --persona triage --input issue_url=<PR-URL> --output-dir <dir>\n  castra persona-validate <result-file>\n  castra persona-run --persona triage --dry-run   # renders the prompt only\n\nSKILL: codeberg-issue-triage (the triage heuristics carry over to this forge).\n\nTOOLS (b4mad MCP, never the web UI):\n  mcp__b4mad__get_pull_request_by_index owner=agentic-forges repo=forgejo-mcp index={{PR}}\n  mcp__b4mad__list_repo_labels  owner=agentic-forges repo=forgejo-mcp    # or: castra label --repo agentic-forges/forgejo-mcp\n  mcp__b4mad__add_issue_labels  owner=agentic-forges repo=forgejo-mcp index={{PR}} labels=<numeric ids, comma separated>\n\nLabel ids are NOT stable across forges — always list them first, never reuse ids from CLAUDE.md's Codeberg table.\n\nJudgement, not reflex: Kind/Security means 'this PR fixes a vulnerability', not 'this PR touches a sensitive surface'. If the change opens a new capability worth scrutiny (arbitrary host file reads, token handling, command execution), say so in prose to the human instead of mislabelling.\n\nDONE: Kind/* and Priority/* set; any security-relevant surface flagged to the human in the session summary."
+    },
+
+    {
+      "key": "reproduce",
+      "type": "task",
+      "priority": 1,
+      "parent_key": "epic",
+      "title": "PR #{{PR}}: reproduce every red CI check locally",
+      "labels": ["pr-review", "ci"],
+      "description": "Never review a red PR from the check name alone. Get the real error.\n\nSTEP 1 — find the run. Tekton TaskRuns get pruned within hours, so logs are usually already gone:\n  oc get pipelinerun -A | grep <pipelinerun-name>\n  tkn -n <ns> pipelinerun logs <name>      # try first; expect 'not found'\n\nSTEP 2 — when logs are gone, recover the command from the embedded spec. This always works, because the PipelineRun stores the resolved taskSpec:\n  oc -n <ns> get pipelinerun <name> -o json | python3 -c \"import json,sys; d=json.load(sys.stdin); print(json.dumps([t for t in d['status']['pipelineSpec']['tasks'] if t['name']=='<task>'][0], indent=1))\"\nRead .steps[].script — that is the exact command to run locally, and .spec.params.revision is the commit it ran against.\n\nSTEP 3 — reproduce at the PR head in an isolated worktree (never in the user's working tree). Prefer castra, which names the branch and directory consistently:\n  castra prepare-run --persona review --issue {{PR}} --base <revision-from-step-2>\nOr by hand:\n  git fetch upstream refs/pull/{{PR}}/head:refs/remotes/upstream/pr-{{PR}}\n  git worktree add <scratchpad>/pr{{PR}} refs/remotes/upstream/pr-{{PR}} --detach\nThen run each step's script in that worktree. Note that a later 'git pull --rebase' prunes the pr-{{PR}} remote ref and leaves the worktree detached — harmless, but do not be surprised.\n\nAGENT: delegate to Explore if locating the pipeline/task definitions means sweeping .tekton/ — keep the log dumps out of the main context.\n\nDONE: the failure reproduced locally, with the exact error text captured verbatim for the comment."
+    },
+
+    {
+      "key": "diagnose",
+      "type": "task",
+      "priority": 1,
+      "parent_key": "epic",
+      "title": "PR #{{PR}}: find the root cause and verify the fix before writing a word",
+      "labels": ["pr-review", "ci"],
+      "description": "Reproducing is not diagnosing. Find WHY, then PROVE the fix.\n\nMethod that worked on #481: compare the failing artifact against a passing sibling in the same repo. The validator message ('must contain SHALL or MUST') was misleading — SHALL was plainly present on line two. Diffing against a passing delta showed the passing ones were unwrapped single lines, which located the real rule: only the first physical line is inspected.\n\nThen APPLY the candidate fix in the throwaway worktree and re-run the CI command. Do not post a fix you have not seen turn the check green. Report the resulting totals ('24 passed, 0 failed') in the comment — it is what makes the ask credible.\n\nAlso run the steps AFTER the failing one. A step-1 failure means steps 2+ never ran and may hide further breakage.\n\nDONE: root cause stated in one sentence; fix verified green locally; any downstream steps confirmed."
+    },
+
+    {
+      "key": "comment_fix",
+      "type": "task",
+      "priority": 1,
+      "parent_key": "epic",
+      "title": "PR #{{PR}}: post the diagnosis and the fix to the author",
+      "labels": ["pr-review"],
+      "description": "One comment: what is red, the verbatim error, WHY it is red, the exact fix, and evidence you verified it. Then ask politely.\n\nTOOL: mcp__b4mad__create_issue_comment owner=agentic-forges repo=forgejo-mcp index={{PR}} body=...\n\nStructure that worked:\n  1. Thank them and name the real problem their PR solves (shows you read it).\n  2. 'Heads-up that <pipeline> is red (PipelineRun <name>, revision <sha>). I reproduced it locally with <command>; it is a small formatting nit, not a design problem.'\n  3. Fenced block with the actual validator output.\n  4. **Cause:** with the specific lines, and — where possible — why a sibling part of their own PR passes. Contrast teaches faster than a rule.\n  5. **Fix:** a copy-pasteable corrected block, plus which repo convention it matches.\n  6. 'I verified this makes the whole suite green.'\n  7. A concrete, polite ask.\n\nTone: the author does not know this repo's conventions. That is the repo's failure to document, not theirs.\n\nCASTRA: for run-scoped progress (as opposed to the human-readable review), use 'castra status --persona review --run-id <id>' — it posts and then UPDATES one per-run comment instead of stacking new ones. Use it for pipeline noise; use a real comment for anything the author must read.\n\nDONE: comment posted; permalink recorded for the human."
+    },
+
+    {
+      "key": "demo",
+      "type": "task",
+      "priority": 2,
+      "parent_key": "epic",
+      "title": "PR #{{PR}}: request a Showboat demo, with an unconditional offer to do it instead",
+      "labels": ["pr-review", "showboat"],
+      "description": "SKILL: showboat (.claude/skills/showboat/SKILL.md) — read it before asking, so the ask is accurate.\n\nAsk for a demo file under demos/ that interleaves narrative, real ./forgejo-mcp --cli invocations, and genuinely captured output. Point at demos/README.md for the house shape and the nearest existing demo as a template.\n\nMake the ask actionable, not bureaucratic:\n  - name the tool (uvx showboat; init/note/exec/pop) and say showboat exec captures output so nothing is hand-written;\n  - propose a concrete path (one new demos/<topic>.md is usually less churn than editing three) plus the demos/README.md index line;\n  - require ${FORGEJO_MCP_BIN:-forgejo-mcp} over absolute paths;\n  - enumerate what to show by mapping it onto the scenarios in THEIR OWN spec delta;\n  - state the one hard rule: captured output only.\n\nBe honest about enforcement: check-spec-demo-anchors.sh only gates specs that opt in with '<!-- demos-anchored: true -->'. If this change has not opted in, the demo is convention, not a gate — phrase it as a request and tell the human it is not a blocker.\n\nALWAYS close with a real offer to record the demo yourself and push it to their branch. Do not let paperwork sink a good feature.\n\nDONE: comment posted with the offer explicit."
+    },
+
+    {
+      "key": "followups",
+      "type": "task",
+      "priority": 2,
+      "parent_key": "epic",
+      "title": "PR #{{PR}}: delegate follow-up discovery to a subagent and file beads",
+      "labels": ["pr-review"],
+      "description": "A PR surfaces work that is not the PR's job (thin test coverage, absent docs, adjacent dead code). File it; do not smuggle it into the contributor's diff.\n\nAGENT: spawn a background general-purpose agent — this is fan-out reading across a package and you want the conclusion, not the file dumps. Brief it to:\n  1. run 'bd prime' first for the repo's workflow;\n  2. measure the real gap ('go test -cover' on the relevant packages), not a vibe;\n  3. CHECK FOR DUPLICATES with bd list / bd ready before creating anything;\n  4. create ONE bead enumerating specific handlers and untested paths;\n  5. commit and push nothing, modify no source.\n\nDemand it distinguish what is on main from what only exists in the PR branch — a bead describing code that has not merged yet is a trap for the next reader. (On #481 the agent correctly caught that file_path was not on main and scoped the bead accordingly.)\n\nDONE: bead id(s) reported, no duplicates created."
+    },
+
+    {
+      "key": "harden",
+      "type": "task",
+      "priority": 1,
+      "parent_key": "epic",
+      "title": "PR #{{PR}}: turn the CI failure into a deterministic local guard",
+      "labels": ["pr-review", "ci", "determinism"],
+      "description": "The point of the review is that the NEXT contributor does not hit this. CLAUDE.md: if it can be a script or a git hook, it must be.\n\nPattern used for #481 (three layers, each doing only what it can):\n  1. .editorconfig — stop editors REINTRODUCING the problem (it cannot enforce anything; be honest about that).\n  2. scripts/ci/<check>.sh — a POSIX sh wrapper that SHELLS OUT to the same tool CI runs rather than re-implementing its rules. One source of truth, and every rule is covered, not just the one that bit us. Skip with a warning when the tool is absent so contributors are not blocked. On failure, print a targeted hint when the upstream error message is misleading.\n  3. .pre-commit-config.yaml — wire the script in, scoped with 'files:' to the paths that matter.\n  4. DEVELOPER.md — document the convention and how to run the gate locally.\n\nCASTRA ALTERNATIVE — do not do this inline if it is a well-scoped chunk someone else can own. File the guard as its own issue and put the 'code' trigger label on it: that hands it to the castra code bot, which implements, pushes a branch, and opens a PR. Escalate with 'castra:human' if it stalls or needs a judgement call. Inline is right when the fix is small and you already have the failing tree in front of you (as with #481); delegation is right when it is a separable chunk of work.\n\nIf a persona produced the branch, publish it with 'castra post-run' rather than pushing by hand.\n\nVERIFY ALL THREE PATHS before committing: exit 0 clean, exit 1 with hint on a known-bad tree (reuse the PR worktree), exit 0 with warning when the tool is off PATH. Then 'pre-commit run <hook> --all-files'.\n\nDONE: guard committed; all three exit paths demonstrated."
+    },
+
+    {
+      "key": "commit",
+      "type": "task",
+      "priority": 2,
+      "parent_key": "epic",
+      "title": "PR #{{PR}}: commit and push the guard",
+      "labels": ["pr-review"],
+      "description": "SKILL: ds:commit — always. Never hand-craft the git commit command (CLAUDE.md).\n\nConventional commit; emoji goes AFTER the first colon ('chore: 🔧 ...'). Body explains why the failure was confusing, not just what changed. Footer: 'Assisted-by: <Model> via <Tool>'.\n\nThe repo default branch is main and 'origin' is a personal fork while 'upstream' is agentic-forges — check 'git rev-parse --abbrev-ref @{u}' before pushing so the commit lands where you think it does.\n\nBranch first unless the human explicitly says to commit to main.\n\nDONE: 'git status -sb' shows the branch in sync with its upstream."
+    },
+
+    {
+      "key": "state",
+      "type": "task",
+      "priority": 2,
+      "parent_key": "epic",
+      "title": "PR #{{PR}}: set review-state labels",
+      "labels": ["pr-review"],
+      "description": "Once the review is delivered and the ball is in the author's court, label the STATE so the next person sees it without reading ten comments.\n\n  Reviewed/Confirmed      — a human/agent has reviewed it\n  Status/Need More Info   — waiting on the author to act\n  Status/Blocked          — blocked on something EXTERNAL; do not use it for 'waiting on author', that double-signals\n\nmcp__b4mad__add_issue_labels adds without replacing, so earlier Kind/* and Priority/* labels survive.\n\nIf the vocabulary does not fit (this repo has no Reviewed/Changes-Requested, and Reviewed/Confirmed reads as 'bug reproduced'), use the closest label AND tell the human the vocabulary is the problem. Do not silently misuse a label.\n\nCASTRA: the vocabulary is meant to be declarative, not hand-curated —\n  castra init-labels --repo agentic-forges/forgejo-mcp --file <labels.json> --dry-run\nis idempotent and shows the plan before touching the forge. NOTE (verified 2026-08-13): this repo's .castra/ holds only personas/ and prompts/ — there is no labels.json here yet, so fixing a vocabulary gap properly means adding one (the lage repo has a working example). Until then, report the gap rather than inventing labels by hand.\n\nDONE: state labels set; any vocabulary gap reported."
+    },
+
+    {
+      "key": "closeout",
+      "type": "task",
+      "priority": 2,
+      "parent_key": "epic",
+      "title": "PR #{{PR}}: close out the session",
+      "labels": ["pr-review"],
+      "description": "SKILL: done-with.\n\nCLAUDE.md session-completion protocol — work is NOT complete until push succeeds:\n  git pull --rebase\n  bd dolt push          # beads created during review are otherwise stranded locally\n  git push\n  git status            # MUST show up to date with origin\n\nCASTRA: RELEASE THE MUTEX you acquired in the triage step ('castra label ...' — see its --help). A stuck castra:bot-active label makes the bot skip this PR forever, and nobody will notice quickly. If you are leaving the PR needing a human decision rather than author action, set 'castra:human' as well. Close the run with 'castra status --persona review --status success|failure --run-id <id>' so the per-run comment does not sit unresolved.\n\nThen: close finished beads, remove throwaway git worktrees ('git worktree list' — the PR worktree from the reproduce step), and hand off with the PR permalinks, the bead ids filed, and exactly what the contributor was asked for.\n\nDONE: everything pushed; mutex released; scratch worktrees gone; handoff written."
+    }
+  ],
+
+  "edges": [
+    {"from_key": "triage",      "to_key": "reproduce",   "type": "blocks"},
+    {"from_key": "reproduce",   "to_key": "diagnose",    "type": "blocks"},
+    {"from_key": "diagnose",    "to_key": "comment_fix", "type": "blocks"},
+    {"from_key": "diagnose",    "to_key": "harden",      "type": "blocks"},
+    {"from_key": "comment_fix", "to_key": "demo",        "type": "blocks"},
+    {"from_key": "comment_fix", "to_key": "state",       "type": "blocks"},
+    {"from_key": "demo",        "to_key": "state",       "type": "blocks"},
+    {"from_key": "harden",      "to_key": "commit",      "type": "blocks"},
+    {"from_key": "commit",      "to_key": "closeout",    "type": "blocks"},
+    {"from_key": "state",       "to_key": "closeout",    "type": "blocks"},
+    {"from_key": "followups",   "to_key": "closeout",    "type": "blocks"}
+  ]
+}
