@@ -349,7 +349,9 @@ Resources that embed a list (issue, pr) cap the embedded array at 30 items. When
 | `forgejo://repo/{owner}/{repo}/commit/{sha}` | Commit metadata | Immutable per sha. Returns JSON + markdown sidecar. sha must be 40 hex chars. |
 | `forgejo://repo/{owner}/{repo}/commit/{sha}/status` | application/json | Combined CI status for a sha: aggregate state + bounded per-context statuses (cap 30, sentinel names list tool `get_commit_statuses`). |
 | `forgejo://repo/{owner}/{repo}/issue/{index}` | application/json (+ text/markdown sidecar) | Issue metadata + rendered body + bounded recent comments (cap 30, sentinel names `list_issue_comments`). |
+| `forgejo://repo/{owner}/{repo}/issues{?state,labels,page,limit}` | application/json | Bounded list of issues as rows — index, title, state, author, labels, assignees, milestone, comment count, timestamps, due date — and **no bodies**. `state` ∈ {open, closed, all} (default `open`); `labels` comma-separated; cap 30, sentinel names `list_repo_issues`. Read the single-issue resource for a body. |
 | `forgejo://repo/{owner}/{repo}/{kind}/{index}/comment/{id}` | application/json (+ text/markdown sidecar) | Single comment by id; kind ∈ {issue, pr}. |
+| `forgejo://repo/{owner}/{repo}/{kind}/{index}/comments{?page,limit}` | application/json | Bounded comment thread with **full bodies** (the single-issue resource excerpts them at 200 chars); kind ∈ {issue, pr}; cap 30, sentinel names `list_issue_comments`. |
 | `forgejo://repo/{owner}/{repo}/pr/{index}` | application/json (+ text/markdown sidecar) | PR metadata, head/base refs, mergeability, bounded recent comments (cap 30, sentinel `list_issue_comments`) and reviews (cap 30, sentinel `list_pull_reviews`). |
 | `forgejo://repo/{owner}/{repo}/label/{id}` | application/json | Single repository label by numeric id. |
 | `forgejo://repo/{owner}/{repo}/labels{?page,limit}` | application/json | Bounded list of repository labels (cap 30, sentinel names `list_repo_labels`). |

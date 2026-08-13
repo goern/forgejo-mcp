@@ -311,6 +311,23 @@ type LabelParams struct {
 	ID    int64
 }
 
+// IssuesParams holds parsed fields from forgejo://repo/{owner}/{repo}/issues.
+type IssuesParams struct {
+	Owner string
+	Repo  string
+}
+
+// IssueCommentsParams holds parsed fields from
+// forgejo://repo/{owner}/{repo}/{kind}/{index}/comments. Kind is constrained to
+// "issue" or "pr"; both resolve through the Forgejo issue-comment API, matching
+// the single-comment resource.
+type IssueCommentsParams struct {
+	Owner string
+	Repo  string
+	Kind  string
+	Index int64
+}
+
 // LabelsParams holds parsed fields from forgejo://repo/{owner}/{repo}/labels.
 type LabelsParams struct {
 	Owner string
@@ -342,6 +359,50 @@ func ParseLabel(uri string) (LabelParams, error) {
 		return LabelParams{}, fmt.Errorf("%w: invalid URI %q: id must be numeric", ErrInvalidParams, uri)
 	}
 	return LabelParams{Owner: parts[0], Repo: parts[1], ID: id}, nil
+}
+
+// ParseIssues parses forgejo://repo/{owner}/{repo}/issues.
+// Query parameters (state, labels, page, limit) are read by the handler, not here.
+func ParseIssues(uri string) (IssuesParams, error) {
+	u, err := parseForgejoURI(uri)
+	if err != nil {
+		return IssuesParams{}, err
+	}
+	if u.Host != "repo" {
+		return IssuesParams{}, fmt.Errorf("%w: expected forgejo://repo/..., got %q", ErrInvalidParams, uri)
+	}
+	parts := splitPath(u.Path)
+	// parts: [owner, repo, "issues"]
+	if len(parts) != 3 || parts[2] != "issues" {
+		return IssuesParams{}, fmt.Errorf("%w: expected forgejo://repo/{owner}/{repo}/issues, got %q", ErrInvalidParams, uri)
+	}
+	return IssuesParams{Owner: parts[0], Repo: parts[1]}, nil
+}
+
+// ParseIssueComments parses forgejo://repo/{owner}/{repo}/{kind}/{index}/comments.
+// Returns ErrInvalidParams if kind is not "issue"/"pr" or the index is not numeric.
+func ParseIssueComments(uri string) (IssueCommentsParams, error) {
+	u, err := parseForgejoURI(uri)
+	if err != nil {
+		return IssueCommentsParams{}, err
+	}
+	if u.Host != "repo" {
+		return IssueCommentsParams{}, fmt.Errorf("%w: expected forgejo://repo/..., got %q", ErrInvalidParams, uri)
+	}
+	parts := splitPath(u.Path)
+	// parts: [owner, repo, kind, index, "comments"]
+	if len(parts) != 5 || parts[4] != "comments" {
+		return IssueCommentsParams{}, fmt.Errorf("%w: expected forgejo://repo/{owner}/{repo}/{kind}/{index}/comments, got %q", ErrInvalidParams, uri)
+	}
+	kind := parts[2]
+	if kind != "issue" && kind != "pr" {
+		return IssueCommentsParams{}, fmt.Errorf("%w: invalid URI %q: kind must be 'issue' or 'pr', got %q", ErrInvalidParams, uri, kind)
+	}
+	index, err := strconv.ParseInt(parts[3], 10, 64)
+	if err != nil {
+		return IssueCommentsParams{}, fmt.Errorf("%w: invalid URI %q: index must be numeric", ErrInvalidParams, uri)
+	}
+	return IssueCommentsParams{Owner: parts[0], Repo: parts[1], Kind: kind, Index: index}, nil
 }
 
 // ParseLabels parses forgejo://repo/{owner}/{repo}/labels.
