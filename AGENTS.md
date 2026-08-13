@@ -99,28 +99,48 @@ Some features are blocked on upstream API/SDK support. See `docs/plans/` for:
 
 ## Repository Labels
 
-Labels for goern/forgejo-mcp on Codeberg:
+The label vocabulary is declarative, not hand-curated. `.castra/labels.json`
+is the source of truth for the labels this repo wants; apply it with:
 
-| ID | Name | Color | Description |
-| ---- | ------ | ------- | ------------- |
-| 335058 | Kind/Feature | 0288d1 | New functionality |
-| 335061 | Kind/Enhancement | 84b6eb | Improve existing functionality |
-| 335091 | Status/Blocked | 880e4f | Something is blocking this issue or pull request |
-| 335103 | Priority/Medium | e64a19 | The priority is medium |
-| 1702838 | RFC - Request For Comments | 0e8a16 | Request For Comments — design/spec open for feedback before implementation |
+```bash
+castra init-labels --repo agentic-forges/forgejo-mcp --file .castra/labels.json --dry-run
+castra init-labels --repo agentic-forges/forgejo-mcp --file .castra/labels.json
+```
 
-### Usage with Codeberg MCP
+It is idempotent: existing labels are skipped, missing ones are created.
+`--file` is required — castra's default search looks in `./`, not `.castra/`.
+Pass `--overwrite` to push colour/description edits onto labels that already
+exist. **It never deletes**, so retiring a label means removing it from the
+file *and* deleting it on the forge by hand.
 
-When adding labels via the `mcp__codeberg__add_issue_labels` tool, use the numeric ID:
+Do NOT hardcode label IDs in documentation — they are per-forge and did not
+survive the Codeberg → git.b4mad.industries migration. List them first:
 
 ```
-mcp__codeberg__add_issue_labels(
-  owner: "goern",
-  repo: "forgejo-mcp",
-  index: <issue_number>,
-  labels: "<label_id>"  # e.g., "335091" for Status/Blocked
-)
+mcp__b4mad__list_repo_labels(owner: "agentic-forges", repo: "forgejo-mcp")
+mcp__b4mad__add_issue_labels(owner: "agentic-forges", repo: "forgejo-mcp",
+                             index: <number>, labels: "<numeric ids, comma separated>")
 ```
+
+### Review states
+
+For pull requests, distinguish the four "waiting" states — they are not
+interchangeable, and `Status/Blocked` in particular is easy to misuse:
+
+| Label | Means |
+| ----- | ----- |
+| `Reviewed/Approved` | Review passed, no changes requested |
+| `Reviewed/Changes-Requested` | Reviewed, changes required before merge |
+| `Status/Awaiting-Author` | Waiting on the author to act |
+| `Status/Need More Info` | We cannot proceed until a question is answered |
+| `Status/Blocked` | Blocked on something **external** — never "waiting on author" |
+
+`Reviewed/Confirmed` means "bug reproduced". It is an issue label; it does not
+describe a code review.
+
+Some labels on the forge predate this file and are deliberately not declared
+in it: the `hermes-*` set (superseded bot) and the `area:*` lanes (they arrived
+from castra's built-in default vocabulary and describe another repo's domain).
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 ## Beads Issue Tracker
