@@ -9,7 +9,7 @@
 *2026-08-14T20:39:38Z by Showboat 0.6.1*
 <!-- showboat-id: 5b74b0ca-acd5-411a-ad21-e171ad65e87c -->
 
-This demo proves the [attachment upload source OpenSpec delta](../openspec/changes/attachment-file-path-upload/specs/attachment-upload-sources/spec.md) against the public [`pisco/showboat-attachment-demo`](https://git.b4mad.industries/pisco/showboat-attachment-demo) repository. The live targets are [issue #1](https://git.b4mad.industries/pisco/showboat-attachment-demo/issues/1), comment `5988`, and [release `attachment-demo-20260814`](https://git.b4mad.industries/pisco/showboat-attachment-demo/releases/tag/attachment-demo-20260814).
+This demo proves the [attachment upload source specification](../openspec/specs/attachment-upload-sources/spec.md) against the public [`pisco/showboat-attachment-demo`](https://git.b4mad.industries/pisco/showboat-attachment-demo) repository. The live targets are [issue #1](https://git.b4mad.industries/pisco/showboat-attachment-demo/issues/1), comment `5988`, and [release `attachment-demo-20260814`](https://git.b4mad.industries/pisco/showboat-attachment-demo/releases/tag/attachment-demo-20260814).
 
 Every command below was captured with the `FORGEJO_MCP_ALLOW_FILE_PATH_UPLOAD` gate in force: the successful `file_path` uploads ran with the gate open and `FORGEJO_MCP_UPLOAD_ROOT` confining reads to the repository root, and the rejection cases ran with the gate explicitly closed.
 
