@@ -298,13 +298,13 @@ List all my repositories
 | `list_issue_attachments` | List attachments on an issue or PR |
 | `get_issue_attachment` | Get metadata for a single issue/PR attachment |
 | `download_issue_attachment` | Download an issue/PR attachment (inline if < 1 MiB; metadata + URL otherwise) |
-| `create_issue_attachment` | Upload a new attachment to an issue or PR (base64 content) |
+| `create_issue_attachment` | Upload a new attachment to an issue or PR (base64 content or a file path on the MCP host) |
 | `edit_issue_attachment` | Rename an issue/PR attachment |
 | `delete_issue_attachment` | Delete an issue/PR attachment |
 | `list_comment_attachments` | List attachments on an issue/PR comment |
 | `get_comment_attachment` | Get metadata for a single comment attachment |
 | `download_comment_attachment` | Download a comment attachment (inline if < 1 MiB; metadata + URL otherwise) |
-| `create_comment_attachment` | Upload a new attachment to an issue/PR comment (base64 content) |
+| `create_comment_attachment` | Upload a new attachment to an issue/PR comment (base64 content or a file path on the MCP host) |
 | `edit_comment_attachment` | Rename a comment attachment |
 | `delete_comment_attachment` | Delete a comment attachment |
 | **Releases** | |
@@ -319,7 +319,7 @@ List all my repositories
 | `list_release_attachments` | List attachments on a release (response fetched in full, sliced client-side) |
 | `get_release_attachment` | Get metadata for a single release attachment |
 | `download_release_attachment` | Download a release attachment (inline if < 1 MiB; metadata + URL otherwise) |
-| `create_release_attachment` | Upload a new attachment to a release (base64 content) |
+| `create_release_attachment` | Upload a new attachment to a release (base64 content or a file path on the MCP host) |
 | `edit_release_attachment` | Rename a release attachment |
 | `delete_release_attachment` | Delete a release attachment — destructive |
 | **Wiki** | |
@@ -442,8 +442,31 @@ You can configure the server using command-line arguments or environment variabl
 | `--http-port` | - | Port for streamable HTTP mode (default: 8080) |
 | `--cli` | - | Enter CLI mode for direct tool invocation |
 | `--user-agent` | `FORGEJO_USER_AGENT` | HTTP User-Agent header (default: `forgejo-mcp/<version>`) |
+| - | `FORGEJO_MCP_ALLOW_FILE_PATH_UPLOAD` | Allow `file_path` attachment uploads to read the host filesystem (`1`/`true`/`yes`/`on`; off by default) |
+| - | `FORGEJO_MCP_UPLOAD_ROOT` | Confine `file_path` uploads to this directory (default: anywhere the process can read) |
 
 Command-line arguments take priority over environment variables.
+
+### Uploading attachments from the host filesystem
+
+`create_issue_attachment`, `create_comment_attachment`, and
+`create_release_attachment` accept either base64 `content` or a `file_path` on
+the machine running `forgejo-mcp`. The path form avoids base64-expanding a large
+release artifact through the MCP transport.
+
+It is **off by default**, because it hands whatever drives the MCP client the
+ability to read any file the server process can read — a prompt-injected agent
+could upload `~/.ssh/id_ed25519` as a public release asset. Turn it on
+deliberately, and prefer confining it:
+
+```bash
+export FORGEJO_MCP_ALLOW_FILE_PATH_UPLOAD=1
+export FORGEJO_MCP_UPLOAD_ROOT=/home/you/build/dist   # optional but recommended
+```
+
+With `FORGEJO_MCP_UPLOAD_ROOT` set, a path that resolves outside that directory
+— by being absolute, by `..`, or through a symlink — is rejected before anything
+is read. Base64 `content` uploads are unaffected by either variable.
 
 ## Verifying Releases
 

@@ -43,6 +43,17 @@ B64=$(base64 -w0 /tmp/snippet.txt)
   --args "{\"owner\":\"goern\",\"repo\":\"forgejo-mcp\",\"comment_id\":13781165,\"content\":\"$B64\",\"filename\":\"snippet.txt\",\"mime_type\":\"text/plain\"}"
 ```
 
+The same tool can read a file from the `forgejo-mcp` host without base64:
+
+```bash
+./forgejo-mcp --cli create_comment_attachment \
+  --args '{"owner":"goern","repo":"forgejo-mcp","comment_id":13781165,"file_path":"/tmp/snippet.txt","mime_type":"text/plain"}'
+```
+
+Relative paths resolve from the `forgejo-mcp` process working directory, not
+from the MCP client's working directory. Pass `filename` only to override the
+path basename.
+
 ```output
 [
   {
