@@ -12,19 +12,32 @@ spec:
     instead of waiting for the post-merge release pipeline to no-op.
 
     Checks:
-      1. PR title (passed via PR_TITLE param from PAC dynamic var
-         {{ body.pull_request.title }}) matches Conventional Commits.
+      1. PR title (fetched from the forge API using PR_NUMBER) matches
+         Conventional Commits.
       2. Every commit on the PR branch (revision..origin/main..HEAD on the
          clone) matches the same regex. Merge commits are skipped.
 
     The regex accepts the type whitelist from .releaserc plus 'revert'.
     Optional scope (`(scope)`), optional breaking marker (`!`), required
     colon+space+subject. Allows gitmoji or any character in subject.
+
+    The title is fetched at runtime rather than passed in as a PaC dynamic
+    variable. PaC substitutes payload values into the JSON manifest, so a
+    title containing a double quote breaks PipelineRun unmarshalling before
+    any TaskRun exists, and the substitution reaches remote task files too —
+    including into `script:` blocks. Taking a numeric PR number and looking
+    the title up over HTTP removes that surface rather than escaping it.
   params:
-    - name: PR_TITLE
+    - name: PR_NUMBER
       description: |
-        Pull request title from PAC dynamic variable
-        {{ body.pull_request.title }}.
+        Pull request number, from the PAC dynamic variable
+        pull_request_number. Numeric, so it cannot carry a payload.
+      type: string
+    - name: REPO_URL
+      description: |
+        Clone URL of the repository, e.g.
+        https://forge.example.com/owner/repo. The API base and the
+        owner/repo pair are derived from it.
       type: string
     - name: BASE_REF
       description: Base branch to diff PR commits against.
@@ -49,16 +62,36 @@ spec:
     - name: check-pr-title
       image: $(params.GIT_IMAGE)
       env:
-        - name: PR_TITLE
-          value: $(params.PR_TITLE)
+        - name: PR_NUMBER
+          value: $(params.PR_NUMBER)
+        - name: REPO_URL
+          value: $(params.REPO_URL)
         - name: CC_REGEX
           value: $(params.CC_REGEX)
       script: |
         #!/usr/bin/env bash
         set -euo pipefail
+        if [ -z "${PR_NUMBER}" ]; then
+          echo "PR_NUMBER param is empty — cannot validate Conventional Commits format." >&2
+          echo "Hint: the PipelineRun must pass the PR number as PR_NUMBER." >&2
+          exit 1
+        fi
+
+        # https://forge/owner/repo -> api_base=https://forge, slug=owner/repo
+        url="${REPO_URL%.git}"
+        slug="${url#*://*/}"
+        api_base="${url%/"${slug}"}"
+        api="${api_base}/api/v1/repos/${slug}/pulls/${PR_NUMBER}"
+
+        echo "Fetching PR title: ${api}"
+        if ! body=$(curl -fsSL --max-time 30 "${api}"); then
+          echo "::error::Could not fetch PR #${PR_NUMBER} from ${api}" >&2
+          exit 1
+        fi
+        # -r prints the raw string; the title is data here, never evaluated.
+        PR_TITLE=$(printf '%s' "${body}" | jq -r '.title // empty')
         if [ -z "${PR_TITLE}" ]; then
-          echo "PR_TITLE param is empty — cannot validate Conventional Commits format." >&2
-          echo "Hint: PipelineRun must pass {{ body.pull_request.title }} as PR_TITLE." >&2
+          echo "::error::PR #${PR_NUMBER} has no title in the API response." >&2
           exit 1
         fi
         printf 'PR title: %s\n' "${PR_TITLE}"
