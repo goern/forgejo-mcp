@@ -348,7 +348,7 @@ func TestRepoHookFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 	}
 
 	// TestRepoHook is not in SDK v3; call the API directly (POST /repos/{owner}/{repo}/hooks/{id}/tests).
-	path := fmt.Sprintf("/repos/%s/%s/hooks/%d/tests", owner, repo, int64(idF))
+	path := forgejo.APIPath("repos", owner, repo, "hooks", int64(idF), "tests")
 	if err := forgejo.DoJSON(ctx, "POST", path, nil, nil); err != nil {
 		return to.ErrorResult(fmt.Errorf("test repo hook: %w", err))
 	}

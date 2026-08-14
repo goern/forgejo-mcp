@@ -7,7 +7,7 @@
 check-demos:
     ./scripts/ci/check-spec-demo-anchors.sh
 
-# >>> enable-semantic-release v0.0.0-dev sha256:e55873e3d94b (managed block — do not edit) >>>
+# >>> enable-semantic-release v0.0.0-dev sha256:33fef0631a43 (managed block — do not edit) >>>
 # Release tasks, installed by the enable-semantic-release skill.
 #
 # `just release` cuts a real release; everything else here exists so that the
@@ -16,8 +16,8 @@ check-demos:
 #
 # THE THING TO INTERNALISE: the Job clones the repo from the FORGE. It never
 # sees this working tree. So a dirty tree is harmless and an unpushed commit is
-# not — it releases what is on origin/main, which is why `preflight` checks the
-# remote ref and only warns about local dirt.
+# not — it releases what is on the release remote's main, which is why
+# `preflight` checks the remote ref and only warns about local dirt.
 #
 # Everything here is prefixed `sr_` or named for what it does; there is no
 # `set shell` and no `default` recipe, because this block is appended to a
@@ -25,9 +25,25 @@ check-demos:
 
 sr_namespace := "b4mad-forgejo"
 sr_agent     := "b4mad-release-agent"
-sr_repo_url  := `git remote get-url origin`
-sr_slug      := `git remote get-url origin | sed -E 's#.*:[0-9]+/##; s#\.git$##'`
-sr_repo      := `git remote get-url origin | sed -E 's#.*/##; s#\.git$##'`
+
+# WHICH REMOTE IS THE RELEASE TARGET. Not hardcoded to `origin`: a checkout
+# whose `origin` is a personal fork and whose canonical repo is a second remote
+# is a normal arrangement, and hardcoding sent the Job at the fork — it would
+# clone stale code and hang the Release object off the wrong repo. The branch's
+# own tracking remote is the reliable answer to "where does my main live";
+# `origin` remains the fallback, so single-remote checkouts are unaffected.
+# Override for one run with `just sr_remote=origin <recipe>`.
+sr_remote := ```
+    r=$(git config --get "branch.$(git rev-parse --abbrev-ref HEAD 2>/dev/null).remote" 2>/dev/null || true)
+    printf '%s' "${r:-origin}"
+```
+
+# shell() rather than backticks: backticks do NOT interpolate {{…}}, so a
+# plain `git remote get-url {{sr_remote}}` silently asks for a remote named
+# literally "{{sr_remote}}". shell() passes the value as $1 instead.
+sr_repo_url := shell("git remote get-url \"$1\"", sr_remote)
+sr_slug     := shell("git remote get-url \"$1\" | sed -E 's#.*:[0-9]+/##; s#\\.git$##'", sr_remote)
+sr_repo     := shell("git remote get-url \"$1\" | sed -E 's#.*/##; s#\\.git$##'", sr_remote)
 
 # The Job manifest and the grant script both ship WITH the skill; a checkout
 # that keeps its own copy (forge-agents does, at these paths) wins. Found here
@@ -56,7 +72,9 @@ preflight:
     fail=0
     note() { printf '  %-4s %s\n' "$1" "$2"; }
     echo
-    echo "preflight for {{sr_slug}}:"
+    # The remote is auto-detected, so name it: a silent wrong guess here is the
+    # whole failure this variable exists to prevent.
+    echo "preflight for {{sr_slug}} (remote: {{sr_remote}}):"
     echo
 
     if ! command -v oc >/dev/null; then
@@ -78,17 +96,17 @@ preflight:
         note "ok" "on main"
     fi
 
-    # The check that actually matters: the Job releases origin/main.
-    git fetch -q origin main 2>/dev/null || true
-    if ! ahead=$(git rev-list --count origin/main..HEAD 2>/dev/null); then
-        note "✗" "no origin/main to compare against"; fail=1
+    # The check that actually matters: the Job releases {{sr_remote}}/main.
+    git fetch -q {{sr_remote}} main 2>/dev/null || true
+    if ! ahead=$(git rev-list --count {{sr_remote}}/main..HEAD 2>/dev/null); then
+        note "✗" "no {{sr_remote}}/main to compare against"; fail=1
     elif [ "$ahead" != "0" ]; then
-        note "✗" "$ahead commit(s) not pushed — the Job would release without them"; fail=1
+        note "✗" "$ahead commit(s) not pushed to {{sr_remote}} — the Job would release without them"; fail=1
     else
-        behind=$(git rev-list --count HEAD..origin/main)
+        behind=$(git rev-list --count HEAD..{{sr_remote}}/main)
         [ "$behind" = "0" ] \
-            && note "ok" "origin/main is exactly this commit" \
-            || note "ok" "origin/main is $behind ahead; that is what gets released"
+            && note "ok" "{{sr_remote}}/main is exactly this commit" \
+            || note "ok" "{{sr_remote}}/main is $behind ahead; that is what gets released"
     fi
 
     # Informational only — the Job never sees the working tree.
@@ -183,4 +201,4 @@ clean-jobs:
     echo "$jobs"
     read -rp "delete these? [y/N] " a
     [ "$a" = "y" ] && oc -n {{sr_namespace}} delete $jobs || echo "left alone"
-# <<< enable-semantic-release v0.0.0-dev sha256:e55873e3d94b <<<
+# <<< enable-semantic-release v0.0.0-dev sha256:33fef0631a43 <<<

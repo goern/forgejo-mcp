@@ -196,7 +196,7 @@ func ListIssueAttachmentsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 	}
 
 	var out []*forgejo_sdk.Attachment
-	path := fmt.Sprintf("/repos/%s/%s/issues/%d/assets", owner, repo, int64(index))
+	path := forgejo.APIPath("repos", owner, repo, "issues", int64(index), "assets")
 	if err := forgejo.DoJSONList(ctx, http.MethodGet, path, &out); err != nil {
 		return to.ErrorResult(fmt.Errorf("list issue attachments err: %w", err))
 	}
@@ -263,7 +263,7 @@ func CreateIssueAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	defer reader.Close()
 
 	var att forgejo_sdk.Attachment
-	path := fmt.Sprintf("/repos/%s/%s/issues/%d/assets", owner, repo, int64(index))
+	path := forgejo.APIPath("repos", owner, repo, "issues", int64(index), "assets")
 	if err := forgejo.DoMultipart(ctx, http.MethodPost, path, multipartFieldName, filename, mimeType, reader, &att); err != nil {
 		return to.ErrorResult(fmt.Errorf("create issue attachment err: %w", err))
 	}
@@ -289,7 +289,7 @@ func EditIssueAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 
 	var att forgejo_sdk.Attachment
 	body := map[string]string{"name": name}
-	path := fmt.Sprintf("/repos/%s/%s/issues/%d/assets/%d", owner, repo, int64(index), int64(aid))
+	path := forgejo.APIPath("repos", owner, repo, "issues", int64(index), "assets", int64(aid))
 	if err := forgejo.DoJSON(ctx, http.MethodPatch, path, body, &att); err != nil {
 		return to.ErrorResult(fmt.Errorf("edit issue attachment err: %w", err))
 	}
@@ -308,7 +308,7 @@ func DeleteIssueAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("attachment_id: %w", err))
 	}
-	path := fmt.Sprintf("/repos/%s/%s/issues/%d/assets/%d", owner, repo, int64(index), int64(aid))
+	path := forgejo.APIPath("repos", owner, repo, "issues", int64(index), "assets", int64(aid))
 	if err := forgejo.DoJSON(ctx, http.MethodDelete, path, nil, nil); err != nil {
 		return to.ErrorResult(fmt.Errorf("delete issue attachment err: %w", err))
 	}
@@ -327,7 +327,7 @@ func ListCommentAttachmentsFn(ctx context.Context, req mcp.CallToolRequest) (*mc
 	}
 
 	var out []*forgejo_sdk.Attachment
-	path := fmt.Sprintf("/repos/%s/%s/issues/comments/%d/assets", owner, repo, int64(cid))
+	path := forgejo.APIPath("repos", owner, repo, "issues", "comments", int64(cid), "assets")
 	if err := forgejo.DoJSONList(ctx, http.MethodGet, path, &out); err != nil {
 		return to.ErrorResult(fmt.Errorf("list comment attachments err: %w", err))
 	}
@@ -393,7 +393,7 @@ func CreateCommentAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*m
 	defer reader.Close()
 
 	var att forgejo_sdk.Attachment
-	path := fmt.Sprintf("/repos/%s/%s/issues/comments/%d/assets", owner, repo, int64(cid))
+	path := forgejo.APIPath("repos", owner, repo, "issues", "comments", int64(cid), "assets")
 	if err := forgejo.DoMultipart(ctx, http.MethodPost, path, multipartFieldName, filename, mimeType, reader, &att); err != nil {
 		return to.ErrorResult(fmt.Errorf("create comment attachment err: %w", err))
 	}
@@ -419,7 +419,7 @@ func EditCommentAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 
 	var att forgejo_sdk.Attachment
 	body := map[string]string{"name": name}
-	path := fmt.Sprintf("/repos/%s/%s/issues/comments/%d/assets/%d", owner, repo, int64(cid), int64(aid))
+	path := forgejo.APIPath("repos", owner, repo, "issues", "comments", int64(cid), "assets", int64(aid))
 	if err := forgejo.DoJSON(ctx, http.MethodPatch, path, body, &att); err != nil {
 		return to.ErrorResult(fmt.Errorf("edit comment attachment err: %w", err))
 	}
@@ -438,7 +438,7 @@ func DeleteCommentAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*m
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("attachment_id: %w", err))
 	}
-	path := fmt.Sprintf("/repos/%s/%s/issues/comments/%d/assets/%d", owner, repo, int64(cid), int64(aid))
+	path := forgejo.APIPath("repos", owner, repo, "issues", "comments", int64(cid), "assets", int64(aid))
 	if err := forgejo.DoJSON(ctx, http.MethodDelete, path, nil, nil); err != nil {
 		return to.ErrorResult(fmt.Errorf("delete comment attachment err: %w", err))
 	}
@@ -449,7 +449,7 @@ func DeleteCommentAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*m
 
 func getIssueAttachment(ctx context.Context, owner, repo string, index, aid int64) (*forgejo_sdk.Attachment, error) {
 	var att forgejo_sdk.Attachment
-	path := fmt.Sprintf("/repos/%s/%s/issues/%d/assets/%d", owner, repo, index, aid)
+	path := forgejo.APIPath("repos", owner, repo, "issues", index, "assets", aid)
 	if err := forgejo.DoJSON(ctx, http.MethodGet, path, nil, &att); err != nil {
 		return nil, err
 	}
@@ -458,7 +458,7 @@ func getIssueAttachment(ctx context.Context, owner, repo string, index, aid int6
 
 func getCommentAttachment(ctx context.Context, owner, repo string, cid, aid int64) (*forgejo_sdk.Attachment, error) {
 	var att forgejo_sdk.Attachment
-	path := fmt.Sprintf("/repos/%s/%s/issues/comments/%d/assets/%d", owner, repo, cid, aid)
+	path := forgejo.APIPath("repos", owner, repo, "issues", "comments", cid, "assets", aid)
 	if err := forgejo.DoJSON(ctx, http.MethodGet, path, nil, &att); err != nil {
 		return nil, err
 	}

@@ -48,7 +48,7 @@ type wikiWriteOptions struct {
 }
 
 func wikiRepoPath(owner, repo string) string {
-	return fmt.Sprintf("/repos/%s/%s/wiki", url.PathEscape(owner), url.PathEscape(repo))
+	return APIPath("repos", owner, repo, "wiki")
 }
 
 func wikiPageSegment(pageName string) string {

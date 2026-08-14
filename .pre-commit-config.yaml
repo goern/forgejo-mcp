@@ -16,6 +16,28 @@ repos:
         language: system
         types: [go]
 
+      - id: openspec-validate
+        name: openspec validate --all --strict
+        description: >-
+          Mirrors the validate step in .tekton/tasks/openspec-validate.yaml so
+          a malformed change delta fails here instead of in CI. Skips when
+          openspec is not installed.
+        entry: scripts/ci/openspec-validate.sh
+        language: script
+        pass_filenames: false
+        files: ^(openspec/.*\.md|openspec/config\.yaml|scripts/ci/openspec-validate\.sh)$
+
+      - id: check-api-path-escaping
+        name: check raw-HTTP API path escaping
+        description: >-
+          Reject API paths built with fmt.Sprintf instead of
+          forgejo.APIPath(), which escapes every segment. Mirrors the
+          api-path-escaping step in .tekton/tasks/go-ci.yaml.
+        entry: scripts/ci/check-api-path-escaping.sh
+        language: script
+        pass_filenames: false
+        files: ^(operation/.*\.go|pkg/.*\.go|scripts/ci/check-api-path-escaping\.sh)$
+
       - id: check-demos
         name: check anchored spec demos
         description: Validate anchored Showboat demos against their specs.

@@ -74,6 +74,14 @@ spec:
           exit 1
         fi
 
+    - name: api-path-escaping
+      image: $(params.GO_IMAGE)
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        git config --global --add safe.directory "$(workspaces.source.path)"
+        ./scripts/ci/check-api-path-escaping.sh
+
     - name: mod-tidy-check
       image: $(params.GO_IMAGE)
       script: |

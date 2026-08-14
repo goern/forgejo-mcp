@@ -1,0 +1,197 @@
+[
+    {
+        "color": "c62828",
+        "description": "Breaking change that won't be backward compatible",
+        "name": "Compat/Breaking"
+    },
+    {
+        "color": "ee0701",
+        "description": "Something is not working",
+        "name": "Kind/Bug"
+    },
+    {
+        "color": "37474f",
+        "description": "Documentation changes",
+        "name": "Kind/Documentation"
+    },
+    {
+        "color": "84b6eb",
+        "description": "Improve existing functionality",
+        "name": "Kind/Enhancement"
+    },
+    {
+        "color": "0288d1",
+        "description": "New functionality",
+        "name": "Kind/Feature"
+    },
+    {
+        "color": "5c5753",
+        "description": "OpenSpec change proposal / spec-driven work",
+        "name": "Kind/OpenSpec"
+    },
+    {
+        "color": "9c27b0",
+        "description": "This is security issue",
+        "name": "Kind/Security"
+    },
+    {
+        "color": "795548",
+        "description": "Issue or pull request related to testing",
+        "name": "Kind/Testing"
+    },
+    {
+        "color": "b71c1c",
+        "description": "The priority is critical",
+        "name": "Priority/Critical"
+    },
+    {
+        "color": "d32f2f",
+        "description": "The priority is high",
+        "name": "Priority/High"
+    },
+    {
+        "color": "4caf50",
+        "description": "The priority is low",
+        "name": "Priority/Low"
+    },
+    {
+        "color": "e64a19",
+        "description": "The priority is medium",
+        "name": "Priority/Medium"
+    },
+    {
+        "color": "0e8a16",
+        "description": "Request For Comments — design/spec open for feedback before implementation",
+        "name": "RFC - Request For Comments"
+    },
+    {
+        "color": "2e7d32",
+        "description": "Code review passed — no changes requested (human/agent sign-off on a PR)",
+        "name": "Reviewed/Approved"
+    },
+    {
+        "color": "ef6c00",
+        "description": "Reviewed and changes are required before merge — the author must act",
+        "name": "Reviewed/Changes-Requested"
+    },
+    {
+        "color": "795548",
+        "description": "Issue has been confirmed",
+        "name": "Reviewed/Confirmed"
+    },
+    {
+        "color": "616161",
+        "description": "This issue or pull request already exists",
+        "name": "Reviewed/Duplicate"
+    },
+    {
+        "color": "546e7a",
+        "description": "Invalid issue",
+        "name": "Reviewed/Invalid"
+    },
+    {
+        "color": "eeeeee",
+        "description": "This issue won't be fixed",
+        "name": "Reviewed/Won't Fix"
+    },
+    {
+        "color": "222222",
+        "description": "Somebody has started to work on this but abandoned work",
+        "name": "Status/Abandoned"
+    },
+    {
+        "color": "5c6bc0",
+        "description": "Waiting on the author to act — use this instead of Status/Blocked, which means blocked on something external",
+        "name": "Status/Awaiting-Author"
+    },
+    {
+        "color": "880e4f",
+        "description": "Something is blocking this issue or pull request",
+        "name": "Status/Blocked"
+    },
+    {
+        "color": "424242",
+        "description": "Feedback is required to reproduce issue or to continue work",
+        "name": "Status/Need More Info"
+    },
+    {
+        "color": "0e8a16",
+        "description": "Spec/deliverable approved (set by castra finish)",
+        "name": "approved"
+    },
+    {
+        "color": "b60205",
+        "description": "Agent cannot proceed; prerequisite missing or ambiguous input",
+        "name": "blocked"
+    },
+    {
+        "color": "d73a4a",
+        "description": "Bounded defect fix; handled directly without an openspec change",
+        "name": "bug"
+    },
+    {
+        "color": "ffaa00",
+        "description": "castra is actively working this",
+        "name": "castra:bot-active"
+    },
+    {
+        "color": "fbca04",
+        "description": "Castra escalated — human must look closely (remove to hand back)",
+        "name": "castra:human"
+    },
+    {
+        "color": "a2eeef",
+        "description": "Feature or design work; routed through the openspec change flow",
+        "name": "change"
+    },
+    {
+        "color": "bfd4f2",
+        "description": "Trigger castra checker-tobi — print the version step + a haiku-written version-info background",
+        "name": "checker:tobi"
+    },
+    {
+        "color": "cccccc",
+        "description": "intake: recommended for closing (noise/obsolete)",
+        "name": "close-suggested"
+    },
+    {
+        "color": "c2e0c6",
+        "description": "Trigger castra code bot — implement issue, push branch, open PR",
+        "name": "code"
+    },
+    {
+        "color": "5319e7",
+        "description": "Trigger Copilot cloud agent to resolve an existing PR merge conflict",
+        "name": "copilot-conflict"
+    },
+    {
+        "color": "cccccc",
+        "description": "Out of current scope; excluded from triage and routing until removed",
+        "name": "deferred"
+    },
+    {
+        "color": "0366d6",
+        "description": "Pull requests that update a dependency file",
+        "name": "dependencies"
+    },
+    {
+        "color": "0e8a16",
+        "description": "Authorable-surface PR checked — no docs/modding change needed (skips docs-modding gate)",
+        "name": "docs-ok"
+    },
+    {
+        "color": "0e8a16",
+        "description": "Human-scoped — portfolio-em sends straight to code (skip intake)",
+        "name": "fast-track"
+    },
+    {
+        "color": "cccccc",
+        "description": "groom: recommended for closing (noise/obsolete)",
+        "name": "groom:close-suggested"
+    },
+    {
+        "color": "d93f0b",
+        "description": "A human must act before any agent continues (fullsend escalation)",
+        "name": "human"
+    }
+]

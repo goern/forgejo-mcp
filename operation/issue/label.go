@@ -343,7 +343,7 @@ func CreateOrgLabelFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	}
 
 	var label forgejo_sdk.Label
-	if err := forgejo.DoJSON(ctx, http.MethodPost, fmt.Sprintf("/orgs/%s/labels", org), body, &label); err != nil {
+	if err := forgejo.DoJSON(ctx, http.MethodPost, forgejo.APIPath("orgs", org, "labels"), body, &label); err != nil {
 		return to.ErrorResult(fmt.Errorf("create org label: %w", err))
 	}
 	return to.TextResult(label)
@@ -378,7 +378,7 @@ func EditOrgLabelFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 	}
 
 	var label forgejo_sdk.Label
-	if err := forgejo.DoJSON(ctx, http.MethodPatch, fmt.Sprintf("/orgs/%s/labels/%d", org, int64(idF)), opt, &label); err != nil {
+	if err := forgejo.DoJSON(ctx, http.MethodPatch, forgejo.APIPath("orgs", org, "labels", int64(idF)), opt, &label); err != nil {
 		return to.ErrorResult(fmt.Errorf("edit org label: %w", err))
 	}
 	return to.TextResult(label)
@@ -393,7 +393,7 @@ func DeleteOrgLabelFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 
 	if deleteMode != "force" {
 		var label forgejo_sdk.Label
-		if err := forgejo.DoJSON(ctx, http.MethodGet, fmt.Sprintf("/orgs/%s/labels/%d", org, id), nil, &label); err != nil {
+		if err := forgejo.DoJSON(ctx, http.MethodGet, forgejo.APIPath("orgs", org, "labels", id), nil, &label); err != nil {
 			return to.ErrorResult(fmt.Errorf("get org label: %w", err))
 		}
 
@@ -411,7 +411,7 @@ func DeleteOrgLabelFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		}
 	}
 
-	if err := forgejo.DoJSON(ctx, http.MethodDelete, fmt.Sprintf("/orgs/%s/labels/%d", org, id), nil, nil); err != nil {
+	if err := forgejo.DoJSON(ctx, http.MethodDelete, forgejo.APIPath("orgs", org, "labels", id), nil, nil); err != nil {
 		return to.ErrorResult(fmt.Errorf("delete org label: %w", err))
 	}
 	return to.TextResult(map[string]any{"deleted": true, "id": id})
@@ -423,7 +423,7 @@ func GetOrgLabelFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	idF, _ := to.Float64(req.GetArguments()["id"])
 
 	var label forgejo_sdk.Label
-	if err := forgejo.DoJSON(ctx, http.MethodGet, fmt.Sprintf("/orgs/%s/labels/%d", org, int64(idF)), nil, &label); err != nil {
+	if err := forgejo.DoJSON(ctx, http.MethodGet, forgejo.APIPath("orgs", org, "labels", int64(idF)), nil, &label); err != nil {
 		return to.ErrorResult(fmt.Errorf("get org label: %w", err))
 	}
 	return to.TextResult(label)
