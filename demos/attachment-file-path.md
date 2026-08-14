@@ -17,9 +17,17 @@ This demo proves the [attachment upload source OpenSpec delta](../openspec/chang
 export FORGEJO_URL=https://git.b4mad.industries
 export FORGEJO_ACCESS_TOKEN=<your-token>
 export FORGEJO_MCP_BIN="${FORGEJO_MCP_BIN:-forgejo-mcp}"
+export FORGEJO_MCP_ALLOW_FILE_PATH_UPLOAD=1
 ```
 
 Run all commands from the repository root. The token is supplied through the environment and is never embedded in a captured command.
+
+> **Note.** The capture below predates the `FORGEJO_MCP_ALLOW_FILE_PATH_UPLOAD`
+> gate; every `file_path` command shown now additionally requires that variable,
+> which is why the replay setup exports it. Without it each `file_path` call
+> returns `file_path uploads are disabled on this host`. Setting
+> `FORGEJO_MCP_UPLOAD_ROOT` to the repository root would further confine these
+> reads. Base64 `content` commands in this demo are unaffected.
 
 ## Upload from `file_path` with basename defaulting
 

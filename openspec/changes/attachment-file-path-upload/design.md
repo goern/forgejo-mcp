@@ -14,6 +14,14 @@
    inference, and base64 decoding.
 5. Multipart bodies stream through `io.Pipe`. Release uploads use the same raw
    HTTP helper instead of the SDK creation method, which buffers the body.
+6. `file_path` is off by default. It hands whatever drives the MCP client a
+   read primitive over the host filesystem, so a prompt-injected agent could
+   turn `~/.ssh/id_ed25519` into a public release asset. `FORGEJO_MCP_ALLOW_FILE_PATH_UPLOAD`
+   makes enabling it a deliberate operator act, and `FORGEJO_MCP_UPLOAD_ROOT`
+   narrows the blast radius to one directory. Both are read at call time rather
+   than at startup so tests and short-lived CLI runs can scope them.
+7. Confinement compares symlink-resolved paths, because a symlink planted
+   inside the root would otherwise read anything the process can reach.
 
 ## Compatibility
 

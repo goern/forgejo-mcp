@@ -17,6 +17,7 @@ import (
 
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/flag"
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/forgejo"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/upload"
 
 	"github.com/mark3labs/mcp-go/mcp"
 )
@@ -344,6 +345,7 @@ func TestCreateIssueAttachmentFn_DecodesBase64AndUsesMultipart(t *testing.T) {
 }
 
 func TestCreateIssueAttachmentFn_UsesFilePathAndBasename(t *testing.T) {
+	t.Setenv(upload.AllowFilePathEnv, "1")
 	path := filepath.Join(t.TempDir(), "from-path.bin")
 	if err := os.WriteFile(path, []byte("path payload"), 0o600); err != nil {
 		t.Fatal(err)
@@ -580,6 +582,7 @@ func TestCommentAttachmentLifecycle_Smoke(t *testing.T) {
 }
 
 func TestCreateCommentAttachmentFn_UsesFilePath(t *testing.T) {
+	t.Setenv(upload.AllowFilePathEnv, "1")
 	path := filepath.Join(t.TempDir(), "comment.txt")
 	if err := os.WriteFile(path, []byte("comment file"), 0o600); err != nil {
 		t.Fatal(err)

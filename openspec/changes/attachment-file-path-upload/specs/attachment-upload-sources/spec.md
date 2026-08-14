@@ -32,6 +32,26 @@ The `create_issue_attachment`, `create_comment_attachment`, and `create_release_
 - **WHEN** `content` is present with an empty string and `file_path` is absent
 - **THEN** the tool SHALL upload a zero-byte file
 
+### Requirement: Host file reads are opt-in
+
+Reading upload content off the host filesystem SHALL be disabled unless the operator sets `FORGEJO_MCP_ALLOW_FILE_PATH_UPLOAD` to a truthy value (`1`, `true`, `yes`, `on`). When the operator also sets `FORGEJO_MCP_UPLOAD_ROOT`, a `file_path` SHALL resolve inside that directory after symlink resolution or be rejected. Base64 `content` uploads SHALL be unaffected by both variables.
+
+#### Scenario: Gate closed by default
+
+- **WHEN** a caller supplies `file_path` and `FORGEJO_MCP_ALLOW_FILE_PATH_UPLOAD` is unset or not truthy
+- **THEN** the tool SHALL reject the request before opening the file
+- **AND** the error SHALL name the variable that enables the feature
+
+#### Scenario: Path outside the configured root
+
+- **WHEN** `FORGEJO_MCP_UPLOAD_ROOT` is set and `file_path` resolves outside it, whether by an absolute path, `..`, or a symlink
+- **THEN** the tool SHALL reject the request before uploading anything
+
+#### Scenario: Base64 upload with the gate closed
+
+- **WHEN** a caller supplies `content` and `FORGEJO_MCP_ALLOW_FILE_PATH_UPLOAD` is unset
+- **THEN** the tool SHALL upload those bytes as usual
+
 ### Requirement: Streaming multipart upload
 
 Attachment creation SHALL stream multipart bodies to Forgejo without buffering

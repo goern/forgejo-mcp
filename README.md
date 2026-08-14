@@ -442,8 +442,31 @@ You can configure the server using command-line arguments or environment variabl
 | `--http-port` | - | Port for streamable HTTP mode (default: 8080) |
 | `--cli` | - | Enter CLI mode for direct tool invocation |
 | `--user-agent` | `FORGEJO_USER_AGENT` | HTTP User-Agent header (default: `forgejo-mcp/<version>`) |
+| - | `FORGEJO_MCP_ALLOW_FILE_PATH_UPLOAD` | Allow `file_path` attachment uploads to read the host filesystem (`1`/`true`/`yes`/`on`; off by default) |
+| - | `FORGEJO_MCP_UPLOAD_ROOT` | Confine `file_path` uploads to this directory (default: anywhere the process can read) |
 
 Command-line arguments take priority over environment variables.
+
+### Uploading attachments from the host filesystem
+
+`create_issue_attachment`, `create_comment_attachment`, and
+`create_release_attachment` accept either base64 `content` or a `file_path` on
+the machine running `forgejo-mcp`. The path form avoids base64-expanding a large
+release artifact through the MCP transport.
+
+It is **off by default**, because it hands whatever drives the MCP client the
+ability to read any file the server process can read — a prompt-injected agent
+could upload `~/.ssh/id_ed25519` as a public release asset. Turn it on
+deliberately, and prefer confining it:
+
+```bash
+export FORGEJO_MCP_ALLOW_FILE_PATH_UPLOAD=1
+export FORGEJO_MCP_UPLOAD_ROOT=/home/you/build/dist   # optional but recommended
+```
+
+With `FORGEJO_MCP_UPLOAD_ROOT` set, a path that resolves outside that directory
+— by being absolute, by `..`, or through a symlink — is rejected before anything
+is read. Base64 `content` uploads are unaffected by either variable.
 
 ## Verifying Releases
 

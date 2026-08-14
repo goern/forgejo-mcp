@@ -86,7 +86,7 @@ const (
 	AttachmentID       = "Attachment ID"
 	AttachmentName     = "New name for the attachment"
 	AttachmentContent  = "Base64-encoded file bytes to upload. Provide exactly one of content or file_path"
-	AttachmentFilePath = "Path to a file on the forgejo-mcp host. Relative paths resolve from the server process working directory. Provide exactly one of content or file_path"
+	AttachmentFilePath = "Path to a file on the forgejo-mcp host. Relative paths resolve from the server process working directory. Disabled unless the host sets FORGEJO_MCP_ALLOW_FILE_PATH_UPLOAD=1, and confined to FORGEJO_MCP_UPLOAD_ROOT when that is set. Provide exactly one of content or file_path"
 	AttachmentFilename = `Filename to associate with the upload. Required with content; optional with file_path (defaults to the path basename)`
 	AttachmentMIME     = "MIME type hint for uploaded file (optional; inferred from filename if omitted)"
 

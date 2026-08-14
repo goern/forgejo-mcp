@@ -15,6 +15,13 @@ func stringPointer(value string) *string {
 	return &value
 }
 
+// allowFilePathUploads opts the test into the host-side file read that
+// AllowFilePathEnv gates. Tests that assert the gate itself must not call it.
+func allowFilePathUploads(t *testing.T) {
+	t.Helper()
+	t.Setenv(AllowFilePathEnv, "1")
+}
+
 func TestOpenBase64(t *testing.T) {
 	content := base64.StdEncoding.EncodeToString([]byte("payload"))
 	reader, filename, err := Open(Source{Content: &content, Filename: "file.bin"})
@@ -41,6 +48,7 @@ func TestOpenEmptyBase64(t *testing.T) {
 }
 
 func TestOpenFilePath(t *testing.T) {
+	allowFilePathUploads(t)
 	path := filepath.Join(t.TempDir(), "payload.txt")
 	if err := os.WriteFile(path, []byte("from file"), 0o600); err != nil {
 		t.Fatal(err)
@@ -57,6 +65,7 @@ func TestOpenFilePath(t *testing.T) {
 }
 
 func TestOpenRelativeFilePathAndFilenameOverride(t *testing.T) {
+	allowFilePathUploads(t)
 	dir := t.TempDir()
 	path := filepath.Join(dir, "payload.txt")
 	if err := os.WriteFile(path, []byte("relative"), 0o600); err != nil {
@@ -82,7 +91,80 @@ func TestOpenRelativeFilePathAndFilenameOverride(t *testing.T) {
 	}
 }
 
+func TestOpenRejectsFilePathWhenNotEnabled(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "payload.txt")
+	if err := os.WriteFile(path, []byte("secret"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, value := range []string{"", "0", "false", "no"} {
+		t.Run("env="+value, func(t *testing.T) {
+			t.Setenv(AllowFilePathEnv, value)
+			reader, _, err := Open(Source{FilePath: &path})
+			if reader != nil {
+				_ = reader.Close()
+			}
+			if err == nil || !strings.Contains(err.Error(), AllowFilePathEnv) {
+				t.Fatalf("expected the gate to reject file_path, got %v", err)
+			}
+		})
+	}
+}
+
+// Base64 uploads are unaffected by the gate — it only guards host file reads.
+func TestOpenBase64IgnoresGate(t *testing.T) {
+	t.Setenv(AllowFilePathEnv, "")
+	content := base64.StdEncoding.EncodeToString([]byte("payload"))
+	reader, _, err := Open(Source{Content: &content, Filename: "file.bin"})
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	_ = reader.Close()
+}
+
+func TestOpenConfinesToUploadRoot(t *testing.T) {
+	allowFilePathUploads(t)
+	root := t.TempDir()
+	inside := filepath.Join(root, "inside.txt")
+	if err := os.WriteFile(inside, []byte("ok"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	outsideDir := t.TempDir()
+	outside := filepath.Join(outsideDir, "outside.txt")
+	if err := os.WriteFile(outside, []byte("nope"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	// A symlink inside the root must not become a way out of it.
+	escape := filepath.Join(root, "escape.txt")
+	if err := os.Symlink(outside, escape); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(UploadRootEnv, root)
+
+	reader, filename, err := Open(Source{FilePath: &inside})
+	if err != nil {
+		t.Fatalf("path inside the root: %v", err)
+	}
+	_ = reader.Close()
+	if filename != "inside.txt" {
+		t.Fatalf("filename: %q", filename)
+	}
+
+	for name, path := range map[string]string{"outside": outside, "symlink out": escape} {
+		t.Run(name, func(t *testing.T) {
+			reader, _, err := Open(Source{FilePath: &path})
+			if reader != nil {
+				_ = reader.Close()
+			}
+			if err == nil || !strings.Contains(err.Error(), UploadRootEnv) {
+				t.Fatalf("expected confinement error, got %v", err)
+			}
+		})
+	}
+}
+
 func TestOpenRejectsInvalidSources(t *testing.T) {
+	allowFilePathUploads(t)
 	validPath := filepath.Join(t.TempDir(), "file.txt")
 	if err := os.WriteFile(validPath, []byte("x"), 0o600); err != nil {
 		t.Fatal(err)

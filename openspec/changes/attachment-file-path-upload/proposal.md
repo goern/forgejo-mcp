@@ -17,6 +17,8 @@ and inconvenient, especially for release artifacts.
   memory.
 - Document that paths belong to the `forgejo-mcp` host and relative paths use
   its process working directory.
+- Gate host file reads behind `FORGEJO_MCP_ALLOW_FILE_PATH_UPLOAD`, with an
+  optional `FORGEJO_MCP_UPLOAD_ROOT` confining them to one directory.
 
 ## Impact
 

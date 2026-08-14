@@ -16,6 +16,7 @@ import (
 
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/flag"
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/forgejo"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/upload"
 
 	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -420,6 +421,7 @@ func TestCreateReleaseAttachmentFn_HappyPath(t *testing.T) {
 }
 
 func TestCreateReleaseAttachmentFn_UsesFilePathAndFilenameOverride(t *testing.T) {
+	t.Setenv(upload.AllowFilePathEnv, "1")
 	path := filepath.Join(t.TempDir(), "original.bin")
 	if err := os.WriteFile(path, []byte("release file"), 0o600); err != nil {
 		t.Fatal(err)
