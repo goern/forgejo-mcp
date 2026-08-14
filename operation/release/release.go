@@ -575,7 +575,7 @@ func CreateReleaseAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*m
 	defer reader.Close()
 
 	var att forgejo_sdk.Attachment
-	path := fmt.Sprintf("/repos/%s/%s/releases/%d/assets", owner, repo, int64(rid))
+	path := forgejo.APIPath("repos", owner, repo, "releases", int64(rid), "assets")
 	if err := forgejo.DoMultipart(ctx, http.MethodPost, path, "attachment", filename, mimeType, reader, &att); err != nil {
 		return to.ErrorResult(fmt.Errorf("create release attachment err: %w", err))
 	}
