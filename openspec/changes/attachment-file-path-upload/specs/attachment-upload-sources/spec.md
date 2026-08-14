@@ -4,11 +4,7 @@
 
 ### Requirement: Attachment upload source
 
-The `create_issue_attachment`, `create_comment_attachment`, and
-`create_release_attachment` tools SHALL accept optional string arguments
-`content` and `file_path` and SHALL require exactly one argument key to be
-present. `content` SHALL contain base64-encoded bytes. `file_path` SHALL refer
-to a regular file on the host running `forgejo-mcp`.
+The `create_issue_attachment`, `create_comment_attachment`, and `create_release_attachment` tools SHALL accept optional string arguments `content` and `file_path` and SHALL require exactly one argument key to be present. `content` SHALL contain base64-encoded bytes. `file_path` SHALL refer to a regular file on the host running `forgejo-mcp`.
 
 #### Scenario: Upload base64 content
 
