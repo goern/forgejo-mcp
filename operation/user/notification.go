@@ -170,7 +170,7 @@ func GetNotificationThreadFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	if resp != nil {
 		statusCode = resp.StatusCode
 	}
-	forgejo.LogAPICall(ctx, "GET", fmt.Sprintf("/notifications/threads/%d", int64(id)), duration, statusCode, err)
+	forgejo.LogAPICall(ctx, "GET", forgejo.APIPath("notifications", "threads", int64(id)), duration, statusCode, err)
 
 	if err != nil {
 		log.LogMCPToolError(ctx, GetNotificationThreadToolName, duration, err)
@@ -204,7 +204,7 @@ func MarkNotificationReadFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 	if resp != nil {
 		statusCode = resp.StatusCode
 	}
-	forgejo.LogAPICall(ctx, "PATCH", fmt.Sprintf("/notifications/threads/%d", int64(id)), duration, statusCode, err)
+	forgejo.LogAPICall(ctx, "PATCH", forgejo.APIPath("notifications", "threads", int64(id)), duration, statusCode, err)
 
 	if err != nil {
 		log.LogMCPToolError(ctx, MarkNotificationReadToolName, duration, err)
@@ -320,7 +320,7 @@ func ListRepoNotificationsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	if resp != nil {
 		statusCode = resp.StatusCode
 	}
-	forgejo.LogAPICall(ctx, "GET", fmt.Sprintf("/repos/%s/%s/notifications", owner, repo), duration, statusCode, err)
+	forgejo.LogAPICall(ctx, "GET", forgejo.APIPath("repos", owner, repo, "notifications"), duration, statusCode, err)
 
 	if err != nil {
 		log.LogMCPToolError(ctx, ListRepoNotificationsToolName, duration, err)
@@ -365,7 +365,7 @@ func MarkRepoNotificationsReadFn(ctx context.Context, req mcp.CallToolRequest) (
 	if resp != nil {
 		statusCode = resp.StatusCode
 	}
-	forgejo.LogAPICall(ctx, "PUT", fmt.Sprintf("/repos/%s/%s/notifications", owner, repo), duration, statusCode, err)
+	forgejo.LogAPICall(ctx, "PUT", forgejo.APIPath("repos", owner, repo, "notifications"), duration, statusCode, err)
 
 	if err != nil {
 		log.LogMCPToolError(ctx, MarkRepoNotificationsReadToolName, duration, err)

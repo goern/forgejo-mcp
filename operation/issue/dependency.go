@@ -96,7 +96,7 @@ func ListIssueDependenciesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	index, _ := to.Float64(req.GetArguments()["index"])
 	page, limit := parsePageLimit(req.GetArguments())
 
-	path := fmt.Sprintf("/repos/%s/%s/issues/%d/dependencies?page=%d&limit=%d", owner, repo, int64(index), page, limit)
+	path := forgejo.APIPath("repos", owner, repo, "issues", int64(index), "dependencies") + fmt.Sprintf("?page=%d&limit=%d", page, limit)
 	issues := []*forgejo_sdk.Issue{}
 	if err := forgejo.DoJSONList(ctx, http.MethodGet, path, &issues); err != nil {
 		return to.ErrorResult(fmt.Errorf("list issue dependencies err: %w", err))
@@ -111,7 +111,7 @@ func ListIssueDependentsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 	index, _ := to.Float64(req.GetArguments()["index"])
 	page, limit := parsePageLimit(req.GetArguments())
 
-	path := fmt.Sprintf("/repos/%s/%s/issues/%d/blocks?page=%d&limit=%d", owner, repo, int64(index), page, limit)
+	path := forgejo.APIPath("repos", owner, repo, "issues", int64(index), "blocks") + fmt.Sprintf("?page=%d&limit=%d", page, limit)
 	issues := []*forgejo_sdk.Issue{}
 	if err := forgejo.DoJSONList(ctx, http.MethodGet, path, &issues); err != nil {
 		return to.ErrorResult(fmt.Errorf("list issue dependents err: %w", err))
@@ -144,7 +144,7 @@ func AddIssueDependencyFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 		return to.ErrorResult(fmt.Errorf("an issue cannot depend on itself"))
 	}
 
-	path := fmt.Sprintf("/repos/%s/%s/issues/%d/dependencies", owner, repo, int64(index))
+	path := forgejo.APIPath("repos", owner, repo, "issues", int64(index), "dependencies")
 	body := issueMetaBody{Index: int64(dependsOn), Owner: owner, Repo: repo}
 	if err := forgejo.DoJSON(ctx, http.MethodPost, path, body, nil); err != nil {
 		return to.ErrorResult(fmt.Errorf("add issue dependency err: %w", err))
@@ -159,7 +159,7 @@ func RemoveIssueDependencyFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	index, _ := to.Float64(req.GetArguments()["index"])
 	dependencyIndex, _ := to.Float64(req.GetArguments()["dependency_index"])
 
-	path := fmt.Sprintf("/repos/%s/%s/issues/%d/dependencies", owner, repo, int64(index))
+	path := forgejo.APIPath("repos", owner, repo, "issues", int64(index), "dependencies")
 	body := issueMetaBody{Index: int64(dependencyIndex), Owner: owner, Repo: repo}
 	if err := forgejo.DoJSON(ctx, http.MethodDelete, path, body, nil); err != nil {
 		return to.ErrorResult(fmt.Errorf("remove issue dependency err: %w", err))

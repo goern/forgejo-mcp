@@ -50,7 +50,14 @@ Do not add a copyright line — the SPDX identifier line alone is sufficient.
 2. Define tool with `mcp.NewTool()` and implement handler function
 3. Register in the domain's `RegisterTool(s *server.MCPServer)` function
 4. If new domain, import and call in `operation/operation.go`
-5. **Bound the output.** If response size depends on data (not tool
+5. **Escape API paths.** If the tool uses the raw-HTTP helpers
+   (`forgejo.DoJSON`, `DoJSONList`, `DoAPIRaw`, `DoMultipart`) rather than the
+   SDK, build the path with `forgejo.APIPath("repos", owner, repo, …)` — it
+   escapes every segment. A hand-rolled `fmt.Sprintf("/repos/%s/…")` lets an
+   owner containing `/` or `?` retarget the request at another endpoint;
+   `scripts/ci/check-api-path-escaping.sh` fails the build on it. Append query
+   strings to the `APIPath` result.
+6. **Bound the output.** If response size depends on data (not tool
    semantics), the tool MUST satisfy [docs/design/output-bounding.md](docs/design/output-bounding.md):
    client-controlled bound + resumability + documented parameters. Use the
    checklist there in the PR description.

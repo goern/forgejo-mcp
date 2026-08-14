@@ -36,7 +36,7 @@ func fetchOrgLabels(ctx context.Context, org string, page, limit int) ([]ScopedL
 	if limit < 1 {
 		limit = 100
 	}
-	path := fmt.Sprintf("/orgs/%s/labels?page=%d&limit=%d", org, page, limit)
+	path := forgejo.APIPath("orgs", org, "labels") + fmt.Sprintf("?page=%d&limit=%d", page, limit)
 	var raw []*forgejo_sdk.Label
 	if err := forgejo.DoJSONList(ctx, http.MethodGet, path, &raw); err != nil {
 		return nil, err
