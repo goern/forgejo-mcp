@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	client     *forgejo.Client
-	clientOnce sync.Once
+	client   *forgejo.Client
+	clientMu sync.Mutex
 )
 
 type contextKey string
@@ -54,35 +54,39 @@ func Client(ctx context.Context) (*forgejo.Client, error) {
 		return c, nil
 	}
 
-	clientOnce.Do(func() {
-		if client == nil {
-			// Use configured user agent or default to forgejo-mcp/<version>
-			userAgent := flag.UserAgent
-			if userAgent == "" {
-				userAgent = "forgejo-mcp/" + flag.Version
-			}
+	clientMu.Lock()
+	defer clientMu.Unlock()
 
-			c, err := forgejo.NewClient(flag.URL,
-				forgejo.SetToken(flag.Token),
-				forgejo.SetUserAgent(userAgent),
-			)
-			if err != nil {
-				log.Error("Failed to create Forgejo client",
-					log.SanitizedURLField("url", flag.URL),
-					log.ErrorField(err),
-				)
-				// We still fatal here because if the singleton can't be created at startup,
-				// the server is useless in stdio mode.
-				log.Fatalf("create forgejo client err: %v", err)
-			}
-			client = c
-			log.Info("Successfully created Forgejo client",
-				log.SanitizedURLField("url", flag.URL),
-				log.BoolField("token_configured", flag.Token != ""),
-				log.StringField("user_agent", userAgent),
-			)
-		}
-	})
+	if client != nil {
+		return client, nil
+	}
+
+	// Use configured user agent or default to forgejo-mcp/<version>
+	userAgent := flag.UserAgent
+	if userAgent == "" {
+		userAgent = "forgejo-mcp/" + flag.Version
+	}
+
+	c, err := forgejo.NewClient(flag.URL,
+		forgejo.SetToken(flag.Token),
+		forgejo.SetUserAgent(userAgent),
+	)
+	if err != nil {
+		log.Error("Failed to create Forgejo client",
+			log.SanitizedURLField("url", flag.URL),
+			log.ErrorField(err),
+		)
+		// Never fatal: the caller decides. At startup, RegisterTool's connection
+		// test turns this into a clean "connection test failed" exit; in tests it
+		// stays an ordinary error instead of killing the test binary.
+		return nil, fmt.Errorf("create forgejo client: %w", err)
+	}
+	client = c
+	log.Info("Successfully created Forgejo client",
+		log.SanitizedURLField("url", flag.URL),
+		log.BoolField("token_configured", flag.Token != ""),
+		log.StringField("user_agent", userAgent),
+	)
 	return client, nil
 }
 

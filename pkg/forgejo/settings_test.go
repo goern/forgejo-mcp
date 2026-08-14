@@ -6,7 +6,6 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"sync"
 	"sync/atomic"
 	"testing"
 
@@ -37,7 +36,6 @@ func TestMaxResponseItems_CachesAcrossCalls(t *testing.T) {
 	flag.URL = srv.URL
 	flag.Token = "global-token"
 	client = nil
-	clientOnce = sync.Once{}
 	resetSettingsCacheForTesting()
 
 	ctx := context.Background()
@@ -82,7 +80,6 @@ func TestMaxResponseItems_FailureIsUnknownNotZero(t *testing.T) {
 	flag.URL = srv.URL
 	flag.Token = "global-token"
 	client = nil
-	clientOnce = sync.Once{}
 	resetSettingsCacheForTesting()
 
 	ctx := context.Background()
@@ -122,7 +119,6 @@ func TestSetClientForTesting_ResetsSettingsCache(t *testing.T) {
 	flag.URL = srv.URL
 	flag.Token = "global-token"
 	client = nil
-	clientOnce = sync.Once{}
 	resetSettingsCacheForTesting()
 
 	ctx := context.Background()

@@ -24,7 +24,6 @@ func TestClient_WithContextToken(t *testing.T) {
 	flag.Token = "global-token"
 	// Reset the singleton
 	client = nil
-	clientOnce = sync.Once{}
 
 	// 1. Get client without context token
 	ctx := context.Background()
@@ -61,7 +60,6 @@ func TestClient_EphemeralConstructionError(t *testing.T) {
 	flag.URL = "http://127.0.0.1:1"
 	flag.Token = "global-token"
 	client = nil
-	clientOnce = sync.Once{}
 
 	ctx := WithToken(context.Background(), "request-token")
 	c, err := Client(ctx)
@@ -97,7 +95,6 @@ func TestClient_AuthorizationHeader(t *testing.T) {
 	flag.URL = srv.URL
 	flag.Token = "global-token"
 	client = nil
-	clientOnce = sync.Once{}
 
 	// Test concurrent requests with different tokens
 	var wg sync.WaitGroup

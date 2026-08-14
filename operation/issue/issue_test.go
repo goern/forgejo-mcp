@@ -945,7 +945,10 @@ func TestSearchIssues_SettingsFailureNeverBecomesZeroCeiling(t *testing.T) {
 
 func TestSearchIssues_ClientErrorPropagates(t *testing.T) {
 	// No backend at all: forgejo.Client construction against an unreachable
-	// URL surfaces as an error before any ListIssues call.
+	// URL surfaces as an error before any ListIssues call. Clear the singleton
+	// first so this holds whatever order -shuffle picks.
+	forgejo.ResetClientForTesting()
+	t.Cleanup(forgejo.ResetClientForTesting)
 	flag.URL = "http://127.0.0.1:0"
 	flag.Token = "tkn"
 	res, err := SearchIssuesFn(context.Background(), makeReq(map[string]any{"owner": "goern"}))
