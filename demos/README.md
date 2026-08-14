@@ -68,7 +68,7 @@ edit, delete — for both surfaces.
 |------|-------|---------------|
 | [issue-attachments.md](issue-attachments.md) | 6 tools keyed by `index` | Upload, inspect, download, rename, delete attachments on an issue/PR |
 | [comment-attachments.md](comment-attachments.md) | 6 tools keyed by `comment_id` | Same lifecycle on individual comment attachments |
-| [attachment-file-path.md](attachment-file-path.md) | `create_issue_attachment`, `create_comment_attachment`, `create_release_attachment` | Host file uploads with basename defaults, filename overrides, relative paths, source validation, zero-byte content, and a large streamed release asset |
+| [attachment-file-path.md](attachment-file-path.md) | `create_issue_attachment`, `create_comment_attachment`, `create_release_attachment` | Host file uploads with basename defaults, filename overrides, relative paths, source validation, zero-byte content, a large streamed release asset, and the `FORGEJO_MCP_ALLOW_FILE_PATH_UPLOAD` / `FORGEJO_MCP_UPLOAD_ROOT` gate rejecting reads |
 
 **Use case.** An agent triaging a bug report needs to fetch the
 attached log file before reasoning about it; an agent writing a release
