@@ -139,7 +139,10 @@ and then the fence. Edit `justfile-block.just`, never the installed copy.
 
 ### The AGENTS.md how-to
 
-Ten lines: the Job releases `origin/main` from the forge and never sees your
+Ten lines: the Job releases the release remote's `main` from the forge — that
+is the current branch's tracking remote, `origin` unless the checkout says
+otherwise, printed by `just preflight` and overridable with
+`just sr_remote=<name> …` — and never sees your
 working tree, `just preflight` before `just release`, commits must be
 conventional. It points at the just targets; it does not restate them. Edit
 `agents-md-block.md`.
