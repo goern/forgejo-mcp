@@ -299,17 +299,43 @@ func issueCommentsResourceHandler(ctx context.Context, req mcp.ReadResourceReque
 		return nil, resource.MapForgejoError(uri, err)
 	}
 
-	items := make([]string, len(rawComments))
-	for i, c := range rawComments {
+	// Forgejo's issue-comments endpoint ignores page and limit: it returns the
+	// whole thread whatever is asked for. Verified against a 69-comment thread —
+	// `?limit=5` returns all 69, and `?page=2` returns the same rows as page 1.
+	// It sends X-Total-Count but no Link header. (The issues endpoint honours
+	// both and sends both headers, which is why only this resource needs the
+	// following.)
+	//
+	// So the page offset is applied here when the server declined to apply it.
+	// The test is "did more rows come back than were asked for" rather than a
+	// hardcoded assumption, so this corrects itself if Forgejo starts honouring
+	// the bounds: then the rows already are the requested page and slicing them
+	// again would wrongly return nothing for page 2.
+	window := rawComments
+	offset := 0
+	serverIgnoredBounds := len(rawComments) > limit
+	if serverIgnoredBounds {
+		offset = min((page-1)*limit, len(rawComments))
+		window = rawComments[offset:min(offset+limit, len(rawComments))]
+	}
+
+	items := make([]string, len(window))
+	for i, c := range window {
 		items[i] = strconv.FormatInt(c.ID, 10)
 	}
 	bounded := resource.Bounded(items, limit, ListIssueCommentsToolName)
-	if hasMore(resp) {
+	switch {
+	case serverIgnoredBounds:
+		// Everything is in hand, so the row count is the authoritative total.
+		if offset+len(window) < len(rawComments) {
+			bounded = bounded.WithMoreRemaining(len(rawComments))
+		}
+	case hasMore(resp):
 		bounded = bounded.WithMoreRemaining(totalCount(resp))
 	}
 
 	comments := make([]commentBody, 0, len(bounded.Items))
-	for _, c := range rawComments {
+	for _, c := range window {
 		if len(comments) >= len(bounded.Items) {
 			break
 		}

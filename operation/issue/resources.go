@@ -40,9 +40,15 @@ func RegisterIssueResources(s *server.MCPServer) {
 		),
 		mcp.WithTemplateMIMEType("application/json"),
 	)
+	// The {?…} expansion is load-bearing, not documentation: mcp-go matches a
+	// read against an anchored regexp built from this exact string, so a
+	// template registered bare matches only the bare URI and every
+	// query-bearing read fails with "resource not found" before any handler
+	// runs. The bound and filter parameters are the entire point of this
+	// resource, so registering without them makes it unusable.
 	resource.RegisterTemplate(
 		s,
-		"forgejo://repo/{owner}/{repo}/issues",
+		"forgejo://repo/{owner}/{repo}/issues{?state,labels,page,limit}",
 		"Forgejo Issue List",
 		repoIssuesResourceHandler,
 		mcp.WithTemplateDescription(
@@ -59,7 +65,9 @@ func RegisterIssueResources(s *server.MCPServer) {
 	)
 	resource.RegisterTemplate(
 		s,
-		"forgejo://repo/{owner}/{repo}/{kind}/{index}/comments",
+		// See the note on the issue-list template above: the {?…} expansion is
+		// what makes page/limit reachable at all.
+		"forgejo://repo/{owner}/{repo}/{kind}/{index}/comments{?page,limit}",
 		"Forgejo Comment Thread",
 		issueCommentsResourceHandler,
 		mcp.WithTemplateDescription(

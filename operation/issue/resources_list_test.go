@@ -602,6 +602,128 @@ func TestIssueCommentsResource_PageForwarded(t *testing.T) {
 	}
 }
 
+// setupBoundsIgnoringServer reproduces how Forgejo's issue-comments endpoint
+// actually behaves: it returns the entire thread whatever `page` and `limit`
+// say, and sends X-Total-Count but no Link header. Verified live against a
+// 69-comment thread — `?limit=5` returned all 69, and `?page=2` returned the
+// same rows as page 1.
+func setupBoundsIgnoringServer(t *testing.T, total int) {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		rows := make([]interface{}, 0, total)
+		for i := 1; i <= total; i++ {
+			rows = append(rows, fakeCommentRow(i, fmt.Sprintf("comment %d", i)))
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Total-Count", strconv.Itoa(total))
+		_ = json.NewEncoder(w).Encode(rows)
+	}))
+	t.Cleanup(srv.Close)
+	client, err := forgejo_sdk.NewClient(srv.URL, forgejo_sdk.SetForgejoVersion("7.0.0"))
+	if err != nil {
+		t.Fatalf("creating test client: %v", err)
+	}
+	forgejo.SetClientForTesting(client)
+}
+
+// TestIssueCommentsResource_PagesWhenServerIgnoresBounds covers the endpoint as
+// it really is. Without client-side windowing the resource advertises `page`,
+// echoes it back, and silently serves page 1's rows for every page — which is
+// worse than refusing, because the payload looks right.
+func TestIssueCommentsResource_PagesWhenServerIgnoresBounds(t *testing.T) {
+	const (
+		corpus = 69
+		limit  = 30
+	)
+	setupBoundsIgnoringServer(t, corpus)
+
+	var seen []int
+	for page := 1; page <= 3; page++ {
+		uri := fmt.Sprintf("forgejo://repo/o/r/issue/42/comments?page=%d&limit=%d", page, limit)
+		contents, err := issueCommentsResourceHandler(context.Background(), readReq(uri))
+		if err != nil {
+			t.Fatalf("page %d: handler error: %v", page, err)
+		}
+		var payload commentsListPayload
+		readListPayload(t, contents, &payload)
+
+		wantRows := limit
+		wantTruncated := true
+		if page == 3 {
+			wantRows = corpus - 2*limit // 9
+			wantTruncated = false
+		}
+		if len(payload.Comments) != wantRows {
+			t.Fatalf("page %d: expected %d comments, got %d", page, wantRows, len(payload.Comments))
+		}
+		if payload.Truncated != wantTruncated {
+			t.Fatalf("page %d: truncated=%v, want %v", page, payload.Truncated, wantTruncated)
+		}
+		if wantTruncated && !strings.Contains(payload.Sentinel, fmt.Sprintf("of %d", corpus)) {
+			t.Fatalf("page %d: sentinel should carry the true total %d, got %q", page, corpus, payload.Sentinel)
+		}
+		for _, c := range payload.Comments {
+			seen = append(seen, int(c.ID))
+		}
+	}
+
+	if len(seen) != corpus {
+		t.Fatalf("expected the whole %d-comment thread across 3 pages, got %d: %v", corpus, len(seen), seen)
+	}
+	for i, got := range seen {
+		if got != i+1 {
+			t.Fatalf("the thread repeated or skipped a comment at position %d: want %d, got %d\nfull sequence: %v",
+				i, i+1, got, seen)
+		}
+	}
+}
+
+// TestIssueCommentsResource_PastTheEndIsEmpty guards the clamp: a page beyond
+// the thread must be empty and untruncated, not a panic and not a wrapped slice.
+func TestIssueCommentsResource_PastTheEndIsEmpty(t *testing.T) {
+	setupBoundsIgnoringServer(t, 69)
+
+	contents, err := issueCommentsResourceHandler(context.Background(),
+		readReq("forgejo://repo/o/r/issue/42/comments?page=9&limit=30"))
+	if err != nil {
+		t.Fatalf("handler error: %v", err)
+	}
+	var payload commentsListPayload
+	readListPayload(t, contents, &payload)
+	if len(payload.Comments) != 0 {
+		t.Fatalf("expected no comments past the end of the thread, got %d", len(payload.Comments))
+	}
+	if payload.Truncated {
+		t.Fatal("a page past the end must not claim more remains")
+	}
+}
+
+// TestIssueCommentsResource_ServerHonouringBoundsIsNotSlicedTwice is the
+// forward-compatibility half: if Forgejo starts honouring page/limit, the rows
+// already are the requested page and re-applying the offset here would return
+// nothing for page 2.
+func TestIssueCommentsResource_ServerHonouringBoundsIsNotSlicedTwice(t *testing.T) {
+	setupPaginatingServer(t, &paginatingHandler{
+		total:   69,
+		pathHas: "/comments",
+		row:     func(i int) map[string]interface{} { return fakeCommentRow(i, fmt.Sprintf("comment %d", i)) },
+	})
+
+	contents, err := issueCommentsResourceHandler(context.Background(),
+		readReq("forgejo://repo/o/r/issue/42/comments?page=2&limit=30"))
+	if err != nil {
+		t.Fatalf("handler error: %v", err)
+	}
+	var payload commentsListPayload
+	readListPayload(t, contents, &payload)
+	if len(payload.Comments) != 30 {
+		t.Fatalf("expected the server's own page 2 of 30 rows, got %d", len(payload.Comments))
+	}
+	if payload.Comments[0].ID != 31 {
+		t.Fatalf("server-paged rows were sliced a second time: page 2 starts at %d, want 31", payload.Comments[0].ID)
+	}
+}
+
 func TestIssueCommentsResource_BadKind(t *testing.T) {
 	if _, err := issueCommentsResourceHandler(context.Background(), readReq("forgejo://repo/o/r/wiki/42/comments")); err == nil {
 		t.Fatal("expected an error for a kind that is neither issue nor pr")

@@ -92,8 +92,13 @@ one answers "read it".
 
 The collection SHALL bound its items with `EmbeddedListCap`, SHALL support `page` and
 `limit`, and SHALL append the standard truncation sentinel naming `list_issue_comments`.
-Its paging SHALL follow the same page-size and `rel="next"` rules as the issue
-collection above.
+
+Forgejo's issue-comment endpoint ignores `page` and `limit` and returns the entire
+thread, sending `X-Total-Count` but no `Link` header, so this resource SHALL apply the
+page offset itself whenever the upstream returns more rows than were requested, and
+SHALL take the total from the rows in hand. When the upstream returns no more rows than
+were requested it SHALL treat them as already paged and SHALL NOT apply the offset a
+second time, so the resource stays correct if Forgejo begins honouring the bounds.
 
 The bound here is on the **number of comments, not on bytes**: a page of full bodies
 can still be a large payload. This is deliberate and is the bound
@@ -115,6 +120,45 @@ single-issue resource.
 #### Scenario: Invalid kind is rejected
 - **WHEN** a client reads a comments URI whose kind is neither `issue` nor `pr`
 - **THEN** the read SHALL fail with an invalid-parameters error
+
+#### Scenario: Pages cover the thread when upstream ignores the bounds
+- **WHEN** a client walks the pages of a thread longer than `limit` and the upstream
+  returns the whole thread for every request
+- **THEN** each page SHALL contain that page's slice of the thread and no other
+- **AND** the union of the pages SHALL be the whole thread, with no comment skipped
+  or repeated
+- **AND** a page past the end of the thread SHALL be empty and SHALL NOT be truncated
+
+#### Scenario: Upstream-paged rows are not offset a second time
+- **WHEN** the upstream returns no more rows than were requested for page 2
+- **THEN** the payload SHALL contain those rows unchanged
+
+### Requirement: Collection templates are registered with their query expansions
+
+Each collection resource template SHALL be registered with its RFC 6570 query expansion included in the template string — `…/issues{?state,labels,page,limit}` and `…/{kind}/{index}/comments{?page,limit}` — and not with the bare path alone.
+
+The MCP server matches a `resources/read` against an anchored regular expression built
+from the registered template string. A template registered without its query expansion
+therefore matches only the bare URI, and every read carrying `state`, `labels`, `page`
+or `limit` fails with "resource not found" before any handler runs — making the bound
+and filter parameters, which are the entire purpose of these resources, unreachable.
+This is invisible to tests that call the handlers directly.
+
+#### Scenario: Bare collection URI resolves
+- **WHEN** a client issues `resources/read` for `forgejo://repo/{owner}/{repo}/issues`
+- **THEN** the read SHALL be routed to the issue-collection handler
+
+#### Scenario: Query-bearing collection URI resolves
+- **WHEN** a client issues `resources/read` for
+  `forgejo://repo/{owner}/{repo}/issues?state=all&labels=a,b&page=2&limit=5`
+- **THEN** the read SHALL be routed to the issue-collection handler
+- **AND** the effective state, labels, page and limit SHALL be those from the query
+
+#### Scenario: Query-bearing comment-thread URI resolves
+- **WHEN** a client issues `resources/read` for
+  `forgejo://repo/{owner}/{repo}/{kind}/{index}/comments?page=2&limit=5`
+- **THEN** the read SHALL be routed to the comment-thread handler
+- **AND** the effective page and limit SHALL be those from the query
 
 #### Scenario: Over-cap thread is truncated with a sentinel
 - **WHEN** more comments exist than the effective limit
