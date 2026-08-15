@@ -19,6 +19,25 @@
 # re-deriving anything: one source of truth, and it reports every context, not
 # just the one that bit us.
 #
+# Two kinds of context come back, and they mean different things:
+#
+#   "op1st Pipelines as Code"              PaC's own gating slot: absent when no
+#                                          approval is needed, the placeholder
+#                                          above when it is, "Success" once
+#                                          unblocked, "Failed" when PaC could
+#                                          not process the event at all.
+#   "op1st Pipelines as Code / <run>"      one actual PipelineRun.
+#
+# Only the second kind is a pipeline result, so only the second kind decides
+# this script's exit code. The gating slot is reported, never counted — when
+# PaC fails before creating any PipelineRun it writes a top-level failure that
+# no later run ever overwrites, so a retest that goes fully green leaves the
+# forge reporting aggregate=failure until the head SHA changes. Counting that
+# status would make this guard call a green PR red forever. Ignoring it
+# silently would be worse, so a top-level failure alongside real runs is
+# printed as a warning: the runs that exist passed, but a manifest that failed
+# to parse has no run to report and its absence cannot be seen from here.
+#
 # Usage:
 #   scripts/ci/check-pr-ci-ran.sh <pr-number> [owner/repo]
 #   scripts/ci/check-pr-ci-ran.sh --sha <commit-sha> [owner/repo]
@@ -41,9 +60,11 @@ set -eu
 FORGE="${FORGEJO_URL:-https://git.b4mad.industries}"
 DEFAULT_REPO="agentic-forges/forgejo-mcp"
 
-# The placeholder PaC leaves when it declines to start a run. Matching on the
-# description rather than the context, because the context is the same string
-# PaC uses for real run reporting.
+# PaC's gating context. Real PipelineRuns report under "<this> / <run-name>".
+PAC_CONTEXT='op1st Pipelines as Code'
+
+# The placeholder PaC leaves in the gating context when it declines to start a
+# run. Matched on the description, because the state alone does not say why.
 AWAITING_RE='waiting for an /ok-to-test'
 
 usage() {
@@ -116,13 +137,20 @@ fi
 printf '%s' "$status_json" |
   jq -r '.statuses[] | "  \(.status)\t\(.context)\t\(.description)"'
 
-# Statuses that are real pipeline reports, i.e. everything except the
-# "waiting for an /ok-to-test" placeholder.
-real="$(printf '%s' "$status_json" |
-  jq --arg re "$AWAITING_RE" '[.statuses[] | select((.description // "") | contains($re) | not)] | length')"
+# Real pipeline reports: every context except PaC's own gating slot. Any other
+# status provider still counts, so a third party reporting failure is not
+# quietly dropped.
+runs="$(printf '%s' "$status_json" |
+  jq --arg c "$PAC_CONTEXT" '[.statuses[] | select(.context != $c)] | length')"
 
-if [ "$real" -eq 0 ]; then
-  cat >&2 <<EOF
+if [ "$runs" -eq 0 ]; then
+  awaiting="$(printf '%s' "$status_json" |
+    jq --arg c "$PAC_CONTEXT" --arg re "$AWAITING_RE" '[.statuses[]
+       | select(.context == $c)
+       | select((.description // "") | contains($re))] | length')"
+
+  if [ "$awaiting" -ne 0 ]; then
+    cat >&2 <<EOF
 
 check-pr-ci-ran: CI is BLOCKED, not passing.
 
@@ -136,12 +164,26 @@ Fix: a maintainer must comment
 on the pull request. Then re-run this script — the head SHA does not change,
 but real pipeline contexts will appear.
 EOF
+    exit 1
+  fi
+
+  cat >&2 <<EOF
+
+check-pr-ci-ran: NO PipelineRun ever reported on ${SHA}.
+
+The only status is Pipelines-as-Code's own gating context. PaC processed the
+event and created nothing — typically a .tekton manifest that failed to parse,
+which it reports at the top level and then stops.
+
+The PR is unverified. Fix the manifest and push, or retest: note that a retest
+does NOT clear the top-level failure above, only a new head SHA does.
+EOF
   exit 1
 fi
 
 failed="$(printf '%s' "$status_json" |
-  jq --arg re "$AWAITING_RE" '[.statuses[]
-     | select((.description // "") | contains($re) | not)
+  jq --arg c "$PAC_CONTEXT" '[.statuses[]
+     | select(.context != $c)
      | select(.status != "success")] | length')"
 
 if [ "$failed" -ne 0 ]; then
@@ -150,5 +192,36 @@ if [ "$failed" -ne 0 ]; then
   exit 1
 fi
 
-echo "check-pr-ci-ran: OK — ${real} pipeline context(s) succeeded on ${SHA}."
+# Every real run passed. If PaC's gating context is nevertheless red, say so
+# loudly rather than swallowing it: it is usually stale, but it can also mean a
+# manifest never produced a run at all, and nothing here can tell the two apart.
+gating_failed="$(printf '%s' "$status_json" |
+  jq --arg c "$PAC_CONTEXT" '[.statuses[]
+     | select(.context == $c)
+     | select(.status == "failure" or .status == "error")] | length')"
+
+if [ "$gating_failed" -ne 0 ]; then
+  stale="$(printf '%s' "$status_json" | jq --arg c "$PAC_CONTEXT" -r '
+    ([.statuses[] | select(.context == $c and (.status == "failure" or .status == "error")) | .created_at] | max) as $gating
+    | ([.statuses[] | select(.context != $c) | .created_at] | max) as $newest_run
+    | if $gating == null or $newest_run == null then "unknown"
+      elif $gating < $newest_run then "yes"
+      else "no"
+      end')"
+
+  echo >&2
+  echo "check-pr-ci-ran: WARNING — '${PAC_CONTEXT}' is red on ${SHA}, but no" >&2
+  echo "PipelineRun owns it." >&2
+  if [ "$stale" = "yes" ]; then
+    echo "It predates the newest run context, so it is most likely stale from an" >&2
+    echo "earlier attempt; only a new head SHA clears it, and the forge will keep" >&2
+    echo "reporting this commit as failed until then." >&2
+  else
+    echo "It is NOT older than the newest run context, so treat it as live." >&2
+  fi
+  echo "It can also mean a .tekton manifest failed to parse: the runs below are" >&2
+  echo "green, which is not proof that every intended pipeline ran." >&2
+fi
+
+echo "check-pr-ci-ran: OK — ${runs} pipeline context(s) succeeded on ${SHA}."
 exit 0

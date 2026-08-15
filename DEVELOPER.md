@@ -237,12 +237,49 @@ scripts/ci/check-pr-ci-ran.sh --sha <commit-sha>
 ```
 
 It reads the forge's combined-status API for the PR head and exits non-zero
-when CI never ran, is still awaiting `/ok-to-test`, or reported a non-success
-context. It skips with a warning if `curl` or `jq` is missing. Set
+when CI never ran, is still awaiting `/ok-to-test`, or a pipeline reported a
+non-success context. It skips with a warning if `curl` or `jq` is missing. Set
 `FORGEJO_URL` for another instance and `FORGEJO_TOKEN` for a private repo.
 
 This is a reviewer-side gate, not a pre-commit hook: no local file change
 implies it, so there is nothing for `pre-commit` to key on.
+
+### A permanently-red PR is not necessarily a failing one
+
+Pipelines-as-Code reports under two kinds of context:
+
+```
+op1st Pipelines as Code                          its own gating slot
+op1st Pipelines as Code / forgejo-mcp-code-scans one actual PipelineRun
+```
+
+When PaC fails *before* creating any PipelineRun — a `.tekton` manifest that
+will not parse is the usual cause — it writes a failure into the gating slot
+and stops. A later successful retest creates the named run contexts, but
+nothing owns the gating slot, so that failure is never overwritten. The forge
+keeps reporting the commit as `aggregate=failure` even though every pipeline
+that exists passed, and **only a new head SHA clears it** — retesting cannot,
+however many times you try.
+
+Observed on PR #491 at `16ec840`:
+
+```
+failure  op1st Pipelines as Code                                2026-08-13T23:19:10Z
+success  op1st Pipelines as Code / forgejo-mcp-code-scans       2026-08-13T23:27:53Z
+success  op1st Pipelines as Code / forgejo-mcp-on-pull-request  2026-08-13T23:29:43Z
+```
+
+This is upstream PaC behaviour, not something this repo can fix. The guard
+therefore decides pass/fail from the named run contexts alone and reports the
+gating slot without counting it: a red gating slot alongside green runs prints
+a warning and still exits 0, and the warning says whether the failure predates
+the newest run (almost certainly stale) or not (treat as live). A gating
+failure with *no* run contexts at all still exits 1 — there, the empty gating
+slot is the only evidence there is, and it says nothing ran.
+
+The warning is worth reading rather than dismissing. A manifest that failed to
+parse has no run context to be red, so green runs are not proof that every
+intended pipeline ran — only that the ones which started passed.
 
 ## Blocked Features
 
