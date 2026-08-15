@@ -1,10 +1,10 @@
 # Demo: bounded issue-list and comment-thread resources
 
-*2026-08-15T23:15:35Z by Showboat 0.6.1*
+*2026-08-15T23:33:59Z by Showboat 0.6.1*
 <!-- showboat-id: 8e857e23-19d2-411a-86e9-09bf9c9a64a3 -->
 <!-- captured-for: PR #487 -->
 <!-- captured-at: 2026-08-15 -->
-<!-- captured-against: be9e4b4 (feat/issue-list-resources) -->
+<!-- captured-against: d879ca1 (feat/issue-list-resources) -->
 
 ## Background
 
@@ -38,8 +38,11 @@ That is not a style preference. Forgejo computes the offset as
 `(page - 1) * PageSize`, so a `PageSize` of `limit + 1` that hands back only
 `limit` rows makes page N+1 begin one row past the last row page N showed —
 and the row in between is unreachable from any page a client can ask for.
-Truncation is therefore detected from the `Link … rel="next"` header, and the
-sentinel's total comes from `X-Total-Count` when the server sends one.
+§4 walks a page boundary to show that it holds.
+
+Truncation is detected from the `Link … rel="next"` header and the sentinel's
+total comes from `X-Total-Count`. One endpoint needs more than that, and §7
+shows why.
 
 ## Setup
 
@@ -58,12 +61,6 @@ demo replays against any build:
 export FORGEJO_MCP_BIN="${FORGEJO_MCP_BIN:-forgejo-mcp}"
 # Point at a local build: export FORGEJO_MCP_BIN=./forgejo-mcp
 ```
-
-`--cli` mode covers tools only, so resources are read over the MCP stdio
-transport — `printf` pipes the JSON-RPC handshake plus one `resources/read`
-into the binary, and `jq` selects the response by `id`. This demo is
-**read-only**; it runs against the public `forgejo/forgejo` repository on
-codeberg.org, which at capture time had 1,560 open issues and pull requests.
 
 ## 1. The issue list at the default cap
 
@@ -137,8 +134,8 @@ reduction          :     16.7x
 
 ## 2. `N of M shown` — where the two numbers come from
 
-The sentinel above said "30 of 1560". Neither number is inferred from the rows
-in hand. `30` is the bound the resource applied; `1560` is what upstream
+The sentinel said "30 of 1560". Neither number is inferred from the rows in
+hand. `30` is the bound the resource applied; `1560` is what upstream
 reported. Both headers the resource relies on, straight from the API:
 
 ```bash
@@ -154,24 +151,150 @@ curl -sS -D - -o /dev/null \
   x-total-count: 1560
 ```
 
-## 3. The comment thread, with full bodies
+## 3. An explicit `limit`
 
-`forgejo/forgejo` issue [#1024](https://codeberg.org/forgejo/forgejo/issues/1024)
-is a long-running proposal thread — 69 comments at capture time. The
-single-issue resource excerpts each comment at 200 characters; this resource
-carries them whole.
+The bound is the caller's to set. `limit=5` returns five rows and the sentinel
+carries the same authoritative total — the total describes the query, not the
+page:
 
 ```bash
 printf '%s\n' \
   '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"demo","version":"0"}}}' \
   '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
-  '{"jsonrpc":"2.0","id":3,"method":"resources/read","params":{"uri":"forgejo://repo/forgejo/forgejo/issue/1024/comments"}}' \
+  '{"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"forgejo://repo/forgejo/forgejo/issues?limit=5"}}' \
   | "${FORGEJO_MCP_BIN:-forgejo-mcp}" -t stdio -url "$FORGEJO_URL" -token "$FORGEJO_ACCESS_TOKEN" 2>/dev/null \
-  | jq -r 'select(.id==3) | .result.contents[0].text | fromjson
+  | jq -r 'select(.id==2) | .result.contents[0].text | fromjson
+      | "page/limit: \(.page)/\(.limit)",
+        "rows      : \(.issues|length)",
+        "sentinel  : \(.sentinel)",
+        "",
+        (.issues[] | "  #\(.index)  \(.title[:56])")'
+```
+
+```output
+page/limit: 1/5
+rows      : 5
+sentinel  : [truncated: 5 of 1560 items shown. Use list_repo_issues tool to fetch more.]
+
+  #13937  problem: Forgejo Actions "on push tags" doesn't trigger 
+  #13936  bug: Branch selector uncaught TypeError with Rocket Load
+  #13934  fix(secutify): prevent unauthorized access to draft rele
+  #13933  Update dependency globals to v17.11.0 (forgejo)
+  #13932  problem: the `action` table is huge
+```
+
+## 4. The page boundary — nothing lost, nothing repeated
+
+This is the property the paging rule exists to protect. The earlier
+implementation asked upstream for `limit + 1` rows to detect truncation while
+showing only `limit`, which moved the offset of the next page one row past the
+end of the current one — so exactly one row per boundary was returned by no
+page at all.
+
+The check below is self-verifying rather than a matter of reading two lists
+carefully: it walks pages 1 and 2 at `limit=5`, then reads the same query once
+at `limit=10`. If the boundary is sound the two pages concatenated must equal
+the single ten-row read, in order, with no duplicates.
+
+```bash
+read_uri() {
+  printf '%s\n' \
+    '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"demo","version":"0"}}}' \
+    '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
+    "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"resources/read\",\"params\":{\"uri\":\"$1\"}}" \
+    | "${FORGEJO_MCP_BIN:-forgejo-mcp}" -t stdio -url "$FORGEJO_URL" -token "$FORGEJO_ACCESS_TOKEN" 2>/dev/null \
+    | jq -r 'select(.id==2) | .result.contents[0].text | fromjson | .issues[].index'
+}
+
+p1=$(read_uri 'forgejo://repo/forgejo/forgejo/issues?page=1&limit=5')
+p2=$(read_uri 'forgejo://repo/forgejo/forgejo/issues?page=2&limit=5')
+ten=$(read_uri 'forgejo://repo/forgejo/forgejo/issues?page=1&limit=10')
+
+python3 - "$p1" "$p2" "$ten" <<'PY'
+import sys
+p1, p2, ten = (s.split() for s in sys.argv[1:4])
+print('page 1 (limit=5) :', ' '.join(p1))
+print('page 2 (limit=5) :', ' '.join(p2))
+print()
+print('last id of page 1 :', p1[-1])
+print('first id of page 2:', p2[0])
+print()
+walked = p1 + p2
+print('pages 1+2 walked  :', ' '.join(walked))
+print('single limit=10   :', ' '.join(ten))
+print()
+print('duplicates across pages :', sorted(set(p1) & set(p2)) or 'none')
+print('walk == single read     :', walked == ten)
+PY
+```
+
+```output
+page 1 (limit=5) : 13937 13936 13934 13933 13932
+page 2 (limit=5) : 13931 13930 13929 13924 13922
+
+last id of page 1 : 13932
+first id of page 2: 13931
+
+pages 1+2 walked  : 13937 13936 13934 13933 13932 13931 13930 13929 13924 13922
+single limit=10   : 13937 13936 13934 13933 13932 13931 13930 13929 13924 13922
+
+duplicates across pages : none
+walk == single read     : True
+```
+
+## 5. `state` and `labels` reach the API
+
+`state` accepts `open`, `closed` or `all` and defaults to `open`; `labels` is a
+comma-separated list, trimmed around each entry. Both are applied upstream
+rather than by filtering a page after the fact, which the sentinel's total
+makes visible — narrowing the query moves the total, not just the rows.
+
+Label names containing `/` must be percent-encoded as `%2F`: the URI is parsed
+as a URI, so a bare slash in a query value does not match the template.
+
+```bash
+for q in 'state=closed' \
+         'state=closed&labels=bug' \
+         'state=closed&labels=bug,%20forgejo%2Fui'; do
+  printf '%s\n' \
+    '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"demo","version":"0"}}}' \
+    '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
+    "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"resources/read\",\"params\":{\"uri\":\"forgejo://repo/forgejo/forgejo/issues?$q&limit=3\"}}" \
+    | "${FORGEJO_MCP_BIN:-forgejo-mcp}" -t stdio -url "$FORGEJO_URL" -token "$FORGEJO_ACCESS_TOKEN" 2>/dev/null \
+    | jq -r --arg q "$q" 'select(.id==2) | .result.contents[0].text | fromjson
+        | "\($q)\n    state=\(.state)  labels=\(.labels // [] | tostring)\n    \(.sentinel)"'
+done
+```
+
+```output
+state=closed
+    state=closed  labels=[]
+    [truncated: 3 of 12209 items shown. Use list_repo_issues tool to fetch more.]
+state=closed&labels=bug
+    state=closed  labels=["bug"]
+    [truncated: 3 of 743 items shown. Use list_repo_issues tool to fetch more.]
+state=closed&labels=bug,%20forgejo%2Fui
+    state=closed  labels=["bug","forgejo/ui"]
+    [truncated: 3 of 172 items shown. Use list_repo_issues tool to fetch more.]
+```
+
+## 6. The comment thread, with full bodies
+
+`forgejo/forgejo` issue [#1024](https://codeberg.org/forgejo/forgejo/issues/1024)
+is a long-running proposal thread — 69 comments at capture time. The
+single-issue resource excerpts each comment at 200 characters; this resource
+carries them whole, and reports the same kind of sentinel.
+
+```bash
+printf '%s\n' \
+  '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"demo","version":"0"}}}' \
+  '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
+  '{"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"forgejo://repo/forgejo/forgejo/issue/1024/comments"}}' \
+  | "${FORGEJO_MCP_BIN:-forgejo-mcp}" -t stdio -url "$FORGEJO_URL" -token "$FORGEJO_ACCESS_TOKEN" 2>/dev/null \
+  | jq -r 'select(.id==2) | .result.contents[0].text | fromjson
       | "kind/index  : \(.kind)/\(.index)",
         "page/limit  : \(.page)/\(.limit)",
         "comments    : \(.comments|length)",
-        "truncated   : \(.truncated)",
         "sentinel    : \(.sentinel)",
         "body chars  : min \([.comments[].body|length]|min), max \([.comments[].body|length]|max)",
         "",
@@ -182,7 +305,6 @@ printf '%s\n' \
 kind/index  : issue/1024
 page/limit  : 1/30
 comments    : 30
-truncated   : true
 sentinel    : [truncated: 30 of 69 items shown. Use list_issue_comments tool to fetch more.]
 body chars  : min 75, max 6032
 
@@ -192,132 +314,76 @@ body chars  : min 75, max 6032
     Abuse-related vector: If a username (e.g. `https://codeberg.org/forgej…
 ```
 
-## 4. Not yet demonstrable: `state`, `labels`, `page` and `limit`
+## 7. Paging a thread
 
-Everything above used default bounds, because **no URI carrying a query string
-resolves**. Passing any documented parameter fails the read:
+Walking the thread five at a time. Page 2 is a different window, and the two
+pages join without a gap or an overlap, exactly as the issue list does in §4:
 
 ```bash
-read_uri() {
+read_ids() {
   printf '%s\n' \
     '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"demo","version":"0"}}}' \
     '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
-    "{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"resources/read\",\"params\":{\"uri\":\"$1\"}}" \
+    "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"resources/read\",\"params\":{\"uri\":\"$1\"}}" \
     | "${FORGEJO_MCP_BIN:-forgejo-mcp}" -t stdio -url "$FORGEJO_URL" -token "$FORGEJO_ACCESS_TOKEN" 2>/dev/null \
-    | jq -r --arg u "$1" 'select(.id==4)
-        | if .error then "FAIL  \($u)" else "ok    \($u)" end'
+    | jq -r 'select(.id==2) | .result.contents[0].text | fromjson | .comments[].id'
 }
 
-# added by this change
-read_uri 'forgejo://repo/forgejo/forgejo/issues'
-read_uri 'forgejo://repo/forgejo/forgejo/issues?limit=5'
-read_uri 'forgejo://repo/forgejo/forgejo/issues?state=all'
-read_uri 'forgejo://repo/forgejo/forgejo/issue/1024/comments?page=2&limit=5'
+p1=$(read_ids 'forgejo://repo/forgejo/forgejo/issue/1024/comments?page=1&limit=5')
+p2=$(read_ids 'forgejo://repo/forgejo/forgejo/issue/1024/comments?page=2&limit=5')
+ten=$(read_ids 'forgejo://repo/forgejo/forgejo/issue/1024/comments?page=1&limit=10')
 
-# already merged on main — same failure, so this is inherited, not introduced
-read_uri 'forgejo://repo/forgejo/forgejo/labels?page=1&limit=5'
-read_uri 'forgejo://org/forgejo/labels?limit=5'
+python3 - "$p1" "$p2" "$ten" <<'PY'
+import sys
+p1, p2, ten = (s.split() for s in sys.argv[1:4])
+print('page 1 (limit=5) :', ' '.join(p1))
+print('page 2 (limit=5) :', ' '.join(p2))
+print()
+print('last id of page 1 :', p1[-1])
+print('first id of page 2:', p2[0])
+print()
+print('duplicates across pages :', sorted(set(p1) & set(p2)) or 'none')
+print('walk == single limit=10 :', p1 + p2 == ten)
+PY
 ```
 
 ```output
-ok    forgejo://repo/forgejo/forgejo/issues
-FAIL  forgejo://repo/forgejo/forgejo/issues?limit=5
-FAIL  forgejo://repo/forgejo/forgejo/issues?state=all
-FAIL  forgejo://repo/forgejo/forgejo/issue/1024/comments?page=2&limit=5
-FAIL  forgejo://repo/forgejo/forgejo/labels?page=1&limit=5
-FAIL  forgejo://org/forgejo/labels?limit=5
+page 1 (limit=5) : 980539 981106 1059048 1059052 1059586
+page 2 (limit=5) : 2023383 2105550 2105950 2106024 2109638
+
+last id of page 1 : 1059586
+first id of page 2: 2023383
+
+duplicates across pages : none
+walk == single limit=10 : True
 ```
 
-The last two lines are the already-merged label resources on `main`, which fail
-identically — so this is inherited, not introduced here.
+One difference from the issue list is worth knowing about, because it is
+invisible in the payload: **Forgejo's issue-comments endpoint ignores `page`
+and `limit`** — it returns the whole thread whatever is asked for, and sends
+`X-Total-Count` but no `Link` header. (The `/issues` endpoint honours both and
+sends both, which is why only this resource needs the following.) The window
+above is therefore applied client-side, and only when the server hands back
+more rows than were requested, so the resource stops slicing by itself if
+Forgejo ever starts honouring the bounds. The response is bounded either way;
+the fetch behind it is not.
 
-**Cause.** The templates are registered without their RFC 6570 query
-expansion:
-
-```go
-resource.RegisterTemplate(s, "forgejo://repo/{owner}/{repo}/issues", …)
-```
-
-`mcp-go` matches a read against `template.Regexp()`, which is anchored, so a
-URI with a `?` matches nothing. The handlers are not at fault — `pageLimit()`
-and `issuesQuery()` already parse the parameters out of `req.Params.URI`. Only
-the registered string is short. Registering the form the spec, `AGENTS.md` and
-the template's own description all use makes both shapes match:
-
-```go
-resource.RegisterTemplate(s, "forgejo://repo/{owner}/{repo}/issues{?state,labels,page,limit}", …)
-```
-
-**Why the tests pass.** Every resource test builds an `mcp.ReadResourceRequest`
-and calls the handler function directly, so none of them cross the matcher that
-rejects these URIs. `operation/operation_wiki_test.go` already has the shape
-that would catch it — `server.NewMCPServer` plus `HandleMessage` with a real
-`resources/read` envelope.
-
-Until that lands, these sections cannot be captured honestly and are therefore
-absent rather than faked: the issue list at an explicit `limit`, the `state`
-and `labels` filters, and the walk across a page boundary showing no row lost
-or repeated.
-
-## 5. A second, upstream limit on comment threads
-
-Independent of the above: Forgejo's issue-comments endpoint ignores both
-`page` and `limit`.
-
-```bash
-for q in 'page=1&limit=5' 'page=1&limit=30' 'page=2&limit=30'; do
-  curl -s -H "Authorization: token $FORGEJO_ACCESS_TOKEN" \
-    "$FORGEJO_URL/api/v1/repos/forgejo/forgejo/issues/1024/comments?$q" \
-    | python3 -c "
-import sys, json
-d = json.load(sys.stdin)
-print('%-16s -> %d rows, first id %s' % (sys.argv[1], len(d), d[0]['id'] if d else None))
-" "$q"
-done
-```
-
-```output
-page=1&limit=5   -> 69 rows, first id 980539
-page=1&limit=30  -> 69 rows, first id 980539
-page=2&limit=30  -> 69 rows, first id 980539
-```
-
-The whole 69-comment thread arrives whatever is asked for, and `page=2` starts
-at the same comment as `page=1`. Three consequences for the comment-thread
-resource, none of which apply to the issue list:
-
-1. **The response is bounded; the fetch is not.** The resource trims to `limit`
-   after the entire thread has crossed the wire, so a very long thread is fully
-   materialised before 30 comments of it are returned.
-2. **`page` is inert here.** Comments past the first `limit` are not reachable
-   through this resource at all — the sentinel correctly says more remain and
-   correctly points at `list_issue_comments`, which shares the same upstream
-   constraint.
-3. **This thread's sentinel total is not the `X-Total-Count` number.** With no
-   `Link` header the SDK leaves `Response.NextPage` at zero, so `hasMore()` is
-   false and `WithMoreRemaining()` is never reached; the `69` comes from
-   `resource.Bounded` counting the over-fetched rows. The issue list behaves
-   the way the spec describes — it honours the bound, upstream sends both
-   headers, and its `1560` really is `X-Total-Count`.
-
-The `/issues` endpoint honours `page` and `limit` correctly, so the paging fix
-this change makes — page size equal to the caller's limit, "more exists" from
-the response — is right where it can be exercised.
-
-## 6. Autonomous workflow: triage without reading the repository
+## 8. Autonomous workflow: triage without reading the repository
 
 The two resources are the cheap halves of a loop that used to be expensive:
 
 1. **Survey.** Read `forgejo://repo/{owner}/{repo}/issues` — one payload, rows
    only, 16.7× smaller than the same issues as objects. The agent sees index,
    title, labels, assignee, comment count and due date: enough to rank.
-2. **Decide.** Rank on the rows. Nothing has been read that the agent did not
-   need, and the truncation sentinel says plainly how much of the repository
-   is still unseen rather than letting a silent cut look like the whole set.
+2. **Narrow.** Re-read with `state` and `labels` when the first pass is too
+   broad, or walk pages when it is too deep. The bound is the caller's, and
+   the sentinel says plainly how much of the repository is still unseen rather
+   than letting a silent cut look like the whole set.
 3. **Open one.** `forgejo://repo/{owner}/{repo}/issue/{index}` for the body and
    excerpted recent comments — the deciding read.
 4. **Read the argument.** `forgejo://repo/{owner}/{repo}/issue/{index}/comments`
-   only for the thread that turned out to matter, with full bodies.
+   only for the thread that turned out to matter, with full bodies, paged if
+   the thread is long.
 
 The cost of the survey scales with the number of rows; the cost of the deep
 read is paid once, for the one thread the agent chose. That is the property
