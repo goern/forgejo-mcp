@@ -61,13 +61,15 @@ None. Additive only.
 
 - **Code**: `operation/issue/resources_list.go` (new), two template registrations in
   `operation/issue/resources.go`, two parsers in `operation/resource/parse.go`.
-- **Tests**: `operation/issue/resources_list_test.go` (17 cases: row mapping and the
+- **Tests**: `operation/issue/resources_list_test.go` (22 cases: row mapping and the
   no-body property, default and explicit filters reaching the API, unknown-state
-  fallback, truncation sentinel, cap clamping, error mapping, PR kind, full-body
-  preservation, bad kind, non-numeric index) and
-  `operation/resource/parse_issuelist_test.go` (8 cases, including both near-miss
-  URIs). Mutation-checked: ignoring the caller's `state`, and dropping the `limit+1`
-  fetch, each fail the suite.
+  fallback, multi-page coverage against a mock with real offset semantics,
+  header-driven truncation with and without `X-Total-Count`, an untruncated final
+  page, cap clamping, error mapping, PR kind, full-body preservation, bad kind,
+  non-numeric index) and `operation/resource/parse_issuelist_test.go` (8 cases,
+  including both near-miss URIs). Mutation-checked: ignoring the caller's `state`,
+  restoring the `limit+1` page size, forcing "more exists" to false, and dropping the
+  `X-Total-Count` read each fail the suite.
 - **APIs**: one GET per read, the same call the corresponding list tool already makes.
 - **Dependencies**: none added.
 - **Risk**: low — read-only, additive, no tool surface changed.

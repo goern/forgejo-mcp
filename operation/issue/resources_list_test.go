@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -48,6 +49,80 @@ func (h *listRoutingHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	default:
 		w.WriteHeader(http.StatusNotFound)
+	}
+}
+
+// paginatingHandler serves a corpus of `total` rows with the real upstream
+// offset semantics — offset = (page-1)*PageSize — plus the `Link` and
+// `X-Total-Count` headers Forgejo actually sends.
+//
+// listRoutingHandler above cannot see a paging bug, because it returns the same
+// canned body whatever page is asked for. That is precisely how requesting
+// limit+1 rows per page while showing only limit of them went unnoticed: every
+// page boundary silently skipped a row, and no test that ignores `page` can
+// tell.
+type paginatingHandler struct {
+	total   int
+	pathHas string
+	row     func(i int) map[string]interface{}
+}
+
+func (h *paginatingHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if !strings.Contains(r.URL.Path, h.pathHas) {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	size, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	if size < 1 {
+		size = 10
+	}
+
+	offset := (page - 1) * size
+	rows := make([]interface{}, 0, size)
+	for i := offset + 1; i <= offset+size && i <= h.total; i++ {
+		rows = append(rows, h.row(i))
+	}
+
+	w.Header().Set("X-Total-Count", strconv.Itoa(h.total))
+	if offset+len(rows) < h.total {
+		w.Header().Set("Link", fmt.Sprintf(`<%s?page=%d&limit=%d>; rel="next"`, r.URL.Path, page+1, size))
+	}
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(rows)
+}
+
+func setupPaginatingServer(t *testing.T, h *paginatingHandler) *httptest.Server {
+	t.Helper()
+	srv := httptest.NewServer(h)
+	t.Cleanup(srv.Close)
+	client, err := forgejo_sdk.NewClient(srv.URL, forgejo_sdk.SetForgejoVersion("7.0.0"))
+	if err != nil {
+		t.Fatalf("creating test client: %v", err)
+	}
+	forgejo.SetClientForTesting(client)
+	return srv
+}
+
+// assertPagesCoverCorpus walks pages 1..pages and fails if the union of what
+// the client saw is not exactly the contiguous run it should be. A row that no
+// page returns is the defect this guards; a row two pages both return would be
+// the opposite mistake.
+func assertPagesCoverCorpus(t *testing.T, seen []int, pages, limit int) {
+	t.Helper()
+	want := pages * limit
+	if len(seen) != want {
+		t.Fatalf("expected %d rows across %d pages of %d, got %d: %v", want, pages, limit, len(seen), seen)
+	}
+	for i, got := range seen {
+		if got != i+1 {
+			t.Fatalf("page boundary lost or repeated a row at position %d: want %d, got %d\nfull sequence: %v",
+				i, i+1, got, seen)
+		}
 	}
 }
 
@@ -193,9 +268,12 @@ func TestRepoIssuesResource_FiltersReachTheAPI(t *testing.T) {
 	if !strings.Contains(q, "page=2") {
 		t.Fatalf("page not forwarded: %q", q)
 	}
-	// limit+1 is requested so truncation can be detected.
-	if !strings.Contains(q, "limit=6") {
-		t.Fatalf("expected limit+1 (6) to be requested, query was %q", q)
+	// The page size is the caller's limit exactly. Asking for limit+1 to probe
+	// for truncation would desynchronise the upstream offset from the rows
+	// shown and skip a row at every page boundary — see
+	// TestRepoIssuesResource_PagesCoverEveryRow.
+	if !strings.Contains(q, "limit=5") {
+		t.Fatalf("expected the caller's limit (5) to be requested verbatim, query was %q", q)
 	}
 
 	var payload issuesListPayload
@@ -256,9 +334,169 @@ func TestRepoIssuesResource_CapCeiling(t *testing.T) {
 	if _, err := repoIssuesResourceHandler(context.Background(), readReq(uri)); err != nil {
 		t.Fatalf("handler error: %v", err)
 	}
-	want := fmt.Sprintf("limit=%d", resource.EmbeddedListCap+1)
+	want := fmt.Sprintf("limit=%d", resource.EmbeddedListCap)
 	if !strings.Contains(h.lastIssuesQuery, want) {
 		t.Fatalf("a caller-supplied limit above the ceiling must clamp (%s), query was %q", want, h.lastIssuesQuery)
+	}
+}
+
+// TestRepoIssuesResource_PagesCoverEveryRow is the property that matters:
+// walking the pages a client can actually ask for must show every row exactly
+// once. It replaces the old "limit+1 was requested" assertion, which pinned the
+// mechanism rather than the outcome — and pinned it to a mechanism that skipped
+// a row at every page boundary.
+func TestRepoIssuesResource_PagesCoverEveryRow(t *testing.T) {
+	const (
+		corpus = 100
+		limit  = 30
+		pages  = 3
+	)
+	setupPaginatingServer(t, &paginatingHandler{
+		total:   corpus,
+		pathHas: "/issues",
+		row:     func(i int) map[string]interface{} { return fakeIssueRow(i, fmt.Sprintf("issue %d", i)) },
+	})
+
+	var seen []int
+	for page := 1; page <= pages; page++ {
+		uri := fmt.Sprintf("forgejo://repo/o/r/issues?page=%d&limit=%d", page, limit)
+		contents, err := repoIssuesResourceHandler(context.Background(), readReq(uri))
+		if err != nil {
+			t.Fatalf("page %d: handler error: %v", page, err)
+		}
+		var payload issuesListPayload
+		readListPayload(t, contents, &payload)
+		if !payload.Truncated {
+			t.Fatalf("page %d of a %d-row corpus must report more remaining", page, corpus)
+		}
+		for _, row := range payload.Issues {
+			seen = append(seen, int(row.Index))
+		}
+	}
+	assertPagesCoverCorpus(t, seen, pages, limit)
+}
+
+func TestIssueCommentsResource_PagesCoverEveryRow(t *testing.T) {
+	const (
+		corpus = 100
+		limit  = 30
+		pages  = 3
+	)
+	setupPaginatingServer(t, &paginatingHandler{
+		total:   corpus,
+		pathHas: "/comments",
+		row:     func(i int) map[string]interface{} { return fakeCommentRow(i, fmt.Sprintf("comment %d", i)) },
+	})
+
+	var seen []int
+	for page := 1; page <= pages; page++ {
+		uri := fmt.Sprintf("forgejo://repo/o/r/issue/42/comments?page=%d&limit=%d", page, limit)
+		contents, err := issueCommentsResourceHandler(context.Background(), readReq(uri))
+		if err != nil {
+			t.Fatalf("page %d: handler error: %v", page, err)
+		}
+		var payload commentsListPayload
+		readListPayload(t, contents, &payload)
+		if !payload.Truncated {
+			t.Fatalf("page %d of a %d-row corpus must report more remaining", page, corpus)
+		}
+		for _, c := range payload.Comments {
+			seen = append(seen, int(c.ID))
+		}
+	}
+	assertPagesCoverCorpus(t, seen, pages, limit)
+}
+
+// TestRepoIssuesResource_TruncationComesFromTheHeader pins where "more exists"
+// is now read from. The page is full and exactly the size asked for, so nothing
+// in the item count says the corpus continues — only the Link header does. The
+// sentinel carries the real total from X-Total-Count rather than repeating the
+// page size back at the caller.
+func TestRepoIssuesResource_TruncationComesFromTheHeader(t *testing.T) {
+	setupPaginatingServer(t, &paginatingHandler{
+		total:   471,
+		pathHas: "/issues",
+		row:     func(i int) map[string]interface{} { return fakeIssueRow(i, fmt.Sprintf("issue %d", i)) },
+	})
+
+	contents, err := repoIssuesResourceHandler(context.Background(), readReq("forgejo://repo/o/r/issues?limit=30"))
+	if err != nil {
+		t.Fatalf("handler error: %v", err)
+	}
+	var payload issuesListPayload
+	readListPayload(t, contents, &payload)
+
+	if len(payload.Issues) != 30 {
+		t.Fatalf("expected exactly the limit in rows, got %d", len(payload.Issues))
+	}
+	if !payload.Truncated {
+		t.Fatal("a full page with a rel=next link must report truncation")
+	}
+	if payload.ListTool != ListRepoIssuesToolName {
+		t.Fatalf("expected the fallback tool named, got %q", payload.ListTool)
+	}
+	if !strings.Contains(payload.Sentinel, "30 of 471") {
+		t.Fatalf("sentinel should carry the server's total, got %q", payload.Sentinel)
+	}
+}
+
+// TestRepoIssuesResource_LastPageIsNotTruncated is the other half: the final
+// page has no rel=next link, so it must not claim more remains.
+func TestRepoIssuesResource_LastPageIsNotTruncated(t *testing.T) {
+	setupPaginatingServer(t, &paginatingHandler{
+		total:   50,
+		pathHas: "/issues",
+		row:     func(i int) map[string]interface{} { return fakeIssueRow(i, fmt.Sprintf("issue %d", i)) },
+	})
+
+	contents, err := repoIssuesResourceHandler(context.Background(), readReq("forgejo://repo/o/r/issues?page=2&limit=30"))
+	if err != nil {
+		t.Fatalf("handler error: %v", err)
+	}
+	var payload issuesListPayload
+	readListPayload(t, contents, &payload)
+
+	if len(payload.Issues) != 20 {
+		t.Fatalf("expected the 20-row tail of a 50-row corpus, got %d", len(payload.Issues))
+	}
+	if payload.Truncated {
+		t.Fatal("the last page must not report more remaining")
+	}
+	if payload.Sentinel != "" {
+		t.Fatalf("no sentinel on the last page, got %q", payload.Sentinel)
+	}
+}
+
+// TestRepoIssuesResource_TruncationWithoutTotalHeader covers an instance that
+// sends rel=next but no X-Total-Count: truncation is still reported, and the
+// sentinel says so without inventing a total.
+func TestRepoIssuesResource_TruncationWithoutTotalHeader(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Link", `<`+r.URL.Path+`?page=2&limit=2>; rel="next"`)
+		_ = json.NewEncoder(w).Encode(fakeIssueRows(2))
+	}))
+	defer srv.Close()
+	client, err := forgejo_sdk.NewClient(srv.URL, forgejo_sdk.SetForgejoVersion("7.0.0"))
+	if err != nil {
+		t.Fatalf("creating test client: %v", err)
+	}
+	forgejo.SetClientForTesting(client)
+
+	contents, err := repoIssuesResourceHandler(context.Background(), readReq("forgejo://repo/o/r/issues?limit=2"))
+	if err != nil {
+		t.Fatalf("handler error: %v", err)
+	}
+	var payload issuesListPayload
+	readListPayload(t, contents, &payload)
+	if !payload.Truncated {
+		t.Fatal("rel=next alone must be enough to report truncation")
+	}
+	if strings.Contains(payload.Sentinel, " of ") {
+		t.Fatalf("sentinel must not claim a total the server never sent, got %q", payload.Sentinel)
+	}
+	if !strings.Contains(payload.Sentinel, ListRepoIssuesToolName) {
+		t.Fatalf("sentinel should still name the fallback tool, got %q", payload.Sentinel)
 	}
 }
 
@@ -359,8 +597,8 @@ func TestIssueCommentsResource_PageForwarded(t *testing.T) {
 	if _, err := issueCommentsResourceHandler(context.Background(), readReq("forgejo://repo/o/r/issue/42/comments?page=3&limit=4")); err != nil {
 		t.Fatalf("handler error: %v", err)
 	}
-	if !strings.Contains(h.lastCommentsQuery, "page=3") || !strings.Contains(h.lastCommentsQuery, "limit=5") {
-		t.Fatalf("page/limit+1 not forwarded: %q", h.lastCommentsQuery)
+	if !strings.Contains(h.lastCommentsQuery, "page=3") || !strings.Contains(h.lastCommentsQuery, "limit=4") {
+		t.Fatalf("page and the caller's limit verbatim not forwarded: %q", h.lastCommentsQuery)
 	}
 }
 

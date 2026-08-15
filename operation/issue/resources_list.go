@@ -22,6 +22,28 @@ import (
 // across every issue-domain resource.
 const resourceTimeFormat = "2006-01-02T15:04:05Z07:00"
 
+// hasMore reports whether the server said another page exists. The SDK parses
+// the response's `Link: …; rel="next"` header into Response.NextPage, so this
+// is upstream's own answer rather than an inference from how many rows arrived
+// — which is what lets these resources page without over-fetching.
+func hasMore(resp *forgejo_sdk.Response) bool {
+	return resp != nil && resp.NextPage != 0
+}
+
+// totalCount reads Forgejo's X-Total-Count header, the authoritative number of
+// rows matching the query. Returns 0 when the header is absent or unparseable,
+// which the sentinel renders as "total unknown" rather than guessing.
+func totalCount(resp *forgejo_sdk.Response) int {
+	if resp == nil || resp.Response == nil {
+		return 0
+	}
+	n, err := strconv.Atoi(resp.Header.Get("X-Total-Count"))
+	if err != nil || n < 0 {
+		return 0
+	}
+	return n
+}
+
 // ---- repo issues list ----
 
 // issueRef is one row of the bounded issue list: enough to decide which issue to
@@ -79,17 +101,17 @@ func repoIssuesResourceHandler(ctx context.Context, req mcp.ReadResourceRequest)
 		return nil, fmt.Errorf("forgejo client: %w", err)
 	}
 
-	// Request limit+1 so Bounded's >cap check fires (same reasoning as the label lists).
-	fetch := limit + 1
-	if fetch > resource.EmbeddedListCap+1 {
-		fetch = resource.EmbeddedListCap + 1
-	}
-
+	// PageSize MUST equal the caller's limit. The label resources over-fetch by
+	// one to make truncation detectable, but they are not paged: upstream
+	// computes the offset as (page-1)*PageSize, so a PageSize of limit+1 that
+	// hands back only limit rows makes page N+1 start one row past the last row
+	// page N showed, and that row is unreachable from any page the client can
+	// ask for. "More exists" comes from the response's Link header instead.
 	opt := forgejo_sdk.ListIssueOption{
 		State: forgejo_sdk.StateType(state),
 		ListOptions: forgejo_sdk.ListOptions{
 			Page:     page,
-			PageSize: fetch,
+			PageSize: limit,
 		},
 	}
 	if len(labels) > 0 {
@@ -109,6 +131,9 @@ func repoIssuesResourceHandler(ctx context.Context, req mcp.ReadResourceRequest)
 		items[i] = strconv.FormatInt(iss.Index, 10)
 	}
 	bounded := resource.Bounded(items, limit, ListRepoIssuesToolName)
+	if hasMore(resp) {
+		bounded = bounded.WithMoreRemaining(totalCount(resp))
+	}
 
 	refs := make([]issueRef, 0, len(bounded.Items))
 	for _, iss := range rawIssues {
@@ -259,15 +284,13 @@ func issueCommentsResourceHandler(ctx context.Context, req mcp.ReadResourceReque
 		return nil, fmt.Errorf("forgejo client: %w", err)
 	}
 
-	fetch := limit + 1
-	if fetch > resource.EmbeddedListCap+1 {
-		fetch = resource.EmbeddedListCap + 1
-	}
-
+	// PageSize == limit, for the paging reason spelled out in
+	// repoIssuesResourceHandler above.
+	//
 	// PR comments use the same issue-comment API, exactly as the single-comment
 	// resource does — the index is the shared issue/PR index.
 	rawComments, resp, err := client.ListIssueComments(p.Owner, p.Repo, p.Index, forgejo_sdk.ListIssueCommentOptions{
-		ListOptions: forgejo_sdk.ListOptions{Page: page, PageSize: fetch},
+		ListOptions: forgejo_sdk.ListOptions{Page: page, PageSize: limit},
 	})
 	if err != nil {
 		if resp != nil {
@@ -281,6 +304,9 @@ func issueCommentsResourceHandler(ctx context.Context, req mcp.ReadResourceReque
 		items[i] = strconv.FormatInt(c.ID, 10)
 	}
 	bounded := resource.Bounded(items, limit, ListIssueCommentsToolName)
+	if hasMore(resp) {
+		bounded = bounded.WithMoreRemaining(totalCount(resp))
+	}
 
 	comments := make([]commentBody, 0, len(bounded.Items))
 	for _, c := range rawComments {
