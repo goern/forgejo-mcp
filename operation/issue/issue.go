@@ -140,7 +140,7 @@ var (
 		mcp.WithString("assignee", mcp.Description("Assignee username (convenience for a single user; equivalent to a one-element 'assignees')")),
 		mcp.WithString("assignees", mcp.Description("Assignee usernames (comma-separated). Overrides 'assignee' if both are set. Pass an empty string to clear all assignees.")),
 		mcp.WithString("milestone", mcp.Description(params.Milestone)),
-		mcp.WithString("due_date", mcp.Description("Set the issue's due date (RFC3339, e.g. 2026-08-20T00:00:00Z). Ignored if 'clear_due_date' is also true — set exactly one of the two.")),
+		mcp.WithString("due_date", mcp.Description("Set the issue's due date (RFC3339, e.g. 2026-08-20T00:00:00Z). Mutually exclusive with 'clear_due_date'; setting both is an error.")),
 		mcp.WithBoolean("clear_due_date", mcp.Description("Clear the issue's due date. Mutually exclusive with 'due_date'.")),
 	)
 
@@ -358,11 +358,18 @@ func ListRepoIssuesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	// field to carry it (v3.0.0 QueryEncode never emits &sort=...). Go around
 	// the SDK client with the raw-HTTP helper for this one param, same
 	// pattern as fetchOrgLabels above.
+	//
+	// DoJSON, not DoJSONList: DoJSONList maps a 404 to an empty list, which is
+	// right for endpoints where "none exist" really does 404 (fetchOrgLabels),
+	// but /repos/{owner}/{repo}/issues returns 200 [] for a repo with no
+	// issues — a 404 there means the repository does not exist. Swallowing it
+	// would make a typo'd repo name read as "no issues", and only when the
+	// caller happened to pass `sort`.
 	if sort != "" {
 		query := opt.QueryEncode() + "&sort=" + url.QueryEscape(sort)
-		path := fmt.Sprintf("/repos/%s/%s/issues?%s", owner, repo, query)
+		path := forgejo.APIPath("repos", owner, repo, "issues") + "?" + query
 		var issues []*forgejo_sdk.Issue
-		if err := forgejo.DoJSONList(ctx, http.MethodGet, path, &issues); err != nil {
+		if err := forgejo.DoJSON(ctx, http.MethodGet, path, nil, &issues); err != nil {
 			return to.ErrorResult(fmt.Errorf("get issues list err: %w", err))
 		}
 		return to.TextResult(issues)

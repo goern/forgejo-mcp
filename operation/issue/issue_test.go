@@ -1379,6 +1379,117 @@ func TestListRepoIssues_SortNearDueDate(t *testing.T) {
 	}
 }
 
+// newNotFoundBackend serves 404 for every API path except the SDK's startup
+// version probe, i.e. it stands in for "the repository does not exist".
+func newNotFoundBackend(t *testing.T) *httptest.Server {
+	t.Helper()
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v1/version", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"version":"11.0.0+gitea-1.22.0"}`))
+	})
+	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"message":"repository does not exist","url":"` +
+			`https://example.invalid/api/swagger"}`))
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	flag.URL = srv.URL
+	flag.Token = "tkn"
+	flag.UserAgent = "test"
+
+	c, err := forgejo_sdk.NewClient(srv.URL,
+		forgejo_sdk.SetToken("tkn"),
+		forgejo_sdk.SetUserAgent("test"),
+	)
+	if err != nil {
+		t.Fatalf("failed to build SDK client for test: %v", err)
+	}
+	forgejo.SetClientForTesting(c)
+	return srv
+}
+
+// TestListRepoIssues_MissingRepoErrorsWithAndWithoutSort pins the property
+// that made the sort branch worth a second look: the two code paths must agree
+// about a repository that does not exist. /repos/{owner}/{repo}/issues returns
+// 200 [] when a repo simply has no issues, so a 404 there means the repo is
+// missing and must surface as an error — not as an empty list — regardless of
+// whether the caller passed `sort`.
+func TestListRepoIssues_MissingRepoErrorsWithAndWithoutSort(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		args map[string]any
+	}{
+		{"without sort", map[string]any{"owner": "nope", "repo": "nope"}},
+		{"with sort", map[string]any{"owner": "nope", "repo": "nope", "sort": "nearduedate"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			newNotFoundBackend(t)
+
+			res, err := ListRepoIssuesFn(context.Background(), makeReq(tc.args))
+			if err == nil && (res == nil || !res.IsError) {
+				t.Fatalf("missing repository must surface as an error, got err=%v res=%+v", err, res)
+			}
+		})
+	}
+}
+
+// TestListRepoIssues_SortPathEscapesSegments guards the raw-HTTP path built by
+// the sort branch: this is the first raw site to append a query string to a
+// hand-built path, so an unescaped "?" in repo would merge into the query and
+// swallow the /issues segment rather than 404.
+func TestListRepoIssues_SortPathEscapesSegments(t *testing.T) {
+	// The request target has to be read raw: http.Request.URL.Path is the
+	// *decoded* form, so %2F reads back as "/" there and would hide exactly
+	// the escaping this test exists to prove. RequestURI is the untouched
+	// wire value, and a bare handler (no ServeMux) keeps it unrewritten.
+	var requestURI string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Path == "/api/v1/version" {
+			_, _ = w.Write([]byte(`{"version":"11.0.0+gitea-1.22.0"}`))
+			return
+		}
+		requestURI = r.RequestURI
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	t.Cleanup(srv.Close)
+	flag.URL = srv.URL
+	flag.Token = "tkn"
+	flag.UserAgent = "test"
+
+	c, err := forgejo_sdk.NewClient(srv.URL,
+		forgejo_sdk.SetToken("tkn"),
+		forgejo_sdk.SetUserAgent("test"),
+	)
+	if err != nil {
+		t.Fatalf("failed to build SDK client for test: %v", err)
+	}
+	forgejo.SetClientForTesting(c)
+
+	res, err := ListRepoIssuesFn(context.Background(), makeReq(map[string]any{
+		"owner": "o/x/../../admin",
+		"repo":  "r?state=all&",
+		"sort":  "nearduedate",
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("ListRepoIssuesFn returned error: err=%v res=%+v", err, res)
+	}
+
+	rawPath, rawQuery, _ := strings.Cut(requestURI, "?")
+	if !strings.HasSuffix(rawPath, "/issues") {
+		t.Fatalf("the %q in repo merged into the query and swallowed /issues; request target = %q", "?", requestURI)
+	}
+	if strings.Contains(rawPath, "/x/") || strings.Contains(rawPath, "/../") {
+		t.Fatalf("path traversal was not contained; request target = %q", requestURI)
+	}
+	if !strings.Contains(rawQuery, "sort=nearduedate") {
+		t.Fatalf("expected sort=nearduedate in query, got request target = %q", requestURI)
+	}
+}
+
 func TestListRepoIssues_SortInvalidRejected(t *testing.T) {
 	res, err := ListRepoIssuesFn(context.Background(), makeReq(map[string]any{
 		"owner": "goern",

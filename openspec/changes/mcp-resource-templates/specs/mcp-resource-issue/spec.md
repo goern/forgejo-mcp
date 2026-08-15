@@ -10,7 +10,7 @@ The server SHALL register a resource template with URI `forgejo://repo/{owner}/{
 
 ### Requirement: Issue resource read returns metadata and recent comments
 
-`resources/read` for an issue URI SHALL return a primary `application/json` content block with issue metadata (`index`, `title`, `state`, `body`, `labels`, `assignees`, `milestone`, `author`, `created_at`, `updated_at`, `closed_at`, `comments_count`, `html_url`) and a `text/markdown` sidecar containing the rendered body. The JSON SHALL include a `recent_comments` array of up to 30 most-recent comments, each with `id`, `author`, `created_at`, `body_excerpt` (first 280 characters).
+`resources/read` for an issue URI SHALL return a primary `application/json` content block with issue metadata (`index`, `title`, `state`, `body`, `labels`, `assignees`, `milestone`, `author`, `created_at`, `updated_at`, `closed_at`, `due_date`, `comments_count`, `html_url`) and a `text/markdown` sidecar containing the rendered body. The JSON SHALL include a `recent_comments` array of up to 30 most-recent comments, each with `id`, `author`, `created_at`, `body_excerpt` (first 280 characters).
 
 #### Scenario: Issue with few comments includes all
 - **WHEN** a client reads an issue URI for an issue with `M ≤ 30` comments
