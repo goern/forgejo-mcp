@@ -234,13 +234,13 @@ List all my repositories
 | **Commits** | |
 | `list_repo_commits` | List commits in a repository |
 | **Issues** | |
-| `list_repo_issues` | List issues in a repository (page/limit) |
+| `list_repo_issues` | List issues in a repository (page/limit). Optional `sort` orders server-side: `relevance`, `latest`, `oldest`, `recentupdate`, `leastupdate`, `mostcomment`, `leastcomment`, `nearduedate`, `farduedate` (the last two are the due-date directions). |
 | `search_issues` | Search issues across every repository of one owner (page/limit); returns `{issues,page,limit,count,has_next}` |
 | `get_issue_by_index` | Get a specific issue |
 | `create_issue` | Create a new issue |
 | `add_issue_labels` | Add labels to an issue (requires numeric label IDs) |
 | `remove_issue_labels` | Remove labels from an issue (requires numeric label IDs) |
-| `update_issue` | Update an existing issue (requires numeric milestone ID) |
+| `update_issue` | Update an existing issue (requires numeric milestone ID). `due_date` sets the deadline (RFC3339); `clear_due_date=true` removes it. The two are mutually exclusive — setting both is an error, and omitting both leaves the deadline unchanged. |
 | `issue_state_change` | Open or close an issue |
 | `list_issue_dependencies` | List issues the given issue depends on. Bounded by `page` (1-based) + `limit` (page size); the response echoes `page`/`limit` so callers can fetch the next page. |
 | `list_issue_dependents` | List issues that depend on the given issue. Bounded by `page` (1-based) + `limit` (page size); the response echoes `page`/`limit` so callers can fetch the next page. |

@@ -155,6 +155,61 @@ func TestIssueResourceHandler_HappyPath(t *testing.T) {
 	}
 }
 
+// TestIssueResourceHandler_DueDatePassesThrough covers daikon#93: the
+// forgejo://repo/{owner}/{repo}/issue/{index} resource template builds its
+// own issueResourcePayload (unlike get_issue_by_index/list_repo_issues,
+// which marshal the raw SDK struct), so due_date needed a dedicated field —
+// verified missing before this change, not assumed present.
+func TestIssueResourceHandler_DueDatePassesThrough(t *testing.T) {
+	issue := fakeIssue()
+	issue["due_date"] = "2026-08-20T23:59:59Z"
+	h := &issueRoutingHandler{
+		issueStatus:    http.StatusOK,
+		issueBody:      issue,
+		commentsStatus: http.StatusOK,
+		commentsBody:   fakeComments(0),
+	}
+	srv := setupIssueMockServer(t, h)
+	defer srv.Close()
+
+	req := makeIssueResourceRequest("goern", "forgejo-mcp", 42)
+	contents, err := issueResourceHandler(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	jsonBlock := contents[0].(mcp.TextResourceContents)
+	var payload issueResourcePayload
+	if err := json.Unmarshal([]byte(jsonBlock.Text), &payload); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	if payload.DueDate != "2026-08-20T23:59:59Z" {
+		t.Errorf("expected due_date=2026-08-20T23:59:59Z, got %q", payload.DueDate)
+	}
+}
+
+func TestIssueResourceHandler_NoDueDateOmitted(t *testing.T) {
+	h := &issueRoutingHandler{
+		issueStatus:    http.StatusOK,
+		issueBody:      fakeIssue(), // no due_date key
+		commentsStatus: http.StatusOK,
+		commentsBody:   fakeComments(0),
+	}
+	srv := setupIssueMockServer(t, h)
+	defer srv.Close()
+
+	req := makeIssueResourceRequest("goern", "forgejo-mcp", 42)
+	contents, err := issueResourceHandler(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	jsonBlock := contents[0].(mcp.TextResourceContents)
+	if strings.Contains(jsonBlock.Text, "due_date") {
+		t.Errorf("expected due_date omitted when unset (omitempty), got %q", jsonBlock.Text)
+	}
+}
+
 func TestIssueResourceHandler_OverCap_Truncated(t *testing.T) {
 	// Use exactly EmbeddedListCap+1 items. In production, ListIssueComments is
 	// now called with PageSize=EmbeddedListCap+1, so the server can return up
