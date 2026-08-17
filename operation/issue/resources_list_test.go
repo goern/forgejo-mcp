@@ -724,6 +724,101 @@ func TestIssueCommentsResource_ServerHonouringBoundsIsNotSlicedTwice(t *testing.
 	}
 }
 
+// TestIssueCommentsResource_ThreadExactlyLimitLongPagesToEmpty is the case a
+// row-count-only guard cannot see. A bounds-ignoring server returns the whole
+// thread, and when the thread is exactly `limit` long that is indistinguishable
+// by count from a full page served by a server that paged properly — so a guard
+// of "more rows than asked for" declines to apply the offset and hands page 1's
+// rows back for page 2. X-Total-Count is what separates the two.
+func TestIssueCommentsResource_ThreadExactlyLimitLongPagesToEmpty(t *testing.T) {
+	const limit = resource.EmbeddedListCap // 30, the default limit
+	setupBoundsIgnoringServer(t, limit)
+
+	first, err := issueCommentsResourceHandler(context.Background(),
+		readReq(fmt.Sprintf("forgejo://repo/o/r/issue/42/comments?page=1&limit=%d", limit)))
+	if err != nil {
+		t.Fatalf("page 1: handler error: %v", err)
+	}
+	var page1 commentsListPayload
+	readListPayload(t, first, &page1)
+	if len(page1.Comments) != limit {
+		t.Fatalf("page 1 should carry the whole %d-comment thread, got %d", limit, len(page1.Comments))
+	}
+	if page1.Truncated {
+		t.Fatal("a thread of exactly the limit fits on page 1 — nothing remains")
+	}
+
+	second, err := issueCommentsResourceHandler(context.Background(),
+		readReq(fmt.Sprintf("forgejo://repo/o/r/issue/42/comments?page=2&limit=%d", limit)))
+	if err != nil {
+		t.Fatalf("page 2: handler error: %v", err)
+	}
+	var page2 commentsListPayload
+	readListPayload(t, second, &page2)
+	if len(page2.Comments) != 0 {
+		t.Fatalf("page 2 of a %d-comment thread must be empty, got %d comments starting at id %d",
+			limit, len(page2.Comments), page2.Comments[0].ID)
+	}
+	if page2.Truncated {
+		t.Fatal("an empty page past the end must not claim more remains")
+	}
+}
+
+// TestIssueCommentsResource_ShortThreadPagesToEmpty is the same defect one step
+// further from the boundary: a thread shorter than the limit was also never
+// offset, so page 2 repeated page 1.
+func TestIssueCommentsResource_ShortThreadPagesToEmpty(t *testing.T) {
+	setupBoundsIgnoringServer(t, 3)
+
+	contents, err := issueCommentsResourceHandler(context.Background(),
+		readReq("forgejo://repo/o/r/issue/42/comments?page=2&limit=30"))
+	if err != nil {
+		t.Fatalf("handler error: %v", err)
+	}
+	var payload commentsListPayload
+	readListPayload(t, contents, &payload)
+	if len(payload.Comments) != 0 {
+		t.Fatalf("page 2 of a 3-comment thread must be empty, got %d", len(payload.Comments))
+	}
+}
+
+// TestIssueCommentsResource_HonouringServerFullPageIsNotSlicedTwice is the
+// other direction, and the reason the guard is not simply ">=": a server that
+// pages properly returns exactly `limit` rows for every full page. Those rows
+// already are the requested page, and re-applying the offset would empty it.
+// Here the last page is full too (60 rows, limit 30), so no page in the corpus
+// can be told apart from a whole thread by row count alone.
+func TestIssueCommentsResource_HonouringServerFullPageIsNotSlicedTwice(t *testing.T) {
+	const (
+		corpus = 60
+		limit  = 30
+	)
+	setupPaginatingServer(t, &paginatingHandler{
+		total:   corpus,
+		pathHas: "/comments",
+		row:     func(i int) map[string]interface{} { return fakeCommentRow(i, fmt.Sprintf("comment %d", i)) },
+	})
+
+	var seen []int
+	for page := 1; page <= 2; page++ {
+		uri := fmt.Sprintf("forgejo://repo/o/r/issue/42/comments?page=%d&limit=%d", page, limit)
+		contents, err := issueCommentsResourceHandler(context.Background(), readReq(uri))
+		if err != nil {
+			t.Fatalf("page %d: handler error: %v", page, err)
+		}
+		var payload commentsListPayload
+		readListPayload(t, contents, &payload)
+		if len(payload.Comments) != limit {
+			t.Fatalf("page %d: expected the server's own full page of %d rows, got %d",
+				page, limit, len(payload.Comments))
+		}
+		for _, c := range payload.Comments {
+			seen = append(seen, int(c.ID))
+		}
+	}
+	assertPagesCoverCorpus(t, seen, 2, limit)
+}
+
 func TestIssueCommentsResource_BadKind(t *testing.T) {
 	if _, err := issueCommentsResourceHandler(context.Background(), readReq("forgejo://repo/o/r/wiki/42/comments")); err == nil {
 		t.Fatal("expected an error for a kind that is neither issue nor pr")

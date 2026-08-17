@@ -307,13 +307,27 @@ func issueCommentsResourceHandler(ctx context.Context, req mcp.ReadResourceReque
 	// following.)
 	//
 	// So the page offset is applied here when the server declined to apply it.
-	// The test is "did more rows come back than were asked for" rather than a
-	// hardcoded assumption, so this corrects itself if Forgejo starts honouring
-	// the bounds: then the rows already are the requested page and slicing them
-	// again would wrongly return nothing for page 2.
+	// The test is a property of the response rather than a hardcoded assumption,
+	// so this corrects itself if Forgejo starts honouring the bounds: then the
+	// rows already are the requested page and slicing them again would wrongly
+	// return nothing for page 2.
+	//
+	// The property is "upstream handed back the entire thread", which is true
+	// when either:
+	//
+	//   - more rows arrived than were asked for; or
+	//   - exactly as many rows arrived as X-Total-Count says the thread holds.
+	//
+	// The row count alone cannot carry this. A server that honours the bounds
+	// also returns exactly `limit` rows for any full page, so "len >= limit"
+	// would double-slice it. The total is what separates them: a paging server
+	// on page N>1 returns at most total-(N-1)*limit rows, which is strictly
+	// fewer than total, so the equality can only hold for a server that ignored
+	// the offset. On page 1 the offset is 0 and the slice is a no-op either way.
 	window := rawComments
 	offset := 0
-	serverIgnoredBounds := len(rawComments) > limit
+	total := totalCount(resp)
+	serverIgnoredBounds := len(rawComments) > limit || (total > 0 && len(rawComments) == total)
 	if serverIgnoredBounds {
 		offset = min((page-1)*limit, len(rawComments))
 		window = rawComments[offset:min(offset+limit, len(rawComments))]
@@ -331,7 +345,7 @@ func issueCommentsResourceHandler(ctx context.Context, req mcp.ReadResourceReque
 			bounded = bounded.WithMoreRemaining(len(rawComments))
 		}
 	case hasMore(resp):
-		bounded = bounded.WithMoreRemaining(totalCount(resp))
+		bounded = bounded.WithMoreRemaining(total)
 	}
 
 	comments := make([]commentBody, 0, len(bounded.Items))
