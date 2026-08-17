@@ -81,12 +81,12 @@ See `openspec/specs/mcp-resources-core/spec.md` for the full normative spec (add
 | `forgejo://repo/{owner}/{repo}/commit/{sha}` | application/json + markdown | Commit metadata (sha must be 40 hex chars) |
 | `forgejo://repo/{owner}/{repo}/commit/{sha}/status` | application/json | Combined CI status |
 | `forgejo://repo/{owner}/{repo}/issue/{index}` | application/json + markdown | Issue with bounded comments (cap 30) |
-| `forgejo://repo/{owner}/{repo}/issues{?state,labels,page,limit}` | application/json | Bounded issue rows, no bodies (state default open; cap 30, sentinel `list_repo_issues`); in `labels`, encode a literal `/` in a label name as `%2F` without double-encoding, and note that an unrecognised name is silently dropped — if none match you get the unfiltered set, not an empty one |
+| `forgejo://repo/{owner}/{repo}/issues{?state,labels,page,limit}` | application/json | Bounded issue rows, no bodies (state default open; cap 30, sentinel `list_repo_issues`); in `labels`, encode a literal `/` as `%2F` and spaces as `%20` without double-encoding (`+` does not work), and note that names are AND-ed and an unrecognised one is silently dropped — if none match you get the unfiltered set, not an empty one |
 | `forgejo://repo/{owner}/{repo}/{kind}/{index}/comment/{id}` | application/json + markdown | Single comment |
 | `forgejo://repo/{owner}/{repo}/{kind}/{index}/comments{?page,limit}` | application/json | Bounded comment thread, full bodies (cap 30, sentinel `list_issue_comments`) |
 | `forgejo://repo/{owner}/{repo}/pr/{index}` | application/json + markdown | PR with bounded comments + reviews (cap 30) |
 | `forgejo://repo/{owner}/{repo}/branch_protections` | application/json | Bounded list of branch protection rules |
-| `forgejo://repo/{owner}/{repo}/branch_protection/{rule}` | application/json | Single branch protection rule |
+| `forgejo://repo/{owner}/{repo}/branch_protection/{rule}` | application/json | Single branch protection rule; rule names are branch patterns, so encode a literal `/` as `%2F` and spaces as `%20` without double-encoding (`release%2Fv1`) — a raw `/` does not resolve |
 | `forgejo://repo/{owner}/{repo}/label/{id}` | application/json | Single repository label |
 | `forgejo://repo/{owner}/{repo}/labels{?page,limit}` | application/json | Bounded repo label list (cap 30, sentinel `list_repo_labels`) |
 | `forgejo://org/{org}/labels{?page,limit}` | application/json | Bounded org label list (cap 30, sentinel `list_org_labels`) |
