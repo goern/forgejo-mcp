@@ -7,7 +7,7 @@
 check-demos:
     ./scripts/ci/check-spec-demo-anchors.sh
 
-# >>> enable-semantic-release v1.4.1 sha256:98b96f591752 (managed block — do not edit) >>>
+# >>> enable-semantic-release v1.4.2 sha256:98b96f591752 (managed block — do not edit) >>>
 # Release tasks, installed by the enable-semantic-release skill.
 #
 # `just release` cuts a real release; everything else here exists so that the
@@ -233,4 +233,4 @@ clean-jobs:
     echo "$jobs"
     read -rp "delete these? [y/N] " a
     [ "$a" = "y" ] && oc -n {{sr_namespace}} delete $jobs || echo "left alone"
-# <<< enable-semantic-release v1.4.1 sha256:98b96f591752 <<<
+# <<< enable-semantic-release v1.4.2 sha256:98b96f591752 <<<

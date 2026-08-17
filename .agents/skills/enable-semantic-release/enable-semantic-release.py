@@ -17,7 +17,7 @@ actually bit:
      the run reports it, because the push succeeded.
 
   2. The agent has write on the repo's CODE unit.
-     ⚠️ THE TRAP. release-bots is a team whose nominal permission is "write",
+     ⚠️ THE TRAP. release-engineering is a team whose nominal permission is "write",
      which reads as sufficient and is not: its units were packages + releases
      only. Forgejo authorises a branch push against unit.TypeCode specifically,
      so the agent held "write" and was still rejected with
@@ -113,7 +113,7 @@ AGENT = "b4mad-release-agent"
 AGENT_SECRET = f"forgejo-agent-{AGENT}"
 # The org team that carries the release identity. Membership is not re-derived
 # per repo: one team is the thing a human can audit in a single screen.
-TEAM = "release-bots"
+TEAM = "release-engineering"
 # The org where TEAM already exists in the shape that works — quoted verbatim in
 # the "no such team" failure so the remedy is a copy, not a design decision.
 TEAM_HOME = "agentic-forges"
@@ -138,7 +138,7 @@ MANIFEST = "job-semantic-release.yaml"
 # release's version and nobody bumps anything by hand. In a forge-agents
 # checkout it therefore reads 0.0.0-dev, which is the truth — the checkout is
 # not any release — and makes every installed release look newer than it.
-SKILL_VERSION = "1.4.1"
+SKILL_VERSION = "1.4.2"
 
 # The slug baked into the shipped Job manifest, which the installed `release`
 # target rewrites to the local one. A no-op in the repo it ships from.

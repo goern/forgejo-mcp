@@ -397,7 +397,7 @@ test` is a separate hand-maintained target above the fence.
 | `no SSH key` / `no GPG key` | Run `./create-forge-agent.py b4mad-release-agent --overwrite`. A missing GPG key does not fail the push — it lands the release commit **unverified**, silently. |
 | `Secret forgejo-agent-… is missing` | The SealedSecret is not in the `b4mad-forgejo` kustomization; see `openshift/README.md`. |
 | `has no semantic-release config` | The repo needs a `.releaserc`. Nothing to enable yet. |
-| `org '<x>' has no 'release-bots' team` | Copy the team shape from `agentic-forges` using the curl the script prints. It must carry `repo.code=write` — a team that is nominally "write" without that unit still rejects the push. |
+| `org '<x>' has no 'release-engineering' team` | Copy the team shape from `agentic-forges` using the curl the script prints. It must carry `repo.code=write` — a team that is nominally "write" without that unit still rejects the push. |
 | `'<x>' is a personal account` | Forgejo has no teams there. The script offers transfer-to-org (preferred) or a direct collaborator grant, with the cost of each. Present both; the choice is the user's. |
 | `enable_push=false` | Branch protection forbids direct pushes outright. The script will not disable a protection — that is a hand edit or a move to PR/AGit flow. |
 
