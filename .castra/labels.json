@@ -140,6 +140,11 @@
         "name": "castra:human"
     },
     {
+        "color": "5319e7",
+        "description": "Trigger castra release-engineer — assess the release branch, then cut a semantic release on a go verdict",
+        "name": "castra:release"
+    },
+    {
         "color": "a2eeef",
         "description": "Feature or design work; routed through the openspec change flow",
         "name": "change"
