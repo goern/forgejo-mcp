@@ -31,9 +31,15 @@ func RegisterLabelResources(s *server.MCPServer) {
 		),
 		mcp.WithTemplateMIMEType("application/json"),
 	)
+	// The {?…} expansion is load-bearing, not documentation: mcp-go matches a
+	// read against an anchored regexp built from this exact string, so a
+	// template registered bare matches only the bare URI and every
+	// query-bearing read fails with "resource not found" before any handler
+	// runs. Registered bare, this resource's page/limit were unreachable —
+	// and so, in turn, was the paging defect below.
 	resource.RegisterTemplate(
 		s,
-		"forgejo://repo/{owner}/{repo}/labels",
+		"forgejo://repo/{owner}/{repo}/labels{?page,limit}",
 		"Forgejo Repo Labels",
 		repoLabelsResourceHandler,
 		mcp.WithTemplateDescription(
@@ -46,7 +52,9 @@ func RegisterLabelResources(s *server.MCPServer) {
 	)
 	resource.RegisterTemplate(
 		s,
-		"forgejo://org/{org}/labels",
+		// See the note on the repo-labels template above: the {?…} expansion
+		// is what makes page/limit reachable at all.
+		"forgejo://org/{org}/labels{?page,limit}",
 		"Forgejo Org Labels",
 		orgLabelsResourceHandler,
 		mcp.WithTemplateDescription(
@@ -133,14 +141,14 @@ func repoLabelsResourceHandler(ctx context.Context, req mcp.ReadResourceRequest)
 		return nil, fmt.Errorf("forgejo client: %w", err)
 	}
 
-	// Request cap+1 so Bounded's >cap check fires.
-	fetch := limit + 1
-	if fetch > resource.EmbeddedListCap+1 {
-		fetch = resource.EmbeddedListCap + 1
-	}
-
+	// PageSize MUST equal the caller's limit. Upstream computes the offset as
+	// (page-1)*PageSize, so requesting limit+1 rows as a truncation probe while
+	// showing only limit of them makes page N+1 start one row past the last row
+	// page N showed — and that row is returned by no page the client can ask
+	// for. The probe and the page cannot share PageSize. "More exists" comes
+	// from the response's Link header instead.
 	rawLabels, resp, err := client.ListRepoLabels(p.Owner, p.Repo, forgejo_sdk.ListLabelsOptions{
-		ListOptions: forgejo_sdk.ListOptions{Page: page, PageSize: fetch},
+		ListOptions: forgejo_sdk.ListOptions{Page: page, PageSize: limit},
 	})
 	if err != nil {
 		if resp != nil {
@@ -154,6 +162,9 @@ func repoLabelsResourceHandler(ctx context.Context, req mcp.ReadResourceRequest)
 		items[i] = strconv.FormatInt(l.ID, 10)
 	}
 	bounded := resource.Bounded(items, limit, ListRepoLabelsToolName)
+	if hasMore(resp) {
+		bounded = bounded.WithMoreRemaining(totalCount(resp))
+	}
 
 	labels := make([]labelResourcePayload, 0, len(bounded.Items))
 	for _, l := range rawLabels {
@@ -209,13 +220,11 @@ func orgLabelsResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) 
 
 	page, limit := pageLimit(req)
 
-	// Request cap+1 so Bounded's >cap check fires.
-	fetch := limit + 1
-	if fetch > resource.EmbeddedListCap+1 {
-		fetch = resource.EmbeddedListCap + 1
-	}
-
-	rawLabels, err := fetchOrgLabels(ctx, p.Org, page, fetch)
+	// PageSize == limit, for the paging reason spelled out in
+	// repoLabelsResourceHandler above. This path goes through the raw-HTTP
+	// helper rather than the SDK, so the Link/X-Total-Count headers are read
+	// directly instead of via forgejo_sdk.Response.
+	rawLabels, header, err := fetchOrgLabels(ctx, p.Org, page, limit)
 	if err != nil {
 		return nil, resource.MapForgejoError(uri, err)
 	}
@@ -225,6 +234,9 @@ func orgLabelsResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) 
 		items[i] = strconv.FormatInt(l.ID, 10)
 	}
 	bounded := resource.Bounded(items, limit, ListOrgLabelsToolName)
+	if headerHasMore(header) {
+		bounded = bounded.WithMoreRemaining(headerTotalCount(header))
+	}
 
 	labels := make([]labelResourcePayload, 0, len(bounded.Items))
 	for _, l := range rawLabels {

@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -37,7 +38,27 @@ func totalCount(resp *forgejo_sdk.Response) int {
 	if resp == nil || resp.Response == nil {
 		return 0
 	}
-	n, err := strconv.Atoi(resp.Header.Get("X-Total-Count"))
+	return headerTotalCount(resp.Header)
+}
+
+// headerHasMore is hasMore for the raw-HTTP path, which has no SDK Response to
+// parse the Link header for it. Same question, same answer: did the server
+// advertise a next page.
+func headerHasMore(h http.Header) bool {
+	for _, link := range h.Values("Link") {
+		// A single Link value may carry several comma-separated relations,
+		// so this is a substring test rather than a parse. Forgejo quotes
+		// the rel; tolerate the unquoted form too.
+		if strings.Contains(link, `rel="next"`) || strings.Contains(link, "rel=next") {
+			return true
+		}
+	}
+	return false
+}
+
+// headerTotalCount is totalCount for a bare http.Header.
+func headerTotalCount(h http.Header) int {
+	n, err := strconv.Atoi(h.Get("X-Total-Count"))
 	if err != nil || n < 0 {
 		return 0
 	}
