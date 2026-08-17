@@ -46,6 +46,37 @@ func RegisterIssueResources(s *server.MCPServer) {
 	// query-bearing read fails with "resource not found" before any handler
 	// runs. The bound and filter parameters are the entire point of this
 	// resource, so registering without them makes it unusable.
+	//
+	// That same regexp is why the description spells out %2F and %20 for the
+	// labels filter: an RFC 6570 value does not admit a raw '/' or a space, so
+	// ?labels=Kind/Feature fails to match the template and the read is
+	// rejected as "resource not found" before repoIssuesResourceHandler runs.
+	// '+' does not work either — it matches nothing and would reach the API as
+	// a literal '+'. Our own parsing tolerates a raw slash and the REST API
+	// accepts one; the client simply never gets that far. This applies to path
+	// variables as much as query values (see the branch_protection/{rule}
+	// template, whose rule names are branch patterns), and slash-shaped label
+	// vocabularies (Kind/…, Status/…) make it the first thing a caller hits.
+	//
+	// The description also warns that upstream drops unrecognised label names
+	// rather than matching nothing. Measured against this repo's own API
+	// (state=all, 484 issues total):
+	//
+	//	labels=Kind%2FOpenSpec            ->  10
+	//	labels=Kind%2FBug                 ->   8
+	//	labels=Kind%2FOpenSpec,Kind%2FBug ->   0   (so names are AND-ed)
+	//	labels=Kind%2FOpenSpec,zzz-nope   ->  10   (not 0 — zzz-nope is dropped)
+	//	labels=zzz-nope                   -> 484   (the unfiltered set)
+	//
+	// Under AND semantics an unknown name would have to yield 0 if it were
+	// treated as an unmatchable term; it yields the known name's own count
+	// instead, which is what proves the name is discarded outright. A filter
+	// whose names are all unknown therefore degenerates to no filter at all.
+	// Note this is the per-repo endpoint; search_issues uses the cross-repo
+	// search endpoint and documents OR semantics, which is not a contradiction.
+	// We could only surface a dropped name by resolving it against the repo's
+	// (and org's) label list before the query — an extra round trip per read
+	// and a behaviour change, not a doc fix — hence the warning here.
 	resource.RegisterTemplate(
 		s,
 		"forgejo://repo/{owner}/{repo}/issues{?state,labels,page,limit}",
@@ -55,8 +86,15 @@ func RegisterIssueResources(s *server.MCPServer) {
 			"Bounded list of repository issues as rows — index, title, state, labels, "+
 				"assignees, milestone, comment count, timestamps — with no bodies. "+
 				"Filters and bounds are client-controlled (state ∈ {open, closed, all}, "+
-				"default open; labels comma-separated; page/limit, ceiling "+
+				"default open; labels comma-separated, encoding a literal '/' in a "+
+				"label name as %2F and spaces as %20, without double-encoding — '+' "+
+				"does not work — e.g. "+
+				"labels=Kind%2FFeature,Status%2FNeed%20More%20Info; page/limit, ceiling "+
 				strconv.Itoa(resource.EmbeddedListCap)+"). "+
+				"Forgejo silently ignores a label name it does not recognise: if no "+
+				"listed name matches, the result is the UNFILTERED set rather than an "+
+				"empty one, so a typo reads as a successful wide answer. Verify names "+
+				"against "+ListRepoLabelsToolName+" instead of trusting the row count. "+
 				"Read forgejo://repo/{owner}/{repo}/issue/{index} for a body. "+
 				"URI: forgejo://repo/{owner}/{repo}/issues{?state,labels,page,limit}. "+
 				"Truncation sentinel: "+ListRepoIssuesToolName+".",

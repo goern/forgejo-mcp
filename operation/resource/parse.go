@@ -282,8 +282,12 @@ func ParseBranchProtections(uri string) (BranchProtectionsParams, error) {
 }
 
 // ParseBranchProtection parses forgejo://repo/{owner}/{repo}/branch_protection/{rule}.
-// The rule name is the remainder after "branch_protection/" so glob rules
-// containing slashes round-trip.
+// The rule name is the remainder after "branch_protection/", which is what lets a
+// %2F-encoded rule round-trip: url.Parse decodes %2F into a real '/', splitting the
+// name across segments, and rejoining puts it back. This is NOT a licence to send a
+// raw '/' — mcp-go matches the read against a regexp built from the template, and a
+// path variable there does not admit one, so forgejo://…/branch_protection/release/*
+// never reaches this function at all.
 func ParseBranchProtection(uri string) (BranchProtectionParams, error) {
 	u, err := parseForgejoURI(uri)
 	if err != nil {

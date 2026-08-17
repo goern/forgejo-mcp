@@ -54,6 +54,10 @@ func RegisterResource(s *server.MCPServer) {
 		mcp.WithTemplateDescription(
 			"A single branch protection rule for a Forgejo repository. "+
 				"URI: forgejo://repo/{owner}/{repo}/branch_protection/{rule} — rule is the rule name. "+
+				"Rule names are branch patterns and commonly contain slashes: encode a "+
+				"literal '/' as %2F and spaces as %20, without double-encoding, e.g. "+
+				"release%2Fv1. A raw '/' does not resolve, and %252F resolves to the "+
+				"literal text %2F rather than a slash. "+
 				"Returns the rule's full protection state as a read-only JSON document.",
 		),
 		mcp.WithTemplateMIMEType("application/json"),
