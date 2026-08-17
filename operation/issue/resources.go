@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/operation/resource"
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/forgejo"
@@ -36,6 +37,46 @@ func RegisterIssueResources(s *server.MCPServer) {
 			"Single comment by id. kind ∈ {issue, pr}. "+
 				"PR comments use the same Forgejo issue-comment API. "+
 				"URI: forgejo://repo/{owner}/{repo}/{kind}/{index}/comment/{id}.",
+		),
+		mcp.WithTemplateMIMEType("application/json"),
+	)
+	// The {?…} expansion is load-bearing, not documentation: mcp-go matches a
+	// read against an anchored regexp built from this exact string, so a
+	// template registered bare matches only the bare URI and every
+	// query-bearing read fails with "resource not found" before any handler
+	// runs. The bound and filter parameters are the entire point of this
+	// resource, so registering without them makes it unusable.
+	resource.RegisterTemplate(
+		s,
+		"forgejo://repo/{owner}/{repo}/issues{?state,labels,page,limit}",
+		"Forgejo Issue List",
+		repoIssuesResourceHandler,
+		mcp.WithTemplateDescription(
+			"Bounded list of repository issues as rows — index, title, state, labels, "+
+				"assignees, milestone, comment count, timestamps — with no bodies. "+
+				"Filters and bounds are client-controlled (state ∈ {open, closed, all}, "+
+				"default open; labels comma-separated; page/limit, ceiling "+
+				strconv.Itoa(resource.EmbeddedListCap)+"). "+
+				"Read forgejo://repo/{owner}/{repo}/issue/{index} for a body. "+
+				"URI: forgejo://repo/{owner}/{repo}/issues{?state,labels,page,limit}. "+
+				"Truncation sentinel: "+ListRepoIssuesToolName+".",
+		),
+		mcp.WithTemplateMIMEType("application/json"),
+	)
+	resource.RegisterTemplate(
+		s,
+		// See the note on the issue-list template above: the {?…} expansion is
+		// what makes page/limit reachable at all.
+		"forgejo://repo/{owner}/{repo}/{kind}/{index}/comments{?page,limit}",
+		"Forgejo Comment Thread",
+		issueCommentsResourceHandler,
+		mcp.WithTemplateDescription(
+			"Bounded list of comments with FULL bodies (the single-issue resource "+
+				"excerpts them). kind ∈ {issue, pr}; PR comments use the same Forgejo "+
+				"issue-comment API. page/limit client-controlled, ceiling "+
+				strconv.Itoa(resource.EmbeddedListCap)+". "+
+				"URI: forgejo://repo/{owner}/{repo}/{kind}/{index}/comments{?page,limit}. "+
+				"Truncation sentinel: "+ListIssueCommentsToolName+".",
 		),
 		mcp.WithTemplateMIMEType("application/json"),
 	)

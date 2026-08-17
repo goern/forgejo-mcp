@@ -133,11 +133,14 @@ web-UI clicks.
 | Demo | Tools | What it shows |
 |------|-------|---------------|
 | [bounded-responses.md](bounded-responses.md) | `get_pull_request_diff` with `file_path`, `get_file_content` with `start_line`/`end_line` | Cut payloads to just the file or line range the agent needs (measured 16× / 41× reductions on real data) |
+| [bounded-issue-and-comment-lists.md](bounded-issue-and-comment-lists.md) | `forgejo://…/issues{?state,labels,page,limit}` and `forgejo://…/{kind}/{index}/comments{?page,limit}` resources | Row-shaped issue lists with no bodies (measured 16.7× reduction), client-controlled bounds and filters, a page-boundary walk proving no row is lost or repeated, full-body comment threads, and the `N of M shown` sentinel |
 
 **Use case.** Reviewing a PR no longer means pulling the whole diff
 into the model's context. Pick one file's hunks, optionally read a
 few lines of surrounding source around each hunk, repeat. Per-call
 payloads stay proportional to what the agent actually inspects.
+The same rule applies to triage: survey a repository as rows, then open
+only the one thread that turned out to matter.
 
 This is the user-facing half of the architectural rule in
 [`../docs/design/output-bounding.md`](../docs/design/output-bounding.md):
