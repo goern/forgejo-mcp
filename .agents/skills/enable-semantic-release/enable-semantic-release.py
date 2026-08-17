@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Christoph Görn
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Grant b4mad-release-agent what it needs to run semantic-release on a repo.
 
 WHY a script: the answer is never "give the bot write access". It is a chain of
@@ -133,7 +138,7 @@ MANIFEST = "job-semantic-release.yaml"
 # release's version and nobody bumps anything by hand. In a forge-agents
 # checkout it therefore reads 0.0.0-dev, which is the truth — the checkout is
 # not any release — and makes every installed release look newer than it.
-SKILL_VERSION = "0.0.0-dev"
+SKILL_VERSION = "1.4.1"
 
 # The slug baked into the shipped Job manifest, which the installed `release`
 # target rewrites to the local one. A no-op in the repo it ships from.
@@ -222,22 +227,42 @@ def admin_credentials() -> tuple[str, str]:
 
 
 def parse_repo_url(url: str) -> tuple[str, str]:
-    """ssh://git@host:port/owner/repo.git -> (owner, repo), or raise.
+    """A clone URL for this instance -> (owner, repo), or raise.
 
-    Pedantic on purpose. The host and port are verified against this instance
-    because a URL that parses but points elsewhere would produce a plan full of
-    confident nonsense about the wrong forge.
+    Accepts the three forms git itself hands out — ssh://git@host:port/o/r.git,
+    https://host/o/r.git, and git@host:o/r.git — because the caller is no longer
+    only a human typing the Job's REPO_URL. `just preflight` passes whatever
+    `git remote get-url` returns for the release remote, and `upstream` is very
+    often added as HTTPS; rejecting that made the grant check fail on a repo
+    that was perfectly releasable.
+
+    Still pedantic about WHICH FORGE, which was always the point: a URL that
+    parses but points elsewhere would produce a plan full of confident nonsense
+    about the wrong instance. The scheme was never what protected against that
+    — the host is — so the host is checked in every form, and the port in the
+    one form that carries it.
     """
-    m = re.fullmatch(r"ssh://git@([^:/]+):(\d+)/([^/]+)/(.+?)(?:\.git)?/?", url)
+    forms = (
+        r"ssh://git@(?P<host>[^:/]+):(?P<port>\d+)/(?P<owner>[^/]+)/(?P<repo>.+?)(?:\.git)?/?",
+        r"https://(?P<host>[^:/]+)/(?P<owner>[^/]+)/(?P<repo>.+?)(?:\.git)?/?",
+        r"git@(?P<host>[^:/]+):(?P<owner>[^/]+)/(?P<repo>.+?)(?:\.git)?/?",
+    )
+    m = next((m for m in (re.fullmatch(f, url) for f in forms) if m), None)
     if not m:
         raise Fail(
-            f"not an SSH clone URL: {url!r}\n"
-            f"   expected ssh://git@{SSH_HOST}:{SSH_PORT}/<owner>/<repo>.git — "
-            f"the exact form the Job's REPO_URL takes")
-    host, port, owner, repo = m.group(1), int(m.group(2)), m.group(3), m.group(4)
-    if host != SSH_HOST or port != SSH_PORT:
+            f"not a clone URL: {url!r}\n"
+            f"   expected ssh://git@{SSH_HOST}:{SSH_PORT}/<owner>/<repo>.git, "
+            f"https://{SSH_HOST}/<owner>/<repo>.git, "
+            f"or git@{SSH_HOST}:<owner>/<repo>.git")
+    host = m.group("host")
+    if host != SSH_HOST:
+        raise Fail(f"{host} is not this instance ({SSH_HOST})")
+    # Only the ssh:// form carries a port, and a wrong one there is the same
+    # class of mistake as a wrong host: it is not this instance.
+    port = m.groupdict().get("port")
+    if port is not None and int(port) != SSH_PORT:
         raise Fail(f"{host}:{port} is not this instance ({SSH_HOST}:{SSH_PORT})")
-    return owner, repo
+    return m.group("owner"), m.group("repo")
 
 
 class Step:
@@ -918,8 +943,286 @@ AGENTS_MD = Managed(
     gap="\n",
 )
 
-PARTS = ("grant", "justfile", "agents-md")
+PARTS = ("grant", "justfile", "agents-md", "ci")
 BLOCKS = {"justfile": JUSTFILE, "agents-md": AGENTS_MD}
+
+
+# --------------------------------------------------------------------------- #
+# Consumer 3: whole files — the four `ci` part targets under .tekton/ and
+# OWNERS. These are NOT spliced into a file that might already have other
+# content: they ARE the file, installed by name. Managed's fence exists to let
+# a block coexist with hand-written content around it; that question does not
+# apply here, so WholeFile below is a separate, smaller class rather than a
+# third mode bolted onto Managed. What IS reused, deliberately, is the
+# version/hash vocabulary (body_hash, version_key) — "is this mine, is it
+# current, is it edited, is it newer" is the identical six-way question, only
+# the marker is a single header LINE rather than an open/close fence, and a
+# stale copy is replaced WHOLE rather than spliced in place.
+# --------------------------------------------------------------------------- #
+
+
+class WholeFile:
+    """A file this skill installs by name rather than by splicing into
+    existing content. `body_fn` is a zero-argument callable — usually a
+    closure over already-resolved per-repo facts (language, repo name) —
+    because unlike a Managed block's body, a whole file's content can differ
+    by repo and the hash still has to describe THAT repo's installed copy.
+    """
+
+    def __init__(self, *, part: str, what: str, dest: str, body_fn,
+                 header_prefix: str = "# "):
+        self.part, self.what, self.dest = part, what, dest
+        self.body_fn, self.header_prefix = body_fn, header_prefix
+        self.re_header = re.compile(
+            re.escape(header_prefix)
+            + r">>> enable-semantic-release v(?P<version>\S+) "
+              r"sha256:(?P<hash>[0-9a-f]+) \(managed file — do not edit by "
+              r"hand\) >>>$")
+
+    def header_line(self, h: str, version: str | None = None) -> str:
+        version = SKILL_VERSION if version is None else version
+        return (f"{self.header_prefix}>>> enable-semantic-release v{version} "
+                f"sha256:{h} (managed file — do not edit by hand) >>>\n")
+
+    def render(self, body: str, version: str | None = None) -> str:
+        return self.header_line(body_hash(body), version) + body
+
+    def find(self, text: str) -> dict | None:
+        """This skill's header at the top of `text`, or None. Unlike Managed
+        there is no fence integrity to police — a single header line either
+        matches or it does not, and everything after it is the body,
+        whatever it is."""
+        if not text:
+            return None
+        first, _, rest = text.partition("\n")
+        m = self.re_header.match(first)
+        if not m:
+            return None
+        return {"version": m["version"], "hash": m["hash"], "body": rest}
+
+    def plan(self, repo: Path) -> dict:
+        path = repo / self.dest
+        body = self.body_fn()
+        plan = {"m": self, "path": path, "body": body}
+        if not path.is_file():
+            return plan | {"action": "create"}
+
+        found = self.find(path.read_text())
+        if found is None:
+            return plan | {"action": "clash"}
+        if body_hash(found["body"]) != found["hash"]:
+            return plan | {"action": "edited", "block": found}
+        if found["body"] == body and found["version"] == SKILL_VERSION:
+            return plan | {"action": "noop", "block": found}
+        if version_key(found["version"]) > version_key(SKILL_VERSION):
+            return plan | {"action": "downgrade", "block": found}
+        return plan | {"action": "update", "block": found}
+
+    def write(self, plan: dict) -> None:
+        path = plan["path"]
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(self.render(plan["body"]))
+
+
+def report_wholefile(plan: dict, repo: Path, *, force: bool) -> None:
+    w: WholeFile = plan["m"]
+    path, action = plan["path"], plan["action"]
+    rel = path.relative_to(repo) if path.is_relative_to(repo) else path
+    log(f"\n{w.what} in {repo} (v{SKILL_VERSION}):\n")
+
+    if action == "create":
+        log(f"  create   {rel}")
+    elif action == "noop":
+        log(f"  keep     {rel} already carries v{SKILL_VERSION}, unedited")
+    elif action == "update":
+        was = plan["block"]["version"]
+        move = (f"v{was} → v{SKILL_VERSION}" if was != SKILL_VERSION else
+                f"the v{was} copy no longer matches the template")
+        log(f"  update   {rel}: {move}, replaced whole")
+    elif action == "clash":
+        verb = "⚠️ force " if force else "⚠️ skip  "
+        log(f"  {verb} {rel} exists and carries no enable-semantic-release "
+            f"header — hand-written or foreign.")
+        if force:
+            log("           --force-block given: overwriting it.")
+        else:
+            log("           Nothing was written. --force-block to overwrite "
+                "it whole, or move it aside and re-run.")
+    elif action == "downgrade":
+        b = plan["block"]
+        verb = "⚠️ force " if force else "⚠️ skip  "
+        log(f"  {verb} {rel} carries v{b['version']}, which is NEWER than "
+            f"this copy of the skill (v{SKILL_VERSION}).")
+        log("           " + (
+            f"--force-block given: downgrading it to v{SKILL_VERSION}."
+            if force else
+            f"Writing would downgrade it. Install the newer skill and run "
+            f"that, or --force-block if you really mean to go back."))
+    elif action == "edited":
+        b = plan["block"]
+        verb = "⚠️ force " if force else "⚠️ skip  "
+        log(f"  {verb} the v{b['version']} copy of {rel} no longer hashes to "
+            f"{b['hash']} — it was hand-edited after this skill wrote it.")
+        log("           " + (
+            f"--force-block given: replacing it with v{SKILL_VERSION}; those "
+            f"edits are gone."
+            if force else
+            f"Re-run with --force-block to replace it with v{SKILL_VERSION} "
+            f"and lose those edits."))
+    log("")
+
+
+def install_wholefile(w: WholeFile, repo: Path, *, dry_run: bool,
+                      force: bool) -> int:
+    """0 done or nothing to do · 1 a clash, liftable with --force-block ·
+    2 a downgrade or a hand-edit, liftable with --force-block.
+
+    Unlike a justfile clash, a whole-file clash is NEVER structurally fatal:
+    there is no append and nothing else in the file to break by overwriting
+    it, so --force-block lifts all three "no" cases here, not just two.
+    """
+    plan = w.plan(repo)
+    action = plan["action"]
+    needs_force = action in ("clash", "downgrade", "edited")
+    report_wholefile(plan, repo, force=needs_force and force)
+
+    if needs_force and not force:
+        return 1 if action == "clash" else 2
+    if action == "noop":
+        return 0
+    if dry_run:
+        log(f"  dry run — {plan['path'].name} was not touched.\n")
+        return 0
+    w.write(plan)
+    log("")
+    return 0
+
+
+# --- language detection, and the repo facts the ci templates need ---------- #
+#
+# EVIDENCE-BASED ONLY. Guessing which CI task to install is worse than
+# refusing: a python-ci.yaml installed into a bun repo is a pipeline that
+# always fails, discovered only after a PR is blocked on it.
+
+BUN_EVIDENCE = ("package.json", "bun.lock", "bun.lockb")
+
+# Packaging evidence is sufficient on its own: a repo that declares itself a
+# python package (or lists its deps) is python whether or not it has tests
+# yet — python-ci.yaml's `unittest discover -s tests` just finds nothing to
+# run in that case, it does not break. requirements*.txt covers
+# requirements.txt / requirements-dev.txt / etc., the common unpackaged shape.
+PYTHON_PACKAGING_EVIDENCE = ("pyproject.toml", "setup.py", "setup.cfg")
+
+# No packaging file at all — e.g. forge-agents itself: stdlib scripts at the
+# repo root with a tests/ dir and no pyproject.toml/setup.py, nothing to
+# `pip install`. That shape is exactly what python-ci.yaml targets (no
+# install step), so tests/ + at least one root-level *.py counts as evidence
+# too. tests/ alone would not: an empty or unrelated tests/ dir proves
+# nothing about the language.
+PYTHON_SCRIPT_SHAPE_HINT = "a tests/ directory plus a *.py file at the repo root"
+
+
+def _has_python_evidence(repo: Path) -> bool:
+    if any((repo / name).is_file() for name in PYTHON_PACKAGING_EVIDENCE):
+        return True
+    if list(repo.glob("requirements*.txt")):
+        return True
+    if (repo / "tests").is_dir() and list(repo.glob("*.py")):
+        return True
+    return False
+
+
+def detect_ci_language(repo: Path) -> str:
+    has_bun = any((repo / name).is_file() for name in BUN_EVIDENCE)
+    has_python = _has_python_evidence(repo)
+    if has_bun and has_python:
+        raise Fail(
+            f"{repo} carries evidence of BOTH bun ({', '.join(BUN_EVIDENCE)}) "
+            f"and python ({', '.join(PYTHON_PACKAGING_EVIDENCE)}, "
+            f"requirements*.txt, or {PYTHON_SCRIPT_SHAPE_HINT}) — refusing to "
+            f"guess which CI task to install. Install .tekton/tasks/"
+            f"python-ci.yaml or bun-ci.yaml by hand instead.")
+    if has_bun:
+        return "bun"
+    if has_python:
+        return "python"
+    raise Fail(
+        f"{repo} has neither bun (one of {', '.join(BUN_EVIDENCE)}) nor "
+        f"python ({', '.join(PYTHON_PACKAGING_EVIDENCE)}, requirements*.txt, "
+        f"or {PYTHON_SCRIPT_SHAPE_HINT}) evidence — refusing to guess which "
+        f"CI task to install. Add the missing manifest, or install "
+        f".tekton/tasks/<lang>-ci.yaml by hand and skip this part with "
+        f"--skip ci.")
+
+
+def detect_repo_name(repo: Path) -> str:
+    """The slug that goes into the PipelineRun's name and the Task refs.
+    Prefers the origin remote's slug — the same source the justfile block
+    reads — and falls back to the directory's own name, which is all that is
+    left for a repo with no remote configured yet (a fresh `git init`, or a
+    test's scratch dir)."""
+    out = run(["git", "-C", str(repo), "remote", "get-url", "origin"],
+              check=False)
+    if out.returncode == 0:
+        url = out.stdout.decode().strip()
+        m = re.search(r"/([^/]+?)(?:\.git)?/?$", url)
+        if m:
+            return m.group(1)
+    return repo.name
+
+
+def _ci_body(name: str):
+    return lambda: find_bundled(name).read_text()
+
+
+def _on_pr_body(ctx: dict):
+    def render() -> str:
+        text = find_bundled("ci-on-pull-request.yaml").read_text()
+        subs = {
+            "@@REPO_NAME@@": ctx["repo_name"],
+            "@@CI_TASK_FILE@@": ctx["task_file"],
+            "@@CI_TASK_NAME@@": ctx["task_name"],
+            "@@CI_STORAGE@@": ctx["storage"],
+        }
+        for placeholder, value in subs.items():
+            text = text.replace(placeholder, value)
+        if "@@" in text:
+            raise Fail("ci-on-pull-request.yaml still has an unsubstituted "
+                       "@@…@@ placeholder — the template and this script "
+                       "disagree.")
+        return text
+    return render
+
+
+def ci_targets(ctx: dict) -> list[WholeFile]:
+    return [
+        WholeFile(part="ci", what=".tekton/on-pull-request.yaml",
+                  dest=".tekton/on-pull-request.yaml",
+                  body_fn=_on_pr_body(ctx)),
+        WholeFile(part="ci", what=f".tekton/tasks/{ctx['language']}-ci.yaml",
+                  dest=ctx["task_file"],
+                  body_fn=_ci_body(f"ci-{ctx['language']}-ci.yaml")),
+        WholeFile(part="ci", what=".tekton/tasks/commit-title-check.yaml",
+                  dest=".tekton/tasks/commit-title-check.yaml",
+                  body_fn=_ci_body("ci-commit-title-check.yaml")),
+        WholeFile(part="ci", what="OWNERS", dest="OWNERS",
+                  body_fn=_ci_body("ci-OWNERS")),
+    ]
+
+
+def install_ci(repo: Path, *, dry_run: bool, force: bool) -> int:
+    lang = detect_ci_language(repo)
+    ctx = {
+        "language": lang,
+        "task_file": f".tekton/tasks/{lang}-ci.yaml",
+        "task_name": f"{lang}-ci",
+        "storage": "1Gi" if lang == "python" else "2Gi",
+        "repo_name": detect_repo_name(repo),
+    }
+    rc = 0
+    for w in ci_targets(ctx):
+        rc = install_wholefile(w, repo, dry_run=dry_run, force=force) or rc
+    return rc
 
 
 def report_block(plan: dict, repo: Path, *, force: bool) -> None:
@@ -1099,12 +1402,15 @@ def main() -> int:
         # is not lost behind a successful grant.
         rc = 0
         blocks = [name for name in PARTS if name in parts and name in BLOCKS]
-        if blocks:
+        if blocks or "ci" in parts:
             repo_dir = resolve_repo(args.repo_dir)
             for name in blocks:
                 rc = install_block(BLOCKS[name], repo_dir,
                                    dry_run=args.dry_run,
                                    force=args.force_block) or rc
+            if "ci" in parts:
+                rc = install_ci(repo_dir, dry_run=args.dry_run,
+                                force=args.force_block) or rc
         if "grant" not in parts:
             return rc
 

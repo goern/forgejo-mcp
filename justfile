@@ -7,7 +7,7 @@
 check-demos:
     ./scripts/ci/check-spec-demo-anchors.sh
 
-# >>> enable-semantic-release v0.0.0-dev sha256:33fef0631a43 (managed block — do not edit) >>>
+# >>> enable-semantic-release v1.4.1 sha256:98b96f591752 (managed block — do not edit) >>>
 # Release tasks, installed by the enable-semantic-release skill.
 #
 # `just release` cuts a real release; everything else here exists so that the
@@ -29,20 +29,43 @@ sr_agent     := "b4mad-release-agent"
 # WHICH REMOTE IS THE RELEASE TARGET. Not hardcoded to `origin`: a checkout
 # whose `origin` is a personal fork and whose canonical repo is a second remote
 # is a normal arrangement, and hardcoding sent the Job at the fork — it would
-# clone stale code and hang the Release object off the wrong repo. The branch's
-# own tracking remote is the reliable answer to "where does my main live";
-# `origin` remains the fallback, so single-remote checkouts are unaffected.
-# Override for one run with `just sr_remote=origin <recipe>`.
+# clone stale code and hang the Release object off the wrong repo.
+#
+# `upstream` WINS OVER THE TRACKING REMOTE, which is the one thing experience
+# corrected. The tracking remote looks like the right answer and is not: in a
+# fork-based checkout `main` almost always tracks the fork, because that is
+# what `git clone` of your own fork sets up and what `git push` should keep
+# meaning. So the tracking remote re-elected the fork in exactly the layout
+# this variable exists to handle. Releases belong to the canonical repo — it
+# holds the tag history the next version is computed FROM (a tagless fork
+# computes 1.0.0 and is wrong every time) and it is where a bot can actually
+# be granted push. `upstream` is the near-universal name for it; the tracking
+# remote stays the fallback, then `origin`, so single-remote checkouts are
+# unaffected. Override for one run with `just sr_remote=origin <recipe>`.
 sr_remote := ```
-    r=$(git config --get "branch.$(git rev-parse --abbrev-ref HEAD 2>/dev/null).remote" 2>/dev/null || true)
-    printf '%s' "${r:-origin}"
+    if git remote get-url upstream >/dev/null 2>&1; then
+        printf 'upstream'
+    else
+        r=$(git config --get "branch.$(git rev-parse --abbrev-ref HEAD 2>/dev/null).remote" 2>/dev/null || true)
+        printf '%s' "${r:-origin}"
+    fi
 ```
 
 # shell() rather than backticks: backticks do NOT interpolate {{…}}, so a
 # plain `git remote get-url {{sr_remote}}` silently asks for a remote named
 # literally "{{sr_remote}}". shell() passes the value as $1 instead.
+#
+# The slug is the LAST TWO PATH SEGMENTS, not "whatever follows :<port>/". Once
+# the release remote stopped being `origin` it also stopped being reliably an
+# SSH URL: `upstream` is very often added as HTTPS, which has no :<port>/ to
+# anchor on, and the old expression then yielded the whole
+# https://host/owner/repo as the "slug" — a value that reaches the Job manifest
+# and hangs the Release off nothing. owner/repo is the one shape all three
+# forms (ssh://…:2222/o/r.git, https://host/o/r.git, git@host:o/r.git) share.
+# Only the slug is needed downstream, so an HTTPS remote is now fine: the Job
+# clones over SSH regardless, from the URL the manifest builds.
 sr_repo_url := shell("git remote get-url \"$1\"", sr_remote)
-sr_slug     := shell("git remote get-url \"$1\" | sed -E 's#.*:[0-9]+/##; s#\\.git$##'", sr_remote)
+sr_slug     := shell("git remote get-url \"$1\" | sed -E 's#\\.git$##; s#.*[/:]([^/]+/[^/]+)$#\\1#'", sr_remote)
 sr_repo     := shell("git remote get-url \"$1\" | sed -E 's#.*/##; s#\\.git$##'", sr_remote)
 
 # The Job manifest and the grant script both ship WITH the skill; a checkout
@@ -76,6 +99,15 @@ preflight:
     # whole failure this variable exists to prevent.
     echo "preflight for {{sr_slug}} (remote: {{sr_remote}}):"
     echo
+
+    # Warn, do not fail, when `origin` is the only candidate. A single-remote
+    # checkout is the common case and usually correct — but it is also what a
+    # fork looks like before anyone adds `upstream`, and that fork releases
+    # green off the wrong tag history. Naming the ambiguity is the whole fix;
+    # deciding it here would break every repo that legitimately has one remote.
+    if [ "{{sr_remote}}" = "origin" ] && ! git remote get-url upstream >/dev/null 2>&1; then
+        note "note" "no 'upstream' remote — releasing to origin ({{sr_slug}}). If this is a fork, that is the wrong repo: add upstream, or pass sr_remote=."
+    fi
 
     if ! command -v oc >/dev/null; then
         note "✗" "oc is not on PATH"; fail=1
@@ -201,4 +233,4 @@ clean-jobs:
     echo "$jobs"
     read -rp "delete these? [y/N] " a
     [ "$a" = "y" ] && oc -n {{sr_namespace}} delete $jobs || echo "left alone"
-# <<< enable-semantic-release v0.0.0-dev sha256:33fef0631a43 <<<
+# <<< enable-semantic-release v1.4.1 sha256:98b96f591752 <<<

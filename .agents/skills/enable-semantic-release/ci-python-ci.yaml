@@ -1,0 +1,64 @@
+# SPDX-FileCopyrightText: 2026 Christoph Görn
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# This repo's test gate: `python3 -m unittest discover -s tests`, installed by
+# the enable-semantic-release skill's `ci` part because a repo with pyproject.toml
+# and a tests/ directory was detected as a python project.
+#
+# Deliberately no pip install step. If this repo's suite needs a dependency,
+# add an install step here — do not assume: a stdlib-only test tree that
+# suddenly needs network access is a regression this task should surface, not
+# paper over.
+#
+# The image is ubi9/python-312 rather than docker.io/library/python:*-slim for
+# two reasons, both learned the hard way. It carries git, and a surprising
+# number of "stdlib only" suites shell out to git for scratch fixtures — the
+# slim images do not, and the failure reads as `FileNotFoundError: [Errno 2]
+# No such file or directory: 'git'`, which looks like a broken test rather
+# than a missing binary. And it comes from the Red Hat registry, so it is not
+# subject to Docker Hub's anonymous pull limits.
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: python-ci
+  annotations:
+    tekton.dev/displayName: "python unittest suite"
+spec:
+  description: |
+    Runs `python3 -m unittest discover -s tests`. Keep in lockstep with
+    whatever `just test` (or your task runner's equivalent) already runs, so
+    CI and a local run give the same answer.
+  params:
+    - name: PYTHON_IMAGE
+      description: Container image carrying python3.
+      type: string
+      default: registry.access.redhat.com/ubi9/python-312
+  workspaces:
+    - name: source
+      mountPath: /workspace/src
+  stepTemplate:
+    workingDir: $(workspaces.source.path)
+    env:
+      # The UBI images run as an arbitrary non-root UID that does not own the
+      # cloned tree, so writing __pycache__/ next to the sources fails with
+      # `PermissionError: [Errno 13]`. Park the bytecode in /tmp instead —
+      # nothing here needs it to persist.
+      - name: PYTHONPYCACHEPREFIX
+        value: /tmp/pycache
+  steps:
+    - name: unittest
+      image: $(params.PYTHON_IMAGE)
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        python3 --version
+        python3 -m unittest discover -s tests -v
+
+    - name: compile-check
+      image: $(params.PYTHON_IMAGE)
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        # Catches syntax errors in scripts the suite never imports.
+        python3 -m compileall -q .

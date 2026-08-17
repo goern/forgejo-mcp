@@ -1,0 +1,116 @@
+# SPDX-FileCopyrightText: 2026 Christoph Görn
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# Run the test suite and gate commit format on every pull request.
+#
+# Installed by the enable-semantic-release skill's `ci` part. @@CI_TASK_NAME@@
+# was chosen because this repo carries the evidence for it — see the skill's
+# language-detection note if that looks wrong.
+#
+# ⚠️ PREREQUISITE, and this pipeline does nothing until it is met: a PaC
+# `Repository` CR must exist for this repo (`oc get repository -A` lists the
+# ones already bound). The CR is what binds a repo to PaC; this file alone
+# does not create it — that is a separate, cluster-side step.
+#
+# ⚠️ Every taskRef MUST be listed in the pipelinesascode.tekton.dev/task
+# annotation below. PaC resolves task references from that annotation alone
+# and does NOT look at Tasks installed in any shared pipelines namespace. Both
+# tasks here are vendored under .tekton/tasks/ for that reason; git-clone is
+# the exception, resolving from the Tekton Hub catalog on the TektonConfig.
+#
+# ⚠️ This pipeline can run on PRs from forks. PaC will not start it unless the
+# PR author is authorised — a repo collaborator, listed in the root OWNERS
+# file, or covered by an /ok-to-test comment. That is why OWNERS exists at the
+# repo root; without it every fork PR is rejected with "not allowed to trigger
+# CI via pull_request in this repo".
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: "@@REPO_NAME@@-on-pull-request"
+  annotations:
+    # Docs-only PRs skip CI. files.all rather than files.modified so a PR that
+    # ADDS a source file is not waved through by its own documentation.
+    pipelinesascode.tekton.dev/on-cel-expression: |
+      event == "pull_request" && target_branch == "main" &&
+      files.all.exists(f, !(f.startsWith('docs/') || f.endsWith('.md')))
+    pipelinesascode.tekton.dev/task: "[git-clone, @@CI_TASK_FILE@@, .tekton/tasks/commit-title-check.yaml]"
+    pipelinesascode.tekton.dev/max-keep-runs: "5"
+    # A superseded PR run is worthless — the branch moved on, and this
+    # pipeline publishes nothing, so cancelling leaves no partial artifact
+    # behind.
+    pipelinesascode.tekton.dev/cancel-in-progress: "true"
+spec:
+  params:
+    - name: repo_url
+      value: "{{ repo_url }}"
+    - name: revision
+      value: "{{ revision }}"
+    # ⚠️ Deliberately the PR NUMBER, never the PR title. PaC substitutes
+    # payload values into the JSON manifest before any TaskRun exists, so a
+    # title containing a double quote breaks PipelineRun unmarshalling
+    # outright — and the substitution reaches remote task files too,
+    # including into `script:` blocks. A number cannot carry a payload;
+    # commit-title-check looks the title up over the API at runtime instead.
+    - name: pr_number
+      value: "{{ pull_request_number }}"
+    - name: base_ref
+      value: "{{ target_branch }}"
+  pipelineSpec:
+    params:
+      - name: repo_url
+      - name: revision
+      - name: pr_number
+      - name: base_ref
+    workspaces:
+      - name: source
+    tasks:
+      - name: fetch-source
+        taskRef:
+          name: git-clone
+        workspaces:
+          - name: output
+            workspace: source
+        params:
+          - name: url
+            value: $(params.repo_url)
+          - name: revision
+            value: $(params.revision)
+
+      - name: "@@CI_TASK_NAME@@"
+        taskRef:
+          name: "@@CI_TASK_NAME@@"
+        runAfter:
+          - fetch-source
+        workspaces:
+          - name: source
+            workspace: source
+
+      # Runs in parallel with @@CI_TASK_NAME@@, not after it: a bad commit
+      # subject is worth reporting even while the suite is still going, and
+      # neither depends on the other.
+      - name: commit-title-check
+        taskRef:
+          name: commit-title-check
+        runAfter:
+          - fetch-source
+        params:
+          - name: PR_NUMBER
+            value: $(params.pr_number)
+          - name: REPO_URL
+            value: $(params.repo_url)
+          - name: BASE_REF
+            value: $(params.base_ref)
+        workspaces:
+          - name: source
+            workspace: source
+
+  workspaces:
+    - name: source
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: "@@CI_STORAGE@@"

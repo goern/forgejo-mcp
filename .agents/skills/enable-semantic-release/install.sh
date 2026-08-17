@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+
+# SPDX-FileCopyrightText: 2026 Christoph Görn
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 # Install this skill into a project, for `npx skills` and Claude Code both.
 #
 # WHY a script and not `npx skills add`: that command works fine on a tarball
@@ -24,8 +29,8 @@ NAME="$(basename "$SKILL_DIR")"
 TARGET="$(cd "${1:-$PWD}" && pwd)"
 
 if [ "$TARGET" = "$(cd "$SKILL_DIR/../.." && pwd)" ]; then
-    echo "✗ $TARGET is forge-agents itself — the skill is already here." >&2
-    exit 1
+  echo "✗ $TARGET is forge-agents itself — the skill is already here." >&2
+  exit 1
 fi
 
 mkdir -p "$TARGET/.agents/skills" "$TARGET/.claude/skills"
@@ -36,12 +41,21 @@ ln -sfn "../../.agents/skills/$NAME" "$TARGET/.claude/skills/$NAME"
 # rather than silently serving a stale copy. Prove it resolves before claiming
 # success — a dangling symlink installs just as quietly as a good one.
 test -f "$TARGET/.claude/skills/$NAME/SKILL.md" \
-    || { echo "✗ $TARGET/.claude/skills/$NAME does not resolve" >&2; exit 1; }
+  || {
+    echo "✗ $TARGET/.claude/skills/$NAME does not resolve" >&2
+    exit 1
+  }
 test -f "$TARGET/.claude/skills/$NAME/job-semantic-release.yaml" \
-    || { echo "✗ the Job manifest did not come with it" >&2; exit 1; }
+  || {
+    echo "✗ the Job manifest did not come with it" >&2
+    exit 1
+  }
 for t in justfile-block.just agents-md-block.md; do
-    test -f "$TARGET/.claude/skills/$NAME/$t" \
-        || { echo "✗ the $t template did not come with it" >&2; exit 1; }
+  test -f "$TARGET/.claude/skills/$NAME/$t" \
+    || {
+      echo "✗ the $t template did not come with it" >&2
+      exit 1
+    }
 done
 
 echo "✔ $NAME installed into $TARGET (linked to $SKILL_DIR)"

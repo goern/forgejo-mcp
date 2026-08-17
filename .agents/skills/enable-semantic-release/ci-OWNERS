@@ -1,0 +1,36 @@
+# SPDX-FileCopyrightText: 2026 Christoph Görn
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# OWNERS — Pipelines as Code (PaC) authorization
+#
+# PaC (running in the cluster's pipelines namespace) reads this Prow-style file
+# from the DEFAULT branch to decide who may trigger a PipelineRun on a
+# pull_request without a maintainer commenting `/ok-to-test`.
+#
+# Why this repo needs one: PaC's Forgejo ACL recognises repo COLLABORATORS,
+# this file, or an `/ok-to-test` comment. Org membership does not count, so
+# without this file every pull_request event from a non-collaborator is
+# refused with "User <name> is not allowed to trigger CI via pull_request in
+# this repo" — even for an org owner.
+#
+# In PaC, `approvers` and `reviewers` have EQUAL power to trigger CI; only the
+# `.*` (root) scope is honored.
+#
+# b4mad-release-agent is listed below because enabling it is the whole point
+# of this skill: its release commit and tag push to main is itself a
+# CI-triggering event, and the GitHub-bot auto-exemption this pattern usually
+# relies on does not apply on Forgejo/Codeberg.
+#
+# ⚠️ This skill does NOT guess your human approvers/reviewers — a git remote's
+# owner segment is an org or a fork target, not necessarily a person with
+# review authority, and inventing a name here would be worse than an empty
+# list. Add yourself and your other maintainers below before relying on this
+# file to authorise your own pull requests.
+#
+# Docs: https://pipelinesascode.com/docs/guide/running/
+
+approvers:
+  - b4mad-release-agent
+  # - <your-forgejo-username>
+  # - <a-second-approver>

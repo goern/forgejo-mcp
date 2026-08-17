@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Christoph Görn
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 # The cluster-side equivalent of
 #
 #   podman run --rm -ti --userns=keep-id:uid=1001,gid=0 \

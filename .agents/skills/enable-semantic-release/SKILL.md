@@ -1,4 +1,8 @@
 ---
+# SPDX-FileCopyrightText: 2026 Christoph Görn
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 name: enable-semantic-release
 description: Grant b4mad-release-agent what it needs to run semantic-release on a Forgejo repo, install `just release`/`just preflight` into that repo's justfile and a short how-to into its AGENTS.md, then print the oc command that runs the release. Use when asked to "enable semantic-release for <repo>", to onboard a repo to the release Job, to add release targets to a justfile, or when a release push is rejected with "not allowed to push to branch".
 ---
@@ -19,6 +23,11 @@ enable-semantic-release/
   job-semantic-release.yaml      # and at openshift/job-semantic-release.yaml
   justfile-block.just            # the just targets it installs
   agents-md-block.md             # the how-to it installs into AGENTS.md
+  ci-on-pull-request.yaml        # templated: repo name, task file, storage
+  ci-python-ci.yaml              # installed verbatim when python is detected
+  ci-bun-ci.yaml                 # installed verbatim when bun is detected
+  ci-commit-title-check.yaml     # installed verbatim, always
+  ci-OWNERS                      # installed verbatim, always
 ```
 
 Those two symlinks are why there is one copy of each file rather than two: edit
@@ -32,8 +41,8 @@ forge-agents checkout:
 "$(dirname "$0")"/enable-semantic-release.py <url>    # from anywhere
 ```
 
-It does **three** things, named `grant`, `justfile` and `agents-md`, and any
-subset can be run alone with `--only` / `--skip`:
+It does **four** things, named `grant`, `justfile`, `agents-md` and `ci`, and
+any subset can be run alone with `--only` / `--skip`:
 
 1. **`grant`** — the four-part chain the docstring walks through. Needs `oc`,
    logged in to the cluster holding namespace `b4mad-forgejo`: the admin and
@@ -43,10 +52,17 @@ subset can be run alone with `--only` / `--skip`:
    appended to the target repo's justfile.
 3. **`agents-md`** — a ten-line "how you release here" appended to its
    AGENTS.md. It points at the targets rather than restating them.
+4. **`ci`** — a pull-request CI pipeline (Tekton/Pipelines-as-Code) installed
+   as four whole files: `.tekton/on-pull-request.yaml`,
+   `.tekton/tasks/{python,bun}-ci.yaml` (whichever the repo has evidence for),
+   `.tekton/tasks/commit-title-check.yaml`, and `OWNERS`. See "The `ci` files"
+   below.
 
 (2) and (3) are **managed blocks**: same fence, same version, same hash, same
 rules, one implementation (`class Managed`). They need nothing but git, which
-is why `--skip grant` is the half you can exercise anywhere.
+is why `--skip grant` is the half you can exercise anywhere. (4) needs nothing
+but git either — see its own section for why it is not a fifth `Managed`
+consumer.
 
 ## When to use
 
@@ -140,9 +156,10 @@ and then the fence. Edit `justfile-block.just`, never the installed copy.
 ### The AGENTS.md how-to
 
 Ten lines: the Job releases the release remote's `main` from the forge — that
-is the current branch's tracking remote, `origin` unless the checkout says
-otherwise, printed by `just preflight` and overridable with
-`just sr_remote=<name> …` — and never sees your
+is `upstream` when it exists, else the current branch's tracking remote, else
+`origin`; `preflight` warns when `origin` is the only candidate, because that
+is what an un-configured fork looks like. Printed by `just preflight` and
+overridable with `just sr_remote=<name> …` — and never sees your
 working tree, `just preflight` before `just release`, commits must be
 conventional. It points at the just targets; it does not restate them. Edit
 `agents-md-block.md`.
@@ -158,6 +175,87 @@ conventional. It points at the just targets; it does not restate them. Edit
   loud `⚠️ NOTE` that `CLAUDE.md` was not touched. It never writes two files:
   two copies of one instruction set is how they come to disagree, and this tool
   can only keep one of them honest.
+
+### The `ci` files
+
+`Managed` splices a block into a file it does not own — the whole point is
+that other, hand-written content survives on both sides. The four `ci`
+targets are not like that: `.tekton/on-pull-request.yaml`, one of
+`.tekton/tasks/python-ci.yaml` / `.tekton/tasks/bun-ci.yaml`,
+`.tekton/tasks/commit-title-check.yaml`, and `OWNERS` are each installed
+**whole** — there is no splice, because there is nothing else in these files
+that isn't this skill's. A second implementation of the six-answer decision
+(`class WholeFile`) covers them, reusing the same `body_hash`/`version_key`
+free functions `Managed` uses rather than duplicating the version/hash logic —
+the question ("is this mine, is it current, is it edited, is it newer") is
+identical, only the marker is a single header **line** at the top of the
+file (`# >>> enable-semantic-release v… sha256:… (managed file — do not edit
+by hand) >>>`) instead of an open/close fence, and a stale copy is replaced
+**whole** rather than spliced in place.
+
+| Situation | What happens | Exit |
+| --- | --- | --- |
+| file absent | creates it, header + content | 0 |
+| file present, no header (hand-written or foreign) | ⚠️ writes nothing | 1 |
+| header present, same version, hash matches | no-op | 0 |
+| header present, older version, hash matches (unedited) | replaces the whole file, no flag needed | 0 |
+| header present, **newer** version than this skill | ⚠️ that would be a downgrade: writes nothing | 2 |
+| header present, hash does not match its version | ⚠️ you edited it: writes nothing | 2 |
+| any of the three ⚠️ rows with `--force-block` | writes anyway | 0 |
+
+The one place this differs from `Managed`: a whole-file clash (no header at
+all) is exit 1 like a justfile clash, but — unlike a justfile clash —
+`--force-block` **does** lift it. A justfile clash is fatal-without-a-flag
+because *appending* past it would define a name twice and break `just`'s
+parse; a whole-file install never appends, so overwriting a hand-written copy
+has nothing else in the file left to break. The exit code (1, matching a hard
+clash) signals "this needs a human's attention", not "no flag can help".
+
+**Language detection**, for choosing `python-ci.yaml` vs `bun-ci.yaml`, is
+evidence-based and never guesses: `package.json` or a `bun.lock`/`bun.lockb`
+→ bun; any of `pyproject.toml`, `setup.py`, `setup.cfg`, `requirements*.txt`
+→ python on its own — a packaging file is sufficient even before the repo has
+any tests, since `python-ci.yaml`'s `unittest discover -s tests` just finds
+nothing to run rather than breaking. A repo with **no** packaging file at all
+— stdlib scripts and nothing to `pip install`, forge-agents' own shape —
+still counts as python if it has a `tests/` directory **and** at least one
+`*.py` file at the repo root; `tests/` alone does not, since an empty or
+unrelated `tests/` proves nothing by itself. Both bun and python evidence
+present, or neither, refuses outright (exit 1) rather than picking one — a
+wrong guess here is a pipeline that is silently always red. `--repo-dir`
+controls where the evidence is looked for, same as everywhere else.
+
+**Templating.** `.tekton/on-pull-request.yaml` is the one file with
+placeholders: the PipelineRun name and the `pipelinesascode.tekton.dev/task`
+annotation are filled in from the detected language, and the PVC storage
+request (`1Gi` python / `2Gi` bun — go through a checkout without a lockfile
+to reproduce). The repo name comes from the `origin` remote's slug, falling
+back to the `--repo-dir` directory's own basename when there is no remote yet
+(a fresh `git init`, or a scratch dir). `.tekton/tasks/commit-title-check.yaml`
+is deliberately **not** templated — it is meant to read byte-identical
+everywhere, matching the hand-copied original at
+`agentic-forges/forgejo-mcp/.tekton/tasks/commit-title-check.yaml`, because
+PaC resolves task references from the pipeline's own annotation and cannot
+reach into another repo, so a shared task has to be a literal copy kept in
+sync by hand rather than a reference.
+
+**`OWNERS` is deliberately NOT templated with human names.** It ships with
+exactly one entry, `b4mad-release-agent` — because granting it is the whole
+point of this skill, and its release push is itself a CI-triggering event
+that needs the same authorisation any other push does. The script does **not**
+guess your human approvers from the git remote's owner segment: that segment
+is an org or a fork target, not necessarily a person with review authority,
+and a wrong guess in an access-control file is worse than an empty one. The
+installed file carries a `⚠️` comment and two commented-out placeholder lines
+telling you to add yourself and your co-maintainers before relying on it.
+
+**What `ci` does NOT do.** It does not create the Pipelines-as-Code
+`Repository` CR that binds the repo to the cluster — `oc get repository -A`
+either lists this repo or it does not, and if it does not, the installed
+pipeline is inert until a human (or a deliberate agent) adds it under
+GitOps, same as any other repo onboarding to PaC. It does not touch branch
+protection. It does not run a release, or anything else `grant` does — `ci`
+and `grant` are independent parts and neither implies the other.
 
 ### Markers
 
@@ -255,15 +353,16 @@ running this skill is expected to have read it.
 | `--dry-run` | plan every part, change nothing. Excludes `--force*`. |
 | `--force` | permit grant steps that widen access beyond this repo |
 | `--force-block` | permit replacing a hand-edited managed block, or appending past a soft clash |
-| `--only PARTS` | comma-separated subset of `grant,justfile,agents-md` |
+| `--only PARTS` | comma-separated subset of `grant,justfile,agents-md,ci` |
 | `--skip PARTS` | everything except those |
 | `--repo-dir DIR` | which repo's files (default: git top level of the cwd) |
 
 `--only`/`--skip` rather than a `--no-X` and an `--X-only` per part: three parts
-would have meant six such flags, a fourth part eight. One pair that takes part
-names says the same thing and composes — `--only agents-md --force-block` scopes
-a force to one file. `just preflight` calls the script with `--only grant`, so it
-cannot rewrite the justfile it is running from.
+would have meant six such flags, and the fourth (`ci`) would have meant eight.
+One pair that takes part names says the same thing and composes — `--only
+agents-md --force-block` scopes a force to one file. `just preflight` calls the
+script with `--only grant`, so it cannot rewrite the justfile it is running
+from.
 
 ⚠️ `--force` and `--force-block` are separate on purpose and must stay separate:
 one consents to widening a bot's access on the forge, the other to losing your
@@ -272,13 +371,16 @@ silently authorise the first.
 
 ## Tests
 
-`just test` — stdlib `unittest`, in `tests/`, 71 cases covering both consumers:
-round-trip writer→reader across both comment syntaxes and seven version
-strings, fence integrity, all seven planner actions, `--dry-run` writing
-nothing in every one of them, the splice preserving content on both sides, the
-AGENTS.md file-choice matrix, the clash asymmetry, version ordering, and — where
-`just` is installed, skipped cleanly otherwise — that generated justfiles
-actually parse.
+`just test` — stdlib `unittest`, in `tests/`, 103 cases covering all three
+consumers: round-trip writer→reader across both `Managed` comment syntaxes and
+seven version strings, fence integrity, all seven planner actions, `--dry-run`
+writing nothing in every one of them, the splice preserving content on both
+sides, the AGENTS.md file-choice matrix, the clash asymmetry (justfile's fatal
+vs. AGENTS.md's and `ci`'s liftable), version ordering, the `ci` part's
+`WholeFile` lifecycle (create/clash/no-op/update/downgrade/edited, each with
+and without `--force-block`), its language detection (both languages, and the
+ambiguous/neither refusals), and — where `just` is installed, skipped cleanly
+otherwise — that generated justfiles actually parse.
 
 Hermetic: scratch dirs only, no cluster, no network. The grant path is **not**
 covered; it needs a live Forgejo and a live Secret, and a mock forge would test
@@ -314,3 +416,10 @@ test` is a separate hand-maintained target above the fence.
 - Never edit branch protection by hand to work around a refusal. If the script
   declined, it declined for a reason written in the docstring.
 - `--dry-run` and `--force` are mutually exclusive; the script rejects the pair.
+- A `ci` clash (an existing `.tekton/*.yaml` or `OWNERS` with no
+  enable-semantic-release header) is a prompt to *read the file* before
+  reaching for `--force-block` — it means the repo already has hand-written
+  CI or an ACL there, and overwriting it is a bigger loss than an AGENTS.md
+  append: there is no splice, so the whole file goes.
+- Never invent human names for `OWNERS`. Add yourself and your co-maintainers
+  by hand; the script deliberately ships it with only `b4mad-release-agent`.

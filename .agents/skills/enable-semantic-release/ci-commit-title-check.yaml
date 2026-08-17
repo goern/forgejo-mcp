@@ -1,0 +1,176 @@
+# SPDX-FileCopyrightText: 2026 Christoph Görn
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# VENDORED from agentic-forges/forgejo-mcp/.tekton/tasks/commit-title-check.yaml
+# (by way of agentic-forges/castra, which carries an identical copy).
+#
+# Same file, same Task name, kept in sync BY HAND — PaC resolves task references
+# from the pipelinesascode.tekton.dev/task annotation alone and will not reach
+# into another repo, so a shared task has to be copied rather than referenced.
+# If the forgejo-mcp copy changes, copy it here again.
+#
+# The only local change is CC_REGEX: this repo's .releaserc declares a
+# `no-release` type, which the upstream regex would reject.
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: commit-title-check
+  annotations:
+    tekton.dev/displayName: "Conventional Commits PR title + commit message check"
+spec:
+  description: |
+    Gate Conventional Commits format BEFORE merge. semantic-release reads
+    individual commit titles post-merge (see .releaserc); a malformed title
+    silently dropped a release in the past. This task fails the PR early
+    instead of waiting for the post-merge release pipeline to no-op.
+
+    Checks:
+      1. PR title (fetched from the forge API using PR_NUMBER) matches
+         Conventional Commits.
+      2. Every commit on the PR branch (revision..origin/main..HEAD on the
+         clone) matches the same regex. Merge commits are skipped.
+
+    The regex accepts the type allow-list from .releaserc plus 'revert'.
+    Optional scope (`(scope)`), optional breaking marker (`!`), required
+    colon+space+subject. Allows gitmoji or any character in subject.
+
+    The title is fetched at runtime rather than passed in as a PaC dynamic
+    variable. PaC substitutes payload values into the JSON manifest, so a
+    title containing a double quote breaks PipelineRun unmarshalling before
+    any TaskRun exists, and the substitution reaches remote task files too —
+    including into `script:` blocks. Taking a numeric PR number and looking
+    the title up over HTTP removes that surface rather than escaping it.
+  params:
+    - name: PR_NUMBER
+      description: |
+        Pull request number, from the PAC dynamic variable
+        pull_request_number. Numeric, so it cannot carry a payload.
+      type: string
+    - name: REPO_URL
+      description: |
+        Clone URL of the repository, e.g.
+        https://forge.example.com/owner/repo. The API base and the
+        owner/repo pair are derived from it.
+      type: string
+    - name: BASE_REF
+      description: Base branch to diff PR commits against.
+      type: string
+      default: main
+    - name: GIT_IMAGE
+      description: |
+        Image carrying git + bash + grep. Reuses release-tools because it is
+        already pulled by go-ci on every PR run.
+      type: string
+      default: codeberg.org/operate-first/release-tools:latest
+    - name: CC_REGEX
+      description: |
+        Conventional Commits regex (anchored, ERE). The type list is this
+        repo's .releaserc releaseRules plus `revert` — `no-release` is in there
+        because .releaserc maps it to `release: false`, so it is a type a
+        commit may legitimately carry.
+      type: string
+      default: '^(feat|fix|docs|style|refactor|perf|test|ci|chore|build|revert|no-release)(\([^)]+\))?!?: .+'
+  workspaces:
+    - name: source
+      mountPath: /workspace/src
+  stepTemplate:
+    workingDir: $(workspaces.source.path)
+  steps:
+    - name: check-pr-title
+      image: $(params.GIT_IMAGE)
+      env:
+        - name: PR_NUMBER
+          value: $(params.PR_NUMBER)
+        - name: REPO_URL
+          value: $(params.REPO_URL)
+        - name: CC_REGEX
+          value: $(params.CC_REGEX)
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        if [ -z "${PR_NUMBER}" ]; then
+          echo "PR_NUMBER param is empty — cannot validate Conventional Commits format." >&2
+          echo "Hint: the PipelineRun must pass the PR number as PR_NUMBER." >&2
+          exit 1
+        fi
+
+        # https://forge/owner/repo -> api_base=https://forge, slug=owner/repo
+        url="${REPO_URL%.git}"
+        slug="${url#*://*/}"
+        api_base="${url%/"${slug}"}"
+        api="${api_base}/api/v1/repos/${slug}/pulls/${PR_NUMBER}"
+
+        echo "Fetching PR title: ${api}"
+        if ! body=$(curl -fsSL --max-time 30 "${api}"); then
+          echo "::error::Could not fetch PR #${PR_NUMBER} from ${api}" >&2
+          exit 1
+        fi
+        # -r prints the raw string; the title is data here, never evaluated.
+        PR_TITLE=$(printf '%s' "${body}" | jq -r '.title // empty')
+        if [ -z "${PR_TITLE}" ]; then
+          echo "::error::PR #${PR_NUMBER} has no title in the API response." >&2
+          exit 1
+        fi
+        printf 'PR title: %s\n' "${PR_TITLE}"
+        if printf '%s' "${PR_TITLE}" | grep -Eq "${CC_REGEX}"; then
+          echo "OK: PR title matches Conventional Commits."
+        else
+          echo "::error::PR title does not match Conventional Commits format." >&2
+          echo "Expected regex: ${CC_REGEX}" >&2
+          echo "Allowed types: feat, fix, docs, style, refactor, perf, test, ci, chore, build, revert, no-release" >&2
+          echo "Examples:" >&2
+          echo "  feat(api): add /healthz endpoint" >&2
+          echo "  fix: handle nil session token" >&2
+          echo "  chore(release): 2.25.1" >&2
+          exit 1
+        fi
+
+    - name: check-commits
+      image: $(params.GIT_IMAGE)
+      env:
+        - name: BASE_REF
+          value: $(params.BASE_REF)
+        - name: CC_REGEX
+          value: $(params.CC_REGEX)
+      script: |
+        #!/usr/bin/env bash
+        # Validate each commit unique to the PR branch. Skips merge commits
+        # (--no-merges) — their subject is generated by Forgejo and is not
+        # what semantic-release reads.
+        set -euo pipefail
+        git config --global --add safe.directory "$(workspaces.source.path)"
+        git fetch --no-tags --depth=200 origin "${BASE_REF}:refs/remotes/origin/${BASE_REF}" || \
+          git fetch --no-tags origin "${BASE_REF}:refs/remotes/origin/${BASE_REF}"
+
+        range="origin/${BASE_REF}..HEAD"
+        echo "Checking commits in range: ${range}"
+
+        # Bail out clean if PR branch is empty relative to base (no commits to check).
+        if ! git rev-list --no-merges "${range}" --count >/dev/null 2>&1; then
+          echo "No commits found in range — nothing to validate."
+          exit 0
+        fi
+        count=$(git rev-list --no-merges "${range}" --count)
+        if [ "${count}" -eq 0 ]; then
+          echo "No non-merge commits in range — nothing to validate."
+          exit 0
+        fi
+
+        failed=0
+        while IFS=$'\t' read -r sha subject; do
+          if printf '%s' "${subject}" | grep -Eq "${CC_REGEX}"; then
+            printf '  OK   %s %s\n' "${sha}" "${subject}"
+          else
+            printf '  FAIL %s %s\n' "${sha}" "${subject}" >&2
+            failed=$((failed + 1))
+          fi
+        done < <(git log --no-merges --format='%h%x09%s' "${range}")
+
+        if [ "${failed}" -gt 0 ]; then
+          echo "::error::${failed} commit(s) do not match Conventional Commits format." >&2
+          echo "Rewrite history (git rebase -i origin/${BASE_REF}) so every commit matches:" >&2
+          echo "  ${CC_REGEX}" >&2
+          exit 1
+        fi
+        echo "OK: ${count} commit(s) match Conventional Commits."

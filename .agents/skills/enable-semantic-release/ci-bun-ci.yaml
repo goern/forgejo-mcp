@@ -1,0 +1,91 @@
+# SPDX-FileCopyrightText: 2026 Christoph Görn
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# This repo's build/lint/typecheck/test gate, installed by the
+# enable-semantic-release skill's `ci` part because a package.json or bun.lock
+# was detected. Mirrors agentic-forges/castra's bun-ci.yaml, generalised: no
+# specific commands are assumed beyond the bun scripts every bun project
+# defines.
+#
+# The image should be pinned to whatever bun a Containerfile in this repo
+# builds from, if there is one — deliberately: CI that passes on a different
+# bun than the shipped image is CI that can green-light a build the image
+# cannot run.
+#
+# Every step runs in the SAME workspace, so `bun install` in step one
+# populates node_modules for the steps after it. Do not reorder without moving
+# the install with it.
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: bun-ci
+  annotations:
+    tekton.dev/displayName: "bun install + lint + typecheck + test"
+spec:
+  description: |
+    Runs the gates a change has to clear: lint, typecheck, test — the same
+    order pre-commit runs them locally, so the first one to fail here is
+    almost always one pre-commit already caught on staged files. This task's
+    reason to exist is running them on the WHOLE tree, which pre-commit never
+    does.
+  params:
+    - name: BUN_IMAGE
+      description: Container image carrying the bun toolchain.
+      type: string
+      default: docker.io/oven/bun:1
+    - name: LINT_REQUIRED
+      description: |
+        If "true", lint findings fail the build. If "false", lint runs but
+        its exit code is ignored (warn-only).
+      type: string
+      default: "true"
+  workspaces:
+    - name: source
+      mountPath: /workspace/src
+  stepTemplate:
+    workingDir: $(workspaces.source.path)
+    env:
+      - name: BUN_INSTALL_CACHE_DIR
+        value: /workspace/src/.buncache
+  steps:
+    - name: install
+      image: $(params.BUN_IMAGE)
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        bun --version
+        # --frozen-lockfile: a PR that changes package.json without updating
+        # bun.lock fails HERE, loudly, rather than resolving to something an
+        # image build would not reproduce.
+        bun install --frozen-lockfile
+
+    - name: lint
+      image: $(params.BUN_IMAGE)
+      env:
+        - name: LINT_REQUIRED
+          value: $(params.LINT_REQUIRED)
+      script: |
+        #!/usr/bin/env bash
+        set -uo pipefail
+        bun run lint
+        rc=$?
+        if [ "$rc" -ne 0 ] && [ "${LINT_REQUIRED}" != "true" ]; then
+          echo "::warning::lint reported findings; LINT_REQUIRED is not 'true', continuing."
+          exit 0
+        fi
+        exit "$rc"
+
+    - name: typecheck
+      image: $(params.BUN_IMAGE)
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        bun run typecheck
+
+    - name: test
+      image: $(params.BUN_IMAGE)
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        bun test
