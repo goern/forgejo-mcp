@@ -43,7 +43,11 @@ Labels currently live in `operation/issue/issue.go`. The new tools and `resource
 ### D6: Label resources follow `mcp-resources-core` verbatim
 
 - `forgejo://repo/{owner}/{repo}/label/{id}` → single `application/json` block; `id` parsed by a new `ParseLabel` helper rejecting non-numeric ids with `-32602`.
-- `forgejo://repo/{owner}/{repo}/labels` → bounded embedded list. Request `EmbeddedListCap+1` items so `Bounded`'s `>cap` check fires; the truncation sentinel names the `list_repo_labels` tool as the enumeration fallback (mirrors the issue-domain `resources.go` pattern).
+- `forgejo://repo/{owner}/{repo}/labels{?page,limit}` → bounded embedded list. Request exactly the caller's `limit`; the truncation sentinel names the `list_repo_labels` tool as the enumeration fallback (mirrors the issue-domain `resources.go` pattern).
+
+  The `{?…}` expansion is load-bearing, not documentation: mcp-go matches a read against an anchored regexp built from the registered template string, so a template registered bare matches only the bare URI and every query-bearing read fails before any handler runs.
+
+  This decision originally read "request `EmbeddedListCap+1` items so `Bounded`'s `>cap` check fires". That was wrong and shipped a defect. Upstream computes the offset as `(page-1)*PageSize`, so over-fetching by one while showing only `limit` rows makes page N+1 begin one row past the last row page N showed — a row no page can return. The probe and the page cannot share `PageSize`. "More exists" comes from the response instead: `Link … rel="next"`, with `X-Total-Count` for the total.
 - Both reuse the singleton `pkg/forgejo` client; private-repo reads map `403`→`-32002`, `404`→`-32003` via `MapForgejoError`.
 
 ### D7: `labels` (plural) list vs `label/{id}` (singular) — follow the established scheme
