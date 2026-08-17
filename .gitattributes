@@ -2,6 +2,18 @@
 # Use bd merge for beads JSONL files
 .beads/issues.jsonl merge=beads
 
+# Append-only audit log of bead field changes. Concurrent sessions (two agents,
+# or a worktree and the primary checkout) both append, so every branch that
+# touches a bead conflicts on the same trailing lines. `union` concatenates both
+# sides instead: it is built into git — no driver to configure, unlike merge=beads
+# above — and duplicate records are inert because each line carries a unique id.
+#
+# This file is tracked on purpose. `.beads/.gitignore` excludes the Dolt database
+# and every per-machine runtime file, and this project does not run `bd dolt push`
+# (sync.remote still points at the dead pre-migration URL), so this log is the only
+# record of bead activity — including close reasoning — that leaves the machine.
+.beads/interactions.jsonl merge=union
+
 # Vendored agent skills. Tracked on purpose — skills-lock.json pins no commit,
 # so these files are the only reviewable record of what our agents are told to
 # do. Marked generated so they collapse in diffs and stay out of review noise.
