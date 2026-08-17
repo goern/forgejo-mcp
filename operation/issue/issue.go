@@ -49,8 +49,13 @@ type ScopedLabel struct {
 
 // fetchOrgLabels GETs /orgs/{org}/labels via the raw-HTTP helper and
 // stamps each result with scope="org". A 404 is mapped to an empty slice
-// by DoJSONList. 401/403 surface as forgejo.ErrUnauthorized.
-func fetchOrgLabels(ctx context.Context, org string, page, limit int) ([]ScopedLabel, error) {
+// by DoJSONListWithHeader. 401/403 surface as forgejo.ErrUnauthorized.
+//
+// The response headers come back alongside the labels because the bounded
+// org-labels resource pages: it requests exactly the caller's limit and reads
+// Link/X-Total-Count to decide whether more rows exist. Tool callers that
+// enumerate without bounds can discard them.
+func fetchOrgLabels(ctx context.Context, org string, page, limit int) ([]ScopedLabel, http.Header, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -59,14 +64,15 @@ func fetchOrgLabels(ctx context.Context, org string, page, limit int) ([]ScopedL
 	}
 	path := forgejo.APIPath("orgs", org, "labels") + fmt.Sprintf("?page=%d&limit=%d", page, limit)
 	var raw []*forgejo_sdk.Label
-	if err := forgejo.DoJSONList(ctx, http.MethodGet, path, &raw); err != nil {
-		return nil, err
+	header, err := forgejo.DoJSONListWithHeader(ctx, http.MethodGet, path, &raw)
+	if err != nil {
+		return nil, header, err
 	}
 	out := make([]ScopedLabel, 0, len(raw))
 	for _, l := range raw {
 		out = append(out, ScopedLabel{Label: l, Scope: "org"})
 	}
-	return out, nil
+	return out, header, nil
 }
 
 const (
@@ -908,7 +914,7 @@ func ListRepoLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	}
 
 	if includeOrg {
-		orgLabels, oerr := fetchOrgLabels(ctx, owner, int(page), int(limit))
+		orgLabels, _, oerr := fetchOrgLabels(ctx, owner, int(page), int(limit))
 		if oerr != nil {
 			return to.ErrorResult(fmt.Errorf("list org labels err: %w", oerr))
 		}
@@ -931,7 +937,7 @@ func ListOrgLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToo
 		limit = 100
 	}
 
-	labels, err := fetchOrgLabels(ctx, org, int(page), int(limit))
+	labels, _, err := fetchOrgLabels(ctx, org, int(page), int(limit))
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list org labels err: %w", err))
 	}

@@ -43,7 +43,13 @@ Labels currently live in `operation/issue/issue.go`. The new tools and `resource
 ### D6: Label resources follow `mcp-resources-core` verbatim
 
 - `forgejo://repo/{owner}/{repo}/label/{id}` → single `application/json` block; `id` parsed by a new `ParseLabel` helper rejecting non-numeric ids with `-32602`.
-- `forgejo://repo/{owner}/{repo}/labels` → bounded embedded list. Request `EmbeddedListCap+1` items so `Bounded`'s `>cap` check fires; the truncation sentinel names the `list_repo_labels` tool as the enumeration fallback (mirrors the issue-domain `resources.go` pattern).
+- `forgejo://repo/{owner}/{repo}/labels{?page,limit}` → bounded embedded list. Request exactly the caller's `limit`; the truncation sentinel names the `list_repo_labels` tool as the enumeration fallback (mirrors the issue-domain `resources.go` pattern).
+
+  The `{?…}` expansion is load-bearing, not documentation: mcp-go matches a read against an anchored regexp built from the registered template string, so a template registered bare matches only the bare URI and every query-bearing read fails before any handler runs.
+
+  The same applies to `forgejo://org/{org}/labels` below — it carried both defects and both fixes.
+
+  This decision originally read "request `EmbeddedListCap+1` items so `Bounded`'s `>cap` check fires". That was wrong and shipped a defect. See **C4**, which corrected the same mistake in the spec and tasks but did not reach this rationale or the `mcp-resources-core` collection requirement — which is why both went stale and the defect survived. Upstream computes the offset as `(page-1)*PageSize`, so over-fetching by one while showing only `limit` rows makes page N+1 begin one row past the last row page N showed — a row no page can return. The probe and the page cannot share `PageSize`. "More exists" comes from the response instead: `Link … rel="next"`, with `X-Total-Count` for the total.
 - Both reuse the singleton `pkg/forgejo` client; private-repo reads map `403`→`-32002`, `404`→`-32003` via `MapForgejoError`.
 
 ### D7: `labels` (plural) list vs `label/{id}` (singular) — follow the established scheme
@@ -99,7 +105,7 @@ Debate team: `adversary` (devils-advocate), `defender` (proponent), `lens-api-ev
 - **C1 — repo in-use count cited an unreachable header.** D9 said "read `X-Total-Count`", but `DoJSON` never returns `resp.Header`. Rerouted to SDK `ListRepoIssues` pagination (`*Response`). (D9, proposal, tasks 1.2, resolved open question.)
 - **C2 — org list URI sat on the user-first `owner` root.** Labels are org-only; `forgejo://owner/{user}/labels` would 404 ambiguously. Renamed to `forgejo://org/{org}/labels` (new `org` root, matches `/orgs/{org}/labels`). (proposal, design, spec, tasks.)
 - **C3 — org in-use count is unsound under token visibility.** A label used in a private repo the token can't list is invisible → undercount → false assurance. Reframed as best-effort; refusal message now discloses the visibility limit; corrected the "fail-closed" mislabel (`force` is a destructive override, not a block). (D9, risks, spec scenario.)
-- **C4 — `EmbeddedListCap=30` with no caller knob contradicted the spec's own output-bounding claim.** Added client-controlled `page`/`limit` to both list resources; `EmbeddedListCap` is now the ceiling, not the only bound. (mcp-resource-label spec, tasks 4.4–4.5.)
+- **C4 — `EmbeddedListCap=30` with no caller knob contradicted the spec's own output-bounding claim.** Added client-controlled `page`/`limit` to both list resources; `EmbeddedListCap` is now the ceiling, not the only bound. (mcp-resource-label spec, tasks 4.4–4.5.) **Incompletely applied:** the edit did not reach D6 or the `mcp-resources-core` collection requirement, both of which kept describing the pre-C4 model. D6 still prescribed the `EmbeddedListCap+1` over-fetch, and the code was written from it — the defect fixed in PR #504. Both were corrected there; a correction that lists the files it touched is only as good as that list.
 - **C5 (partial) — 3-digit hex was an unverified `SHALL`.** Dropped to 6-digit-only (fail-closed); shorthand returns only with a normative expansion scenario. Org get-one endpoint existence + color shorthand are now pre-code verification gates in Open Questions. (D3, spec, tasks 1.1, Open Questions.)
 - **Lens — reserved `exclusive`/`is_archived`; scope-less `forgejo://label/{id}` forbidden.** Recorded forward-compat note + parser rejection task. (Open Questions, mcp-resource-label spec, task 4.6.)
 

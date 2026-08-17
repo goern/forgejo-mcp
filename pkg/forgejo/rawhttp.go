@@ -167,21 +167,32 @@ func httpErrorFromResponse(req *http.Request, resp *http.Response) *HTTPError {
 // For list endpoints where a 404 should mean "empty list" (Forgejo's habit
 // when the parent entity has no children), use DoJSONList instead.
 func DoJSON(ctx context.Context, method, pathOrURL string, body, out any) error {
+	_, err := doJSONWithHeader(ctx, method, pathOrURL, body, out)
+	return err
+}
+
+// doJSONWithHeader is DoJSON's body, additionally returning the response
+// headers. Paged list endpoints need them: Forgejo reports the total in
+// X-Total-Count and "another page exists" in Link … rel="next", and a bounded
+// resource that must not over-fetch has no other way to detect truncation.
+// The header is returned even on error when a response was received, so a
+// caller mapping a 404 to "empty list" still sees whatever the server said.
+func doJSONWithHeader(ctx context.Context, method, pathOrURL string, body, out any) (http.Header, error) {
 	full, err := resolveURL(pathOrURL)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	var bodyReader io.Reader
 	if body != nil {
 		buf, err := json.Marshal(body)
 		if err != nil {
-			return fmt.Errorf("marshal body: %w", err)
+			return nil, fmt.Errorf("marshal body: %w", err)
 		}
 		bodyReader = bytes.NewReader(buf)
 	}
 	req, err := http.NewRequestWithContext(ctx, method, full, bodyReader)
 	if err != nil {
-		return fmt.Errorf("build request: %w", err)
+		return nil, fmt.Errorf("build request: %w", err)
 	}
 	setCommonHeaders(ctx, req)
 	if body != nil {
@@ -189,32 +200,40 @@ func DoJSON(ctx context.Context, method, pathOrURL string, body, out any) error 
 	}
 	resp, err := doRequest(ctx, req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return httpErrorFromResponse(req, resp)
+		return resp.Header, httpErrorFromResponse(req, resp)
 	}
 	if resp.StatusCode == http.StatusNoContent || out == nil {
 		_, _ = io.Copy(io.Discard, resp.Body)
-		return nil
+		return resp.Header, nil
 	}
 	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
-		return fmt.Errorf("decode response: %w", err)
+		return resp.Header, fmt.Errorf("decode response: %w", err)
 	}
-	return nil
+	return resp.Header, nil
 }
 
 // DoJSONList is like DoJSON but treats 404 as "empty list" (no error,
 // out left at its zero value).
 func DoJSONList(ctx context.Context, method, pathOrURL string, out any) error {
-	err := DoJSON(ctx, method, pathOrURL, nil, out)
+	_, err := DoJSONListWithHeader(ctx, method, pathOrURL, out)
+	return err
+}
+
+// DoJSONListWithHeader is DoJSONList plus the response headers, for paged list
+// endpoints that must read X-Total-Count / Link to bound their output without
+// over-fetching. On the 404-means-empty path the headers are still returned.
+func DoJSONListWithHeader(ctx context.Context, method, pathOrURL string, out any) (http.Header, error) {
+	header, err := doJSONWithHeader(ctx, method, pathOrURL, nil, out)
 	var he *HTTPError
 	if errors.As(err, &he) && he.StatusCode == http.StatusNotFound {
-		return nil
+		return header, nil
 	}
-	return err
+	return header, err
 }
 
 // DoAPIRaw performs an authenticated GET against an API path and reads at most
