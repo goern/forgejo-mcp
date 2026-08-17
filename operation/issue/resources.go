@@ -54,6 +54,16 @@ func RegisterIssueResources(s *server.MCPServer) {
 	// Our own parsing tolerates the raw slash; the client never gets that far.
 	// Slash-shaped label vocabularies (Kind/…, Status/…) are common, so this
 	// is the first thing a caller hits rather than a corner case.
+	//
+	// The description also warns that upstream drops unrecognised label names
+	// rather than matching nothing. Measured against this repo's own API:
+	// labels=zzz-nope returned all 484 issues (the unfiltered total), while
+	// labels=Kind%2FOpenSpec,zzz-nope returned the 10 that the recognised name
+	// selects. So each unknown name is discarded individually, and a filter
+	// where every name is unknown degenerates to no filter at all. We could
+	// only surface that by resolving the names against the repo's (and org's)
+	// label list before the query, which is an extra round trip per read and a
+	// behaviour change, not a doc fix — hence the warning here.
 	resource.RegisterTemplate(
 		s,
 		"forgejo://repo/{owner}/{repo}/issues{?state,labels,page,limit}",
@@ -67,6 +77,10 @@ func RegisterIssueResources(s *server.MCPServer) {
 				"label name as %2F without double-encoding, e.g. "+
 				"labels=Kind%2FFeature,Status%2FBlocked; page/limit, ceiling "+
 				strconv.Itoa(resource.EmbeddedListCap)+"). "+
+				"Forgejo silently ignores a label name it does not recognise: if no "+
+				"listed name matches, the result is the UNFILTERED set rather than an "+
+				"empty one, so a typo reads as a successful wide answer. Verify names "+
+				"against "+ListRepoLabelsToolName+" instead of trusting the row count. "+
 				"Read forgejo://repo/{owner}/{repo}/issue/{index} for a body. "+
 				"URI: forgejo://repo/{owner}/{repo}/issues{?state,labels,page,limit}. "+
 				"Truncation sentinel: "+ListRepoIssuesToolName+".",
