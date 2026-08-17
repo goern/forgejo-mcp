@@ -46,6 +46,14 @@ func RegisterIssueResources(s *server.MCPServer) {
 	// query-bearing read fails with "resource not found" before any handler
 	// runs. The bound and filter parameters are the entire point of this
 	// resource, so registering without them makes it unusable.
+	//
+	// That same regexp is why the description spells out %2F for the labels
+	// filter: an RFC 6570 {?…} value does not admit a raw '/', so
+	// ?labels=Kind/Feature fails to match the template and the read is
+	// rejected as "resource not found" before repoIssuesResourceHandler runs.
+	// Our own parsing tolerates the raw slash; the client never gets that far.
+	// Slash-shaped label vocabularies (Kind/…, Status/…) are common, so this
+	// is the first thing a caller hits rather than a corner case.
 	resource.RegisterTemplate(
 		s,
 		"forgejo://repo/{owner}/{repo}/issues{?state,labels,page,limit}",
@@ -55,7 +63,9 @@ func RegisterIssueResources(s *server.MCPServer) {
 			"Bounded list of repository issues as rows — index, title, state, labels, "+
 				"assignees, milestone, comment count, timestamps — with no bodies. "+
 				"Filters and bounds are client-controlled (state ∈ {open, closed, all}, "+
-				"default open; labels comma-separated; page/limit, ceiling "+
+				"default open; labels comma-separated, encoding a literal '/' in a "+
+				"label name as %2F without double-encoding, e.g. "+
+				"labels=Kind%2FFeature,Status%2FBlocked; page/limit, ceiling "+
 				strconv.Itoa(resource.EmbeddedListCap)+"). "+
 				"Read forgejo://repo/{owner}/{repo}/issue/{index} for a body. "+
 				"URI: forgejo://repo/{owner}/{repo}/issues{?state,labels,page,limit}. "+
