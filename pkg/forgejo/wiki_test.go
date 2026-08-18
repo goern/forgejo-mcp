@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -24,7 +25,7 @@ func TestWikiPageNameRoundTripsEncodedSlash(t *testing.T) {
 
 func TestListWikiPages404IsEmpty(t *testing.T) {
 	newCaptureServer(t, func(w http.ResponseWriter, _ *http.Request, _ *capturedReq) { w.WriteHeader(http.StatusNotFound) })
-	pages, err := ListWikiPages(context.Background(), "o", "r", 1, 31)
+	pages, _, err := ListWikiPages(context.Background(), "o", "r", 1, 31)
 	if err != nil || len(pages) != 0 {
 		t.Fatalf("pages=%v err=%v", pages, err)
 	}
@@ -38,10 +39,13 @@ func TestWikiReadMethodsAndPaths(t *testing.T) {
 		query    string
 		response string
 	}{
-		{"list", func() error { _, err := ListWikiPages(context.Background(), "space owner", "repo", 2, 31); return err }, "/api/v1/repos/space%20owner/repo/wiki/pages", "page=2&limit=31", `[]`},
+		{"list", func() error {
+			_, _, err := ListWikiPages(context.Background(), "space owner", "repo", 2, 31)
+			return err
+		}, "/api/v1/repos/space%20owner/repo/wiki/pages", "page=2&limit=31", `[]`},
 		{"get", func() error { _, err := GetWikiPage(context.Background(), "o", "r", "Guides%2FSetup"); return err }, "/api/v1/repos/o/r/wiki/page/Guides%2FSetup", "", `{"title":"T"}`},
 		{"revisions", func() error {
-			_, err := GetWikiPageRevisions(context.Background(), "o", "r", "Guides%2FSetup", 3, 11)
+			_, _, err := GetWikiPageRevisions(context.Background(), "o", "r", "Guides%2FSetup", 3, 11)
 			return err
 		}, "/api/v1/repos/o/r/wiki/revisions/Guides%2FSetup", "page=3&limit=11", `{"commits":[]}`},
 	}
@@ -62,9 +66,34 @@ func TestWikiReadMethodsAndPaths(t *testing.T) {
 
 func TestWikiRevisions404IsError(t *testing.T) {
 	newCaptureServer(t, func(w http.ResponseWriter, _ *http.Request, _ *capturedReq) { w.WriteHeader(http.StatusNotFound) })
-	_, err := GetWikiPageRevisions(context.Background(), "o", "r", "missing", 1, 31)
+	_, _, err := GetWikiPageRevisions(context.Background(), "o", "r", "missing", 1, 31)
 	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}
+
+func TestListWikiPagesAndRevisionsPassThroughTotalCountHeader(t *testing.T) {
+	newCaptureServer(t, func(w http.ResponseWriter, r *http.Request, _ *capturedReq) {
+		w.Header().Set("X-Total-Count", "7")
+		if strings.Contains(r.URL.Path, "/revisions/") {
+			_, _ = w.Write([]byte(`{"commits":[]}`))
+			return
+		}
+		_, _ = w.Write([]byte(`[]`))
+	})
+	_, header, err := ListWikiPages(context.Background(), "o", "r", 1, 31)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n, ok := TotalCount(header); !ok || n != 7 {
+		t.Fatalf("ListWikiPages: got n=%d ok=%v, want 7/true", n, ok)
+	}
+	_, header, err = GetWikiPageRevisions(context.Background(), "o", "r", "T", 1, 31)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n, ok := TotalCount(header); !ok || n != 7 {
+		t.Fatalf("GetWikiPageRevisions: got n=%d ok=%v, want 7/true", n, ok)
 	}
 }
 

@@ -263,6 +263,98 @@ func TestListIssueDependencies_DecodesIssueList(t *testing.T) {
 	}
 }
 
+func TestListIssueDependencies_TotalCountFromHeader(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v1/version", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"version":"15.0.2+gitea-1.22.0"}`))
+	})
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Total-Count", "6")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`[{"id":1,"number":7,"title":"dependency"}]`))
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	flag.URL = srv.URL
+	flag.Token = "tkn"
+	flag.UserAgent = "test"
+
+	c, err := forgejo_sdk.NewClient(srv.URL, forgejo_sdk.SetToken("tkn"), forgejo_sdk.SetUserAgent("test"))
+	if err != nil {
+		t.Fatalf("failed to build SDK client for test: %v", err)
+	}
+	forgejo.SetClientForTesting(c)
+
+	res, err := ListIssueDependenciesFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern", "repo": "forgejo-mcp", "index": float64(42),
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("ListIssueDependenciesFn returned error: err=%v res=%+v", err, res)
+	}
+	if out := textOf(res); !strings.Contains(out, `"total_count":6`) {
+		t.Fatalf("expected total_count from X-Total-Count header, got %q", out)
+	}
+
+	res, err = ListIssueDependentsFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern", "repo": "forgejo-mcp", "index": float64(42),
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("ListIssueDependentsFn returned error: err=%v res=%+v", err, res)
+	}
+	if out := textOf(res); !strings.Contains(out, `"total_count":6`) {
+		t.Fatalf("expected total_count from X-Total-Count header, got %q", out)
+	}
+}
+
+func TestListIssueDependencies_TotalCountOmittedWhenHeaderAbsentOrGarbage(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		header string
+	}{
+		{"absent", ""},
+		{"garbage", "not-a-number"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			mux := http.NewServeMux()
+			mux.HandleFunc("/api/v1/version", func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"version":"15.0.2+gitea-1.22.0"}`))
+			})
+			mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				if tc.header != "" {
+					w.Header().Set("X-Total-Count", tc.header)
+				}
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(`[{"id":1,"number":7,"title":"dependency"}]`))
+			})
+			srv := httptest.NewServer(mux)
+			t.Cleanup(srv.Close)
+			flag.URL = srv.URL
+			flag.Token = "tkn"
+			flag.UserAgent = "test"
+
+			c, err := forgejo_sdk.NewClient(srv.URL, forgejo_sdk.SetToken("tkn"), forgejo_sdk.SetUserAgent("test"))
+			if err != nil {
+				t.Fatalf("failed to build SDK client for test: %v", err)
+			}
+			forgejo.SetClientForTesting(c)
+
+			res, err := ListIssueDependenciesFn(context.Background(), makeReq(map[string]any{
+				"owner": "goern", "repo": "forgejo-mcp", "index": float64(42),
+			}))
+			if err != nil || res == nil || res.IsError {
+				t.Fatalf("ListIssueDependenciesFn returned error: err=%v res=%+v", err, res)
+			}
+			if out := textOf(res); strings.Contains(out, "total_count") {
+				t.Fatalf("expected total_count to be omitted, got %q", out)
+			}
+		})
+	}
+}
+
 func TestListIssueDependencies_APIErrorSurfaces(t *testing.T) {
 	records := make([]recordedReq, 0, 2)
 	mux := http.NewServeMux()

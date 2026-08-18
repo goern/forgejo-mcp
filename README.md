@@ -221,11 +221,18 @@ List all my repositories
 | `create_branch` | Create a new branch |
 | `delete_branch` | Delete a branch |
 | **Branch Protection** | |
-| `list_branch_protections` | List a repository's branch protection rules. Bounded by `page` (1-based) + `limit` (page size); the response echoes `page`/`limit` so callers can fetch the next page. |
+| `list_branch_protections` | List a repository's branch protection rules. Bounded by `page` (1-based) + `limit` (page size); the response echoes `page`/`limit` and, when Forgejo reports `X-Total-Count`, `total_count`, so callers can fetch the next page. |
 | `get_branch_protection` | Get a single rule by `rule` name |
 | `create_branch_protection` | Create a rule. Requires `branch_name`; `status_check_contexts` is a comma-separated list of required checks (e.g. `"ci/build,ci/test"`). |
 | `edit_branch_protection` | Edit a rule by `rule` name. Only fields you pass change; omitted fields are left unchanged. |
 | `delete_branch_protection` | Delete a rule by `rule` name |
+| **Webhooks** | |
+| `list_repo_hooks` | List repository webhooks. Bounded by `page` (default 1) + `limit` (default 30, no server-imposed ceiling); returns `total_count` when Forgejo reports `X-Total-Count`. |
+| `get_repo_hook` | Get a single repository webhook by ID |
+| `create_repo_hook` | Create a repository webhook. The secret is accepted but never echoed in the response. |
+| `edit_repo_hook` | Edit a repository webhook. Only fields you pass change; omitted fields are left unchanged. |
+| `delete_repo_hook` | Delete a repository webhook by ID |
+| `test_repo_hook` | Trigger a test delivery for a repository webhook — WARNING: triggers a live HTTP delivery |
 | **Files** | |
 | `get_file_content` | Get the content of a file. Optional `start_line`/`end_line` request a 1-indexed inclusive line range (clamps to file extent; ignored when `with_metadata=true`). |
 | `create_file` | Create a new file |
@@ -235,15 +242,15 @@ List all my repositories
 | `list_repo_commits` | List commits in a repository |
 | **Issues** | |
 | `list_repo_issues` | List issues in a repository (page/limit). Optional `sort` orders server-side: `relevance`, `latest`, `oldest`, `recentupdate`, `leastupdate`, `mostcomment`, `leastcomment`, `nearduedate`, `farduedate` (the last two are the due-date directions). |
-| `search_issues` | Search issues across every repository of one owner (page/limit); returns `{issues,page,limit,count,has_next}` |
+| `search_issues` | Search issues across every repository of one owner (page/limit); returns `{issues,page,limit,count,has_next,total_count}` — `total_count` is present only when Forgejo reports `X-Total-Count` |
 | `get_issue_by_index` | Get a specific issue |
 | `create_issue` | Create a new issue |
 | `add_issue_labels` | Add labels to an issue (requires numeric label IDs) |
 | `remove_issue_labels` | Remove labels from an issue (requires numeric label IDs) |
 | `update_issue` | Update an existing issue (requires numeric milestone ID). `due_date` sets the deadline (RFC3339); `clear_due_date=true` removes it. The two are mutually exclusive — setting both is an error, and omitting both leaves the deadline unchanged. |
 | `issue_state_change` | Open or close an issue |
-| `list_issue_dependencies` | List issues the given issue depends on. Bounded by `page` (1-based) + `limit` (page size); the response echoes `page`/`limit` so callers can fetch the next page. |
-| `list_issue_dependents` | List issues that depend on the given issue. Bounded by `page` (1-based) + `limit` (page size); the response echoes `page`/`limit` so callers can fetch the next page. |
+| `list_issue_dependencies` | List issues the given issue depends on. Bounded by `page` (1-based) + `limit` (page size); the response echoes `page`/`limit` and, when Forgejo reports `X-Total-Count`, `total_count`, so callers can fetch the next page. |
+| `list_issue_dependents` | List issues that depend on the given issue. Bounded by `page` (1-based) + `limit` (page size); the response echoes `page`/`limit` and, when Forgejo reports `X-Total-Count`, `total_count`, so callers can fetch the next page. |
 | `add_issue_dependency` | Make one issue depend on another |
 | `remove_issue_dependency` | Remove a dependency from an issue |
 | `list_repo_milestones` | List milestones with their IDs (use with `update_issue`) |
@@ -323,9 +330,9 @@ List all my repositories
 | `edit_release_attachment` | Rename a release attachment |
 | `delete_release_attachment` | Delete a release attachment — destructive |
 | **Wiki** | |
-| `list_wiki_pages` | List pages using `page`/`limit`; returns `has_next`. |
+| `list_wiki_pages` | List pages using `page`/`limit`; returns `has_next` and, when Forgejo reports `X-Total-Count`, `total_count`. |
 | `get_wiki_page` | Read decoded Markdown; optional `start_line`/`end_line`, always returns `total_lines`. |
-| `get_wiki_revisions` | List revision history using `page`/`limit`; returns `has_next`. |
+| `get_wiki_revisions` | List revision history using `page`/`limit`; returns `has_next` and, when Forgejo reports `X-Total-Count`, `total_count`. |
 | `create_wiki_page` | Create a page and return its server-normalized `page_name`; slash-separated titles are a flat subpage naming convention (no hierarchy and no automatic parent page), and an existing title is overwritten. |
 | `update_wiki_page` | Update content/title by normalized `page_name`; last writer wins. |
 | `delete_wiki_page` | Delete a page by normalized `page_name`. |

@@ -31,7 +31,7 @@ const (
 var (
 	ListBranchProtectionsTool = mcp.NewTool(
 		ListBranchProtectionsToolName,
-		mcp.WithDescription("List a repository's branch protection rules (bounded by page/limit)"),
+		mcp.WithDescription("List a repository's branch protection rules (bounded by page/limit). Returns total_count when Forgejo reports X-Total-Count."),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithNumber("page", mcp.Required(), mcp.Description(params.Page), mcp.DefaultNumber(1), mcp.Min(1)),
@@ -107,6 +107,7 @@ type listBranchProtectionsResult struct {
 	Page              int                             `json:"page"`
 	Limit             int                             `json:"limit"`
 	Count             int                             `json:"count"`
+	TotalCount        *int                            `json:"total_count,omitempty"`
 	BranchProtections []*forgejo_sdk.BranchProtection `json:"branch_protections"`
 }
 
@@ -131,16 +132,21 @@ func ListBranchProtectionsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	if err != nil {
 		return to.ErrorResult(err)
 	}
-	bps, _, err := client.ListBranchProtections(owner, repo, forgejo_sdk.ListBranchProtectionsOptions{
+	bps, resp, err := client.ListBranchProtections(owner, repo, forgejo_sdk.ListBranchProtectionsOptions{
 		ListOptions: forgejo_sdk.ListOptions{Page: int(page), PageSize: int(limit)},
 	})
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list branch protections err: %w", err))
 	}
+	var totalCount *int
+	if resp != nil {
+		totalCount = forgejo.TotalCountPtr(resp.Header)
+	}
 	return to.TextResult(listBranchProtectionsResult{
 		Page:              int(page),
 		Limit:             int(limit),
 		Count:             len(bps),
+		TotalCount:        totalCount,
 		BranchProtections: bps,
 	})
 }

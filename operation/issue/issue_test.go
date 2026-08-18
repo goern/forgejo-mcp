@@ -499,6 +499,62 @@ func TestSearchIssues_EnvelopeShape(t *testing.T) {
 	}
 }
 
+func TestSearchIssues_TotalCountFromHeader(t *testing.T) {
+	_, _ = newQueryBackend(t, func(w http.ResponseWriter, r *http.Request, _ *[]recordedReq) {
+		if pageFromQuery(r) == "2" {
+			_, _ = w.Write([]byte(`[]`))
+			return
+		}
+		w.Header().Set("X-Total-Count", "333")
+		_, _ = w.Write([]byte(`[{"id":1,"number":1,"title":"one"},{"id":2,"number":2,"title":"two"}]`))
+	})
+
+	res, err := SearchIssuesFn(context.Background(), makeReq(map[string]any{"owner": "goern"}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("SearchIssuesFn err: %v res=%+v", err, res)
+	}
+	if !strings.Contains(textOf(res), `"total_count":333`) {
+		t.Fatalf("expected total_count from X-Total-Count header, got %s", textOf(res))
+	}
+}
+
+func TestSearchIssues_TotalCountOmittedWhenHeaderAbsent(t *testing.T) {
+	_, _ = newQueryBackend(t, func(w http.ResponseWriter, r *http.Request, _ *[]recordedReq) {
+		if pageFromQuery(r) == "2" {
+			_, _ = w.Write([]byte(`[]`))
+			return
+		}
+		_, _ = w.Write([]byte(`[{"id":1,"number":1,"title":"one"}]`))
+	})
+
+	res, err := SearchIssuesFn(context.Background(), makeReq(map[string]any{"owner": "goern"}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("SearchIssuesFn err: %v res=%+v", err, res)
+	}
+	if strings.Contains(textOf(res), "total_count") {
+		t.Fatalf("expected total_count to be omitted when header is absent, got %s", textOf(res))
+	}
+}
+
+func TestSearchIssues_TotalCountOmittedWhenHeaderUnparsable(t *testing.T) {
+	_, _ = newQueryBackend(t, func(w http.ResponseWriter, r *http.Request, _ *[]recordedReq) {
+		if pageFromQuery(r) == "2" {
+			_, _ = w.Write([]byte(`[]`))
+			return
+		}
+		w.Header().Set("X-Total-Count", "not-a-number")
+		_, _ = w.Write([]byte(`[{"id":1,"number":1,"title":"one"}]`))
+	})
+
+	res, err := SearchIssuesFn(context.Background(), makeReq(map[string]any{"owner": "goern"}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("SearchIssuesFn err: %v res=%+v", err, res)
+	}
+	if strings.Contains(textOf(res), "total_count") {
+		t.Fatalf("expected total_count to be omitted for a garbage header, got %s", textOf(res))
+	}
+}
+
 func TestSearchIssues_HasNextTrueWhenProbeReturnsRows(t *testing.T) {
 	_, records := newQueryBackend(t, func(w http.ResponseWriter, r *http.Request, _ *[]recordedReq) {
 		if pageFromQuery(r) == "2" {

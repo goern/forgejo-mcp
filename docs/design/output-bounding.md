@@ -76,6 +76,21 @@ so a follow-up call can retrieve the rest. Acceptable shapes:
 
 "Got 4 KB of N" beats "got 4 KB."
 
+**`total_count`:** Forgejo sets an `X-Total-Count` response header on paginated
+list/search API endpoints, carrying the total number of matching rows across
+every page (distinct from `count`, which is the row count on the current page
+alone). Tools whose envelope already carries `page`/`limit`/`has_next` SHOULD
+also surface this as a `total_count` field, parsed with the shared
+`pkg/forgejo.TotalCount` / `TotalCountPtr` helpers rather than a bespoke
+per-tool copy. When the header is absent or unparsable, OMIT the key — never
+emit `total_count: 0`, which reads as "confirmed zero rows" rather than
+"unknown." As of coordination#307 this covers `search_issues`,
+`list_wiki_pages`, `get_wiki_revisions`, `list_branch_protections`,
+`list_repo_hooks`, `list_issue_dependencies`, and `list_issue_dependents`.
+Tools that still return a bare array with no pagination envelope at all
+(most `list_*`/`search_*` tools — see the retrofit umbrella below) are out of
+scope for `total_count` until they gain an envelope in the first place.
+
 ## Documentation contract
 
 Every bound parameter MUST appear in:

@@ -245,8 +245,9 @@ var (
 	SearchIssuesTool = mcp.NewTool(
 		SearchIssuesToolName,
 		mcp.WithDescription("Search issues across every repository belonging to one owner (organization or user), without naming a repo. "+
-			"Returns a response envelope {issues, page, limit, count, has_next} rather than a bare array. "+
+			"Returns a response envelope {issues, page, limit, count, has_next, total_count} rather than a bare array. "+
 			"has_next true means a further page may exist; re-issue the call with page incremented to fetch it. "+
+			"total_count, when present, is the total number of matching issues across all pages (from Forgejo's X-Total-Count header); it is omitted rather than 0 when the header is unavailable. "+
 			"Each issue identifies its source repository only via its html_url/url field; there is no separate repository field. "+
 			"Use list_repo_issues instead when the repo is already known."),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
@@ -395,11 +396,12 @@ func ListRepoIssuesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 // searchIssuesEnvelope is the response shape for search_issues: the issues
 // together with a continuation signal, per docs/design/output-bounding.md.
 type searchIssuesEnvelope struct {
-	Issues  []*forgejo_sdk.Issue `json:"issues"`
-	Page    int                  `json:"page"`
-	Limit   int                  `json:"limit"`
-	Count   int                  `json:"count"`
-	HasNext bool                 `json:"has_next"`
+	Issues     []*forgejo_sdk.Issue `json:"issues"`
+	Page       int                  `json:"page"`
+	Limit      int                  `json:"limit"`
+	Count      int                  `json:"count"`
+	HasNext    bool                 `json:"has_next"`
+	TotalCount *int                 `json:"total_count,omitempty"`
 }
 
 func SearchIssuesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -485,11 +487,15 @@ func SearchIssuesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 	if err != nil {
 		return to.ErrorResult(err)
 	}
-	issues, _, err := client.ListIssues(opt)
+	issues, resp, err := client.ListIssues(opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("search issues err: %w", err))
 	}
 	count := len(issues)
+	var totalCount *int
+	if resp != nil {
+		totalCount = forgejo.TotalCountPtr(resp.Header)
+	}
 
 	// has_next (design.md Decision 3, revised): when the ceiling is known,
 	// the rejection above guarantees effectiveLimit <= ceiling, so the
@@ -514,11 +520,12 @@ func SearchIssuesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 	}
 
 	return to.TextResult(searchIssuesEnvelope{
-		Issues:  issues,
-		Page:    int(page),
-		Limit:   effectiveLimit,
-		Count:   count,
-		HasNext: hasNext,
+		Issues:     issues,
+		Page:       int(page),
+		Limit:      effectiveLimit,
+		Count:      count,
+		HasNext:    hasNext,
+		TotalCount: totalCount,
 	})
 }
 

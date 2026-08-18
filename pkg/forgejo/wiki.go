@@ -59,13 +59,16 @@ func wikiPageSegment(pageName string) string {
 	return url.PathEscape(decoded)
 }
 
-func ListWikiPages(ctx context.Context, owner, repo string, page, limit int) ([]WikiPageMeta, error) {
+// ListWikiPages also returns the response headers so callers can read
+// X-Total-Count for a total_count field alongside has_next.
+func ListWikiPages(ctx context.Context, owner, repo string, page, limit int) ([]WikiPageMeta, http.Header, error) {
 	path := fmt.Sprintf("%s/pages?page=%d&limit=%d", wikiRepoPath(owner, repo), page, limit)
 	var pages []WikiPageMeta
-	if err := DoJSONList(ctx, http.MethodGet, path, &pages); err != nil {
-		return nil, err
+	header, err := DoJSONListWithHeader(ctx, http.MethodGet, path, &pages)
+	if err != nil {
+		return nil, header, err
 	}
-	return pages, nil
+	return pages, header, nil
 }
 
 func GetWikiPage(ctx context.Context, owner, repo, pageName string) (*WikiPage, error) {
@@ -77,13 +80,19 @@ func GetWikiPage(ctx context.Context, owner, repo, pageName string) (*WikiPage, 
 	return &page, nil
 }
 
-func GetWikiPageRevisions(ctx context.Context, owner, repo, pageName string, page, limit int) (*WikiRevisions, error) {
+// GetWikiPageRevisions also returns the response headers so callers can read
+// X-Total-Count for a total_count field alongside has_next. Uses
+// doJSONWithHeader (not the List variant) so a 404 stays an error — unlike
+// ListWikiPages, "revisions of a page that doesn't exist" is not "zero
+// revisions".
+func GetWikiPageRevisions(ctx context.Context, owner, repo, pageName string, page, limit int) (*WikiRevisions, http.Header, error) {
 	var revisions WikiRevisions
 	path := fmt.Sprintf("%s/revisions/%s?page=%d&limit=%d", wikiRepoPath(owner, repo), wikiPageSegment(pageName), page, limit)
-	if err := DoJSON(ctx, http.MethodGet, path, nil, &revisions); err != nil {
-		return nil, err
+	header, err := doJSONWithHeader(ctx, http.MethodGet, path, nil, &revisions)
+	if err != nil {
+		return nil, header, err
 	}
-	return &revisions, nil
+	return &revisions, header, nil
 }
 
 func CreateWikiPage(ctx context.Context, owner, repo, title, contentBase64, message string) (*WikiPage, error) {

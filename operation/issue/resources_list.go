@@ -56,12 +56,11 @@ func headerHasMore(h http.Header) bool {
 	return false
 }
 
-// headerTotalCount is totalCount for a bare http.Header.
+// headerTotalCount is totalCount for a bare http.Header. Delegates to the
+// shared pkg/forgejo.TotalCount parser so there is one X-Total-Count reader
+// in the codebase, not several (coordination#307).
 func headerTotalCount(h http.Header) int {
-	n, err := strconv.Atoi(h.Get("X-Total-Count"))
-	if err != nil || n < 0 {
-		return 0
-	}
+	n, _ := forgejo.TotalCount(h)
 	return n
 }
 

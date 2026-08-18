@@ -27,7 +27,7 @@ const (
 var (
 	ListIssueDependenciesTool = mcp.NewTool(
 		ListIssueDependenciesToolName,
-		mcp.WithDescription("List issues that the given issue depends on. Pagination uses page (1-based) and limit (page size); the response echoes page and limit so callers can fetch the next page. Returns an empty list if the issue has no dependencies. This tool fails if the repository has disabled issue dependencies."),
+		mcp.WithDescription("List issues that the given issue depends on. Pagination uses page (1-based) and limit (page size); the response echoes page and limit so callers can fetch the next page, plus total_count when Forgejo reports X-Total-Count. Returns an empty list if the issue has no dependencies. This tool fails if the repository has disabled issue dependencies."),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.IssueIndex)),
@@ -37,7 +37,7 @@ var (
 
 	ListIssueDependentsTool = mcp.NewTool(
 		ListIssueDependentsToolName,
-		mcp.WithDescription("List issues that depend on the given issue. Pagination uses page (1-based) and limit (page size); the response echoes page and limit so callers can fetch the next page. Returns an empty list if no issue depends on it. This tool fails if the repository has disabled issue dependencies."),
+		mcp.WithDescription("List issues that depend on the given issue. Pagination uses page (1-based) and limit (page size); the response echoes page and limit so callers can fetch the next page, plus total_count when Forgejo reports X-Total-Count. Returns an empty list if no issue depends on it. This tool fails if the repository has disabled issue dependencies."),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.IssueIndex)),
@@ -77,9 +77,10 @@ type issueMetaBody struct {
 // metadata needed for resumability. The shape echoes the page/limit parameters
 // so callers can fetch the next page.
 type paginatedDependencyResult struct {
-	Page   int                  `json:"page"`
-	Limit  int                  `json:"limit"`
-	Issues []*forgejo_sdk.Issue `json:"issues"`
+	Page       int                  `json:"page"`
+	Limit      int                  `json:"limit"`
+	TotalCount *int                 `json:"total_count,omitempty"`
+	Issues     []*forgejo_sdk.Issue `json:"issues"`
 }
 
 func RegisterDependencyTool(s *server.MCPServer) {
@@ -98,10 +99,11 @@ func ListIssueDependenciesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 
 	path := forgejo.APIPath("repos", owner, repo, "issues", int64(index), "dependencies") + fmt.Sprintf("?page=%d&limit=%d", page, limit)
 	issues := []*forgejo_sdk.Issue{}
-	if err := forgejo.DoJSONList(ctx, http.MethodGet, path, &issues); err != nil {
+	header, err := forgejo.DoJSONListWithHeader(ctx, http.MethodGet, path, &issues)
+	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list issue dependencies err: %w", err))
 	}
-	return to.TextResult(paginatedDependencyResult{Page: page, Limit: limit, Issues: issues})
+	return to.TextResult(paginatedDependencyResult{Page: page, Limit: limit, TotalCount: forgejo.TotalCountPtr(header), Issues: issues})
 }
 
 func ListIssueDependentsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -113,10 +115,11 @@ func ListIssueDependentsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 
 	path := forgejo.APIPath("repos", owner, repo, "issues", int64(index), "blocks") + fmt.Sprintf("?page=%d&limit=%d", page, limit)
 	issues := []*forgejo_sdk.Issue{}
-	if err := forgejo.DoJSONList(ctx, http.MethodGet, path, &issues); err != nil {
+	header, err := forgejo.DoJSONListWithHeader(ctx, http.MethodGet, path, &issues)
+	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list issue dependents err: %w", err))
 	}
-	return to.TextResult(paginatedDependencyResult{Page: page, Limit: limit, Issues: issues})
+	return to.TextResult(paginatedDependencyResult{Page: page, Limit: limit, TotalCount: forgejo.TotalCountPtr(header), Issues: issues})
 }
 
 func parsePageLimit(args map[string]any) (page, limit int) {
