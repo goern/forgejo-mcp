@@ -8,18 +8,18 @@
       "SHALL NOT report a total" line from `search-issues/spec.md` (moves to
       MODIFIED delta here).
 - [x] `list_wiki_pages` / `get_wiki_revisions` envelopes gain `total_count`.
-- [x] `list_branch_protections` envelope gains `total_count`.
 - [x] `list_repo_hooks` envelope gains `total_count`.
-- [x] `list_issue_dependencies` / `list_issue_dependents` envelopes gain
-      `total_count` (no existing capability spec to delta against — noted in
-      proposal.md instead).
+- [x] Confirm which endpoints actually send `X-Total-Count` before adding the
+      field: `list_branch_protections`, `list_issue_dependencies` and
+      `list_issue_dependents` are excluded because their upstream handlers
+      never call `SetTotalCountHeader`.
 - [x] `operation/issue/resources_list.go`'s `headerTotalCount` delegates to the
       shared helper instead of duplicating the header parse.
 - [x] Unit tests per tool: header present (value flows through), header absent
       (key omitted, not `0`), header unparsable (key omitted).
 - [x] `pkg/forgejo/pagination_test.go` covers the helper directly: valid
       integer, missing header, non-numeric value, negative value.
-- [x] README.md tool table rows updated for all seven tools.
+- [x] README.md tool table rows updated for the tools that gained the field.
 - [x] `docs/design/output-bounding.md` sub-rule 3 documents the convention
       once, naming the shared helper and the omit-on-absent rule.
 - [x] `go build ./...`, `go vet ./...`, `go test ./...` clean.

@@ -24,10 +24,20 @@ needs to move with it.
   `(nil, false)` when the header is absent or unparsable — callers key
   `omitempty` off the boolean, not off a zero value, so a genuine `total_count:
   0` (confirmed empty result) is never confused with "unknown."
-- Add `total_count` (`omitempty`) to the response envelope of the seven tools
-  that already build one: `search_issues`, `list_wiki_pages`,
-  `get_wiki_revisions`, `list_branch_protections`, `list_repo_hooks`,
-  `list_issue_dependencies`, `list_issue_dependents`.
+- Add `total_count` (`omitempty`) to the response envelope of the four tools
+  that both build one and hit an endpoint that actually sends the header:
+  `search_issues`, `list_repo_hooks`, `list_wiki_pages`, `get_wiki_revisions`.
+- Deliberately NOT added to `list_branch_protections`,
+  `list_issue_dependencies` and `list_issue_dependents`. Those tools have a
+  pagination envelope, but the upstream Forgejo handlers behind
+  `/branch_protections`, `/issues/{index}/dependencies` and
+  `/issues/{index}/blocks` never call `SetTotalCountHeader`, so the header is
+  structurally absent and the field could never be populated against a real
+  server. A field that is always missing is a false promise in the tool
+  description, and a test that injects the header into a mock proves the
+  plumbing rather than the availability. If Forgejo starts sending the header
+  for those endpoints, adding it back is a one-line change through the shared
+  helper.
 - `operation/issue/resources_list.go`'s pre-existing `headerTotalCount` now
   delegates to the shared helper instead of duplicating the parse.
 - Document the convention once in `docs/design/output-bounding.md` (sub-rule
@@ -51,12 +61,11 @@ happy to fold that one in as a follow-up if wanted, since it's the same fix.
   the Resumable response envelope requirement is removed.
 - `wiki-tools`: `list_wiki_pages` and `get_wiki_revisions` envelopes gain
   `total_count`.
-- `branch-protection`: `list_branch_protections` envelope gains `total_count`.
 - `repo-webhook-tools`: `list_repo_hooks` envelope gains `total_count`.
 
-Issue-dependency listing (`list_issue_dependencies` / `list_issue_dependents`)
-also gains `total_count`, but has no `openspec/specs/` capability of its own
-yet to carry a delta against — noted here rather than silently applied.
+`branch-protection` and issue-dependency listing are unchanged: their upstream
+endpoints do not emit `X-Total-Count` (see "What Changes"), so no delta is
+raised against `branch-protection/spec.md`.
 
 ### New Capabilities
 
@@ -68,9 +77,8 @@ _None._ This is additive to existing envelopes only.
 |---|---|
 | `pkg/forgejo/pagination.go` | New: `TotalCount`, `TotalCountPtr` |
 | `pkg/forgejo/pagination_test.go` | New: header present/absent/unparsable cases |
-| `operation/issue/issue.go`, `dependency.go`, `resources_list.go` | `total_count` on `search_issues`, `list_issue_dependencies`, `list_issue_dependents`; shared helper adopted |
+| `operation/issue/issue.go`, `resources_list.go` | `total_count` on `search_issues`; shared helper adopted |
 | `operation/wiki/wiki.go` | `total_count` on `list_wiki_pages`, `get_wiki_revisions` |
-| `operation/branchprotection/branchprotection.go` | `total_count` on `list_branch_protections` |
 | `operation/hook/hook.go` | `total_count` on `list_repo_hooks` |
 | `*_test.go` in each of the above | Coverage for header present / absent / unparsable |
 | `README.md` | Tool table rows note the new field |

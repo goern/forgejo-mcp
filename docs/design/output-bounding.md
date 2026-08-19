@@ -84,9 +84,19 @@ also surface this as a `total_count` field, parsed with the shared
 `pkg/forgejo.TotalCount` / `TotalCountPtr` helpers rather than a bespoke
 per-tool copy. When the header is absent or unparsable, OMIT the key — never
 emit `total_count: 0`, which reads as "confirmed zero rows" rather than
-"unknown." As of coordination#307 this covers `search_issues`,
-`list_wiki_pages`, `get_wiki_revisions`, `list_branch_protections`,
-`list_repo_hooks`, `list_issue_dependencies`, and `list_issue_dependents`.
+"unknown." Today this covers `search_issues`, `list_repo_hooks`,
+`list_wiki_pages`, and `get_wiki_revisions`.
+
+A pagination envelope is not on its own a reason to add the field: the
+endpoint has to actually send the header. Forgejo's handlers call
+`SetTotalCountHeader` per endpoint, and several paginated ones do not —
+`/repos/{owner}/{repo}/branch_protections`, `/issues/{index}/dependencies`
+and `/issues/{index}/blocks` return no `X-Total-Count` at all. Their tools
+therefore do NOT carry `total_count`: a key that is structurally always
+absent is a promise the tool cannot keep, and a mock that injects the header
+proves only the plumbing, not the availability. Check the upstream handler
+(or a live response) before adding the field to a new tool.
+
 Tools that still return a bare array with no pagination envelope at all
 (most `list_*`/`search_*` tools — see the retrofit umbrella below) are out of
 scope for `total_count` until they gain an envelope in the first place.

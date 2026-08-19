@@ -56,68 +56,6 @@ func TestListBranchProtectionsFn(t *testing.T) {
 	}
 }
 
-func TestListBranchProtectionsFn_TotalCountFromHeader(t *testing.T) {
-	srv := setupBPMockServer(t, func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("X-Total-Count", "9")
-		_ = json.NewEncoder(w).Encode([]map[string]interface{}{
-			{"rule_name": "main", "branch_name": "main"},
-		})
-	})
-	defer srv.Close()
-
-	res, err := ListBranchProtectionsFn(context.Background(), newCallToolRequest(map[string]interface{}{
-		"owner": "goern", "repo": "forgejo-mcp", "page": float64(1), "limit": float64(50),
-	}))
-	if err != nil {
-		t.Fatalf("ListBranchProtectionsFn err: %v", err)
-	}
-	if text := toolText(t, res); !strings.Contains(text, `"total_count":9`) {
-		t.Errorf("expected total_count from X-Total-Count header, got: %s", text)
-	}
-}
-
-func TestListBranchProtectionsFn_TotalCountOmittedWhenHeaderAbsent(t *testing.T) {
-	srv := setupBPMockServer(t, func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode([]map[string]interface{}{
-			{"rule_name": "main", "branch_name": "main"},
-		})
-	})
-	defer srv.Close()
-
-	res, err := ListBranchProtectionsFn(context.Background(), newCallToolRequest(map[string]interface{}{
-		"owner": "goern", "repo": "forgejo-mcp", "page": float64(1), "limit": float64(50),
-	}))
-	if err != nil {
-		t.Fatalf("ListBranchProtectionsFn err: %v", err)
-	}
-	if text := toolText(t, res); strings.Contains(text, "total_count") {
-		t.Errorf("expected total_count to be omitted, got: %s", text)
-	}
-}
-
-func TestListBranchProtectionsFn_TotalCountOmittedWhenHeaderUnparsable(t *testing.T) {
-	srv := setupBPMockServer(t, func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("X-Total-Count", "garbage")
-		_ = json.NewEncoder(w).Encode([]map[string]interface{}{
-			{"rule_name": "main", "branch_name": "main"},
-		})
-	})
-	defer srv.Close()
-
-	res, err := ListBranchProtectionsFn(context.Background(), newCallToolRequest(map[string]interface{}{
-		"owner": "goern", "repo": "forgejo-mcp", "page": float64(1), "limit": float64(50),
-	}))
-	if err != nil {
-		t.Fatalf("ListBranchProtectionsFn err: %v", err)
-	}
-	if text := toolText(t, res); strings.Contains(text, "total_count") {
-		t.Errorf("expected total_count to be omitted for a garbage header, got: %s", text)
-	}
-}
-
 func TestGetBranchProtectionFn_OK(t *testing.T) {
 	srv := setupBPMockServer(t, func(w http.ResponseWriter, r *http.Request) {
 		if !strings.HasSuffix(r.URL.Path, "/branch_protections/main") {

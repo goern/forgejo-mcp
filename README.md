@@ -221,7 +221,7 @@ List all my repositories
 | `create_branch` | Create a new branch |
 | `delete_branch` | Delete a branch |
 | **Branch Protection** | |
-| `list_branch_protections` | List a repository's branch protection rules. Bounded by `page` (1-based) + `limit` (page size); the response echoes `page`/`limit` and, when Forgejo reports `X-Total-Count`, `total_count`, so callers can fetch the next page. |
+| `list_branch_protections` | List a repository's branch protection rules. Bounded by `page` (1-based) + `limit` (page size); the response echoes `page`/`limit` so callers can fetch the next page. |
 | `get_branch_protection` | Get a single rule by `rule` name |
 | `create_branch_protection` | Create a rule. Requires `branch_name`; `status_check_contexts` is a comma-separated list of required checks (e.g. `"ci/build,ci/test"`). |
 | `edit_branch_protection` | Edit a rule by `rule` name. Only fields you pass change; omitted fields are left unchanged. |
@@ -249,8 +249,8 @@ List all my repositories
 | `remove_issue_labels` | Remove labels from an issue (requires numeric label IDs) |
 | `update_issue` | Update an existing issue (requires numeric milestone ID). `due_date` sets the deadline (RFC3339); `clear_due_date=true` removes it. The two are mutually exclusive — setting both is an error, and omitting both leaves the deadline unchanged. |
 | `issue_state_change` | Open or close an issue |
-| `list_issue_dependencies` | List issues the given issue depends on. Bounded by `page` (1-based) + `limit` (page size); the response echoes `page`/`limit` and, when Forgejo reports `X-Total-Count`, `total_count`, so callers can fetch the next page. |
-| `list_issue_dependents` | List issues that depend on the given issue. Bounded by `page` (1-based) + `limit` (page size); the response echoes `page`/`limit` and, when Forgejo reports `X-Total-Count`, `total_count`, so callers can fetch the next page. |
+| `list_issue_dependencies` | List issues the given issue depends on. Bounded by `page` (1-based) + `limit` (page size); the response echoes `page`/`limit` so callers can fetch the next page. |
+| `list_issue_dependents` | List issues that depend on the given issue. Bounded by `page` (1-based) + `limit` (page size); the response echoes `page`/`limit` so callers can fetch the next page. |
 | `add_issue_dependency` | Make one issue depend on another |
 | `remove_issue_dependency` | Remove a dependency from an issue |
 | `list_repo_milestones` | List milestones with their IDs (use with `update_issue`) |
