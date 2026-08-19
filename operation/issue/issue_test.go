@@ -518,6 +518,25 @@ func TestSearchIssues_TotalCountFromHeader(t *testing.T) {
 	}
 }
 
+// A confirmed-zero total and an unknown total are different answers, and
+// `omitempty` on the *int must not collapse them: X-Total-Count: 0 has to
+// marshal as "total_count":0, while a missing header drops the key entirely
+// (asserted by TestSearchIssues_TotalCountOmittedWhenHeaderAbsent below).
+func TestSearchIssues_TotalCountZeroIsEmittedNotOmitted(t *testing.T) {
+	_, _ = newQueryBackend(t, func(w http.ResponseWriter, _ *http.Request, _ *[]recordedReq) {
+		w.Header().Set("X-Total-Count", "0")
+		_, _ = w.Write([]byte(`[]`))
+	})
+
+	res, err := SearchIssuesFn(context.Background(), makeReq(map[string]any{"owner": "goern"}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("SearchIssuesFn err: %v res=%+v", err, res)
+	}
+	if !strings.Contains(textOf(res), `"total_count":0`) {
+		t.Fatalf("expected a confirmed-zero total_count to be emitted, got %s", textOf(res))
+	}
+}
+
 func TestSearchIssues_TotalCountOmittedWhenHeaderAbsent(t *testing.T) {
 	_, _ = newQueryBackend(t, func(w http.ResponseWriter, r *http.Request, _ *[]recordedReq) {
 		if pageFromQuery(r) == "2" {

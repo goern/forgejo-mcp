@@ -22,6 +22,9 @@
       (key omitted, not `0`), header unparsable (key omitted).
 - [x] `pkg/forgejo/pagination_test.go` covers the helper directly: valid
       integer, missing header, non-numeric value, negative value.
+- [x] Envelope-level coverage that `X-Total-Count: 0` marshals as
+      `"total_count":0` — a confirmed zero must not be swallowed by
+      `omitempty` — paired with the missing-header case that omits the key.
 - [x] README.md tool table rows updated for the tools that gained the field.
 - [x] `docs/design/output-bounding.md` sub-rule 3 documents the convention
       once, naming the shared helper and the omit-on-absent rule.

@@ -83,6 +83,27 @@ func TestListRepoHooksFn_TotalCountFromHeader(t *testing.T) {
 	}
 }
 
+// Confirmed-zero and unknown are different answers: X-Total-Count: 0 must
+// marshal as "total_count":0 rather than being swallowed by `omitempty`,
+// while a missing header drops the key (the sibling test below).
+func TestListRepoHooksFn_TotalCountZeroIsEmittedNotOmitted(t *testing.T) {
+	setupHookMockServer(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Total-Count", "0")
+		_ = json.NewEncoder(w).Encode([]map[string]interface{}{})
+	})
+
+	res, err := ListRepoHooksFn(context.Background(), newHookCallToolRequest(map[string]interface{}{
+		"owner": "goern", "repo": "forgejo-mcp", "page": float64(1), "limit": float64(30),
+	}))
+	if err != nil {
+		t.Fatalf("ListRepoHooksFn err: %v", err)
+	}
+	if text := hookToolText(t, res); !strings.Contains(text, `"total_count":0`) {
+		t.Fatalf("expected a confirmed-zero total_count to be emitted, got: %s", text)
+	}
+}
+
 func TestListRepoHooksFn_TotalCountOmittedWhenHeaderAbsent(t *testing.T) {
 	setupHookMockServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
