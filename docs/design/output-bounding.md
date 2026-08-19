@@ -101,6 +101,20 @@ Tools that still return a bare array with no pagination envelope at all
 (most `list_*`/`search_*` tools — see the retrofit umbrella below) are out of
 scope for `total_count` until they gain an envelope in the first place.
 
+Envelope `total_count` always means the same thing: the grand total the server
+reports for the whole query, not the size of the payload in hand. It usually
+arrives in the `X-Total-Count` header and is then a `*int` omitted when the
+server does not report it; where the endpoint puts the same total in the
+response body instead (`get_wiki_revisions`), it is a plain always-present
+`int`. The per-page row count is `count`, and it is a separate field.
+
+Some pre-existing payloads use the name `total_count` for a LOCAL count of the
+rows they carry — `operation/branchprotection/resources_branchprotection.go`,
+`operation/repo/resources_status.go` and `operation/actions/workflow_logs.go`.
+Those are an existing contract and are deliberately left alone. New envelopes
+MUST NOT follow them: reserve `total_count` for the server grand total and call
+a local count `count`.
+
 ## Documentation contract
 
 Every bound parameter MUST appear in:

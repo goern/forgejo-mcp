@@ -53,6 +53,17 @@ page cap" shape as a standalone report
 ([#289](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/289)) —
 happy to fold that one in as a follow-up if wanted, since it's the same fix.
 
+Two meanings of `total_count` now coexist and the design doc says so
+explicitly: the envelope field added here is the server's grand total for the
+whole query (a `*int` omitted when the server does not report it, or a plain
+`int` where the endpoint carries the total in the response body), while a few
+pre-existing payloads — `operation/branchprotection/resources_branchprotection.go`,
+`operation/repo/resources_status.go`, `operation/actions/workflow_logs.go` —
+use the same name for a local count of the rows they carry. Those are an
+existing contract and are left untouched; `docs/design/output-bounding.md`
+records the distinction and tells new envelopes to use `count` for a local
+count.
+
 ## Capabilities
 
 ### Modified Capabilities
