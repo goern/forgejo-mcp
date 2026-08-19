@@ -80,19 +80,18 @@ func GetWikiPage(ctx context.Context, owner, repo, pageName string) (*WikiPage, 
 	return &page, nil
 }
 
-// GetWikiPageRevisions also returns the response headers so callers can read
-// X-Total-Count for a total_count field alongside has_next. Uses
-// doJSONWithHeader (not the List variant) so a 404 stays an error — unlike
-// ListWikiPages, "revisions of a page that doesn't exist" is not "zero
-// revisions".
-func GetWikiPageRevisions(ctx context.Context, owner, repo, pageName string, page, limit int) (*WikiRevisions, http.Header, error) {
+// GetWikiPageRevisions uses DoJSON (not the List variant) so a 404 stays an
+// error — unlike ListWikiPages, "revisions of a page that doesn't exist" is
+// not "zero revisions". The response body carries the page's total revision
+// count in WikiRevisions.Count, so callers needing a total read that rather
+// than the strippable X-Total-Count header.
+func GetWikiPageRevisions(ctx context.Context, owner, repo, pageName string, page, limit int) (*WikiRevisions, error) {
 	var revisions WikiRevisions
 	path := fmt.Sprintf("%s/revisions/%s?page=%d&limit=%d", wikiRepoPath(owner, repo), wikiPageSegment(pageName), page, limit)
-	header, err := doJSONWithHeader(ctx, http.MethodGet, path, nil, &revisions)
-	if err != nil {
-		return nil, header, err
+	if err := DoJSON(ctx, http.MethodGet, path, nil, &revisions); err != nil {
+		return nil, err
 	}
-	return &revisions, header, nil
+	return &revisions, nil
 }
 
 func CreateWikiPage(ctx context.Context, owner, repo, title, contentBase64, message string) (*WikiPage, error) {

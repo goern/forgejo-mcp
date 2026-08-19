@@ -7,7 +7,10 @@
 - [x] `search_issues` envelope gains `total_count` (omitempty); remove the
       "SHALL NOT report a total" line from `search-issues/spec.md` (moves to
       MODIFIED delta here).
-- [x] `list_wiki_pages` / `get_wiki_revisions` envelopes gain `total_count`.
+- [x] `list_wiki_pages` / `get_wiki_revisions` envelopes gain `total_count`;
+      `list_wiki_pages` documents its value as an upper bound (upstream counts
+      raw tree entries), and `get_wiki_revisions` reads the body `count` field
+      rather than the header.
 - [x] `list_repo_hooks` envelope gains `total_count`.
 - [x] Confirm which endpoints actually send `X-Total-Count` before adding the
       field: `list_branch_protections`, `list_issue_dependencies` and

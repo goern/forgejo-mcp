@@ -28,7 +28,7 @@ const (
 )
 
 var ListWikiPagesTool = mcp.NewTool(ListWikiPagesToolName,
-	mcp.WithDescription("List wiki pages with page/limit pagination; returns has_next and, when Forgejo reports X-Total-Count, total_count."),
+	mcp.WithDescription("List wiki pages with page/limit pagination; returns has_next and, when Forgejo reports X-Total-Count, total_count. total_count is upstream's count of raw wiki tree entries, so on a wiki with subdirectories or non-page files it can exceed the number of pages actually listed — treat it as an upper bound, not an exact total."),
 	mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 	mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 	mcp.WithNumber("page", mcp.Description(params.Page), mcp.DefaultNumber(1), mcp.Min(1)),
@@ -45,7 +45,7 @@ var GetWikiPageTool = mcp.NewTool(GetWikiPageToolName,
 )
 
 var GetWikiRevisionsTool = mcp.NewTool(GetWikiRevisionsToolName,
-	mcp.WithDescription("Get a wiki page's revision history with page/limit pagination; returns has_next and, when Forgejo reports X-Total-Count, total_count."),
+	mcp.WithDescription("Get a wiki page's revision history with page/limit pagination; returns has_next and total_count, the page's total number of revisions as reported in the response body."),
 	mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 	mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 	mcp.WithString("page_name", mcp.Required(), mcp.Description(params.WikiPage)),
@@ -203,13 +203,13 @@ func GetWikiRevisionsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 	repoName, _ := args["repo"].(string)
 	pageName, _ := args["page_name"].(string)
 	page, limit := pagination(args)
-	revisions, header, err := forgejo.GetWikiPageRevisions(ctx, owner, repoName, pageName, page, limit)
+	revisions, err := forgejo.GetWikiPageRevisions(ctx, owner, repoName, pageName, page, limit)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get wiki revisions: %w", err))
 	}
 	hasNext := false
 	if len(revisions.Commits) == limit {
-		next, _, err := forgejo.GetWikiPageRevisions(ctx, owner, repoName, pageName, page+1, limit)
+		next, err := forgejo.GetWikiPageRevisions(ctx, owner, repoName, pageName, page+1, limit)
 		if err != nil {
 			return to.ErrorResult(fmt.Errorf("probe next wiki revision page: %w", err))
 		}
@@ -219,12 +219,16 @@ func GetWikiRevisionsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 	for i, revision := range revisions.Commits {
 		resultRevisions[i] = wikiRevisionSummary{SHA: revision.SHA, Author: revision.Author.Name, Message: revision.Message}
 	}
+	// The revisions body carries the page's total revision count directly, so
+	// total_count comes from it rather than the X-Total-Count header: the two
+	// report the same number, the body field is not strippable by a proxy, and
+	// operation/wiki/resources.go already treats it as the authoritative total.
 	return to.TextResult(struct {
 		Revisions  []wikiRevisionSummary `json:"revisions"`
 		Page       int                   `json:"page"`
 		HasNext    bool                  `json:"has_next"`
-		TotalCount *int                  `json:"total_count,omitempty"`
-	}{resultRevisions, page, hasNext, forgejo.TotalCountPtr(header)})
+		TotalCount int                   `json:"total_count"`
+	}{resultRevisions, page, hasNext, revisions.Count})
 }
 
 func CreateWikiPageFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {

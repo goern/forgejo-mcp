@@ -64,7 +64,7 @@ func wikiResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]mc
 	refs := make([]wikiRevisionRef, 0)
 	revisionIDs := make([]string, 0)
 	revisionCount := 0
-	if revisions, _, revisionErr := forgejo.GetWikiPageRevisions(ctx, p.Owner, p.Repo, p.PageName, 1, resource.EmbeddedListCap+1); revisionErr == nil {
+	if revisions, revisionErr := forgejo.GetWikiPageRevisions(ctx, p.Owner, p.Repo, p.PageName, 1, resource.EmbeddedListCap+1); revisionErr == nil {
 		revisionCount = revisions.Count
 		for _, revision := range revisions.Commits {
 			refs = append(refs, wikiRevisionRef{SHA: revision.SHA, Author: revision.Author.Name, Message: revision.Message})

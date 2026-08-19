@@ -330,9 +330,9 @@ List all my repositories
 | `edit_release_attachment` | Rename a release attachment |
 | `delete_release_attachment` | Delete a release attachment — destructive |
 | **Wiki** | |
-| `list_wiki_pages` | List pages using `page`/`limit`; returns `has_next` and, when Forgejo reports `X-Total-Count`, `total_count`. |
+| `list_wiki_pages` | List pages using `page`/`limit`; returns `has_next` and, when Forgejo reports `X-Total-Count`, `total_count`. `total_count` counts upstream's raw wiki tree entries, so it can exceed the number of pages listed on a wiki with subdirectories — an upper bound, not an exact total. |
 | `get_wiki_page` | Read decoded Markdown; optional `start_line`/`end_line`, always returns `total_lines`. |
-| `get_wiki_revisions` | List revision history using `page`/`limit`; returns `has_next` and, when Forgejo reports `X-Total-Count`, `total_count`. |
+| `get_wiki_revisions` | List revision history using `page`/`limit`; returns `has_next` and `total_count`, the page's total revision count as reported in the response body. |
 | `create_wiki_page` | Create a page and return its server-normalized `page_name`; slash-separated titles are a flat subpage naming convention (no hierarchy and no automatic parent page), and an existing title is overwritten. |
 | `update_wiki_page` | Update content/title by normalized `page_name`; last writer wins. |
 | `delete_wiki_page` | Delete a page by normalized `page_name`. |

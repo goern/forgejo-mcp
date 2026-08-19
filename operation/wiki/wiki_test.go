@@ -186,7 +186,6 @@ func TestGetWikiRevisionsIsBoundedAndFlattensAuthor(t *testing.T) {
 			t.Fatalf("expected stable page size, got %s", r.URL.RawQuery)
 		}
 		if r.URL.Query().Get("page") == "1" {
-			w.Header().Set("X-Total-Count", "2")
 			_, _ = w.Write([]byte(`{"commits":[{"sha":"a","author":{"name":"alice","email":"private@example.test"},"message":"one"}],"count":2}`))
 			return
 		}
@@ -201,20 +200,24 @@ func TestGetWikiRevisionsIsBoundedAndFlattensAuthor(t *testing.T) {
 		t.Fatalf("unexpected result: %s", text)
 	}
 	if !strings.Contains(text, `"total_count":2`) {
-		t.Fatalf("expected total_count from X-Total-Count header: %s", text)
+		t.Fatalf("expected total_count from the response body count: %s", text)
 	}
 }
 
-func TestGetWikiRevisionsOmitsTotalCountWhenHeaderAbsent(t *testing.T) {
+// total_count for revisions comes from the body's count field, not the
+// X-Total-Count header — the two report the same number, and the body cannot
+// be stripped by an intermediary.
+func TestGetWikiRevisionsTotalCountComesFromBodyNotHeader(t *testing.T) {
 	wikiServer(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("X-Total-Count", "99")
 		_, _ = w.Write([]byte(`{"commits":[{"sha":"a","author":{"name":"alice"},"message":"one"}],"count":1}`))
 	})
 	result, err := GetWikiRevisionsFn(context.Background(), wikiRequest(map[string]any{"owner": "o", "repo": "r", "page_name": "T"}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if text := toolText(t, result); strings.Contains(text, "total_count") {
-		t.Fatalf("expected total_count to be omitted, got %s", text)
+	if text := toolText(t, result); !strings.Contains(text, `"total_count":1`) {
+		t.Fatalf("expected total_count from the body count, got %s", text)
 	}
 }
 

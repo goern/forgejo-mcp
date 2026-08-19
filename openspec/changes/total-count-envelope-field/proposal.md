@@ -60,7 +60,13 @@ happy to fold that one in as a follow-up if wanted, since it's the same fix.
 - `search-issues`: envelope gains `total_count`; the "no total" prohibition in
   the Resumable response envelope requirement is removed.
 - `wiki-tools`: `list_wiki_pages` and `get_wiki_revisions` envelopes gain
-  `total_count`.
+  `total_count`. Two wiki-specific notes: upstream computes the wiki-pages
+  header from the raw tree entry count before filtering non-page entries, so
+  `list_wiki_pages`'s `total_count` is documented as an upper bound rather
+  than an exact total; and `get_wiki_revisions` reads its total from the
+  response body's `count` field instead of the header — the same number, but
+  always present, not strippable, and already the authoritative total for
+  `operation/wiki/resources.go`.
 - `repo-webhook-tools`: `list_repo_hooks` envelope gains `total_count`.
 
 `branch-protection` and issue-dependency listing are unchanged: their upstream
