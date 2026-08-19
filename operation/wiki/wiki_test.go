@@ -90,6 +90,7 @@ func TestListWikiPagesIsBoundedAndUsesStableShape(t *testing.T) {
 			t.Fatalf("unexpected query: %s", r.URL.RawQuery)
 		}
 		if r.URL.Query().Get("page") == "2" {
+			w.Header().Set("X-Total-Count", "5")
 			_, _ = w.Write([]byte(`[
 				{"title":"One","sub_url":"One","content_base64":"must-not-leak"},
 				{"title":"Child","sub_url":"Guides%2FChild"}]`))
@@ -110,11 +111,41 @@ func TestListWikiPagesIsBoundedAndUsesStableShape(t *testing.T) {
 	if !strings.Contains(text, `"page_name":"Guides%2FChild"`) || !strings.Contains(text, `"sub_url":"Guides%2FChild"`) || !strings.Contains(text, `"has_next":true`) {
 		t.Fatalf("unexpected result: %s", text)
 	}
+	if !strings.Contains(text, `"total_count":5`) {
+		t.Fatalf("expected total_count from X-Total-Count header: %s", text)
+	}
 	if strings.Contains(text, "content_base64") || strings.Contains(text, "Extra") {
 		t.Fatalf("unbounded or unsafe result: %s", text)
 	}
 	if requests != 2 {
 		t.Fatalf("expected current-page read plus next-page probe, got %d requests", requests)
+	}
+}
+
+func TestListWikiPagesOmitsTotalCountWhenHeaderAbsent(t *testing.T) {
+	wikiServer(t, func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`[{"title":"One","sub_url":"One"}]`))
+	})
+	result, err := ListWikiPagesFn(context.Background(), wikiRequest(map[string]any{"owner": "o", "repo": "r"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if text := toolText(t, result); strings.Contains(text, "total_count") {
+		t.Fatalf("expected total_count to be omitted, got %s", text)
+	}
+}
+
+func TestListWikiPagesOmitsTotalCountWhenHeaderUnparsable(t *testing.T) {
+	wikiServer(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("X-Total-Count", "not-a-number")
+		_, _ = w.Write([]byte(`[{"title":"One","sub_url":"One"}]`))
+	})
+	result, err := ListWikiPagesFn(context.Background(), wikiRequest(map[string]any{"owner": "o", "repo": "r"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if text := toolText(t, result); strings.Contains(text, "total_count") {
+		t.Fatalf("expected total_count to be omitted for a garbage header, got %s", text)
 	}
 }
 
@@ -167,6 +198,26 @@ func TestGetWikiRevisionsIsBoundedAndFlattensAuthor(t *testing.T) {
 	text := toolText(t, result)
 	if !strings.Contains(text, `"author":"alice"`) || !strings.Contains(text, `"has_next":true`) || strings.Contains(text, "private@example.test") || strings.Contains(text, `"sha":"b"`) {
 		t.Fatalf("unexpected result: %s", text)
+	}
+	if !strings.Contains(text, `"total_count":2`) {
+		t.Fatalf("expected total_count from the response body count: %s", text)
+	}
+}
+
+// total_count for revisions comes from the body's count field, not the
+// X-Total-Count header — the two report the same number, and the body cannot
+// be stripped by an intermediary.
+func TestGetWikiRevisionsTotalCountComesFromBodyNotHeader(t *testing.T) {
+	wikiServer(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("X-Total-Count", "99")
+		_, _ = w.Write([]byte(`{"commits":[{"sha":"a","author":{"name":"alice"},"message":"one"}],"count":1}`))
+	})
+	result, err := GetWikiRevisionsFn(context.Background(), wikiRequest(map[string]any{"owner": "o", "repo": "r", "page_name": "T"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if text := toolText(t, result); !strings.Contains(text, `"total_count":1`) {
+		t.Fatalf("expected total_count from the body count, got %s", text)
 	}
 }
 

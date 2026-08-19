@@ -33,7 +33,7 @@ const (
 var (
 	ListRepoHooksTool = mcp.NewTool(
 		ListRepoHooksToolName,
-		mcp.WithDescription("List repository webhooks. page/limit control pagination (default: page 1, limit 30); no server-imposed ceiling."),
+		mcp.WithDescription("List repository webhooks. page/limit control pagination (default: page 1, limit 30); no server-imposed ceiling. Returns total_count when Forgejo reports X-Total-Count."),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithNumber("page", mcp.Required(), mcp.Description(params.Page), mcp.DefaultNumber(1), mcp.Min(1)),
@@ -134,10 +134,11 @@ func safeHook(h *forgejo_sdk.Hook) hookPayload {
 }
 
 type listRepoHooksResult struct {
-	Page  int           `json:"page"`
-	Limit int           `json:"limit"`
-	Count int           `json:"count"`
-	Hooks []hookPayload `json:"hooks"`
+	Page       int           `json:"page"`
+	Limit      int           `json:"limit"`
+	Count      int           `json:"count"`
+	TotalCount *int          `json:"total_count,omitempty"`
+	Hooks      []hookPayload `json:"hooks"`
 }
 
 func ListRepoHooksFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -161,7 +162,7 @@ func ListRepoHooksFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToo
 	if err != nil {
 		return to.ErrorResult(err)
 	}
-	hooks, _, err := client.ListRepoHooks(owner, repo, forgejo_sdk.ListHooksOptions{
+	hooks, resp, err := client.ListRepoHooks(owner, repo, forgejo_sdk.ListHooksOptions{
 		ListOptions: forgejo_sdk.ListOptions{Page: int(page), PageSize: int(limit)},
 	})
 	if err != nil {
@@ -171,11 +172,16 @@ func ListRepoHooksFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToo
 	for i, h := range hooks {
 		payloads[i] = safeHook(h)
 	}
+	var totalCount *int
+	if resp != nil {
+		totalCount = forgejo.TotalCountPtr(resp.Header)
+	}
 	return to.TextResult(listRepoHooksResult{
-		Page:  int(page),
-		Limit: int(limit),
-		Count: len(payloads),
-		Hooks: payloads,
+		Page:       int(page),
+		Limit:      int(limit),
+		Count:      len(payloads),
+		TotalCount: totalCount,
+		Hooks:      payloads,
 	})
 }
 
