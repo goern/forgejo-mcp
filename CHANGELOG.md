@@ -1,3 +1,74 @@
+## [2.34.0](https://git.b4mad.industries/agentic-forges/forgejo-mcp/compare/v2.33.0...v2.34.0) (2026-08-19)
+
+### :sparkles: Features
+
+* ✨ carry Forgejo's X-Total-Count as total_count on paginated envelopes ([a0e0f07](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/a0e0f07dbc701b9431ea603dff7254f6969b5134)), closes [coordination#307](https://git.b4mad.industries/agentic-forges/coordination/issues/307)
+* ✨ print a Claude prompt after creating the PR review molecule ([90b8427](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/90b8427b100ec5d631f56978331c7a1814f5b07d))
+* 🔒️ make file_path attachment uploads opt-in ([8b35313](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/8b35313ea0007bb3c5cafbef06efea693c45d299))
+* **attachments:** accept local file paths ([e25565c](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/e25565c2a1e10ae0af4f5af9a86e284ca88df631))
+* **issue:** expose due_date on the issue resource template (daikon[#93](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/93)) ([78fab02](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/78fab02772eab35798cc6d0f2009c5cd666716d0))
+* **issue:** expose due_date read/write/sort (daikon[#93](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/93)) ([bc48f91](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/bc48f9129cba76d5879de17c75901f4b39cdab99))
+* **resources:** bounded issue-list and comment-thread resources ([5a8d606](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/5a8d606d1dfa0eb72e9435e912fab12e7d07c064))
+
+### :bug: Fixes
+
+* 🐛 correct the branch_protection rule encoding guidance ([d0ca05c](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/d0ca05c8d1a968ccb6b61ece3130a59baf7b13be)), closes [#503](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/503)
+* 🐛 drop total_count where Forgejo never sends X-Total-Count ([c5700f9](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/c5700f9de6836df6a6bb5e759a90f94703a223ea))
+* 🐛 label resources dropped a row per page and ignored the query ([1ba62fa](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/1ba62fabdef8001d42b413b1dc23bed2676a80de))
+* 🐛 offset comment threads that fit within one page ([354ef07](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/354ef07b613d889f90bf35c68e0f24d64dbecc5a))
+* 🐛 read wiki revision totals from the body, bound the page total ([36a8653](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/36a8653abc2e77d65498d75a08d5dff8f96cd9ef))
+* 🐛 stop the CI guard reading a stale PaC status as a failure ([31bdbbd](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/31bdbbdfa9bae502342aa4d8a18315981311d63f))
+* 🔒️ escape the release attachment API path ([beabef9](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/beabef9e7d3ff7ff05fc9efaffb6680c0ba2587a))
+* 🔒️ stop passing the PR title through PaC substitution ([36c5e39](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/36c5e39516d53e4ec9bedcff10d3fef8c55b9dfc))
+* **deps:** update dependency @fission-ai/openspec to v1.9.0 ([f4b3239](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/f4b323994b4d6ded3c8d61379ca5c14ea6c6bd8f))
+* **issue:** stop the sorted issue listing swallowing a missing repo ([6681329](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/6681329741d27d1a77ceee0d53d72a5fdae1208f)), closes [#483](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/483)
+* **openspec:** keep requirement statement intact ([73d4d9a](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/73d4d9a69ee042a526f720d9b4ea15057e03d4c5))
+* **resources:** register the bounded list templates with their query expansions ([d879ca1](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/d879ca13233871ccc7e143b89fcec490e23bb1ff))
+* **resources:** stop the bounded lists skipping a row per page boundary ([be9e4b4](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/be9e4b4a330c16e61cd4f5883c120738ab17a044))
+
+### :memo: Documentation
+
+* 📝 correct the design decision that prescribed the over-fetch ([53262f2](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/53262f2e1ffbb5d48eaac1eaaefccdfdf7eec7f1))
+* 📝 credit pisco for the file_path attachment uploads ([db57c36](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/db57c360733b3a8fa618241fbf96377804d35647))
+* 📝 distinguish envelope total_count from resource-local counts ([65a12d4](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/65a12d4e48a4350a213a06fc7289c0e6d11c093c))
+* 📝 document the tag pipeline that runs after `just release` ([abac3e9](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/abac3e95a6020e3b31665c687c011ecbb10c2068))
+* 📝 openspec proposal for the total_count envelope field ([f2abc85](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/f2abc856de76bc85ee119c048057b03d3458a537)), closes [coordination#307](https://git.b4mad.industries/agentic-forges/coordination/issues/307)
+* 📝 propagate the client-controlled bound to the collection rule ([1dc6aba](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/1dc6aba87b8e066326f8052b66fc4ccdb8d391fa))
+* 📝 re-capture the file_path demo against the upload gate ([87b3781](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/87b37813fbdfe2706bbbedfb16bca076ac6ada80))
+* 📝 state the %2F requirement for slash-shaped label filters ([e4400f4](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/e4400f4f73971f7c7119ad76dfb6f0925f0b5e83))
+* 📝 state the paging invariant by contract, not by header ([74df574](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/74df574e10c78917a57026da94c692bf42838964))
+* 📝 warn that an unknown label filter returns everything ([0111e7e](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/0111e7e256b573f1a5a181660dd844fea713e590))
+* **demos:** add file path upload proof ([01af0db](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/01af0dbdc69ee82972314e5e1c7c1144971e4c8d))
+* **demos:** bounded issue-list and comment-thread resources walkthrough (showboat) ([4ef4be2](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/4ef4be270ff6710c2e61f8603653c9179ca5226e)), closes [forgejo/forgejo#1024](https://git.b4mad.industries/forgejo/forgejo/issues/1024)
+* **demos:** complete the bounded-lists walkthrough against the fixed template registration ([b70cfe3](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/b70cfe31fa3e11beca80ff059b4ec5b25c770b23))
+* **demos:** issue due-date walkthrough (showboat) ([596566c](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/596566cd71688412869eed39baaf79e70f4a551b))
+
+### :white_check_mark: Tests
+
+* ✅ assert a zero X-Total-Count marshals as total_count 0 ([7d0e1db](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/7d0e1db036aa34290407ca36a76baa93d585c42c))
+
+### :repeat: CI
+
+* 🚀 assert CI actually ran on a PR, not merely that it is not red ([49b3a7c](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/49b3a7c264586bafa53eddc29343aa684f415c24)), closes [#483](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/483)
+
+### :repeat: Chore
+
+* 🔧 allow synath to trigger CI ([ece8042](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/ece80423e54bf1b132464bfb101b4ca02af3cdb5))
+* 🔧 archive the attachment-file-path-upload change ([9314c90](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/9314c909bfcc81ebb4366411bbe1857d107401fe))
+* 🔧 declare the castra:release label ([8fb985a](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/8fb985a845306215d800a9cfc2c85b68f9d0c92b))
+* 🔧 union-merge the beads interaction log ([6c6e8aa](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/6c6e8aa2f52f7df80c0b51f5168abb8bdc75e788))
+* 🔧 update enable-semantic-release to v1.4.1 ([f9dedf1](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/f9dedf16e8aeadb46eb075ad08439b3a74afb9c4))
+* 🔧 update enable-semantic-release to v1.4.2 ([e6a8595](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/e6a85958fd963cdb54a081b93c89bf13503525f6))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to 048d54f ([d219919](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/d219919ab5809b8487165b8f0db76e9bbfb531e2))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to 1b171b7 ([7fcd880](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/7fcd8808e08c74d53f5f7f89645064f38b2f9d3e))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to 6c338de ([61f5127](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/61f51277b329d31d022bbe66a84799284a4841b2))
+* **deps:** update quay.io/hummingbird/go docker tag to v1.26.6 ([13cb059](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/13cb059bb2d5b6e46857b1ce238773edcc523c78))
+* **deps:** update quay.io/hummingbird/go:1.26.6-builder docker digest to 4a8c3a1 ([13e7c8f](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/13e7c8f0e363b15c92d20fe6570fe50aedccbe7b))
+* **deps:** update quay.io/hummingbird/go:1.26.6-builder docker digest to 4c7a4f1 ([f65e087](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/f65e087c19aebec2fdd3c7acdca4d8553a1e60f8))
+* **deps:** update quay.io/hummingbird/go:1.26.6-builder docker digest to b157afc ([1767320](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/1767320be89d0e06e0254a22a29d6425c9c3e971))
+* update the interaction of the beads ([cb10c84](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/cb10c84f586f7bff56e38c1f7bfcf8fe3300247e))
+* update the interaction of the beads ([0b91026](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/0b910265bf1f278dea2991e8d7744aa5e2e139ba))
+
 ## [2.33.0](https://git.b4mad.industries/agentic-forges/forgejo-mcp/compare/v2.32.1...v2.33.0) (2026-08-14)
 
 ### :sparkles: Features
