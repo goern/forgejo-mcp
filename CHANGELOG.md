@@ -1,3 +1,18 @@
+## [2.34.1](https://git.b4mad.industries/agentic-forges/forgejo-mcp/compare/v2.34.0...v2.34.1) (2026-08-21)
+
+### :repeat: Chore
+
+* 🔧 add castra:release onboarding preflight check ([e50d68b](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/e50d68b7cfdcb6d07b191175767bbcb71d11135d))
+* 🔧 add release-manager list to OWNERS ([c2a592d](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/c2a592d8aefdbb899f0423e9f7121300a8698b15)), closes [#523](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/523)
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to 7199380 ([72cad89](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/72cad891e3812477c14aed7aeec35234db521fbe))
+* **deps:** update quay.io/hummingbird/go docker tag to v1.26.7 ([d05f651](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/d05f651d281a08127d7f7ca936f555b1a2b02aa0))
+* **deps:** update quay.io/hummingbird/go docker tag to v1.27.0 ([12c46f1](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/12c46f11fd41f7ac82c394f3170f74e2452fd751))
+* **deps:** update quay.io/hummingbird/go:1.26.6-builder docker digest to 9985f49 ([b9b2ff6](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/b9b2ff64d7d523f70bbd8656b9f5ac2f196e9d15))
+* **deps:** update quay.io/hummingbird/go:1.27.0-builder docker digest to 053da9c ([99d63ee](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/99d63ee0d144de7ec6e6fad21e7718fa04460482))
+* **deps:** update quay.io/hummingbird/go:1.27.0-builder docker digest to 8602056 ([6e60d3d](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/6e60d3d7512657b6a9ae2ea5de2a24ebf82022f7))
+* **deps:** update quay.io/hummingbird/go:1.27.0-builder docker digest to 8b25151 ([4734040](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/473404035e81e38a85547a50d473ce9da1224605))
+* **deps:** update quay.io/hummingbird/go:1.27.0-builder docker digest to ad74bc6 ([c35811e](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/c35811e7726c188f71acd77710e989362a05e3d2))
+
 ## [2.34.0](https://git.b4mad.industries/agentic-forges/forgejo-mcp/compare/v2.33.0...v2.34.0) (2026-08-19)
 
 ### :sparkles: Features
