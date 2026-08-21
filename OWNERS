@@ -16,3 +16,11 @@ approvers:
   - synath
   - b4mad-renovate
   - op1st-gitops
+
+# castra-release-authz reads this list (not `approvers`) to decide who may
+# add `castra:release` and cut a tag. Deliberately separate from `approvers`:
+# that grants triggering CI, this grants cutting a release.
+# See agentic-forges/castra manifests/castra/README.md, "The castra:release
+# lane cuts a permanent tag".
+release-manager:
+  - goern
