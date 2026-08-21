@@ -279,3 +279,38 @@ oc -n op1st-pipelines get taskrun -l tekton.dev/pipelineRun=<run-name>
 A complete release has **14 assets**: 4 tarballs, 4 SBOMs, 4 `.mcpb`,
 `checksums.txt`, and `checksums.txt.sig`. Compare against the previous tag
 rather than against memory.
+
+## Triggering a castra:release
+
+This is a second, separate release path from the `just release` Job above:
+labeling an issue `castra:release` triggers `agentic-forges/castra`'s
+`release-engineer` persona (Tekton EventListener → pipeline), which judges
+whether the branch is releasable and, on a `go` verdict, runs the same
+deterministic semantic-release cut. See `agentic-forges/castra`'s
+`manifests/castra/README.md`, section "The `castra:release` lane cuts a
+permanent tag", for the full design.
+
+**Run `just castra-preflight` before labeling anything.** It checks the two
+repo-onboarding preconditions that fail *silently* — no comment, no error,
+the issue just sits there:
+
+1. `OWNERS` has a non-empty `release-manager:` list (separate from
+   `approvers:` — that grants triggering CI, this grants cutting a tag).
+   `castra-release-authz` fails **closed** on a missing file, missing key, or
+   empty list.
+2. A Forgejo webhook is registered on this repo pointing at
+   `https://webhooks.castra.b4mad.industries` with `issues` events, active.
+   Without it nothing is ever delivered to the EventListener.
+
+A third precondition can't be checked ahead of time, only followed as a
+workflow rule: **add the label to an existing issue, never at issue
+creation.** Creating an issue with `castra:release` already attached emits a
+Forgejo `opened` action; the EventListener's CEL filter only matches
+`label_updated`. Labeling at creation is therefore indistinguishable from (1)
+or (2) failing — same silence, different cause. If the label is already on
+the issue and nothing happened, remove it and re-add it to produce a genuine
+`label_updated` event.
+
+Diagnosed against `agentic-forges/forgejo-mcp#523` (2026-08-21): all three
+were true at once — the label had been added at creation, `OWNERS` had no
+`release-manager:` key, and no webhook was registered on the repo at all.
