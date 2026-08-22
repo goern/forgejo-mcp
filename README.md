@@ -218,6 +218,11 @@ List all my repositories
 | `fork_repo` | Fork a repository |
 | `edit_repo` | Edit repository settings. Only fields you pass change; omitted fields are left unchanged. Providing no fields is an error. |
 | `search_repos` | Search for repositories |
+| **Topics** | |
+| `list_repo_topics` | List a repository's topics. Bounded by `page` (default 1) + `limit` (default 100); returns `{topics, page, limit, count}`. |
+| `set_repo_topics` | Replace all topics. `topics` is a required comma-separated string; an empty string clears. Invalid names are rejected before the request. |
+| `add_repo_topic` | Add one topic |
+| `delete_repo_topic` | Delete one topic |
 | **Branches** | |
 | `list_branches` | List all branches in a repository |
 | `create_branch` | Create a new branch |

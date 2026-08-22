@@ -64,6 +64,10 @@ func RegisterTool(s *server.MCPServer) {
 	s.AddTool(ListMyReposTool, ListMyReposFn)
 	s.AddTool(GetRepoTool, GetRepoFn)
 	s.AddTool(EditRepoTool, EditRepoFn)
+	s.AddTool(ListRepoTopicsTool, ListRepoTopicsFn)
+	s.AddTool(SetRepoTopicsTool, SetRepoTopicsFn)
+	s.AddTool(AddRepoTopicTool, AddRepoTopicFn)
+	s.AddTool(DeleteRepoTopicTool, DeleteRepoTopicFn)
 
 	// File
 	s.AddTool(GetFileContentTool, GetFileContentFn)

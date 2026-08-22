@@ -5,6 +5,7 @@ package repo
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/operation/params"
@@ -46,7 +47,13 @@ var (
 	)
 )
 
-func loadRepo(ctx context.Context, owner, repo string) (*forgejo_sdk.Repository, error) {
+// repositoryView is GetRepo plus topics. SDK Repository has no Topics field.
+type repositoryView struct {
+	*forgejo_sdk.Repository
+	Topics []string `json:"topics"`
+}
+
+func loadRepo(ctx context.Context, owner, repo string) (*repositoryView, error) {
 	client, err := forgejo.Client(ctx)
 	if err != nil {
 		return nil, err
@@ -55,7 +62,20 @@ func loadRepo(ctx context.Context, owner, repo string) (*forgejo_sdk.Repository,
 	if err != nil {
 		return nil, fmt.Errorf("get repo: %w", err)
 	}
-	return r, nil
+	topics, resp, err := client.ListRepoTopics(owner, repo, forgejo_sdk.ListRepoTopicsOptions{
+		ListOptions: forgejo_sdk.ListOptions{Page: 1, PageSize: maxRepoTopics},
+	})
+	if err != nil {
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
+			topics = []string{}
+		} else {
+			return nil, fmt.Errorf("list repo topics: %w", err)
+		}
+	}
+	if topics == nil {
+		topics = []string{}
+	}
+	return &repositoryView{Repository: r, Topics: topics}, nil
 }
 
 func GetRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {

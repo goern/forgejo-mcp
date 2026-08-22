@@ -4,7 +4,7 @@
 
 Read one repository and PATCH its settings page (description, website,
 visibility, unit toggles) without falling back to raw HTTP. Topics are a
-separate API and are not a field of `edit_repo`.
+separate API — see [repo-topics.md](repo-topics.md).
 
 ## Setup
 

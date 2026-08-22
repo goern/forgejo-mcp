@@ -200,9 +200,12 @@ omitted `private` cannot become `false`.
 | Demo | Tools | What it shows |
 |------|-------|---------------|
 | [edit-repo.md](edit-repo.md) | `get_repo`, `edit_repo` | Read `website`/`description`, description-only PATCH, explicit `private=false`, clear-by-empty-string, empty-edit guard |
+| [repo-topics.md](repo-topics.md) | `list_repo_topics`, `set_repo_topics`, `add_repo_topic`, `delete_repo_topic` | CSV replace-all, empty CSV clears, missing `topics` key is an error, add/delete one name, invalid names never hit the network. Not a field of `edit_repo`. |
 
 **Use case.** Put a homepage on an existing repo, archive a finished project,
 or turn wiki/issues off — without `curl` and without clobbering visibility.
+Tag a repo with `go,mcp` via `set_repo_topics` rather than a PATCH that would
+wipe tags if the field were omitted.
 
 ---
 
