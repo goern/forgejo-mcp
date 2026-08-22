@@ -274,6 +274,10 @@
       "description": "Rename a release attachment."
     },
     {
+      "name": "edit_repo",
+      "description": "Edit repository settings (PATCH — only supplied fields change). Providing no fields is an error."
+    },
+    {
       "name": "edit_repo_hook",
       "description": "Edit a repository webhook. Only fields you pass are changed; omitted fields are left untouched."
     },
@@ -360,6 +364,10 @@
     {
       "name": "get_release_by_tag",
       "description": "Get a release by tag name."
+    },
+    {
+      "name": "get_repo",
+      "description": "Get a single repository by owner and name."
     },
     {
       "name": "get_repo_hook",

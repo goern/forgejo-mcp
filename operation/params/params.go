@@ -80,6 +80,7 @@ const (
 
 	// Misc parameters
 	Description = "Description"
+	Website     = "Website URL"
 	Private     = "Private repo"
 
 	// Attachment parameters

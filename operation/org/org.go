@@ -31,7 +31,7 @@ var (
 		mcp.WithString("name", mcp.Required(), mcp.Description("Organization username")),
 		mcp.WithString("full_name", mcp.Description("Display name")),
 		mcp.WithString("description", mcp.Description(params.Description)),
-		mcp.WithString("website", mcp.Description("Website URL")),
+		mcp.WithString("website", mcp.Description(params.Website)),
 		mcp.WithString("location", mcp.Description("Location")),
 		mcp.WithString("visibility", mcp.Description("Visibility: public, limited, or private")),
 	)
@@ -63,7 +63,7 @@ var (
 		mcp.WithString("org", mcp.Required(), mcp.Description(params.Org)),
 		mcp.WithString("full_name", mcp.Description("Display name")),
 		mcp.WithString("description", mcp.Description(params.Description)),
-		mcp.WithString("website", mcp.Description("Website URL")),
+		mcp.WithString("website", mcp.Description(params.Website)),
 		mcp.WithString("location", mcp.Description("Location")),
 		mcp.WithString("visibility", mcp.Description("Visibility: public, limited, or private")),
 	)

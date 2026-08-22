@@ -191,6 +191,19 @@ with its spec under `openspec/`, not in this folder.
 every newly created repository, tests the delivery to confirm the endpoint is
 reachable, and removes stale hooks whose URLs no longer respond.
 
+### 11. Repository settings
+
+Read one repository and PATCH description, website, visibility, archive flag,
+and unit toggles. Only supplied fields change; an empty edit is an error so an
+omitted `private` cannot become `false`.
+
+| Demo | Tools | What it shows |
+|------|-------|---------------|
+| [edit-repo.md](edit-repo.md) | `get_repo`, `edit_repo` | Read `website`/`description`, description-only PATCH, explicit `private=false`, clear-by-empty-string, empty-edit guard |
+
+**Use case.** Put a homepage on an existing repo, archive a finished project,
+or turn wiki/issues off — without `curl` and without clobbering visibility.
+
 ---
 
 ## Cross-cutting workflows
