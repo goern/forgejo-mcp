@@ -213,8 +213,10 @@ List all my repositories
 | `search_users` | Search for users |
 | **Repositories** | |
 | `list_my_repos` | List all repositories you own |
+| `get_repo` | Get a single repository by owner and name |
 | `create_repo` | Create a new repository |
 | `fork_repo` | Fork a repository |
+| `edit_repo` | Edit repository settings. Only fields you pass change; omitted fields are left unchanged. Providing no fields is an error. |
 | `search_repos` | Search for repositories |
 | **Branches** | |
 | `list_branches` | List all branches in a repository |

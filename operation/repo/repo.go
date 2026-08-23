@@ -20,6 +20,8 @@ const (
 	CreateRepoToolName  = "create_repo"
 	ForkRepoToolName    = "fork_repo"
 	ListMyReposToolName = "list_my_repos"
+	GetRepoToolName     = "get_repo"
+	EditRepoToolName    = "edit_repo"
 )
 
 var (
@@ -60,6 +62,8 @@ func RegisterTool(s *server.MCPServer) {
 	s.AddTool(CreateRepoTool, CreateRepoFn)
 	s.AddTool(ForkRepoTool, ForkRepoFn)
 	s.AddTool(ListMyReposTool, ListMyReposFn)
+	s.AddTool(GetRepoTool, GetRepoFn)
+	s.AddTool(EditRepoTool, EditRepoFn)
 
 	// File
 	s.AddTool(GetFileContentTool, GetFileContentFn)
