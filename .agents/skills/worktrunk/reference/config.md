@@ -6,25 +6,25 @@ Manage user & project configs. Includes shell integration, hooks, and saved stat
 
 Install shell integration (required for directory switching):
 
-```bash
+```console
 $ wt config shell install
 ```
 
 Create user config file with documented examples:
 
-```bash
+```console
 $ wt config create
 ```
 
 Create project config file (`.config/wt.toml`) for hooks:
 
-```bash
+```console
 $ wt config create --project
 ```
 
 Show current configuration and file locations:
 
-```bash
+```console
 $ wt config show
 ```
 
@@ -77,6 +77,7 @@ Controls where new worktrees are created.
 - `{{ repo_path }}` — absolute path to the repository root (e.g., `/Users/me/code/myproject`. Or for bare repos, the bare directory itself)
 - `{{ repo }}` — repository directory name (e.g., `myproject`)
 - `{{ owner }}` — primary remote owner path (may include subgroups like `group/subgroup`)
+- `{{ remote_repo }}` — repository name in the primary remote URL, without `.git` (e.g., `myproject`); differs from `{{ repo }}`, the directory on disk, when a clone was renamed
 - `{{ branch }}` — raw branch name (e.g., `feature/auth`)
 - `{{ branch | sanitize }}` — filesystem-safe: `/` and `\` become `-` (e.g., `feature-auth`)
 - `{{ branch | sanitize_db }}` — database-safe: lowercase, underscores, hash suffix (e.g., `feature_auth_x7k`)
@@ -192,11 +193,13 @@ columns = ["branch", "status", "ci", "path"]   # Columns to show, in order — b
 timeout-ms = 0     # Wall-clock budget for the entire collect phase; 0 disables
 ```
 
-`columns` selects and orders the columns to render; omit it for the default set.
-It is meant to drive a per-invocation [alias](https://worktrunk.dev/extending/#aliases)
-(`wt --config-set 'list.columns=[…]' list`), giving a named view without
-disturbing the default `wt list`. A static setting works but pins one layout
-over a table that otherwise adapts to `--full` and terminal width.
+`columns` selects and orders the columns the `wt list` table and the `wt switch`
+picker render; `--format json` ignores it and always emits every field. Omit it
+for the default set. It is meant to drive a per-invocation
+[alias](https://worktrunk.dev/extending/#aliases) (`wt --config-set 'list.columns=[…]' list`),
+giving a named view without disturbing the default `wt list`. A static setting
+works but pins one layout over a table that otherwise adapts to `--full` and
+terminal width.
 
 Valid built-in names:
 
@@ -225,11 +228,6 @@ since `--full` only bundles columns into the default table rather than gating a
 named one. A column whose data source is missing still stays hidden — `summary`
 needs an LLM command (`[commit.generation]`), `url` needs a `[list] url`
 template — since listing can't supply the data.
-
-The selection drives the table and the `wt switch` picker. `wt list --format
-json` always emits every field, but a listed gated column (`ci`, `summary`)
-still forces its data collection on, so the JSON carries the same data the
-table shows.
 
 #### Custom columns [experimental]
 
@@ -341,7 +339,7 @@ User config can include a `[projects]` table for project-specific settings — w
 
 Entries are keyed by project identifier — `<host>/<owner>/<repo>` derived from the primary remote URL (no `.git` suffix), or the canonical repo path when there is no remote. Run `wt config show` inside the repo to see the identifier for the current project; it appears in the `PROJECT CONFIG` section as `Identifier: …`.
 
-Scalar values (like `worktree-path`) replace the global value; everything else (hooks, aliases, etc.) appends, global first.
+Scalar values (like `worktree-path`) replace the global value; everything else (hooks, aliases, etc.) appends, global first. See [how the layers rank](https://worktrunk.dev/config/#precedence).
 
 ```toml
 [projects."github.com/user/repo"]
@@ -613,7 +611,7 @@ Aliases defined here are shared with teammates. For personal aliases, use the [u
 
 Worktrunk needs shell integration to change directories when switching worktrees. Install with:
 
-```bash
+```console
 $ wt config shell install
 ```
 
@@ -647,7 +645,7 @@ For nested config sections, use double underscores to separate levels:
 
 Override the LLM command in CI to use a mock:
 
-```bash
+```console
 $ WORKTRUNK_COMMIT__GENERATION__COMMAND="echo 'test: automated commit'" wt merge
 ```
 
@@ -662,7 +660,9 @@ $ WORKTRUNK_COMMIT__GENERATION__COMMAND="echo 'test: automated commit'" wt merge
 | `XDG_CONFIG_DIRS` | Colon-separated system config directories (default: `/etc/xdg`) |
 | `WORKTRUNK_DIRECTIVE_CD_FILE` | Internal: set by shell wrappers. wt writes a raw path; the wrapper `cd`s to it |
 | `WORKTRUNK_DIRECTIVE_EXEC_FILE` | Internal: set by shell wrappers. wt writes shell commands; the wrapper sources the file |
+| `WORKTRUNK_SHELL_CWD` | Internal: set by wt on alias and hook bodies, so a nested `wt` preserves the user's subdirectory |
 | `WORKTRUNK_SHELL` | Internal: set by shell wrappers to indicate shell type (e.g., `powershell`) |
+| `WORKTRUNK_COMPLETE_NAME` | Internal: set by shell wrappers to the command name completions register under (defaults to the binary name) |
 | `WORKTRUNK_MAX_CONCURRENT_COMMANDS` | Max parallel git commands (default: 32). Lower if hitting file descriptor limits. |
 | `WORKTRUNK_VERBOSE` | Verbosity level (`0`/`1`/`2`), like `-v`/`-vv` but applied everywhere — including shell completion, which no flag can reach |
 | `RUST_LOG` | Logging directive (e.g. `worktrunk=debug`); overrides the verbosity baseline for what reaches stderr |
@@ -671,14 +671,31 @@ $ WORKTRUNK_COMMIT__GENERATION__COMMAND="echo 'test: automated commit'" wt merge
 
 ## Inline config overrides (`--config-set`)
 
-`--config-set <toml>` overrides any user config key for a single invocation, with higher priority than both config files and `WORKTRUNK_` env vars. The value is a TOML fragment, so arrays and tables work directly; the flag is global (works before or after the subcommand), repeatable, and a later `--config-set` replaces an earlier one for the same key.
+`--config-set <toml>` overrides any user config key for a single invocation. The value is a TOML fragment, so arrays and tables work directly; the flag is global (works before or after the subcommand), repeatable, and a later `--config-set` replaces an earlier one for the same key.
 
-```bash
+```console
 $ wt --config-set list.full=true list
 $ wt step copy-ignored --config-set 'step.copy-ignored.exclude=["target", "dist"]'
 ```
 
 This composes with aliases — an alias body can invoke `wt --config-set … <command>` to render a named view without changing the saved config.
+
+## Precedence
+
+Sources closer to the invocation rank higher (user config above system config), and within a config file a [project entry](https://worktrunk.dev/config/#user-project-specific-settings) outranks the global key of the same name. So `worktree-path` comes from the first of these that sets it:
+
+1. `--config-set 'worktree-path = …'`
+2. `WORKTRUNK_WORKTREE_PATH`
+3. `[projects."github.com/owner/repo"]` in the config file
+4. global `worktree-path` in the config file
+
+A `--config-set` that names a project entry is both the highest layer and the most specific key, so it beats the same flag's global key:
+
+```console
+$ wt --config-set 'projects."github.com/owner/repo".worktree-path = "/tmp/scratch"' switch --create feature
+```
+
+Hooks, aliases and `step.copy-ignored.exclude` accumulate rather than replace, so an env-set hook and a project's hook both run.
 
 ## Command reference
 
@@ -737,7 +754,7 @@ If a config file doesn't exist, shows defaults that would be used.
 
 Use `--full` to run diagnostic checks:
 
-```bash
+```console
 $ wt config show --full
 ```
 
@@ -795,38 +812,45 @@ Project hooks and project aliases prompt for approval on first run to prevent un
 ### Examples
 
 List commands and their approval status for current project:
-```bash
+```console
 $ wt config approvals list
 ```
 
 Pre-approve all hook and alias commands for current project:
-```bash
+```console
 $ wt config approvals add
 ```
 
+Pre-approve without prompting, for a container or CI job:
+```console
+$ wt config approvals add --yes
+```
+
 Clear approvals for current project:
-```bash
+```console
 $ wt config approvals clear
 ```
 
 Clear only approvals for commands no longer in the project config:
-```bash
+```console
 $ wt config approvals clear --stale
 ```
 
 Clear global approvals:
-```bash
+```console
 $ wt config approvals clear --global
 ```
 
 Check whether an unattended run would stop for approval:
-```bash
+```console
 $ wt config approvals list --format=json | jq -r .state
 ```
 
 ### How approvals work
 
-Approved commands are saved to `~/.config/worktrunk/approvals.toml`. Re-approval is required when the command template changes or the project moves. Use `--yes` to bypass prompts in CI.
+Approved commands are saved to `~/.config/worktrunk/approvals.toml`. Re-approval is required when the command template changes or the project moves.
+
+`--yes` bypasses the prompt, and what it leaves behind depends on the command it is passed to. On a command that runs project commands it grants consent for that run alone and records nothing, so the next run asks again. On `wt config approvals add` the record is the whole point, so the approvals are written — which is how an unattended environment pre-approves a project it has just cloned.
 
 ### Reading approval state
 
@@ -891,17 +915,17 @@ Aliases are command templates configured in user (`~/.config/worktrunk/config.to
 ### Examples
 
 Show every configured alias's template:
-```bash
+```console
 $ wt config alias show
 ```
 
 Show the template for `deploy`:
-```bash
+```console
 $ wt config alias show deploy
 ```
 
 Preview an invocation without running it:
-```bash
+```console
 $ wt config alias dry-run deploy
 $ wt config alias dry-run deploy -- --env=staging
 ```
@@ -957,37 +981,37 @@ State is stored in `.git/` (config entries and log files), separate from configu
 ### Examples
 
 Get the default branch:
-```bash
+```console
 $ wt config state default-branch
 ```
 
 Set the default branch manually:
-```bash
+```console
 $ wt config state default-branch set main
 ```
 
 Set a marker for current branch:
-```bash
+```console
 $ wt config state marker set 🚧
 ```
 
 Store arbitrary data:
-```bash
+```console
 $ wt config state vars set env=staging
 ```
 
 Drop the regenerable caches:
-```bash
+```console
 $ wt config state cache clear
 ```
 
 Show all stored state:
-```bash
+```console
 $ wt config state get
 ```
 
 Clear all stored state:
-```bash
+```console
 $ wt config state clear
 ```
 
@@ -1040,7 +1064,7 @@ View or drop worktrunk's regenerable caches in one place. Everything here is reb
 
 - **CI status** — GitHub/GitLab CI per branch (30–60s TTL), shown in [`wt list`](https://worktrunk.dev/list/#ci-status), plus the largest PR/MR number seen (sizes the CI column)
 - **Summaries** — LLM-generated branch summaries (`wt list --full`, `wt switch` preview)
-- **Git commands** — SHA-keyed disk caches: merge-tree, ancestry, diff-stats, and `wt switch` preview renders
+- **Git commands** — cached merge-tree, ancestry, diff-stat, and `wt switch` preview results
 - **Hints** — one-time hints already shown in this repo
 - **Previous branch** — the `wt switch -` target, re-recorded on the next switch
 
@@ -1051,12 +1075,12 @@ Without a subcommand, runs `get`.
 ### Examples
 
 Show cache contents:
-```bash
+```console
 $ wt config state cache
 ```
 
 Drop all caches:
-```bash
+```console
 $ wt config state cache clear
 ```
 
@@ -1104,7 +1128,7 @@ Default branch detection and override.
 
 Useful in scripts to avoid hardcoding `main` or `master`:
 
-```bash
+```console
 $ git rebase $(wt config state default-branch)
 ```
 
@@ -1228,27 +1252,27 @@ All logs are stored in `.git/wt/logs/` (in the main worktree's git directory). A
 ### Examples
 
 List all log files:
-```bash
+```console
 $ wt config state logs
 ```
 
 Query the command log:
-```bash
+```console
 $ tail -5 .git/wt/logs/commands.jsonl | jq .
 ```
 
 Path to one hook log (e.g. the `post-start` `server` hook for the current branch):
-```bash
+```console
 $ wt config state logs --format=json | jq -r '.hook_output[] | select(.source == "user" and .hook_type == "post-start" and (.name | startswith("server"))) | .path'
 ```
 
 Logs for a specific branch:
-```bash
+```console
 $ wt config state logs --format=json | jq '.hook_output[] | select(.branch | startswith("feature"))'
 ```
 
 Clear all logs:
-```bash
+```console
 $ wt config state logs clear
 ```
 
@@ -1349,7 +1373,7 @@ Custom status text or emoji shown in the `wt list` Status column.
 
 Markers appear at the end of the Status column, after git symbols:
 
-```
+```console
 $ wt list
   Branch       Status        HEAD±    main↕     main…±  Remote⇅  Commit   Age   Message
 @ main             ^⇡                                    ⇡1      33323bc  1d    Initial commit
@@ -1370,7 +1394,7 @@ $ wt list
 
 Stored in git config as `worktrunk.state.<branch>.marker`. Set directly with:
 
-```bash
+```console
 $ git config worktrunk.state.feature.marker '{"marker":"🚧","set_at":0}'
 ```
 
@@ -1426,23 +1450,23 @@ Store custom variables per branch. Values are stored as-is — plain strings or 
 ### Examples
 
 Set and get values:
-```bash
+```console
 $ wt config state vars set env=staging
 $ wt config state vars get env
 ```
 
 Store JSON:
-```bash
+```console
 $ wt config state vars set config='{"port": 3000, "debug": true}'
 ```
 
 List all keys:
-```bash
+```console
 $ wt config state vars list
 ```
 
 Operate on a different branch:
-```bash
+```console
 $ wt config state vars set env=production --branch=main
 ```
 
@@ -1457,7 +1481,7 @@ dev = "ENV={{ vars.env | default('development') }} npm start -- --port {{ vars.p
 
 JSON object and array values support dot access:
 
-```bash
+```console
 $ wt config state vars set config='{"port": 3000, "debug": true}'
 ```
 ```toml

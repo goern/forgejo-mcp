@@ -5,13 +5,13 @@
       "source": "juliusbrussee/caveman",
       "sourceType": "github",
       "skillPath": "skills/cavecrew/SKILL.md",
-      "computedHash": "c5527c994fbd4c22b36714e3b124a0f167a533d114ab164fb1d35e2123533917"
+      "computedHash": "7bccdb8d49f41bcb480481cd4f8381b054f69847bed67fb003d83249dd6f0030"
     },
     "caveman": {
       "source": "juliusbrussee/caveman",
       "sourceType": "github",
       "skillPath": "skills/caveman/SKILL.md",
-      "computedHash": "d18cdf73a5f5c496d681a43a6846336b110223bdffa6817b8992529c57f1a815"
+      "computedHash": "2bc96f7c5d3c82f76714d9ec5027ef72518ede527b009a4cab6afd6db339ada9"
     },
     "caveman-commit": {
       "source": "juliusbrussee/caveman",
@@ -23,7 +23,7 @@
       "source": "juliusbrussee/caveman",
       "sourceType": "github",
       "skillPath": "skills/caveman-compress/SKILL.md",
-      "computedHash": "84517cd4cf7a49d8d2bc1baf00f61bc359306c6ad9389756b6937eff958bd374"
+      "computedHash": "771c3407d970fff5df512abb5026402d2431abecdd3e8f264f9142fec8198674"
     },
     "caveman-help": {
       "source": "juliusbrussee/caveman",
@@ -41,25 +41,25 @@
       "source": "juliusbrussee/caveman",
       "sourceType": "github",
       "skillPath": "skills/caveman-stats/SKILL.md",
-      "computedHash": "47ce2de3d6cb39a75047b5c962e4eb3da15594e7397c94103e9a104d42626553"
+      "computedHash": "57c7db449641379e2afd1389fdb17cec8f33d9c8e25b1d28093937b4431895e8"
     },
     "done-with": {
       "source": "goern/bead-workflow-skills",
       "sourceType": "github",
       "skillPath": "skills/done-with/SKILL.md",
-      "computedHash": "8ba71fedd33577044e9cd2ef11ababd2a9575eed43cf30ba1a3b44e13fd4c68e"
+      "computedHash": "b137fe7e5ecfb18aa12365f77ec521de13c6024f2f2f38952423e968fc33ae88"
     },
     "work-on": {
       "source": "goern/bead-workflow-skills",
       "sourceType": "github",
       "skillPath": "skills/work-on/SKILL.md",
-      "computedHash": "ff4c5c91e4467e5d098ef39b51d9bc61b257ad555e07f06d0b66c95d5518e77c"
+      "computedHash": "8f5370802d73c4c4a802fb974e9df569d5973b1eb968b523db6b56bd8282d5ca"
     },
     "worktrunk": {
       "source": "max-sixty/worktrunk",
       "sourceType": "github",
       "skillPath": "skills/worktrunk/SKILL.md",
-      "computedHash": "e61441be9d3673bce61c9f9478fcee21e96239d270b02348480ffa2314f172c5"
+      "computedHash": "4cac44d5225ca5e345ab8319d94444ddb37f444a7a4d20213d1e224412ba3ab5"
     },
     "wt-switch-create": {
       "source": "max-sixty/worktrunk",

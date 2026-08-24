@@ -1,13 +1,13 @@
 ---
 name: done-with
-description: Close out a bead started with /work-on — verify it's safe, clean up the worktree, free the tab
+description: Close out a bead started with /work-on — verify it's safe, clean up the worktree, free the tab and the session name
 argument-hint: "[<bead-id>]"
 license: GPL-3.0-or-later
-compatibility: Requires the `wt`, `jq` and `herdr` CLIs
+compatibility: Requires the `wt`, `jq` and `herdr` CLIs; the session rename additionally needs the `UserPromptSubmit` hook from the README
 ---
 
 Counterpart to `/work-on`. Undoes every step it took: removes the worktree
-(when safe), frees the herdr tab, resets the accent.
+(when safe) and frees the herdr tab and the Claude session name.
 
 ## Model
 
@@ -36,14 +36,14 @@ Read the matched entry:
 
 - **Dirty working tree** — any of `working_tree.staged` / `.modified` /
   `.untracked` / `.renamed` / `.deleted` is true → **stop**. Report the
-  uncommitted changes and do not touch the worktree, tab, or accent. The user
+  uncommitted changes and do not touch the worktree or the tab. The user
   commits or stashes first.
 - **Merged** — `main_state` is `"integrated"` or `"empty"` → safe, proceed.
 - **PR/MR open** — `ci.number` is present (any `ci.status`, draft included —
   "opened" is the bar here, not "approved") → safe, proceed.
 - **Neither** — not merged and no PR → **stop**. Report the branch's ahead/behind
   counts and that no PR was found; tell the user to push and open a PR, or
-  merge, before cleaning up. Do not touch the worktree, tab, or accent.
+  merge, before cleaning up. Do not touch the worktree or the tab.
 
 If the branch has no worktree entry at all in the JSON, say so and stop —
 nothing to clean up.
@@ -68,26 +68,45 @@ wt remove "$BRANCH" --foreground
 ## Step 3 — rename the herdr tab to "free"
 
 ```bash
-herdr tab rename "$(herdr api snapshot | python3 -c 'import json,sys; print(json.load(sys.stdin)["result"]["snapshot"]["focused_tab_id"])')" "free"
+scripts/herdr-rename-tab.sh free
 ```
 
-If herdr is not running, say so and carry on with the remaining step.
+(Run it from the skill's own directory, or by absolute path — it lives next to
+this file.)
 
-## Step 4 — reset the herdr accent to green
+Same script `/work-on` uses: it renames the tab hosting **this** session,
+resolved from the `HERDR_PANE_ID` herdr exports into every pane. Never resolve
+the tab from `herdr api snapshot`'s `focused_tab_id` — that renames whichever
+tab is focused when the command lands, not the one running the session.
 
-Read `~/.config/herdr/config.toml`, ensure `accent = "green"` under `[ui]`
-(insert if absent), then:
+Best effort — every failure is non-fatal, report it and carry on:
+
+| exit | meaning |
+|------|---------|
+| 0 | renamed |
+| 3 | `HERDR_PANE_ID` unset — session is not inside a herdr pane, nothing to rename |
+| 4 | pane unknown to the server (herdr not running, or the pane is gone) |
+| 5 | herdr rejected the rename |
+
+## Step 3b — free the Claude session name too
 
 ```bash
-herdr config check && herdr server reload-config
+scripts/session-title.sh queue free
 ```
 
-`/work-on` sets this same accent to **blue** when a bead *starts* — blue vs.
-green is the busy/free signal, instance-wide across every herdr tab and
-workspace.
+Same label as the tab, for the same reason `/work-on` sets both: a session
+still called `<bead-id>` after cleanup is a lie. The rename is queued and
+applied by the `UserPromptSubmit` hook on the user's next message — a session
+cannot rename itself mid-turn. Exit 3 means `CLAUDE_CODE_SESSION_ID` is unset
+(not a Claude Code session); non-fatal, report and carry on.
 
-## Step 5 — report
+Both renames only ever run after Step 1 passed. A refused cleanup leaves the
+tab *and* the session name on the bead id, which is exactly the truthful
+signal.
+
+## Step 4 — report
 
 One line: branch, why it was safe to remove (merged / PR #N), worktree removed
-y/n, branch kept/deleted, tab renamed to "free". Mention `bd close <bead-id>`
+y/n, branch kept/deleted, tab renamed to "free" and the session rename queued
+(it lands on the next message). Mention `bd close <bead-id>`
 if the bead itself is still open — this command does not close beads.
