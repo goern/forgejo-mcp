@@ -17,20 +17,26 @@ import (
 )
 
 type actionRequestCapture struct {
-	path      string
-	rawQuery  string
-	accept    string
-	byteRange string
+	method      string
+	path        string
+	escapedPath string
+	rawQuery    string
+	accept      string
+	byteRange   string
+	count       int
 }
 
 func setupActionAPIServer(t *testing.T, handler http.HandlerFunc) (*httptest.Server, *actionRequestCapture) {
 	t.Helper()
 	capture := &actionRequestCapture{}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capture.method = r.Method
 		capture.path = r.URL.Path
+		capture.escapedPath = r.URL.EscapedPath()
 		capture.rawQuery = r.URL.RawQuery
 		capture.accept = r.Header.Get("Accept")
 		capture.byteRange = r.Header.Get("Range")
+		capture.count++
 		handler(w, r)
 	}))
 	t.Cleanup(server.Close)
