@@ -20,7 +20,7 @@ export FORGEJO_MCP_BIN="${FORGEJO_MCP_BIN:-./forgejo-mcp}"
 make build
 ```
 
-Spec: `openspec/changes/workflow-run-control/specs/workflow-run-control/spec.md`
+Spec: `openspec/specs/workflow-run-control/spec.md`
 
 ## 1. Tool surface
 
