@@ -163,6 +163,36 @@ func TestOpenConfinesToUploadRoot(t *testing.T) {
 	}
 }
 
+// A sibling directory whose name merely starts with the root's name (e.g.
+// "updir-evil" next to "updir") must not pass the confinement check. A naive
+// strings.HasPrefix(path, root) implementation would wrongly accept it;
+// confineToRoot uses filepath.Rel, which does not.
+func TestOpenConfinesToUploadRootRejectsSiblingPrefixDir(t *testing.T) {
+	allowFilePathUploads(t)
+	parent := t.TempDir()
+	root := filepath.Join(parent, "updir")
+	if err := os.Mkdir(root, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	siblingDir := filepath.Join(parent, "updir-evil")
+	if err := os.Mkdir(siblingDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	siblingFile := filepath.Join(siblingDir, "secret.txt")
+	if err := os.WriteFile(siblingFile, []byte("nope"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(UploadRootEnv, root)
+
+	reader, _, err := Open(Source{FilePath: &siblingFile})
+	if reader != nil {
+		_ = reader.Close()
+	}
+	if err == nil || !strings.Contains(err.Error(), UploadRootEnv) {
+		t.Fatalf("expected sibling-prefix dir %q to be rejected against root %q, got %v", siblingDir, root, err)
+	}
+}
+
 func TestOpenRejectsInvalidSources(t *testing.T) {
 	allowFilePathUploads(t)
 	validPath := filepath.Join(t.TempDir(), "file.txt")
