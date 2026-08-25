@@ -72,6 +72,39 @@ When adding a new resource template, place it under `operation/<domain>/resource
 
 See `openspec/specs/mcp-resources-core/spec.md` for the full normative spec (added by this slice when the change archives).
 
+### Prefer a resource read over a tool call (agent-facing)
+
+When an entity in the table below covers what you need, **read the resource
+instead of calling the equivalent tool**. One `forgejo://` read returns the
+whole entity — a `pr/{index}` read gives title, state, author, both head/base
+SHAs, `mergeable`, and the bounded comment thread with excerpted bodies, in
+place of `get_pull_request_by_index` + `list_issue_comments`. Dual-MIME
+resources return the JSON block *and* a rendered markdown block in the same
+response. Fall back to tools for anything the table does not cover, for writes,
+and when a resource's truncation sentinel names a list tool you need.
+
+**Expand the template yourself — do not expect discovery to find it.** These are
+resource *templates*: they are served by `resources/templates/list`, and
+`resources/list` is empty by design (there are no static resources). A client
+that only calls `resources/list` — Claude Code's `ListMcpResourcesTool` among
+them — reports no resources at all. That is not a broken server. Resolution
+still works: substitute every `{…}` and read the concrete URI.
+
+```
+ReadMcpResourceTool(server: "<your server name>",
+                    uri: "forgejo://repo/agentic-forges/forgejo-mcp/pr/533")
+```
+
+The table below is therefore the discovery mechanism in such clients. Three
+gotchas on expansion, each also noted per row:
+
+- `{sha}` must be the full 40 hex characters; short SHAs are rejected.
+- Percent-encode `/` as `%2F` and spaces as `%20` in any segment that can
+  contain them (wiki page names, branch-protection rule patterns, label
+  filters). Do not double-encode; `+` is not a space.
+- `{?state,labels,page,limit}` rows take a real query string, e.g.
+  `…/issues?state=open&limit=10`.
+
 ### Resource table
 
 | URI template | MIME | What it returns |
