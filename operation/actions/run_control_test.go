@@ -101,7 +101,7 @@ func TestDeleteWorkflowRunFn_LiveRunIsError(t *testing.T) {
 
 func TestCancelWorkflowRunFn_MissingArgsSendNoRequest(t *testing.T) {
 	_, capture := setupActionAPIServer(t, func(w http.ResponseWriter, r *http.Request) {
-		t.Fatal("no request should be sent")
+		t.Error("no request should be sent")
 	})
 
 	for _, args := range []map[string]interface{}{

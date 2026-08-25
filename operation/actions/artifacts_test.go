@@ -124,7 +124,7 @@ func TestGetActionArtifactFn_MetadataOnly(t *testing.T) {
 
 func TestGetActionArtifactFn_MissingArgsSendNoRequest(t *testing.T) {
 	_, capture := setupActionAPIServer(t, func(w http.ResponseWriter, r *http.Request) {
-		t.Fatal("no request should be sent")
+		t.Error("no request should be sent")
 	})
 
 	if _, err := GetActionArtifactFn(context.Background(), newCallToolRequest(map[string]interface{}{

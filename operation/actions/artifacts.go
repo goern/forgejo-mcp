@@ -103,6 +103,7 @@ func ListActionRunArtifactsFn(ctx context.Context, req mcp.CallToolRequest) (*mc
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list action run artifacts: %w", err))
 	}
+	// A JSON null body unmarshals onto a nil slice and overwrites the make above.
 	if artifacts == nil {
 		artifacts = []actionArtifact{}
 	}
