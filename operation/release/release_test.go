@@ -385,6 +385,37 @@ func TestCreateReleaseAttachmentFn_RejectsNonBase64(t *testing.T) {
 	}
 }
 
+// TestCreateReleaseAttachmentFn_RejectsOversizedContent proves the
+// size cap (upload.MaxContentB64Bytes, enforced in
+// pkg/upload.Open) applies to create_release_attachment exactly like it does
+// to create_issue_attachment / create_comment_attachment: this tool accepts
+// base64 `content` through the same upload.Open call, so it gets the same
+// defense-in-depth guard for free.
+func TestCreateReleaseAttachmentFn_RejectsOversizedContent(t *testing.T) {
+	called := false
+	newBackend(t, route{
+		method:     http.MethodPost,
+		pathPrefix: "/api/v1/repos/o/r/releases/1/assets",
+		handler: func(w http.ResponseWriter, _ *http.Request) {
+			called = true
+		},
+	})
+	huge := strings.Repeat("A", upload.MaxContentB64Bytes+1)
+	_, err := CreateReleaseAttachmentFn(context.Background(), req(map[string]any{
+		"owner": "o", "repo": "r", "release_id": 1.0,
+		"content": huge, "filename": "f.bin",
+	}))
+	if err == nil {
+		t.Fatalf("expected error for oversized content")
+	}
+	if !strings.Contains(err.Error(), "too large") {
+		t.Fatalf("expected a size-limit error, got: %v", err)
+	}
+	if called {
+		t.Fatalf("SDK should not be called when content is oversized")
+	}
+}
+
 func TestCreateReleaseAttachmentFn_HappyPath(t *testing.T) {
 	const raw = "release payload bytes"
 	encoded := base64.StdEncoding.EncodeToString([]byte(raw))

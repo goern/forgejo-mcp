@@ -1,8 +1,10 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 // Package transport_test drives the *actual built binary* over the real
 // stdio JSON-RPC transport (not the in-process handler path exercised by
 // test/race, and not the --cli path used by test/e2e — both of those
-// bypass the stdio wire entirely). See coordination#106: comment/issue
-// attachment uploads were reported to fail with "illegal base64 data" at a
+// bypass the stdio wire entirely). Multiple agents reported comment/issue
+// attachment uploads failing with "illegal base64 data" at a
 // variable byte offset near the end of the payload, above thresholds that
 // ranged from ~1.5KB to ~4.9KB across different agent sessions, and one
 // session reported a 30-minute hang.
@@ -16,8 +18,10 @@
 //
 // Run:  go test ./test/transport/ -run TestAttachmentSizeSweep -v
 //
-// Requires the binary to be built first: `make build` (produces ./forgejo-mcp
-// at the repo root, which this test locates relative to itself).
+// The binary under test is built fresh by TestMain into a temp directory —
+// this package is self-contained on a clean checkout and always exercises
+// the current tree, never a stale prebuilt ./forgejo-mcp left over from a
+// previous `make build`.
 package transport_test
 
 import (
@@ -31,6 +35,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -40,18 +45,39 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-// findBinary locates the built forgejo-mcp binary relative to this test file
-// (test/transport/ -> repo root).
-func findBinary(t *testing.T) string {
-	t.Helper()
-	bin, err := filepath.Abs(filepath.Join("..", "..", "forgejo-mcp"))
+// builtBinary is set by TestMain to the path of the freshly built
+// forgejo-mcp binary; tests in this package read it rather than locating a
+// pre-existing build on disk.
+var builtBinary string
+
+// TestMain builds the current tree into a temp binary before running any
+// test in this package, and removes it afterward. This makes the package
+// self-contained on a clean checkout (no `make build` prerequisite) and
+// guarantees the test always exercises the current source, not whatever
+// ./forgejo-mcp happened to be left on disk from an earlier build.
+func TestMain(m *testing.M) {
+	tmpDir, err := os.MkdirTemp("", "forgejo-mcp-sweep-test-*")
 	if err != nil {
-		t.Fatalf("resolve binary path: %v", err)
+		fmt.Fprintf(os.Stderr, "TestMain: create temp dir: %v\n", err)
+		os.Exit(1)
 	}
-	if _, err := os.Stat(bin); err != nil {
-		t.Fatalf("binary not found at %s — run 'make build' first: %v", bin, err)
+	// Note: os.Exit below does not run deferred functions, so the cleanup is
+	// invoked explicitly around m.Run() rather than deferred.
+
+	bin := filepath.Join(tmpDir, "forgejo-mcp")
+	cmd := exec.Command("go", "build", "-o", bin, "../..")
+	cmd.Dir = "."
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "TestMain: go build -o %s ../..: %v\n%s\n", bin, err, out)
+		_ = os.RemoveAll(tmpDir)
+		os.Exit(1)
 	}
-	return bin
+
+	builtBinary = bin
+	code := m.Run()
+	_ = os.RemoveAll(tmpDir)
+	os.Exit(code)
 }
 
 // captured records what the fake Forgejo API actually received for one
@@ -62,7 +88,7 @@ type captured struct {
 }
 
 func TestAttachmentSizeSweep(t *testing.T) {
-	bin := findBinary(t)
+	bin := builtBinary
 
 	results := make(chan captured, 1)
 	fakeAPI := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -136,7 +162,7 @@ func TestAttachmentSizeSweep(t *testing.T) {
 		2 * 1024,   // 2KB
 		4 * 1024,   // 4KB
 		4300,       // ~4.3KB — reported ceiling
-		4952,       // exact failing payload size from the coordination#106 repro
+		4952,       // exact failing payload size from the original bug report
 		8 * 1024,   // 8KB
 		16 * 1024,  // 16KB
 		32 * 1024,  // 32KB
@@ -184,7 +210,7 @@ func TestAttachmentSizeSweep(t *testing.T) {
 					t.Fatalf("CallTool transport error at %d bytes raw (%d base64): %v", size, len(b64), err)
 				}
 			case <-callCtx.Done():
-				t.Fatalf("CallTool HUNG past 20s timeout at %d bytes raw (%d base64) — this is exactly the hang failure mode from coordination#106", size, len(b64))
+				t.Fatalf("CallTool HUNG past 20s timeout at %d bytes raw (%d base64) — this is exactly the ~30-minute hang failure mode originally reported", size, len(b64))
 			}
 
 			if res != nil && res.IsError {
