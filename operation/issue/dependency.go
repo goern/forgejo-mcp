@@ -155,10 +155,23 @@ func AddIssueDependencyFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	log.Debugf("Called AddIssueDependencyFn")
 	owner, _ := req.GetArguments()["owner"].(string)
 	repo, _ := req.GetArguments()["repo"].(string)
-	index, _ := to.Float64(req.GetArguments()["index"])
-	dependsOn, _ := to.Float64(req.GetArguments()["depends_on_index"])
+	index, err := to.Float64(req.GetArguments()["index"])
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("index: %w", err))
+	}
+	dependsOn, err := to.Float64(req.GetArguments()["depends_on_index"])
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("depends_on_index: %w", err))
+	}
 	depOwner, depRepo := crossRepoArgs(req.GetArguments(), "depends_on_owner", "depends_on_repo", owner, repo)
 
+	// Scoped to same-repo (including the defaulted case, since depOwner/depRepo
+	// already fall back to owner/repo above): a same-index dependency in a
+	// DIFFERENT repository is a legitimate cross-repo dependency, not a
+	// self-dependency (see TestAddIssueDependency_CrossRepoSameIndexAllowed).
+	// index and depends_on_index are validated above so a missing/malformed
+	// required argument surfaces as its own clear error instead of both
+	// silently coercing to 0 and being misreported as "cannot depend on itself".
 	if depOwner == owner && depRepo == repo && int64(index) == int64(dependsOn) {
 		return to.ErrorResult(fmt.Errorf("an issue cannot depend on itself"))
 	}
@@ -175,8 +188,14 @@ func RemoveIssueDependencyFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	log.Debugf("Called RemoveIssueDependencyFn")
 	owner, _ := req.GetArguments()["owner"].(string)
 	repo, _ := req.GetArguments()["repo"].(string)
-	index, _ := to.Float64(req.GetArguments()["index"])
-	dependencyIndex, _ := to.Float64(req.GetArguments()["dependency_index"])
+	index, err := to.Float64(req.GetArguments()["index"])
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("index: %w", err))
+	}
+	dependencyIndex, err := to.Float64(req.GetArguments()["dependency_index"])
+	if err != nil {
+		return to.ErrorResult(fmt.Errorf("dependency_index: %w", err))
+	}
 	depOwner, depRepo := crossRepoArgs(req.GetArguments(), "dependency_owner", "dependency_repo", owner, repo)
 
 	path := forgejo.APIPath("repos", owner, repo, "issues", int64(index), "dependencies")

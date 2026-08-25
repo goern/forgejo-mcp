@@ -306,8 +306,8 @@ List all my repositories
 | `issue_state_change` | Open or close an issue |
 | `list_issue_dependencies` | List issues the given issue depends on. Bounded by `page` (1-based) + `limit` (page size); the response echoes `page`/`limit` so callers can fetch the next page. |
 | `list_issue_dependents` | List issues that depend on the given issue. Bounded by `page` (1-based) + `limit` (page size); the response echoes `page`/`limit` so callers can fetch the next page. |
-| `add_issue_dependency` | Make one issue depend on another |
-| `remove_issue_dependency` | Remove a dependency from an issue |
+| `add_issue_dependency` | Make one issue depend on another. The dependency may live in a different repository: optional `depends_on_owner`/`depends_on_repo` default to `owner`/`repo`. |
+| `remove_issue_dependency` | Remove a dependency from an issue. For a cross-repo dependency, optional `dependency_owner`/`dependency_repo` default to `owner`/`repo`. |
 | `list_repo_milestones` | List milestones with their IDs (use with `update_issue`) |
 | `list_repo_labels` | List labels with their IDs. Merges org-level labels for org-owned repos (set `include_org_labels=false` to opt out). Each entry carries a `scope` field (`"repo"` or `"org"`). |
 | `list_org_labels` | List organization-level labels with their IDs. The assignment tools accept label names directly, so this is for discovery and for the rare name that exists in both the repo and the org scope. |
