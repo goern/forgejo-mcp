@@ -66,6 +66,10 @@
       "description": "Log time against an issue or pull request. Provide exactly one of 'seconds' or 'duration'."
     },
     {
+      "name": "add_repo_topic",
+      "description": "Add one topic to a repository. The name is lowercased and must match Forgejo's topic rules."
+    },
+    {
       "name": "add_team_member",
       "description": "Add a user to a team"
     },
@@ -220,6 +224,10 @@
     {
       "name": "delete_repo_label",
       "description": "Delete a repository label. By default refuses if the label is in use; set delete_mode=force to override."
+    },
+    {
+      "name": "delete_repo_topic",
+      "description": "Delete one topic from a repository."
     },
     {
       "name": "delete_review_requests",
@@ -514,6 +522,10 @@
       "description": "List repo pull requests"
     },
     {
+      "name": "list_repo_topics",
+      "description": "List a repository's topics. Bounded by page (default 1) and limit (default 100); returns {topics, page, limit, count}."
+    },
+    {
       "name": "list_repo_tracked_times",
       "description": "List tracked time entries across all issues and PRs in a repository"
     },
@@ -572,6 +584,10 @@
     {
       "name": "search_users",
       "description": "Search users"
+    },
+    {
+      "name": "set_repo_topics",
+      "description": "Replace all repository topics (comma-separated). The topics key is required; an empty string clears every topic."
     },
     {
       "name": "start_issue_stopwatch",
