@@ -167,8 +167,17 @@ func httpErrorFromResponse(req *http.Request, resp *http.Response) *HTTPError {
 // For list endpoints where a 404 should mean "empty list" (Forgejo's habit
 // when the parent entity has no children), use DoJSONList instead.
 func DoJSON(ctx context.Context, method, pathOrURL string, body, out any) error {
-	_, err := doJSONWithHeader(ctx, method, pathOrURL, body, out)
+	_, err := DoJSONWithHeader(ctx, method, pathOrURL, body, out)
 	return err
+}
+
+// DoJSONWithHeader is DoJSON plus the response headers. 4xx/5xx remain
+// errors, including 404 — unlike DoJSONList, a missing parent is not
+// rewritten as an empty list. Paged list endpoints that must distinguish
+// "no such run" from "run with zero children" use this and read
+// X-Total-Count / Link from the returned header.
+func DoJSONWithHeader(ctx context.Context, method, pathOrURL string, body, out any) (http.Header, error) {
+	return doJSONWithHeader(ctx, method, pathOrURL, body, out)
 }
 
 // doJSONWithHeader is DoJSON's body, additionally returning the response

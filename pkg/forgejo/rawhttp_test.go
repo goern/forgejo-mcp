@@ -159,6 +159,43 @@ func TestDoJSONList_404IsEmpty(t *testing.T) {
 	}
 }
 
+func TestDoJSONWithHeader_404IsError(t *testing.T) {
+	newCaptureServer(t, func(w http.ResponseWriter, r *http.Request, _ *capturedReq) {
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"message":"run not found"}`))
+	})
+	var out []map[string]any
+	_, err := DoJSONWithHeader(context.Background(), http.MethodGet, "/x", nil, &out)
+	if err == nil {
+		t.Fatal("404 must remain an error")
+	}
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+	if len(out) != 0 {
+		t.Fatalf("out should stay empty on error, got %d", len(out))
+	}
+}
+
+func TestDoJSONWithHeader_ReturnsHeaders(t *testing.T) {
+	newCaptureServer(t, func(w http.ResponseWriter, r *http.Request, _ *capturedReq) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set(TotalCountHeader, "4")
+		_, _ = w.Write([]byte(`[{"id":1}]`))
+	})
+	var out []map[string]any
+	header, err := DoJSONWithHeader(context.Background(), http.MethodGet, "/x", nil, &out)
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if header.Get(TotalCountHeader) != "4" {
+		t.Fatalf("X-Total-Count: %q", header.Get(TotalCountHeader))
+	}
+	if len(out) != 1 || out[0]["id"] != float64(1) {
+		t.Fatalf("decode mismatch: %+v", out)
+	}
+}
+
 func TestDoAPIRaw_RangedResponse(t *testing.T) {
 	_, captured := newCaptureServer(t, func(w http.ResponseWriter, r *http.Request, _ *capturedReq) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")

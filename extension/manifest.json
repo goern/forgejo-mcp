@@ -78,6 +78,10 @@
       "description": "Cancel a running stopwatch without recording a tracked time entry"
     },
     {
+      "name": "cancel_workflow_run",
+      "description": "Cancel a pending or running workflow run. HTTP 204 for an already-finished run is success; the run is left unchanged."
+    },
+    {
       "name": "check_notifications",
       "description": "Check and list user notifications"
     },
@@ -222,6 +226,10 @@
       "description": "Cancel pending review requests"
     },
     {
+      "name": "delete_workflow_run",
+      "description": "Delete a completed workflow run. A live run is an API error. Removes the run and its job logs; artifacts of that run are marked deleted."
+    },
+    {
       "name": "dismiss_pull_review",
       "description": "Dismiss a pull request review"
     },
@@ -288,6 +296,10 @@
     {
       "name": "fork_repo",
       "description": "Fork repo"
+    },
+    {
+      "name": "get_action_artifact",
+      "description": "Get metadata for one Actions artifact. Does not download the zip."
     },
     {
       "name": "get_action_job_logs",
@@ -388,6 +400,10 @@
     {
       "name": "issue_state_change",
       "description": "Change issue state"
+    },
+    {
+      "name": "list_action_run_artifacts",
+      "description": "List artifacts of a workflow run. Server-paged via page/limit (default 30, max 50); optional name filter."
     },
     {
       "name": "list_action_run_jobs",

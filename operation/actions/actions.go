@@ -38,6 +38,10 @@ func RegisterTool(s *server.MCPServer) {
 	s.AddTool(GetWorkflowRunTool, GetWorkflowRunFn)
 	s.AddTool(ListActionRunJobsTool, ListActionRunJobsFn)
 	s.AddTool(GetActionJobLogsTool, GetActionJobLogsFn)
+	s.AddTool(CancelWorkflowRunTool, CancelWorkflowRunFn)
+	s.AddTool(DeleteWorkflowRunTool, DeleteWorkflowRunFn)
+	s.AddTool(ListActionRunArtifactsTool, ListActionRunArtifactsFn)
+	s.AddTool(GetActionArtifactTool, GetActionArtifactFn)
 }
 
 func DispatchWorkflowFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {

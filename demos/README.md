@@ -204,6 +204,19 @@ omitted `private` cannot become `false`.
 **Use case.** Put a homepage on an existing repo, archive a finished project,
 or turn wiki/issues off — without `curl` and without clobbering visibility.
 
+### 12. Workflow run control
+
+Cancel or delete a workflow run and list that run's artifacts. Cancel is 204
+even when the run already finished; delete only succeeds for a completed run
+and removes it. Artifact tools are metadata-only — they do not download zips.
+
+| Demo | Tools | What it shows |
+|------|-------|---------------|
+| [workflow-run-control.md](workflow-run-control.md) | `cancel_workflow_run`, `delete_workflow_run`, `list_action_run_artifacts`, `get_action_artifact` | `--help` surface, cancel vs delete asymmetry, server-paged artifact envelope, metadata-only get. Write tools are not invoked |
+
+**Use case.** Stop a runaway Actions run, drop a completed failure after
+reading its logs, or inspect what a run uploaded without fetching a zip.
+
 ---
 
 ## Cross-cutting workflows
