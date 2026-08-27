@@ -126,4 +126,10 @@ const (
 	TimeCreatedAt  = "Optional RFC3339 timestamp for when the work happened (defaults to server time)"
 	TimeUserName   = "Optional username to log time on behalf of (requires admin; omit for self)"
 	TimeUserFilter = "Filter results to this username"
+
+	// Packages parameters
+	PackageType    = "Package type (container, generic, npm, maven, …). Omit on list to include every type"
+	PackageName    = "Package name (container names may contain /)"
+	PackageVersion = "Package version"
+	PackageQ       = "Filter by package name (Forgejo q substring)"
 )

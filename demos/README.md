@@ -220,6 +220,20 @@ and removes it. Artifact tools are metadata-only — they do not download zips.
 **Use case.** Stop a runaway Actions run, drop a completed failure after
 reading its logs, or inspect what a run uploaded without fetching a zip.
 
+### 13. Packages
+
+Owner-scoped registry (user or org), not a repository field. Forgejo lists
+**versions** (`SearchVersions`): one row per version, optional `type`/`q`.
+File listing has no server paging — the tool slices client-side.
+
+| Demo | Tools | What it shows |
+|------|-------|---------------|
+| [packages.md](packages.md) | `list_packages`, `get_package`, `list_package_files`, `delete_package` | One row per version, `type`/`q` filters, server-paged list envelope, projected get, client-sliced files with `has_next` and no `total_count`. `delete_package` is `--help` only |
+
+**Use case.** Inventory container and generic versions for an owner, inspect
+what a tag actually uploaded, then delete one stale version — without
+dropping every version of the name.
+
 ---
 
 ## Cross-cutting workflows
