@@ -20,7 +20,7 @@ export FORGEJO_MCP_BIN="${FORGEJO_MCP_BIN:-./forgejo-mcp}"
 make build
 ```
 
-Spec: `openspec/changes/2026-08-27-packages/specs/packages/spec.md`
+Spec: `openspec/specs/packages/spec.md`
 
 ## 1. Tool surface
 
