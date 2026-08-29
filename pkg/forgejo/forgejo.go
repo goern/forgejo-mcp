@@ -54,6 +54,17 @@ func Client(ctx context.Context) (*forgejo.Client, error) {
 		return c, nil
 	}
 
+	// No per-request credential. Whether the operator's own configured
+	// credential may stand in for it is the policy in credential.go: allowed
+	// for stdio and for a loopback-only listener, refused for a listener the
+	// network can reach.
+	if _, err := tokenForRequest(ctx); err != nil {
+		log.ErrorCtx(ctx, "Refusing to serve request with the server's own credential",
+			log.ErrorField(err),
+		)
+		return nil, err
+	}
+
 	clientMu.Lock()
 	defer clientMu.Unlock()
 

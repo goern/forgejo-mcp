@@ -170,7 +170,48 @@ You can run a single centralized `forgejo-mcp` instance and let each client prov
 
 See [demos/multi-tenant-http.md](demos/multi-tenant-http.md) for a copy-pasteable walkthrough.
 
-> Design rationale, token-resolution rules, and request-isolation guarantees: see the `stateless-http-auth` OpenSpec change (`openspec/changes/archive/`).
+#### Exposing the server to a network
+
+By default the `sse` and `http` transports listen on loopback only, so nothing outside
+this machine can reach them. This follows the Model Context Protocol's guidance for
+locally-run servers, and it is a change in behaviour: earlier versions listened on
+every network interface. Both loopback families are bound, so a client that resolves
+`localhost` to either `127.0.0.1` or `::1` connects.
+
+**If you run the server in a container, or serve remote clients, you must now say so
+explicitly.** The default will not accept connections from outside the machine — or,
+in a container, from outside the container:
+
+- set `--host` to an address the network can reach (`0.0.0.0` for all interfaces,
+  which is the usual choice inside a container);
+- and set `--allowed-hosts` to the host names your clients use. This is required, not
+  optional: the server refuses to start on a network-reachable address without it,
+  rather than starting and rejecting every request.
+
+Requests are refused with `403 Forbidden` when their `Host` header is not one you
+declared. Loopback names are always accepted on a loopback listener, so declaring a
+proxy's hostname does not stop you connecting directly from the same machine.
+
+**Browser clients.** A request carrying an `Origin` header is refused unless that
+origin is listed in `--allowed-origins`, which is empty by default. Origins are
+compared in full — scheme, host and port — because an `Origin`'s port belongs to the
+page making the request, not to this server. Requests with no `Origin` header at all
+are unaffected, which is the normal case: an MCP client is not a browser.
+
+#### Authentication on `sse` and `http`
+
+On these transports every request must carry its own `Authorization` header. A request
+without one is refused with `401 Unauthorized`, rather than being served using the
+server's own configured token. This is what the multi-tenant setup above expects
+anyway, and it is why that setup is safe to expose.
+
+On `stdio` the configured token still stands in for an absent header exactly as
+before. Nothing about `stdio` changes.
+
+If you run a single-user deployment over `sse` or `http` and want the old behaviour,
+`--allow-operator-token-fallback` restores it. Understand what it means before you use
+it: any client that can reach the port acts as the identity behind your token, without
+presenting a credential. The startup log says so, loudly, whenever it is on.
 
 **For SSE mode** (legacy HTTP-based):
 
@@ -471,6 +512,10 @@ You can configure the server using command-line arguments or environment variabl
 | `--transport` | - | Transport mode: `stdio`, `sse`, or `http` |
 | `--sse-port` | - | Port for SSE mode (default: 8080) |
 | `--http-port` | - | Port for streamable HTTP mode (default: 8080) |
+| `--host` | `FORGEJO_MCP_HOST` | Address the `sse` and `http` transports bind to (default: `127.0.0.1`, reachable from this machine only) |
+| `--allowed-hosts` | `FORGEJO_MCP_ALLOWED_HOSTS` | Comma-separated `Host` names this server answers to; required when `--host` is not loopback |
+| `--allowed-origins` | `FORGEJO_MCP_ALLOWED_ORIGINS` | Comma-separated web origins allowed to send an `Origin` header, as full origins (`https://console.example.org`). Empty by default |
+| `--allow-operator-token-fallback` | `FORGEJO_MCP_ALLOW_OPERATOR_TOKEN_FALLBACK` | On `sse`/`http`, serve requests with no `Authorization` header using this server's own token. Off by default |
 | `--cli` | - | Enter CLI mode for direct tool invocation |
 | `--user-agent` | `FORGEJO_USER_AGENT` | HTTP User-Agent header (default: `forgejo-mcp/<version>`) |
 | - | `FORGEJO_MCP_ALLOW_FILE_PATH_UPLOAD` | Allow `file_path` attachment uploads to read the host filesystem (`1`/`true`/`yes`/`on`; off by default) |

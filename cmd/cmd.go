@@ -3,10 +3,11 @@ package cmd
 import (
 	"context"
 	"errors"
-	"flag"
+	stdflag "flag"
 	"fmt"
 	"net/url"
 	"os"
+	"strings"
 
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/operation"
 	flagPkg "git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/flag"
@@ -14,12 +15,21 @@ import (
 )
 
 var (
-	transport string
-	urlFlag   string
-	ssePort   int
-	httpPort  int
-	token     string
-	userAgent string
+	transport      string
+	urlFlag        string
+	ssePort        int
+	httpPort       int
+	token          string
+	userAgent      string
+	host           string
+	allowedHosts   string
+	allowedOrigins string
+	allowFallback  bool
+
+	// flagSet is retained so initConfig can ask whether a flag was actually
+	// passed, rather than comparing it to its default value — which cannot
+	// tell "unset" from "explicitly set to the default".
+	flagSet *stdflag.FlagSet
 
 	debug bool
 )
@@ -38,7 +48,8 @@ func isVersionRequest() bool {
 // initFlags registers and parses CLI flags using a dedicated FlagSet to avoid
 // polluting the global flag.CommandLine (which breaks `go test`).
 func initFlags() {
-	fs := flag.NewFlagSet("forgejo-mcp", flag.ExitOnError)
+	fs := stdflag.NewFlagSet("forgejo-mcp", stdflag.ExitOnError)
+	flagSet = fs
 
 	fs.StringVar(
 		&transport,
@@ -81,6 +92,36 @@ func initFlags() {
 		"user-agent",
 		"",
 		"User agent for HTTP requests (default: forgejo-mcp/<version>)",
+	)
+	fs.StringVar(
+		&host,
+		"host",
+		"127.0.0.1",
+		"Address the sse and http transports bind to. The default reaches this machine only; "+
+			"set 0.0.0.0 to accept connections from the network, which also requires -allowed-hosts",
+	)
+	fs.StringVar(
+		&allowedHosts,
+		"allowed-hosts",
+		"",
+		"Comma-separated Host names this server answers to, required when -host is not loopback "+
+			"(for example: mcp.example.org,mcp.example.org:8080)",
+	)
+	fs.StringVar(
+		&allowedOrigins,
+		"allowed-origins",
+		"",
+		"Comma-separated web origins allowed to send an Origin header, as full origins "+
+			"(for example: https://console.example.org). Empty means no browser origin is accepted; "+
+			"requests with no Origin header are unaffected",
+	)
+	fs.BoolVar(
+		&allowFallback,
+		"allow-operator-token-fallback",
+		false,
+		"On the sse and http transports, serve a request that carries no Authorization header using "+
+			"this server's own token. Off by default: it hands this server's forge credential to any "+
+			"caller that can reach the port",
 	)
 	fs.BoolVar(
 		&debug,
@@ -142,6 +183,17 @@ func initConfig() {
 
 	flagPkg.SSEPort = ssePort
 	flagPkg.HTTPPort = httpPort
+
+	flagPkg.Host = resolveString(host, "FORGEJO_MCP_HOST", "host")
+	flagPkg.AllowedHosts = splitList(resolveString(allowedHosts, "FORGEJO_MCP_ALLOWED_HOSTS", "allowed-hosts"))
+	flagPkg.AllowedOrigins = splitList(resolveString(allowedOrigins, "FORGEJO_MCP_ALLOWED_ORIGINS", "allowed-origins"))
+	flagPkg.AllowOperatorTokenFallback = allowFallback
+	if !flagWasPassed("allow-operator-token-fallback") {
+		if v := os.Getenv("FORGEJO_MCP_ALLOW_OPERATOR_TOKEN_FALLBACK"); v != "" {
+			flagPkg.AllowOperatorTokenFallback = isTruthy(v)
+			log.Debug("Using FORGEJO_MCP_ALLOW_OPERATOR_TOKEN_FALLBACK environment variable")
+		}
+	}
 	flagPkg.Token = token
 	if flagPkg.Token == "" {
 		flagPkg.Token = os.Getenv("FORGEJO_ACCESS_TOKEN")
@@ -258,4 +310,55 @@ func Execute(version string) {
 		}
 		log.Fatalf("Run Forgejo MCP Server Error: %v", err)
 	}
+}
+
+// flagWasPassed reports whether the named flag was actually given on the
+// command line. Comparing a flag to its default value cannot tell "not set"
+// from "set to the default", which is how an environment variable came to
+// override an explicit -host 127.0.0.1.
+func flagWasPassed(name string) bool {
+	if flagSet == nil {
+		return false
+	}
+	passed := false
+	flagSet.Visit(func(f *stdflag.Flag) {
+		if f.Name == name {
+			passed = true
+		}
+	})
+	return passed
+}
+
+// resolveString returns the flag value when the flag was passed, otherwise the
+// environment variable, otherwise the flag's default.
+func resolveString(value, envVar, flagName string) string {
+	if flagWasPassed(flagName) {
+		return value
+	}
+	if env := os.Getenv(envVar); env != "" {
+		log.Debug("Using environment variable", log.StringField("variable", envVar))
+		return env
+	}
+	return value
+}
+
+// splitList turns a comma-separated value into a trimmed, non-empty list.
+func splitList(raw string) []string {
+	var out []string
+	for _, v := range strings.Split(raw, ",") {
+		if v = strings.TrimSpace(v); v != "" {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+// isTruthy matches the spelling already accepted by this project's other
+// boolean environment variables.
+func isTruthy(v string) bool {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "1", "true", "yes", "on":
+		return true
+	}
+	return false
 }
