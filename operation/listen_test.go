@@ -5,6 +5,7 @@ package operation
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -66,6 +67,14 @@ func transports() []transportCase {
 // listener and returns the address to dial.
 func startGuarded(t *testing.T, tr transportCase) string {
 	t.Helper()
+	return startGuardedWith(t, tr, nil)
+}
+
+// startGuardedWith is startGuarded with a hook to alter the server before it
+// serves. Only the write-deadline tests use the hook, and only to put back the
+// defect they exist to detect.
+func startGuardedWith(t *testing.T, tr transportCase, tweak func(*http.Server)) string {
+	t.Helper()
 	cfg, err := resolveTransportConfig(tr.name)
 	if err != nil {
 		t.Fatalf("resolveTransportConfig: %v", err)
@@ -73,9 +82,66 @@ func startGuarded(t *testing.T, tr transportCase) string {
 	forgejo.SetRequireRequestToken(cfg.requireAuth)
 	ln := mustListenLoopback(t)
 	srv := newMCPHTTPServer(tr.handler(), cfg)
+	if tweak != nil {
+		tweak(srv)
+	}
 	go func() { _ = srv.Serve(ln) }()
 	t.Cleanup(func() { _ = srv.Close() })
 	return ln.Addr().String()
+}
+
+// openStream sends an authorized GET that the server answers with a stream, and
+// returns the still-open connection. Unlike rawRequest it does not ask for
+// Connection: close and does not stop after the status line, which is the whole
+// point: every other test here finishes inside the handshake, so none of them
+// can see what happens to a stream that stays open.
+func openStream(t *testing.T, dialAddr, path string) net.Conn {
+	t.Helper()
+	conn, err := net.DialTimeout("tcp", dialAddr, 3*time.Second)
+	if err != nil {
+		t.Fatalf("dial %s: %v", dialAddr, err)
+	}
+	t.Cleanup(func() { _ = conn.Close() })
+
+	req := "GET " + path + " HTTP/1.1\r\n" +
+		"Host: " + dialAddr + "\r\n" +
+		"Authorization: token decoy\r\n" +
+		"Accept: text/event-stream\r\n\r\n"
+	_ = conn.SetWriteDeadline(time.Now().Add(3 * time.Second))
+	if _, err := conn.Write([]byte(req)); err != nil {
+		t.Fatalf("write request: %v", err)
+	}
+
+	_ = conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+	buf := make([]byte, 256)
+	n, err := conn.Read(buf)
+	if err != nil {
+		t.Fatalf("read status line: %v", err)
+	}
+	if status := string(buf[:n]); !strings.Contains(status, "200") {
+		t.Fatalf("stream did not open: %q", strings.SplitN(status, "\r\n", 2)[0])
+	}
+	return conn
+}
+
+// streamClosedWithin reports whether the server hung up on an open stream
+// inside d. A read that times out means the stream is still open, which is the
+// healthy case; io.EOF or a reset means the server ended it.
+func streamClosedWithin(t *testing.T, conn net.Conn, d time.Duration) bool {
+	t.Helper()
+	_ = conn.SetReadDeadline(time.Now().Add(d))
+	buf := make([]byte, 256)
+	for {
+		_, err := conn.Read(buf)
+		if err == nil {
+			continue // keep-alive traffic on a healthy stream
+		}
+		var netErr net.Error
+		if errors.As(err, &netErr) && netErr.Timeout() {
+			return false
+		}
+		return true
+	}
 }
 
 // rawRequest writes the request by hand, because the point of these tests is to
@@ -638,6 +704,119 @@ func TestAuthenticatedRequestPassesTheDoor(t *testing.T) {
 			got := get(t, addr, tr.path, "Host: "+addr, "Authorization: Bearer decoy-per-request-value")
 			if strings.Contains(got, "401") || strings.Contains(got, "403") {
 				t.Fatalf("an authenticated request was refused: %q", got)
+			}
+		})
+	}
+}
+
+// startStreamingHandler serves a handler that keeps writing, through the real
+// policy stack and the real shared server.
+//
+// A stub handler rather than the transports themselves, deliberately. The
+// defect lives in the http.Server the transports share, and it only becomes
+// observable when the stream WRITES after the deadline has passed -- an idle
+// SSE session writes nothing, so a test using it passes whether or not the
+// deadline is there. That is not a hypothetical: the first version of this test
+// did exactly that, and its mutation sibling below is what caught it.
+func startStreamingHandler(t *testing.T, tweak func(*http.Server)) string {
+	t.Helper()
+	cfg, err := resolveTransportConfig("sse")
+	if err != nil {
+		t.Fatalf("resolveTransportConfig: %v", err)
+	}
+	forgejo.SetRequireRequestToken(cfg.requireAuth)
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			return
+		}
+		flusher.Flush()
+		ticker := time.NewTicker(100 * time.Millisecond)
+		defer ticker.Stop()
+		for i := 0; i < 60; i++ {
+			select {
+			case <-r.Context().Done():
+				return
+			case <-ticker.C:
+			}
+			if _, err := io.WriteString(w, ": keep-alive\n\n"); err != nil {
+				return
+			}
+			flusher.Flush()
+		}
+	})
+
+	ln := mustListenLoopback(t)
+	srv := newMCPHTTPServer(handler, cfg)
+	if tweak != nil {
+		tweak(srv)
+	}
+	go func() { _ = srv.Serve(ln) }()
+	t.Cleanup(func() { _ = srv.Close() })
+	return ln.Addr().String()
+}
+
+// TestEventStreamOutlivesAWriteDeadline demonstrates the MECHANISM behind the
+// pin in TestSharedServerDeclaresNoWriteDeadline; it is not itself the
+// regression guard, and saying which is which matters. A behavioural test
+// cannot wait out a realistic thirty-second deadline, so reinstating the
+// original defect leaves this one green and turns the declarative pin red. What
+// this pair is for is proving the pin is not a cargo-culted constant: that a
+// deadline really does end a writing stream, and that with none configured the
+// stream really does survive.
+//
+// Go extends the write deadline only when a NEW request header is read; it is
+// never extended while a response is being streamed. Both transports served
+// here stream -- SSE holds /sse open indefinitely, Streamable HTTP holds its GET
+// channel open for server-to-client notifications -- so a WriteTimeout is not a
+// bound on a slow write, it is an absolute cap on the life of every session.
+// The original submission carried WriteTimeout: 30s and killed every stream at
+// thirty seconds; the upstream maintainer found it on pull request 545, and no
+// test here could see it because every other one finishes inside the handshake.
+func TestEventStreamOutlivesAWriteDeadline(t *testing.T) {
+	restoreFlags(t)
+	conn := openStream(t, startStreamingHandler(t, nil), "/sse")
+	if streamClosedWithin(t, conn, 1500*time.Millisecond) {
+		t.Fatal("the server ended a writing stream; a write deadline is back on the shared server")
+	}
+}
+
+// TestEventStreamTestCanSeeAWriteDeadline is the mutation half of the test
+// above, and it is what makes that test worth having. It puts the defect back
+// -- a write deadline shorter than the observation window -- and requires the
+// same observation to report the stream as closed.
+//
+// This is not ceremony. The first version of the test above held an idle SSE
+// session open instead of a writing one, and passed with a 300ms deadline in
+// place: a deadline only bites on a write, so an idle stream cannot detect one.
+// Without this half, that vacuous test would have shipped looking like coverage.
+func TestEventStreamTestCanSeeAWriteDeadline(t *testing.T) {
+	restoreFlags(t)
+	addr := startStreamingHandler(t, func(srv *http.Server) {
+		srv.WriteTimeout = 300 * time.Millisecond
+	})
+	conn := openStream(t, addr, "/sse")
+	if !streamClosedWithin(t, conn, 3*time.Second) {
+		t.Fatal("a 300ms write deadline did not end the stream; this observation cannot detect the defect it exists for")
+	}
+}
+
+// TestSharedServerDeclaresNoWriteDeadline is the cheap, deterministic pin that
+// sits under the behavioural pair: whatever a future refactor does to the
+// timeouts, WriteTimeout on the shared server must stay zero.
+func TestSharedServerDeclaresNoWriteDeadline(t *testing.T) {
+	restoreFlags(t)
+	for _, tr := range transports() {
+		t.Run(tr.name, func(t *testing.T) {
+			cfg, err := resolveTransportConfig(tr.name)
+			if err != nil {
+				t.Fatalf("resolveTransportConfig: %v", err)
+			}
+			if got := newMCPHTTPServer(tr.handler(), cfg).WriteTimeout; got != 0 {
+				t.Fatalf("WriteTimeout = %v, want 0: it caps the life of every stream", got)
 			}
 		})
 	}

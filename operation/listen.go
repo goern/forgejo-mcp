@@ -27,7 +27,6 @@ import (
 const (
 	readHeaderTimeout = 10 * time.Second
 	readTimeout       = 30 * time.Second
-	writeTimeout      = 30 * time.Second
 	idleTimeout       = 120 * time.Second
 	maxHeaderBytes    = 64 << 10
 
@@ -362,9 +361,18 @@ func newMCPHTTPServer(handler http.Handler, cfg transportConfig) *http.Server {
 		Handler:           guardRequests(handler, cfg.hosts, cfg.origins, cfg.requireAuth),
 		ReadHeaderTimeout: readHeaderTimeout,
 		ReadTimeout:       readTimeout,
-		WriteTimeout:      writeTimeout,
 		IdleTimeout:       idleTimeout,
 		MaxHeaderBytes:    maxHeaderBytes,
+		// WriteTimeout is deliberately ABSENT, and must stay absent. Go extends
+		// that deadline only when a new request header is read; it is never
+		// extended during a streaming response. Both transports served here are
+		// stream-based -- SSE holds /sse open indefinitely, and Streamable HTTP
+		// holds its GET channel open for server-to-client notifications -- so
+		// any WriteTimeout is an absolute cap on the life of every stream, not a
+		// bound on a slow write. ReadHeaderTimeout and IdleTimeout carry the
+		// cheap-refusal property instead: a stranger's handshake is bounded, and
+		// a connection that stops making progress is reaped.
+		// TestEventStreamOutlivesAWriteDeadline fails if this is reintroduced.
 		// Go replaces srv.Handler entirely for "OPTIONS *" unless this is set,
 		// which would route that one request shape around the whole policy.
 		DisableGeneralOptionsHandler: true,
