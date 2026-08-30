@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/flag"
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/forgejo"
@@ -215,11 +216,20 @@ func normalizeOrigin(value string) (string, bool) {
 }
 
 // truncateForLog bounds an attacker-controlled value before it reaches the log.
+//
+// The cut is made on a rune boundary. Slicing bytes can land inside a multi-byte
+// sequence and emit a lone replacement character, which is cosmetic in a log
+// line but makes the logged value differ from what the peer actually sent --
+// and the reason to log it at all is to show what was sent.
 func truncateForLog(v string) string {
 	if len(v) <= maxLoggedHeaderLen {
 		return v
 	}
-	return v[:maxLoggedHeaderLen] + "…(truncated)"
+	cut := maxLoggedHeaderLen
+	for cut > 0 && !utf8.RuneStart(v[cut]) {
+		cut--
+	}
+	return v[:cut] + "…(truncated)"
 }
 
 // guardRequests is the middleware required by the Model Context Protocol's

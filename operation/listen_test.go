@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/flag"
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/forgejo"
@@ -819,5 +820,21 @@ func TestSharedServerDeclaresNoWriteDeadline(t *testing.T) {
 				t.Fatalf("WriteTimeout = %v, want 0: it caps the life of every stream", got)
 			}
 		})
+	}
+}
+
+// TestTruncateForLogCutsOnARuneBoundary pins the cosmetic fix that goes with
+// the rate bound: the logged value should be what the peer sent, cut short, not
+// what the peer sent with a mangled final character.
+func TestTruncateForLogCutsOnARuneBoundary(t *testing.T) {
+	// A multi-byte rune straddling the cut: 127 ASCII bytes then "é" (2 bytes),
+	// so a byte slice at 128 would land inside it.
+	v := strings.Repeat("a", maxLoggedHeaderLen-1) + "é" + strings.Repeat("b", 40)
+	got := truncateForLog(v)
+	if !utf8.ValidString(got) {
+		t.Fatalf("truncated value is not valid UTF-8: %q", got)
+	}
+	if strings.ContainsRune(got, utf8.RuneError) {
+		t.Fatalf("truncated value contains a replacement character: %q", got)
 	}
 }
