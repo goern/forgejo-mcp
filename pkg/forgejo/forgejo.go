@@ -56,8 +56,11 @@ func Client(ctx context.Context) (*forgejo.Client, error) {
 
 	// No per-request credential. Whether the operator's own configured
 	// credential may stand in for it is the policy in credential.go: allowed
-	// for stdio and for a loopback-only listener, refused for a listener the
-	// network can reach.
+	// for stdio, and on a network transport only where the operator has opted
+	// in explicitly. The bind address does not enter into it -- a loopback
+	// listener is refused exactly like any other, because a reverse proxy in
+	// front of one rewrites Host to the proxied target by default, so every
+	// observable looks local on a request that came from the internet.
 	if _, err := tokenForRequest(ctx); err != nil {
 		log.ErrorCtx(ctx, "Refusing to serve request with the server's own credential",
 			log.ErrorField(err),
