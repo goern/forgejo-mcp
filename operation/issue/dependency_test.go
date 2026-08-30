@@ -186,6 +186,32 @@ func TestAddIssueDependency_CrossRepoBodyShape(t *testing.T) {
 	}
 }
 
+func TestAddIssueDependency_SelfDependencyIsCaseInsensitive(t *testing.T) {
+	_, records := newDependenciesBackend(t)
+
+	// Forgejo treats owner and repository names case-insensitively, so a
+	// differently-cased spelling names the same repository. Comparing the two
+	// exactly let that spelling past the early check, which then reported a
+	// generic server-side error instead of the clear one.
+	_, err := AddIssueDependencyFn(context.Background(), makeReq(map[string]any{
+		"owner":            "goern",
+		"repo":             "forgejo-mcp",
+		"index":            float64(7),
+		"depends_on_index": float64(7),
+		"depends_on_owner": "Goern",
+		"depends_on_repo":  "Forgejo-MCP",
+	}))
+	if err == nil {
+		t.Fatal("a differently-cased spelling of the same repo was not caught as a self-dependency")
+	}
+	if !strings.Contains(err.Error(), "cannot depend on itself") {
+		t.Fatalf("wrong error for a case-differing self-dependency: %v", err)
+	}
+	if len(*records) > 0 {
+		t.Fatalf("expected no HTTP request, got %d", len(*records))
+	}
+}
+
 func TestAddIssueDependency_CrossRepoSameIndexAllowed(t *testing.T) {
 	_, records := newDependenciesBackend(t)
 

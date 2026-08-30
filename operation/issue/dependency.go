@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation/params"
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/forgejo"
@@ -172,7 +173,12 @@ func AddIssueDependencyFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	// index and depends_on_index are validated above so a missing/malformed
 	// required argument surfaces as its own clear error instead of both
 	// silently coercing to 0 and being misreported as "cannot depend on itself".
-	if depOwner == owner && depRepo == repo && int64(index) == int64(dependsOn) {
+	// EqualFold on owner and repo: Forgejo treats both case-insensitively, so an
+	// uppercased spelling of the same repository is the same repository. Forgejo
+	// rejects the self-dependency server-side either way; comparing case-blind is
+	// about failing early with the clearer message instead of a generic API error.
+	if strings.EqualFold(depOwner, owner) && strings.EqualFold(depRepo, repo) &&
+		int64(index) == int64(dependsOn) {
 		return to.ErrorResult(fmt.Errorf("an issue cannot depend on itself"))
 	}
 
