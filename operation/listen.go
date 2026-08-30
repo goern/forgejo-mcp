@@ -36,6 +36,15 @@ const (
 	// refuses, so logging it whole lets a stranger write to the operator's disk
 	// for free.
 	maxLoggedHeaderLen = 128
+
+	// maxLoggedHeaderLen bounds the SIZE of one refusal line; these bound the
+	// RATE. Without them an unauthenticated peer still writes to the operator's
+	// disk without limit, just in more lines rather than longer ones. The burst
+	// is generous enough that a human debugging a genuinely misconfigured proxy
+	// sees the refusals immediately, and the suppressed count means a flood is
+	// still visible as a flood.
+	refusalLogBurst  = 10
+	refusalLogWindow = time.Second
 )
 
 // isLoopbackHostname reports whether host names a loopback interface. host may
@@ -232,6 +241,53 @@ func truncateForLog(v string) string {
 	return v[:cut] + "…(truncated)"
 }
 
+// refusalLimiter bounds how many refusal lines reach the log per window and
+// counts what it dropped, so a flood is reported as a flood rather than
+// written out one line at a time.
+type refusalLimiter struct {
+	mu          sync.Mutex
+	windowStart time.Time
+	logged      int
+	suppressed  int
+}
+
+// admit reports whether this refusal may be logged, and how many were
+// suppressed in the window that just closed (0 when none were, or when this is
+// not the first admission of a new window).
+func (l *refusalLimiter) admit(now time.Time) (bool, int) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	dropped := 0
+	if now.Sub(l.windowStart) >= refusalLogWindow {
+		dropped, l.suppressed = l.suppressed, 0
+		l.windowStart, l.logged = now, 0
+	}
+	if l.logged < refusalLogBurst {
+		l.logged++
+		return true, dropped
+	}
+	l.suppressed++
+	return false, dropped
+}
+
+// refusals is process-wide on purpose: the bound that matters is on what one
+// server writes to one operator's disk, not on what any single listener does.
+var refusals refusalLimiter
+
+// logRefusal writes a refusal line unless the rate bound says otherwise.
+func logRefusal(msg string, fields ...zap.Field) {
+	ok, dropped := refusals.admit(time.Now())
+	if dropped > 0 {
+		log.Warn("Suppressed refusal log lines over the preceding window",
+			log.IntField("suppressed", dropped),
+		)
+	}
+	if ok {
+		log.Warn(msg, fields...)
+	}
+}
+
 // guardRequests is the middleware required by the Model Context Protocol's
 // Streamable HTTP transport: "Servers MUST validate the Origin header on all
 // incoming connections to prevent DNS rebinding attacks", alongside "Servers
@@ -256,7 +312,7 @@ func truncateForLog(v string) string {
 func guardRequests(next http.Handler, hosts hostPolicy, origins originPolicy, requireAuth bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !hosts.permits(r.Host) {
-			log.Warn("Rejected request with unacceptable Host header",
+			logRefusal("Rejected request with unacceptable Host header",
 				log.StringField("host", truncateForLog(r.Host)),
 				log.StringField("path", truncateForLog(r.URL.Path)),
 			)
@@ -271,7 +327,7 @@ func guardRequests(next http.Handler, hosts hostPolicy, origins originPolicy, re
 				value = origin[0]
 			}
 			if !origins.permits(value) {
-				log.Warn("Rejected request with unacceptable Origin header",
+				logRefusal("Rejected request with unacceptable Origin header",
 					log.StringField("origin", truncateForLog(value)),
 					log.StringField("path", truncateForLog(r.URL.Path)),
 				)
@@ -280,7 +336,7 @@ func guardRequests(next http.Handler, hosts hostPolicy, origins originPolicy, re
 			}
 		}
 		if requireAuth && extractToken(r.Header.Get("Authorization")) == "" {
-			log.Warn("Rejected request with no usable Authorization header",
+			logRefusal("Rejected request with no usable Authorization header",
 				log.StringField("path", truncateForLog(r.URL.Path)),
 			)
 			w.Header().Set("WWW-Authenticate", `Bearer realm="forgejo-mcp"`)

@@ -823,6 +823,44 @@ func TestSharedServerDeclaresNoWriteDeadline(t *testing.T) {
 	}
 }
 
+// TestRefusalLoggingIsRateBounded covers the rate half of the disk-write bound.
+// maxLoggedHeaderLen already bounds how LONG one refusal line can be; without
+// this, an unauthenticated peer still writes to the operator's disk without
+// limit, in more lines rather than longer ones.
+func TestRefusalLoggingIsRateBounded(t *testing.T) {
+	var l refusalLimiter
+	start := time.Now()
+
+	admitted, reported := 0, 0
+	for i := 0; i < refusalLogBurst*5; i++ {
+		ok, dropped := l.admit(start)
+		if ok {
+			admitted++
+		}
+		reported += dropped
+	}
+	if admitted != refusalLogBurst {
+		t.Fatalf("admitted %d refusals in one window, want %d", admitted, refusalLogBurst)
+	}
+	if reported != 0 {
+		t.Fatalf("reported %d suppressed before the window closed, want 0", reported)
+	}
+
+	// The next window admits again, and reports what the closed one dropped.
+	ok, dropped := l.admit(start.Add(refusalLogWindow))
+	if !ok {
+		t.Fatal("a new window did not admit a refusal")
+	}
+	if want := refusalLogBurst*5 - refusalLogBurst; dropped != want {
+		t.Fatalf("reported %d suppressed for the closed window, want %d", dropped, want)
+	}
+
+	// A flood that stops must not keep re-reporting the same suppressed count.
+	if _, dropped := l.admit(start.Add(2 * refusalLogWindow)); dropped != 0 {
+		t.Fatalf("reported %d suppressed for a quiet window, want 0", dropped)
+	}
+}
+
 // TestTruncateForLogCutsOnARuneBoundary pins the cosmetic fix that goes with
 // the rate bound: the logged value should be what the peer sent, cut short, not
 // what the peer sent with a mangled final character.
