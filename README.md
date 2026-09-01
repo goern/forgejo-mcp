@@ -726,7 +726,8 @@ forgejo-mcp --user-agent "forgejo-mcp/1.0.0" --transport sse --url <url> --token
 
 ## Getting Help
 
-- [Report issues](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues)
+- [Report issues](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues) — bugs, questions, feature requests
+- **Found a security problem?** Do not use the issue tracker. See [SECURITY.md](SECURITY.md) for how to report it privately.
 - [View source code](https://git.b4mad.industries/agentic-forges/forgejo-mcp)
 - [Chat on Matrix](https://matrix.to/#/%23forgejo-mcp:b4mad.net) — `#forgejo-mcp:b4mad.net`
 

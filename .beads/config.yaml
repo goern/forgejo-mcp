@@ -53,6 +53,6 @@
 # - github.org
 # - github.repo
 
-sync.remote: "git+ssh://git@codeberg.org/goern/forgejo-mcp.git"
+sync.remote: "https://hub.dolt.b4mad.industries/forgejo_mcp"
 
 dolt.shared-server: true
