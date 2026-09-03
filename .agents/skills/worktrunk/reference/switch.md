@@ -19,6 +19,8 @@ $ wt switch https://github.com/owner/repo/pull/123   # ...or paste the PR's URL
 
 The `--create` flag creates a new branch from `--base` — the default branch unless specified. Without `--create`, the branch must already exist. Switching to a remote branch (e.g., `wt switch feature` when only `origin/feature` exists) creates a local tracking branch.
 
+One rule decides the upstream, whatever `branch.autoSetupMerge` is set to: a new branch tracks the remote branch it starts from only when the two share a name. Switching to `origin/feature` shares it, so that branch tracks. `--create` need not: `--create release --base origin/release` tracks `origin/release`, while `--create feature --base origin/release` — and the bare `--base release` that resolves to it — gets no upstream. Git's default would have `feature` track `origin/release`, so under `push.default = upstream` a bare `git push` would push the new work to `release`. Publishing such a branch takes `git push --set-upstream origin <branch>`, or git's `push.autoSetupRemote = true` set once, after which a bare `git push` from the new worktree publishes it and configures its tracking.
+
 ## Creating worktrees
 
 If the branch already has a worktree, `wt switch` changes directories to it. Otherwise, it creates one:
@@ -160,8 +162,7 @@ Arguments:
   [EXECUTE_ARGS]...
           Additional arguments for --execute command (after --)
 
-          Arguments after -- are appended to the execute command. Each argument is expanded for
-          templates, then POSIX shell-escaped.
+          Each argument is expanded for templates and passed directly to the program.
 
 Options:
   -c, --create
@@ -174,18 +175,27 @@ Options:
           pr:{N}, mr:{N}.
 
   -x, --execute <EXECUTE>
-          Command to run after switch
+          Program to run after switch
 
-          Replaces the wt process with the command after switching, giving it full terminal control.
-          Useful for launching editors, AI agents, or other interactive tools.
+          Runs one external program after switching, with full terminal control. Arguments after --
+          go directly to that program without Worktrunk shell parsing. Program lookup and argument
+          decoding follow the operating system. Shell syntax requires an explicit shell, for example
+          -x sh -- -c 'npm install && npm test'. On Windows, shell shims need their extension (-x
+          code.cmd) or an explicit shell such as -x cmd.exe -- /C code.
 
           Without a branch argument, the interactive picker opens and the command runs against the
           selected worktree — so wt switch -x claude picks a worktree, then launches Claude Code
-          there.
+          there. With --no-cd, the program starts in the invoking directory instead.
 
           Supports hook template variables ({{ branch }}, {{ worktree_path }}, etc.) and filters. {{
           base }} and {{ base_worktree_path }} describe the source: the selected base with --create,
           or the invoking worktree when switching to an existing worktree.
+
+          A variable inside a shell body is substituted before that shell parses it, so a path with
+          spaces splits into several arguments. Pass it as a separate argument instead — sh binds
+          the first one to $0, so the path arrives as $1:
+
+            wt switch feature -x sh -- -c 'cd "$1" && npm test' sh '{{ worktree_path }}'
 
           Especially useful with shell aliases:
 
@@ -206,7 +216,7 @@ Options:
           Skip directory change after switching
 
           Hooks still run normally. Useful when hooks handle navigation (e.g., tmux workflows) or
-          for CI/automation. Use --cd to override.
+          for CI/automation. --execute also starts in the invoking directory. Use --cd to override.
 
   -h, --help
           Print help (see a summary with '-h')
