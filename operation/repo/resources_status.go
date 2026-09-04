@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation/resource"
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/forgejo"
@@ -16,7 +17,8 @@ import (
 
 const statusResourceURITemplate = "forgejo://repo/{owner}/{repo}/commit/{sha}/status"
 
-// statusItem is the per-context entry included in the resource response payload.
+// statusItem is the per-context CI status shared by the commit status
+// resource and get_commit_statuses.
 type statusItem struct {
 	Context     string `json:"context"`
 	State       string `json:"state"`
@@ -85,17 +87,15 @@ func statusResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]
 		return nil, resource.MapForgejoError(uri, err)
 	}
 
-	items := make([]string, len(statuses))
-	itemData := make([]statusItem, len(statuses))
-	for i, s := range statuses {
-		itemData[i] = statusItem{
-			Context:     s.Context,
-			State:       string(s.State),
-			TargetURL:   s.TargetURL,
-			Description: s.Description,
-			CreatedAt:   s.Created.Format("2006-01-02T15:04:05Z07:00"),
+	items := make([]string, 0, len(statuses))
+	itemData := make([]statusItem, 0, len(statuses))
+	for _, s := range statuses {
+		item, ok := toStatusItem(s)
+		if !ok {
+			continue
 		}
-		items[i] = string(s.State)
+		itemData = append(itemData, item)
+		items = append(items, item.State)
 	}
 
 	bounded := resource.Bounded(items, resource.EmbeddedListCap, "get_commit_statuses")
@@ -110,7 +110,7 @@ func statusResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]
 	payload := statusResourcePayload{
 		SHA:        params.SHA,
 		State:      state,
-		TotalCount: len(statuses),
+		TotalCount: len(itemData),
 		Statuses:   boundedItems,
 		Truncated:  bounded.Truncated,
 	}
@@ -132,14 +132,29 @@ func statusResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]
 	}, nil
 }
 
-func computeAggregateState(statuses []*forgejo_sdk.Status) string {
-	if len(statuses) == 0 {
-		return "unknown"
+func toStatusItem(s *forgejo_sdk.Status) (statusItem, bool) {
+	if s == nil {
+		return statusItem{}, false
 	}
+	return statusItem{
+		Context:     s.Context,
+		State:       string(s.State),
+		TargetURL:   s.TargetURL,
+		Description: s.Description,
+		CreatedAt:   s.Created.Format(time.RFC3339),
+	}, true
+}
+
+func computeAggregateState(statuses []*forgejo_sdk.Status) string {
 	hasFailure := false
 	hasPending := false
 	allSuccess := true
+	seen := 0
 	for _, s := range statuses {
+		if s == nil {
+			continue
+		}
+		seen++
 		switch s.State {
 		case forgejo_sdk.StatusFailure, forgejo_sdk.StatusError:
 			hasFailure = true
@@ -152,6 +167,9 @@ func computeAggregateState(statuses []*forgejo_sdk.Status) string {
 		default:
 			allSuccess = false
 		}
+	}
+	if seen == 0 {
+		return "unknown"
 	}
 	switch {
 	case hasFailure:

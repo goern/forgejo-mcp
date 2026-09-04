@@ -13,7 +13,7 @@ error and makes no request. Commit statuses are not Actions workflow runs.
 
 ### Requirement: List commit statuses for a SHA
 
-The `get_commit_statuses` tool SHALL accept required `owner`, `repo`, and `sha`, and optional `page` (default 1) and `limit` (default 30, maximum 50), call `Client.ListStatuses`, and return a JSON object with keys `sha`, `statuses`, `page`, `limit`, and `count`. Each status item SHALL use keys `context`, `state`, `target_url`, `description`, and `created_at`. The system SHALL NOT compute a combined aggregate state.
+The `get_commit_statuses` tool SHALL accept required `owner`, `repo`, and `sha`, and optional `page` (default 1) and `limit` (default 30, maximum 50), call `Client.ListStatuses`, and return a JSON object with keys `sha`, `statuses`, `page`, `limit`, and `count`. `total_count` SHALL be populated from the upstream `X-Total-Count` header via `pkg/forgejo.TotalCountPtr` and SHALL be omitted when the header is absent or unparsable. Each status item SHALL use keys `context`, `state`, `target_url`, `description`, and `created_at`. The system SHALL NOT compute a combined aggregate state.
 
 #### Scenario: List returns a bounding envelope
 
@@ -21,6 +21,16 @@ The `get_commit_statuses` tool SHALL accept required `owner`, `repo`, and `sha`,
 - **THEN** the system SHALL GET `/repos/{owner}/{repo}/commits/{sha}/statuses` with `page` and `limit` query parameters
 - **AND** the system SHALL return an object containing `sha`, `statuses`, `page`, `limit`, and `count`
 - **AND** each element of `statuses` SHALL include `state` (not `status`)
+
+#### Scenario: Total count from X-Total-Count
+
+- **WHEN** the upstream response includes `X-Total-Count`
+- **THEN** the system SHALL return `total_count` set to that header value
+
+#### Scenario: Total count omitted when the header is absent
+
+- **WHEN** the upstream response does not include `X-Total-Count`
+- **THEN** the system SHALL omit `total_count`
 
 #### Scenario: Empty list is an empty array
 

@@ -199,3 +199,39 @@ func TestComputeAggregateState_AnyFailure(t *testing.T) {
 		t.Errorf("expected failure, got %q", got)
 	}
 }
+
+func TestComputeAggregateState_NilOnlyIsUnknown(t *testing.T) {
+	if got := computeAggregateState([]*forgejo_sdk.Status{nil, nil}); got != "unknown" {
+		t.Errorf("got %q, want unknown", got)
+	}
+}
+
+func TestToStatusItem_Nil(t *testing.T) {
+	item, ok := toStatusItem(nil)
+	if ok {
+		t.Fatalf("nil must be skipped, got %+v", item)
+	}
+	if item != (statusItem{}) {
+		t.Errorf("zero item: got %+v", item)
+	}
+}
+
+func TestToStatusItem_MapsFields(t *testing.T) {
+	created := time.Date(2026, 8, 1, 12, 0, 0, 0, time.UTC)
+	got, ok := toStatusItem(&forgejo_sdk.Status{
+		Context:     "ci/woodpecker",
+		State:       forgejo_sdk.StatusSuccess,
+		TargetURL:   "https://ci.example/1",
+		Description: "ok",
+		Created:     created,
+	})
+	if !ok {
+		t.Fatal("expected ok")
+	}
+	if got.Context != "ci/woodpecker" || got.State != "success" || got.TargetURL != "https://ci.example/1" || got.Description != "ok" {
+		t.Errorf("item: %+v", got)
+	}
+	if got.CreatedAt != "2026-08-01T12:00:00Z" {
+		t.Errorf("created_at: got %q", got.CreatedAt)
+	}
+}

@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/forgejo"
 )
 
 func TestGetCommitStatusesFn_ShortSHANoRequest(t *testing.T) {
@@ -61,6 +63,12 @@ func TestGetCommitStatusesFn_EmptyList(t *testing.T) {
 	}
 	if envelope.Result.Page != 1 || envelope.Result.Limit != 30 {
 		t.Errorf("page/limit: got page=%d limit=%d", envelope.Result.Page, envelope.Result.Limit)
+	}
+	if envelope.Result.TotalCount != nil {
+		t.Errorf("total_count must be omitted when the header is absent, got %d", *envelope.Result.TotalCount)
+	}
+	if text := extractText(t, res); strings.Contains(text, "total_count") {
+		t.Errorf("total_count must be omitted when the header is absent: %s", text)
 	}
 }
 
@@ -132,9 +140,15 @@ func TestGetCommitStatusesFn_SuccessPage(t *testing.T) {
 	if item.Description != "ok" {
 		t.Errorf("description: got %q", item.Description)
 	}
+	if item.CreatedAt != "2026-08-01T12:00:00Z" {
+		t.Errorf("created_at: got %q", item.CreatedAt)
+	}
 	text := extractText(t, res)
-	if strings.Contains(text, `"status":"success"`) && !strings.Contains(text, `"state":"success"`) {
-		t.Errorf("item must use state, not SDK status: %s", text)
+	if !strings.Contains(text, `"state":"success"`) {
+		t.Errorf("item must use state: %s", text)
+	}
+	if strings.Contains(text, `"status":"success"`) {
+		t.Errorf("item must not use SDK status: %s", text)
 	}
 }
 
@@ -188,5 +202,106 @@ func TestGetCommitStatusesFn_Page2(t *testing.T) {
 	}
 	if envelope.Result.Page != 2 {
 		t.Errorf("page: got %d, want 2", envelope.Result.Page)
+	}
+}
+
+func TestGetCommitStatusesFn_LimitClamp(t *testing.T) {
+	cases := []struct {
+		name  string
+		limit float64
+		query string
+		echo  int
+	}{
+		{name: "over_max", limit: 999, query: "limit=50", echo: 50},
+		{name: "under_min", limit: 0, query: "limit=30", echo: 30},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var gotQuery string
+			newRepoBackend(t, func(mux *http.ServeMux) {
+				mux.HandleFunc("/api/v1/repos/o/r/commits/"+testSHA+"/statuses", func(w http.ResponseWriter, r *http.Request) {
+					gotQuery = r.URL.RawQuery
+					if r.Method != http.MethodGet {
+						t.Errorf("method: got %q, want GET", r.Method)
+					}
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte(`[]`))
+				})
+			})
+
+			res, err := GetCommitStatusesFn(context.Background(), newCallToolRequest(map[string]any{
+				"owner": "o", "repo": "r", "sha": testSHA, "limit": tc.limit,
+			}))
+			if err != nil || res == nil || res.IsError {
+				t.Fatalf("list failed: err=%v res=%+v", err, res)
+			}
+			if !strings.Contains(gotQuery, tc.query) {
+				t.Errorf("query missing %s: %q", tc.query, gotQuery)
+			}
+
+			var envelope struct {
+				Result getCommitStatusesResult `json:"Result"`
+			}
+			if err := json.Unmarshal([]byte(extractText(t, res)), &envelope); err != nil {
+				t.Fatalf("result JSON: %v", err)
+			}
+			if envelope.Result.Limit != tc.echo {
+				t.Errorf("limit: got %d, want %d", envelope.Result.Limit, tc.echo)
+			}
+		})
+	}
+}
+
+func TestGetCommitStatusesFn_TotalCountFromHeader(t *testing.T) {
+	newRepoBackend(t, func(mux *http.ServeMux) {
+		mux.HandleFunc("/api/v1/repos/o/r/commits/"+testSHA+"/statuses", func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodGet {
+				t.Errorf("method: got %q, want GET", r.Method)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set(forgejo.TotalCountHeader, "4")
+			_, _ = w.Write([]byte(`[]`))
+		})
+	})
+
+	res, err := GetCommitStatusesFn(context.Background(), newCallToolRequest(map[string]any{
+		"owner": "o", "repo": "r", "sha": testSHA,
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("list failed: err=%v res=%+v", err, res)
+	}
+
+	var envelope struct {
+		Result getCommitStatusesResult `json:"Result"`
+	}
+	if err := json.Unmarshal([]byte(extractText(t, res)), &envelope); err != nil {
+		t.Fatalf("result JSON: %v", err)
+	}
+	if envelope.Result.TotalCount == nil || *envelope.Result.TotalCount != 4 {
+		t.Fatalf("total_count: %+v", envelope.Result.TotalCount)
+	}
+}
+
+func TestGetCommitStatusesFn_TotalCountZeroIsEmitted(t *testing.T) {
+	newRepoBackend(t, func(mux *http.ServeMux) {
+		mux.HandleFunc("/api/v1/repos/o/r/commits/"+testSHA+"/statuses", func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodGet {
+				t.Errorf("method: got %q, want GET", r.Method)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set(forgejo.TotalCountHeader, "0")
+			_, _ = w.Write([]byte(`[]`))
+		})
+	})
+
+	res, err := GetCommitStatusesFn(context.Background(), newCallToolRequest(map[string]any{
+		"owner": "o", "repo": "r", "sha": testSHA,
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("list failed: err=%v res=%+v", err, res)
+	}
+	text := extractText(t, res)
+	if !strings.Contains(text, `"total_count":0`) {
+		t.Fatalf("expected a confirmed-zero total_count to be emitted, got: %s", text)
 	}
 }

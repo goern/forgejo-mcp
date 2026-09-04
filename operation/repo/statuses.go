@@ -26,7 +26,7 @@ const (
 var (
 	GetCommitStatusesTool = mcp.NewTool(
 		GetCommitStatusesToolName,
-		mcp.WithDescription("List per-context commit statuses for a full 40-character SHA. Bounded by page (default 1) and limit (default 30, maximum 50); returns {sha, statuses, page, limit, count}. Combined aggregate stays on forgejo://repo/{owner}/{repo}/commit/{sha}/status. Commit statuses are CI context checks, not Actions workflow runs (list_workflow_runs)."),
+		mcp.WithDescription("List per-context commit statuses for a full 40-character SHA. Bounded by page (default 1) and limit (default 30, maximum 50); returns {sha, statuses, page, limit, count, total_count}. total_count is present only when Forgejo reports X-Total-Count. Combined aggregate stays on forgejo://repo/{owner}/{repo}/commit/{sha}/status. Commit statuses are CI context checks, not Actions workflow runs (list_workflow_runs)."),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithString("sha", mcp.Required(), mcp.Description("Full 40-character hex commit SHA")),
@@ -36,11 +36,12 @@ var (
 )
 
 type getCommitStatusesResult struct {
-	SHA      string       `json:"sha"`
-	Statuses []statusItem `json:"statuses"`
-	Page     int          `json:"page"`
-	Limit    int          `json:"limit"`
-	Count    int          `json:"count"`
+	SHA        string       `json:"sha"`
+	Statuses   []statusItem `json:"statuses"`
+	Page       int          `json:"page"`
+	Limit      int          `json:"limit"`
+	Count      int          `json:"count"`
+	TotalCount *int         `json:"total_count,omitempty"`
 }
 
 func GetCommitStatusesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -72,7 +73,7 @@ func GetCommitStatusesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Cal
 	if err != nil {
 		return to.ErrorResult(err)
 	}
-	statuses, _, err := client.ListStatuses(owner, repo, sha, forgejo_sdk.ListStatusesOption{
+	statuses, resp, err := client.ListStatuses(owner, repo, sha, forgejo_sdk.ListStatusesOption{
 		ListOptions: forgejo_sdk.ListOptions{Page: int(page), PageSize: int(limit)},
 	})
 	if err != nil {
@@ -81,23 +82,24 @@ func GetCommitStatusesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Cal
 
 	items := make([]statusItem, 0, len(statuses))
 	for _, s := range statuses {
-		if s == nil {
+		item, ok := toStatusItem(s)
+		if !ok {
 			continue
 		}
-		items = append(items, statusItem{
-			Context:     s.Context,
-			State:       string(s.State),
-			TargetURL:   s.TargetURL,
-			Description: s.Description,
-			CreatedAt:   s.Created.Format("2006-01-02T15:04:05Z07:00"),
-		})
+		items = append(items, item)
+	}
+
+	var totalCount *int
+	if resp != nil {
+		totalCount = forgejo.TotalCountPtr(resp.Header)
 	}
 
 	return to.TextResult(getCommitStatusesResult{
-		SHA:      sha,
-		Statuses: items,
-		Page:     int(page),
-		Limit:    int(limit),
-		Count:    len(items),
+		SHA:        sha,
+		Statuses:   items,
+		Page:       int(page),
+		Limit:      int(limit),
+		Count:      len(items),
+		TotalCount: totalCount,
 	})
 }
