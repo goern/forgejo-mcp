@@ -31,6 +31,60 @@ var (
 	mcpServer *server.MCPServer
 )
 
+// streamableHTTPEndpointPath is the library's own default. It is named here
+// because the transport is mounted on a mux at this path rather than served as
+// the root handler.
+const streamableHTTPEndpointPath = "/mcp"
+
+// requestTokenContextFunc lifts a per-request credential out of the
+// Authorization header and into the context the tool handlers see.
+func requestTokenContextFunc(ctx context.Context, r *http.Request) context.Context {
+	if token := extractToken(r.Header.Get("Authorization")); token != "" {
+		return forgejo.WithToken(ctx, token)
+	}
+	return ctx
+}
+
+// disableLibraryHostCheck reports whether the library's own loopback protection
+// should be switched off.
+//
+// When the operator declares an explicit allow-list, this server's middleware
+// owns the Host policy and is stricter than the library's, which accepts any
+// loopback name. Leaving both on means a request arriving over loopback with a
+// declared external name is refused by the library after our check has already
+// accepted it — two policies disagreeing about one header. With no declared
+// list the library's protection stays on as written.
+func disableLibraryHostCheck() bool { return len(flag.AllowedHosts) > 0 }
+
+// newSSEHandler builds the SSE transport exactly as Run does.
+//
+// It exists so the conformance tests drive the real construction — the option
+// set, the context function and the mount — rather than a copy of it that can
+// drift. A test that builds its own handler proves nothing about this one.
+func newSSEHandler(s *server.MCPServer) http.Handler {
+	opts := []server.SSEOption{server.WithSSEContextFunc(requestTokenContextFunc)}
+	if disableLibraryHostCheck() {
+		opts = append(opts, server.WithSSEDisableLocalhostProtection(true))
+	}
+	return server.NewSSEServer(s, opts...)
+}
+
+// newStreamableHTTPHandler builds the streamable HTTP transport exactly as Run
+// does, mounted on a mux at its endpoint path. Serving the transport as the
+// root handler instead would make it answer on every path.
+func newStreamableHTTPHandler(s *server.MCPServer) http.Handler {
+	opts := []server.StreamableHTTPOption{
+		server.WithHTTPContextFunc(requestTokenContextFunc),
+		server.WithEndpointPath(streamableHTTPEndpointPath),
+	}
+	if disableLibraryHostCheck() {
+		opts = append(opts, server.WithDisableLocalhostProtection(true))
+	}
+	mux := http.NewServeMux()
+	mux.Handle(streamableHTTPEndpointPath, server.NewStreamableHTTPServer(s, opts...))
+	return mux
+}
+
 func RegisterTool(s *server.MCPServer) {
 	log.Info("Registering MCP tools")
 
@@ -180,20 +234,11 @@ func Run(transport, version string) error {
 		}
 		log.Info("MCP stdio server shutdown")
 	case "sse":
-		sseServer := server.NewSSEServer(mcpServer, server.WithSSEContextFunc(func(ctx context.Context, r *http.Request) context.Context {
-			if token := extractToken(r.Header.Get("Authorization")); token != "" {
-				return forgejo.WithToken(ctx, token)
-			}
-			return ctx
-		}))
+		sseServer := newSSEHandler(mcpServer)
 		log.Info("Starting MCP SSE server",
 			log.IntField("port", flag.SSEPort),
 		)
-		log.Info("MCP SSE server ready for connections",
-			log.IntField("port", flag.SSEPort),
-			log.StringField("endpoint", fmt.Sprintf("http://localhost:%d", flag.SSEPort)),
-		)
-		if err := sseServer.Start(fmt.Sprintf(":%d", flag.SSEPort)); err != nil {
+		if err := serveMCPOverHTTP("sse", sseServer, flag.SSEPort); err != nil {
 			log.Error("Failed to start SSE server",
 				log.IntField("port", flag.SSEPort),
 				log.ErrorField(err),
@@ -202,20 +247,11 @@ func Run(transport, version string) error {
 		}
 		log.Info("MCP SSE server shutdown")
 	case "http":
-		httpServer := server.NewStreamableHTTPServer(mcpServer, server.WithHTTPContextFunc(func(ctx context.Context, r *http.Request) context.Context {
-			if token := extractToken(r.Header.Get("Authorization")); token != "" {
-				return forgejo.WithToken(ctx, token)
-			}
-			return ctx
-		}))
+		httpMux := newStreamableHTTPHandler(mcpServer)
 		log.Info("Starting MCP streamable HTTP server",
 			log.IntField("port", flag.HTTPPort),
 		)
-		log.Info("MCP streamable HTTP server ready for connections",
-			log.IntField("port", flag.HTTPPort),
-			log.StringField("endpoint", fmt.Sprintf("http://localhost:%d", flag.HTTPPort)),
-		)
-		if err := httpServer.Start(fmt.Sprintf(":%d", flag.HTTPPort)); err != nil {
+		if err := serveMCPOverHTTP("http", httpMux, flag.HTTPPort); err != nil {
 			log.Error("Failed to start streamable HTTP server",
 				log.IntField("port", flag.HTTPPort),
 				log.ErrorField(err),

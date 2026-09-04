@@ -105,14 +105,15 @@ func resolveSameOriginURL(pathOrURL string) (string, error) {
 	return base + pathOrURL, nil
 }
 
-func setCommonHeaders(ctx context.Context, req *http.Request) {
-	token, ok := ctx.Value(TokenContextKey).(string)
-	if !ok || token == "" {
-		token = flag.Token
+func setCommonHeaders(ctx context.Context, req *http.Request) error {
+	token, err := tokenForRequest(ctx)
+	if err != nil {
+		return err
 	}
 	req.Header.Set("Authorization", "token "+token)
 	req.Header.Set("User-Agent", userAgent())
 	req.Header.Set("Accept", "application/json")
+	return nil
 }
 
 // doRequest sends req, returns the response, mapping common HTTP errors to
@@ -203,7 +204,9 @@ func doJSONWithHeader(ctx context.Context, method, pathOrURL string, body, out a
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
 	}
-	setCommonHeaders(ctx, req)
+	if err := setCommonHeaders(ctx, req); err != nil {
+		return nil, err
+	}
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
@@ -260,7 +263,9 @@ func DoAPIRaw(ctx context.Context, pathOrURL, accept, byteRange string, maxBytes
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
 	}
-	setCommonHeaders(ctx, req)
+	if err := setCommonHeaders(ctx, req); err != nil {
+		return nil, err
+	}
 	if accept != "" {
 		req.Header.Set("Accept", accept)
 	}
@@ -319,7 +324,9 @@ func DoMultipart(ctx context.Context, method, pathOrURL, fieldName, filename, mi
 	}
 	go writeMultipart(pipeWriter, multipartWriter, fieldName, filename, mimeType, r)
 
-	setCommonHeaders(ctx, req)
+	if err := setCommonHeaders(ctx, req); err != nil {
+		return err
+	}
 	req.Header.Set("Content-Type", contentType)
 	resp, err := doRequest(ctx, req)
 	_ = pipeReader.Close()
@@ -377,7 +384,9 @@ func DoRaw(ctx context.Context, pathOrURL string) ([]byte, string, error) {
 	if err != nil {
 		return nil, "", fmt.Errorf("build request: %w", err)
 	}
-	setCommonHeaders(ctx, req)
+	if err := setCommonHeaders(ctx, req); err != nil {
+		return nil, "", err
+	}
 	// Don't constrain Accept here — the asset endpoint is binary.
 
 	resp, err := doRequest(ctx, req)

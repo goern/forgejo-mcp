@@ -34,7 +34,7 @@ make build
 ```output
 Starting Forgejo MCP Server ...
 Starting MCP streamable HTTP server  {"port": 8080}
-MCP streamable HTTP server ready for connections  {"port": 8080, "endpoint": "http://localhost:8080"}
+MCP server listening on loopback only  {"transport": "http", "address": "127.0.0.1:8080, [::1]:8080", "authentication": "every request must carry its own Authorization header", "reachable_from": "this machine only, unless a proxy forwards to it", "to_expose": "set -host to an address the network can reach, and declare -allowed-hosts"}
 ```
 
 ### Custom port
@@ -46,7 +46,7 @@ MCP streamable HTTP server ready for connections  {"port": 8080, "endpoint": "ht
 ```output
 Starting Forgejo MCP Server ...
 Starting MCP streamable HTTP server  {"port": 9090}
-MCP streamable HTTP server ready for connections  {"port": 9090, "endpoint": "http://localhost:9090"}
+MCP server listening on loopback only  {"transport": "http", "address": "127.0.0.1:9090, [::1]:9090", "authentication": "every request must carry its own Authorization header", "reachable_from": "this machine only, unless a proxy forwards to it", "to_expose": "set -host to an address the network can reach, and declare -allowed-hosts"}
 ```
 
 ## Connecting with an MCP client
@@ -115,9 +115,17 @@ curl -X POST http://localhost:8080/mcp \
 
 With the streamable HTTP transport, you can register forgejo-mcp as a custom MCP connector in Claude.ai:
 
-1. Deploy forgejo-mcp with `--transport http` behind a public HTTPS endpoint
-2. In Claude.ai settings, add a custom MCP connector pointing to your endpoint
-3. Claude.ai will discover all Forgejo tools automatically
+1. Deploy forgejo-mcp with `--transport http` behind a public HTTPS endpoint.
+   The listener binds loopback by default, so a deployment that must accept
+   connections from outside its own machine or container needs `--host` set to a
+   reachable address and `--allowed-hosts` set to the names clients use. If your
+   proxy preserves the original `Host` header, declare that name; if it rewrites
+   `Host` to the proxied target, the loopback default already accepts it.
+2. Give the connector its own Forgejo token. Every request on this transport must
+   carry an `Authorization` header — the server will not fall back to its own
+   configured token, and answers `401` to a request without one.
+3. In Claude.ai settings, add a custom MCP connector pointing to your endpoint
+4. Claude.ai will discover all Forgejo tools automatically
 
 See [Claude.ai MCP connector docs](https://support.claude.com/en/articles/11503834-building-custom-connectors-via-remote-mcp-servers) for setup details.
 
