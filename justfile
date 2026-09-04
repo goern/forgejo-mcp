@@ -32,6 +32,14 @@ castra-preflight repo="agentic-forges/forgejo-mcp":
 sr_namespace := "b4mad-forgejo"
 sr_agent     := "b4mad-release-agent"
 
+# WHICH BRANCH GETS RELEASED. The Job clones `--branch $REPO_REF`, and
+# .releaserc lists main/next/beta/alpha — so cutting a prerelease needs the
+# clone, the preflight branch check and the remote-ahead check all pointed at
+# the same branch, or preflight fails on a branch the config explicitly
+# supports while the Job releases main behind your back. Override for one run:
+# `just sr_ref=alpha release-dry`.
+sr_ref := "main"
+
 # WHICH REMOTE IS THE RELEASE TARGET. Not hardcoded to `origin`: a checkout
 # whose `origin` is a personal fork and whose canonical repo is a second remote
 # is a normal arrangement, and hardcoding sent the Job at the fork — it would
@@ -128,23 +136,23 @@ preflight:
     # .releaserc releases from the release branch only; from any other branch
     # semantic-release exits 0 having done nothing, which reads as success.
     branch=$(git rev-parse --abbrev-ref HEAD)
-    if [ "$branch" != "main" ]; then
-        note "✗" "on branch '$branch' — .releaserc releases from main only"; fail=1
+    if [ "$branch" != "{{sr_ref}}" ]; then
+        note "✗" "on branch '$branch' but releasing '{{sr_ref}}' — pass sr_ref=$branch, or switch branch"; fail=1
     else
-        note "ok" "on main"
+        note "ok" "on {{sr_ref}}"
     fi
 
-    # The check that actually matters: the Job releases {{sr_remote}}/main.
-    git fetch -q {{sr_remote}} main 2>/dev/null || true
-    if ! ahead=$(git rev-list --count {{sr_remote}}/main..HEAD 2>/dev/null); then
-        note "✗" "no {{sr_remote}}/main to compare against"; fail=1
+    # The check that actually matters: the Job releases {{sr_remote}}/{{sr_ref}}.
+    git fetch -q {{sr_remote}} {{sr_ref}} 2>/dev/null || true
+    if ! ahead=$(git rev-list --count {{sr_remote}}/{{sr_ref}}..HEAD 2>/dev/null); then
+        note "✗" "no {{sr_remote}}/{{sr_ref}} to compare against — push the branch first"; fail=1
     elif [ "$ahead" != "0" ]; then
         note "✗" "$ahead commit(s) not pushed to {{sr_remote}} — the Job would release without them"; fail=1
     else
-        behind=$(git rev-list --count HEAD..{{sr_remote}}/main)
+        behind=$(git rev-list --count HEAD..{{sr_remote}}/{{sr_ref}})
         [ "$behind" = "0" ] \
-            && note "ok" "{{sr_remote}}/main is exactly this commit" \
-            || note "ok" "{{sr_remote}}/main is $behind ahead; that is what gets released"
+            && note "ok" "{{sr_remote}}/{{sr_ref}} is exactly this commit" \
+            || note "ok" "{{sr_remote}}/{{sr_ref}} is $behind ahead; that is what gets released"
     fi
 
     # Informational only — the Job never sees the working tree.
@@ -196,7 +204,11 @@ _semantic-release-run kind args:
     # The third -e retargets the manifest at THIS repo. The slug appears twice
     # over there — REPO_URL and FORGEJO_REPOSITORY, which decides which repo gets
     # the Release object — so it is /g, and a no-op in the repo it ships from.
+    # The REPO_REF substitution is addressed via the `name: REPO_REF` line and
+    # `n`, not matched on `value: main` directly: `main` is too common a value
+    # to anchor on in a manifest that also carries branch-shaped defaults.
     sed -e "s|name: semantic-release-dry-run\$|name: $job|" \
+        -e "/name: REPO_REF/{n;s|value: .*|value: {{sr_ref}}|;}" \
         -e "s|^          args: .*|          args: $argv|" \
         -e "s|agentic-forges/forge-agents|{{sr_slug}}|g" \
         {{sr_manifest}} | oc -n {{sr_namespace}} create -f -
