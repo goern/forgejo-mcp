@@ -479,7 +479,7 @@
     },
     {
       "name": "list_package_files",
-      "description": "List files of one package version. Client-paged; no total_count."
+      "description": "List files of one package version. Client-paged; total_count is the fetched length."
     },
     {
       "name": "list_packages",

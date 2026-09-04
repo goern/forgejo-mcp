@@ -118,6 +118,9 @@ func TestListPackagesFn_QueryAndEnvelope(t *testing.T) {
 	if decoded.TotalCount == nil || *decoded.TotalCount != 4 {
 		t.Fatalf("total_count: %+v", decoded.TotalCount)
 	}
+	if decoded.HasNext {
+		t.Fatalf("has_next without Link: %+v", decoded)
+	}
 	if len(decoded.Packages) != 1 || decoded.Packages[0].Name != "core" || decoded.Packages[0].HTMLURL == "" {
 		t.Fatalf("packages: %+v", decoded.Packages)
 	}
@@ -145,6 +148,9 @@ func TestListPackagesFn_OmitsTotalCountWhenHeaderAbsent(t *testing.T) {
 	decoded := decodePackageResult[listPackagesResult](t, result)
 	if decoded.Count != 0 || decoded.Packages == nil {
 		t.Fatalf("empty page: %+v", decoded)
+	}
+	if decoded.HasNext {
+		t.Fatalf("has_next without Link: %+v", decoded)
 	}
 }
 
@@ -296,12 +302,12 @@ func TestListPackageFilesFn_ClientSliceHasNext(t *testing.T) {
 	if decoded.Count != 1 || !decoded.HasNext || len(decoded.Files) != 1 || decoded.Files[0].Name != "a.bin" {
 		t.Fatalf("page 1: %+v", decoded)
 	}
+	if decoded.TotalCount != 2 {
+		t.Fatalf("total_count: %d", decoded.TotalCount)
+	}
 	text := resultText(t, page1)
 	if strings.Contains(text, `"md5"`) || strings.Contains(text, `"sha1"`) || strings.Contains(text, `"sha512"`) {
 		t.Fatalf("extra hashes leaked: %s", text)
-	}
-	if strings.Contains(text, "total_count") {
-		t.Fatalf("files envelope must not set total_count: %s", text)
 	}
 
 	page2, err := ListPackageFilesFn(context.Background(), newCallToolRequest(map[string]interface{}{
@@ -314,6 +320,79 @@ func TestListPackageFilesFn_ClientSliceHasNext(t *testing.T) {
 	decoded2 := decodePackageResult[listPackageFilesResult](t, page2)
 	if decoded2.Count != 1 || decoded2.HasNext || decoded2.Files[0].Name != "b.bin" {
 		t.Fatalf("page 2: %+v", decoded2)
+	}
+	if decoded2.TotalCount != 2 {
+		t.Fatalf("page 2 total_count: %d", decoded2.TotalCount)
+	}
+}
+
+func TestListPackageFilesFn_EmptyListTotalCountZero(t *testing.T) {
+	setupPackageAPIServer(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[]`))
+	})
+
+	result, err := ListPackageFilesFn(context.Background(), newCallToolRequest(map[string]interface{}{
+		"owner": "o", "type": "generic", "name": "dist", "version": "1.0.0",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	text := resultText(t, result)
+	if !strings.Contains(text, `"total_count":0`) {
+		t.Fatalf("empty list must emit total_count 0: %s", text)
+	}
+	decoded := decodePackageResult[listPackageFilesResult](t, result)
+	if decoded.TotalCount != 0 || decoded.HasNext || decoded.Count != 0 || decoded.Files == nil {
+		t.Fatalf("empty list: %+v", decoded)
+	}
+}
+
+func TestLinkHasNext(t *testing.T) {
+	cases := []struct {
+		name string
+		link string
+		want bool
+	}{
+		{name: "absent", link: "", want: false},
+		{name: "quoted", link: `</api/v1/packages/o?page=2>; rel="next"`, want: true},
+		{name: "unquoted", link: `</api/v1/packages/o?page=2>; rel=next`, want: true},
+		{name: "comma", link: `</api/v1/packages/o?page=1>; rel="prev", </api/v1/packages/o?page=3>; rel="next"`, want: true},
+		{name: "prev only", link: `</api/v1/packages/o?page=1>; rel="prev"`, want: false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			header := http.Header{}
+			if tc.link != "" {
+				header.Set("Link", tc.link)
+			}
+			if got := linkHasNext(header); got != tc.want {
+				t.Fatalf("linkHasNext(%q) = %v, want %v", tc.link, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestListPackagesFn_HasNextFromLink(t *testing.T) {
+	setupPackageAPIServer(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Link", `</api/v1/packages/o?page=2&limit=30>; rel="next"`)
+		_, _ = w.Write([]byte("[" + fatPackageJSON + "]"))
+	})
+
+	result, err := ListPackagesFn(context.Background(), newCallToolRequest(map[string]interface{}{
+		"owner": "o",
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	decoded := decodePackageResult[listPackagesResult](t, result)
+	if !decoded.HasNext {
+		t.Fatalf("has_next: %+v", decoded)
+	}
+	text := resultText(t, result)
+	if strings.Contains(text, "total_count") {
+		t.Fatalf("total_count must stay omitted without the header: %s", text)
 	}
 }
 

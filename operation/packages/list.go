@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation/params"
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/forgejo"
@@ -20,7 +21,7 @@ import (
 
 var ListPackagesTool = mcp.NewTool(
 	ListPackagesToolName,
-	mcp.WithDescription("List package versions for a user or org (Forgejo SearchVersions: one row per version, not one per name). Optional type and q filter; page (default 1) and limit (default 30, maximum 50) are sent as query parameters. Returns {packages, page, limit, count} and total_count when Forgejo sets X-Total-Count. A missing owner is an error, not an empty list."),
+	mcp.WithDescription("List package versions for a user or org (Forgejo SearchVersions: one row per version, not one per name). Optional type and q filter; page (default 1) and limit (default 30, maximum 50) are sent as query parameters. Returns {packages, page, limit, count, has_next} and total_count when Forgejo sets X-Total-Count. has_next is Link rel=next. A missing owner is an error, not an empty list."),
 	mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 	mcp.WithString("type", mcp.Description(params.PackageType)),
 	mcp.WithString("q", mcp.Description(params.PackageQ)),
@@ -78,6 +79,23 @@ func ListPackagesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 		Page:       page,
 		Limit:      limit,
 		Count:      len(packages),
+		HasNext:    linkHasNext(header),
 		TotalCount: forgejo.TotalCountPtr(header),
 	})
+}
+
+// linkHasNext reports whether Forgejo advertised another page via
+// `Link: …; rel="next"`. Same question as issue.headerHasMore: did the
+// server say there is a next page, not an inference from how many rows
+// arrived.
+func linkHasNext(h http.Header) bool {
+	for _, link := range h.Values("Link") {
+		// A single Link value may carry several comma-separated relations,
+		// so this is a substring test rather than a parse. Forgejo quotes
+		// the rel; tolerate the unquoted form too.
+		if strings.Contains(link, `rel="next"`) || strings.Contains(link, "rel=next") {
+			return true
+		}
+	}
+	return false
 }

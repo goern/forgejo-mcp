@@ -15,13 +15,13 @@ version of a name.
 
 ### Requirement: List package versions of an owner
 
-The `list_packages` tool SHALL accept required `owner` and optional `type`, `q`, `page` (default 1), and `limit` (default 30, maximum 50), GET `/packages/{owner}` with those query parameters (omitting empty `type` and `q`), and return a JSON object with keys `packages`, `page`, `limit`, and `count`. Each element of `packages` SHALL be one package **version**. The system SHALL include `total_count` only when the response carries a parsable `X-Total-Count` header. A 404 SHALL be an error, not an empty list. Each version row SHALL contain `id`, `type`, `name`, `version` and MAY contain `html_url`, `created_at`, and `repository` as the repository `full_name`. The row SHALL NOT embed Forgejo `User` or `Repository` objects.
+The `list_packages` tool SHALL accept required `owner` and optional `type`, `q`, `page` (default 1), and `limit` (default 30, maximum 50), GET `/packages/{owner}` with those query parameters (omitting empty `type` and `q`), and return a JSON object with keys `packages`, `page`, `limit`, `count`, and `has_next`. Each element of `packages` SHALL be one package **version**. The system SHALL set `has_next` from a `Link` header `rel="next"` (quoted or unquoted) and SHALL include `total_count` only when the response carries a parsable `X-Total-Count` header. A 404 SHALL be an error, not an empty list. Each version row SHALL contain `id`, `type`, `name`, `version` and MAY contain `html_url`, `created_at`, and `repository` as the repository `full_name`. The row SHALL NOT embed Forgejo `User` or `Repository` objects.
 
 #### Scenario: List returns a bounding envelope
 
 - **WHEN** the caller invokes `list_packages` with `owner`
 - **THEN** the system SHALL GET `/packages/{owner}` with `page` and `limit` query parameters
-- **AND** the system SHALL return an object containing `packages`, `page`, `limit`, and `count`
+- **AND** the system SHALL return an object containing `packages`, `page`, `limit`, `count`, and `has_next`
 
 #### Scenario: Type and name filters are forwarded
 
@@ -37,6 +37,16 @@ The `list_packages` tool SHALL accept required `owner` and optional `type`, `q`,
 
 - **WHEN** the upstream lists packages without `X-Total-Count`
 - **THEN** the returned object SHALL omit `total_count`
+
+#### Scenario: Link rel=next sets has_next
+
+- **WHEN** the upstream lists packages and sends `Link` with `rel="next"`
+- **THEN** the returned object SHALL include `"has_next": true`
+
+#### Scenario: Missing Link leaves has_next false
+
+- **WHEN** the upstream lists packages without `Link` `rel="next"`
+- **THEN** the returned object SHALL include `"has_next": false`
 
 #### Scenario: Missing owner is an error
 
@@ -86,17 +96,17 @@ The `delete_package` tool SHALL accept required `owner`, `type`, `name`, and `ve
 
 ### Requirement: List files of a package version
 
-The `list_package_files` tool SHALL accept required `owner`, `type`, `name`, and `version` and optional `page` (default 1) and `limit` (default 30, maximum 50), GET `/packages/{owner}/{type}/{name}/{version}/files`, slice the returned array client-side, and return `{files, page, limit, count, has_next}`. The system SHALL NOT include `total_count`. Each file row SHALL contain `id`, `name`, `size` and MAY contain `sha256`. The row SHALL NOT include `md5`, `sha1`, or `sha512`.
+The `list_package_files` tool SHALL accept required `owner`, `type`, `name`, and `version` and optional `page` (default 1) and `limit` (default 30, maximum 50), GET `/packages/{owner}/{type}/{name}/{version}/files`, slice the returned array client-side, and return `{files, page, limit, count, has_next, total_count}`. The system SHALL set `total_count` to the length of the fetched list. Each file row SHALL contain `id`, `name`, `size` and MAY contain `sha256`. The row SHALL NOT include `md5`, `sha1`, or `sha512`.
 
 #### Scenario: Files are sliced with has_next
 
 - **WHEN** the upstream returns two files and the caller sets `limit` to `1` and `page` to `1`
-- **THEN** the system SHALL return one file, `count` 1, and `has_next` true
+- **THEN** the system SHALL return one file, `count` 1, `has_next` true, and `total_count` 2
 
 #### Scenario: Second page
 
 - **WHEN** the upstream returns two files and the caller sets `limit` to `1` and `page` to `2`
-- **THEN** the system SHALL return the second file and `has_next` false
+- **THEN** the system SHALL return the second file, `has_next` false, and `total_count` 2
 
 ### Requirement: Missing required arguments never reach the network
 

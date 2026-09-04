@@ -64,15 +64,17 @@ type listPackagesResult struct {
 	Page       int              `json:"page"`
 	Limit      int              `json:"limit"`
 	Count      int              `json:"count"`
+	HasNext    bool             `json:"has_next"`
 	TotalCount *int             `json:"total_count,omitempty"`
 }
 
 type listPackageFilesResult struct {
-	Files   []packageFile `json:"files"`
-	Page    int           `json:"page"`
-	Limit   int           `json:"limit"`
-	Count   int           `json:"count"`
-	HasNext bool          `json:"has_next"`
+	Files      []packageFile `json:"files"`
+	Page       int           `json:"page"`
+	Limit      int           `json:"limit"`
+	Count      int           `json:"count"`
+	HasNext    bool          `json:"has_next"`
+	TotalCount int           `json:"total_count"`
 }
 
 type deletePackageResult struct {

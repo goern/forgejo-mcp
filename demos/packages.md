@@ -14,7 +14,7 @@ surface against a fictional `OWNER`.
 ## Setup
 
 ```bash
-export FORGEJO_URL=https://codeberg.org
+export FORGEJO_URL=https://git.b4mad.industries
 export FORGEJO_ACCESS_TOKEN=<your-token>
 export FORGEJO_MCP_BIN="${FORGEJO_MCP_BIN:-./forgejo-mcp}"
 make build
@@ -31,8 +31,8 @@ ${FORGEJO_MCP_BIN} --cli list 2>/dev/null | grep -E "list_packages|get_package|d
 ```
   delete_package                           Delete one package version. Removes that version only, not every version of the name. No preflight GET. HTTP 204 returns {owner, type, name, version, status: "deleted"}; 4xx/5xx stay errors.
   get_package                              Get one package version (id, type, name, version, html_url, created_at, repository full_name). Does not embed owner or creator users.
-  list_package_files                       List files of one package version. Forgejo returns the full file list with no paging; page (default 1) and limit (default 30, maximum 50) slice it client-side. Returns {files, page, limit, count, has_next}. Does not set total_count — the files endpoint has no X-Total-Count. Each file is id, name, size, sha256.
-  list_packages                            List package versions for a user or org (Forgejo SearchVersions: one row per version, not one per name). Optional type and q filter; page (default 1) and limit (default 30, maximum 50) are sent as query parameters. Returns {packages, page, limit, count} and total_count when Forgejo sets X-Total-Count. A missing owner is an error, not an empty list.
+  list_package_files                       List files of one package version. Forgejo returns the full file list with no paging; page (default 1) and limit (default 30, maximum 50) slice it client-side. Returns {files, page, limit, count, has_next, total_count}. total_count is the fetched list length (the files endpoint has no X-Total-Count). Each file is id, name, size, sha256.
+  list_packages                            List package versions for a user or org (Forgejo SearchVersions: one row per version, not one per name). Optional type and q filter; page (default 1) and limit (default 30, maximum 50) are sent as query parameters. Returns {packages, page, limit, count, has_next} and total_count when Forgejo sets X-Total-Count. has_next is Link rel=next. A missing owner is an error, not an empty list.
 ```
 
 ```bash
@@ -60,11 +60,11 @@ ${FORGEJO_MCP_BIN} --cli list_packages \
   --args '{"owner":"OWNER","type":"generic","q":"dist","page":1,"limit":30}'
 ```
 
-Envelope: `{packages, page, limit, count, total_count?}`. `total_count` is
-present only when Forgejo sends `X-Total-Count`. Each row is `id`, `type`,
-`name`, `version`, plus `html_url`, `created_at`, and `repository` (the
-linked repo's `full_name`) when set. Nested owner/creator users are not
-returned.
+Envelope: `{packages, page, limit, count, has_next, total_count?}`. `total_count` is
+present only when Forgejo sends `X-Total-Count`. `has_next` is `Link; rel="next"`.
+Each row is `id`, `type`, `name`, `version`, plus `html_url`, `created_at`, and
+`repository` (the linked repo's `full_name`) when set. Nested owner/creator
+users are not returned.
 
 Container names may contain `/` (for example `library/app`). That is one
 `name` segment, not a path.
@@ -81,14 +81,14 @@ Same projected fields as a list row.
 ## 4. List files (read-only)
 
 Forgejo returns every file; the tool slices with `page`/`limit` and
-`has_next`. It does **not** set `total_count`.
+`has_next`. `total_count` is the fetched list length.
 
 ```bash
 ${FORGEJO_MCP_BIN} --cli list_package_files \
   --args '{"owner":"OWNER","type":"generic","name":"dist","version":"1.0.0","page":1,"limit":30}'
 ```
 
-Envelope: `{files, page, limit, count, has_next}`. Each file is `id`,
+Envelope: `{files, page, limit, count, has_next, total_count}`. Each file is `id`,
 `name`, `size`, `sha256`.
 
 ## 5. Delete one version (do not invoke)

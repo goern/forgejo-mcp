@@ -18,7 +18,7 @@ import (
 
 var ListPackageFilesTool = mcp.NewTool(
 	ListPackageFilesToolName,
-	mcp.WithDescription("List files of one package version. Forgejo returns the full file list with no paging; page (default 1) and limit (default 30, maximum 50) slice it client-side. Returns {files, page, limit, count, has_next}. Does not set total_count — the files endpoint has no X-Total-Count. Each file is id, name, size, sha256."),
+	mcp.WithDescription("List files of one package version. Forgejo returns the full file list with no paging; page (default 1) and limit (default 30, maximum 50) slice it client-side. Returns {files, page, limit, count, has_next, total_count}. total_count is the fetched list length (the files endpoint has no X-Total-Count). Each file is id, name, size, sha256."),
 	mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 	mcp.WithString("type", mcp.Required(), mcp.Description(params.PackageType)),
 	mcp.WithString("name", mcp.Required(), mcp.Description(params.PackageName)),
@@ -64,10 +64,11 @@ func ListPackageFilesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 	hasNext := end < len(allFiles)
 
 	return to.TextResult(listPackageFilesResult{
-		Files:   files,
-		Page:    page,
-		Limit:   limit,
-		Count:   len(files),
-		HasNext: hasNext,
+		Files:      files,
+		Page:       page,
+		Limit:      limit,
+		Count:      len(files),
+		HasNext:    hasNext,
+		TotalCount: len(allFiles),
 	})
 }

@@ -338,10 +338,10 @@ List all my repositories
 | `merge_pull_request` | Merge a pull request (style: merge/rebase/rebase-merge/squash; optional title/message/delete-branch/force-merge/wait-for-checks). |
 | `create_pull_review` | Create a review on a pull request (state: APPROVED/REQUEST_CHANGES/COMMENT) with optional inline comments. |
 | **Packages** | |
-| `list_packages` | List package versions of a user or org (one row per version). Optional `type` and `q`. Server-paged via `page`/`limit` (default 30, max 50). Envelope `{packages, page, limit, count, total_count?}`. A missing owner is an error, not an empty list |
+| `list_packages` | List package versions of a user or org (one row per version). Optional `type` and `q`. Server-paged via `page`/`limit` (default 30, max 50). Envelope `{packages, page, limit, count, has_next, total_count?}`. A missing owner is an error, not an empty list |
 | `get_package` | Get one package version. Does not embed owner/creator users |
 | `delete_package` | Delete one package version (not every version of the name). No preflight. 4xx/5xx stay errors |
-| `list_package_files` | List files of one package version. Client-paged via `page`/`limit` (default 30, max 50); envelope `{files, page, limit, count, has_next}`. No `total_count` |
+| `list_package_files` | List files of one package version. Client-paged via `page`/`limit` (default 30, max 50); envelope `{files, page, limit, count, has_next, total_count}` (`total_count` is the fetched list length) |
 | **Actions** | |
 | `dispatch_workflow` | Trigger a workflow run via `workflow_dispatch` event |
 | `list_workflow_runs` | List workflow runs with optional filtering by status, event, or SHA |
