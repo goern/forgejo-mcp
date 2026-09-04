@@ -84,9 +84,9 @@ import (
     "context"
     "fmt"
 
-    "git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/forgejo"
-    "git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/params"
-    "git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/to"
+    "git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/forgejo"
+    "git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/params"
+    "git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/to"
     "github.com/mark3labs/mcp-go/mcp"
     "github.com/mark3labs/mcp-go/server"
 )
@@ -133,7 +133,7 @@ func RegisterTool(s *server.MCPServer) {
 If you created a new domain, import and register it in `operation/operation.go`:
 
 ```go
-import "git.b4mad.industries/agentic-forges/forgejo-mcp/v2/operation/mydomain"
+import "git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation/mydomain"
 
 func RegisterTools(s *server.MCPServer) {
     // ... existing registrations

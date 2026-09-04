@@ -9,11 +9,11 @@ import (
 	"strconv"
 	"strings"
 
-	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/operation/params"
-	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/forgejo"
-	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/log"
-	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/ptr"
-	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/to"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation/params"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/forgejo"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/log"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/ptr"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/to"
 
 	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
 	"github.com/mark3labs/mcp-go/mcp"

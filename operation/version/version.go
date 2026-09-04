@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/flag"
-	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/log"
-	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/to"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/flag"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/log"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/to"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"

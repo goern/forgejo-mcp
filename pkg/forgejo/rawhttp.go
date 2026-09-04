@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/flag"
-	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/log"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/flag"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/log"
 )
 
 // MaxInlineDownloadBytes caps inline base64 attachment payloads.

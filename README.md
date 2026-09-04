@@ -55,7 +55,7 @@ Ensure `$GOPATH/bin` (typically `~/go/bin`) is in your PATH.
 > after the module was renamed (see [Known Issues](#known-issues)):
 >
 > ```bash
-> go install git.b4mad.industries/agentic-forges/forgejo-mcp/v2@latest
+> go install git.b4mad.industries/agentic-forges/forgejo-mcp/v3@latest
 > ```
 
 **Option B: Download Binary**

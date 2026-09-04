@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/flag"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/flag"
 )
 
 type capturedReq struct {

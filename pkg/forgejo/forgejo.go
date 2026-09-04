@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/flag"
-	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/log"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/flag"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/log"
 
 	"codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
 )

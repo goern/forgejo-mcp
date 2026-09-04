@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/flag"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/flag"
 
 	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
 )
