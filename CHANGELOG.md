@@ -1,3 +1,59 @@
+## [2.35.0](https://git.b4mad.industries/agentic-forges/forgejo-mcp/compare/v2.34.1...v2.35.0) (2026-09-06)
+
+### :sparkles: Features
+
+* **actions:** add cancel/delete run and run artifacts ([3734aa2](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/3734aa290b9fff271daecf7ee58897e5591812e3))
+* **repo:** add get_repo and edit_repo tools ([baa594c](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/baa594c00eda1e9881fd5c1cd43b50e4e945bb96))
+* **repo:** add repository topic tools ([0db8b67](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/0db8b67961f48c4d52a6c9e6e4674a55e8385334))
+
+### :bug: Fixes
+
+* **actions:** use `t.Error` in httptest handlers ([9fd616d](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/9fd616d84f1621d5efdf593300463182d7db6456))
+* **deps:** update dependency @fission-ai/openspec to v1.10.0 ([842f0c8](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/842f0c88df5aee193be391ce39eea46e52314c6e))
+
+### :memo: Documentation
+
+* 📝 add a security policy and point reporters at it ([008621f](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/008621fcd7190644d124396ad98b027c0f24a52b)), closes [#545](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/545)
+* 📝 tell agents to prefer resource reads over tool calls ([5e6d035](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/5e6d035a90788a40a910a2542ee170fbf992404d))
+
+### :white_check_mark: Tests
+
+* **upload:** cover sibling-prefix upload-root rejection ([a412fa7](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/a412fa7d1652aa0906b67b25d641b68c7733e7bf))
+
+### :repeat: Chore
+
+* 🔧 archive the edit-repo change ([be54fb4](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/be54fb4e3c2ef5454e7e7ec41b48247654036290))
+* 🔧 archive the repo-topics change ([d2e0d00](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/d2e0d0053000f83c83afe2f873ef387709417f7d))
+* 🔧 archive the workflow-run-control change ([3d64bec](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/3d64bec313b3f3488dd9f96f0a500ff8342490f4))
+* **agents:** update them all ([66af5ab](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/66af5ab8c6616d4c2cd520f84e985f4131f8eda1))
+* **beads:** reconfigured to use hub.dolt.b4mad.industries ([78828b7](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/78828b74b140a4cfe982969adb5355a5df091c96))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to 116df88 ([d8c8d07](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/d8c8d07e67a4d55d894ebfc3569ebf663a1529bf))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to 1212c3d ([30b7567](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/30b756706b947a032e27b1953194bc5fecad8918))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to 57621f2 ([b9c8262](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/b9c82625988f63a4c42f939a13447bf9ede356c6))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to 7ea0a84 ([d192dc5](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/d192dc5563b4d7d528972d9e149622be225baba2))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to 89c1c9b ([b308ca1](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/b308ca134d2e09ff1c9583e2be0b7c555b47b7b0))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to 8f4f90a ([04af06a](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/04af06a505f5d94b793eb3967c85407e8ec52147))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to b9e0bf1 ([df678ea](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/df678eab55b849285124d4a0c2516f7714b1a570))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to bc8e563 ([7222eb8](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/7222eb8ad5dc38ad1eb5ee4a9dd7b6271ea7bd64))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to c22dae6 ([2e62193](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/2e6219385ab70cc34e568f1790ce66d6017c95db))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to c435c1e ([b159330](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/b1593302edacb3dcbed5ef5861d3a2125e33d628))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to faa60cb ([c56dd8c](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/c56dd8cadfdc992be46bf937ad80d8fec7afe644))
+* **deps:** update quay.io/hummingbird/go:1.27.0-builder docker digest to 0f227da ([16b03de](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/16b03de45727d55e70ab8ef941d21059acc532e6))
+* **deps:** update quay.io/hummingbird/go:1.27.0-builder docker digest to 1610c33 ([1c028df](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/1c028df1fd402f38e388f5f1691a8303d46b5e97))
+* **deps:** update quay.io/hummingbird/go:1.27.0-builder docker digest to 25635fd ([b99e451](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/b99e45191632da2ed568788f2f250429ab6b2ef9))
+* **deps:** update quay.io/hummingbird/go:1.27.0-builder docker digest to 2d3bc72 ([d626b9f](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/d626b9f35894d26cf562741d1537c6d4ab9137ab))
+* **deps:** update quay.io/hummingbird/go:1.27.0-builder docker digest to 34445e9 ([f0ce467](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/f0ce467c936c1bf68a44b64f6e4cec4d3515f962))
+* **deps:** update quay.io/hummingbird/go:1.27.0-builder docker digest to 8be947f ([3d5e9f8](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/3d5e9f8d8cf88200c63320ccb7c6dfbc05a8da69))
+* **deps:** update quay.io/hummingbird/go:1.27.0-builder docker digest to 8e77444 ([b2d23ba](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/b2d23ba155ef8e5c6130813124397479e2581142))
+* **deps:** update quay.io/hummingbird/go:1.27.0-builder docker digest to b206830 ([444bd52](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/444bd525725e0c755fb36535648301bd0985e147))
+* **deps:** update quay.io/hummingbird/go:1.27.0-builder docker digest to b3ffe05 ([5ee8312](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/5ee8312375e56a923491fc972b095ad2dd935373))
+* **deps:** update quay.io/hummingbird/go:1.27.0-builder docker digest to d203a1f ([2eede41](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/2eede41a13c16bb83bd93099fdfd214cbd9beb42))
+* **deps:** update quay.io/hummingbird/go:1.27.0-builder docker digest to d2d9202 ([f6d723d](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/f6d723d85d15370c0d26192d2923ce1be0e189a6))
+* **deps:** update quay.io/hummingbird/go:1.27.0-builder docker digest to db9c895 ([9894616](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/98946163c83cd06ca00368b29c0c5692cb1478b9))
+* **deps:** update quay.io/hummingbird/go:1.27.0-builder docker digest to e288dfb ([cfbbc60](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/cfbbc6074812d5694b56d4a1148de2f792fbe1ab))
+* **skills:** add openspec skills, updated the rest ([5fc8e7a](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/5fc8e7af91f613e2a8ba5ccbb787e555cf7b4e9d))
+* **skills:** updated ([d817022](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/d81702251469250be5240f7657e5de2993a34ff3))
+
 ## [2.34.1](https://git.b4mad.industries/agentic-forges/forgejo-mcp/compare/v2.34.0...v2.34.1) (2026-08-21)
 
 ### :repeat: Chore
