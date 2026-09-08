@@ -17,7 +17,9 @@ make build
 
 ## Starting the server
 
-Start the server without a global token (or with a fallback token):
+Start the server without a global token. On this transport every client supplies its
+own, so the server does not need one — and if you do configure one, it is used only for
+the server's own startup connection check, never on a client's behalf:
 
 ```bash
 ./forgejo-mcp --transport http --url https://codeberg.org
@@ -26,7 +28,7 @@ Start the server without a global token (or with a fallback token):
 ```output
 Starting Forgejo MCP Server ...
 Starting MCP streamable HTTP server  {"port": 8080}
-MCP streamable HTTP server ready for connections  {"port": 8080, "endpoint": "http://localhost:8080"}
+MCP server listening on loopback only  {"transport": "http", "address": "127.0.0.1:8080, [::1]:8080", "authentication": "every request must carry its own Authorization header", "reachable_from": "this machine only, unless a proxy forwards to it", "to_expose": "set -host to an address the network can reach, and declare -allowed-hosts"}
 ```
 
 ## Multi-tenant usage with curl
