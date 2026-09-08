@@ -1,3 +1,44 @@
+## [3.0.0](https://git.b4mad.industries/agentic-forges/forgejo-mcp/compare/v2.35.0...v3.0.0) (2026-09-08)
+
+### ⚠ BREAKING CHANGES
+
+* **security:** the sse and http transports now bind 127.0.0.1 by default
+and reject any request without its own Authorization header. A deployment
+serving remote clients must set --host (usually 0.0.0.0) and declare
+--allowed-hosts; a single-operator deployment that relied on the operator
+token being used for anonymous requests must set
+--allow-operator-token-fallback. stdio is unaffected in every respect.
+
+Closes #545.
+
+Co-authored-by: synath <synath@users.noreply.git.b4mad.industries>
+Assisted-by: Claude Opus 5 via Claude Code
+
+### :bug: Fixes
+
+* **deps:** 🔧 tidy go.sum after the mcp-go v1 bump ([db0c589](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/db0c589d7608e52c026707ee1eb171011018bf16)), closes [#554](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/554)
+* **deps:** update module github.com/mark3labs/mcp-go to v1 ([45b4091](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/45b409156102c3059bdf5189a02d7047837a8c04))
+* **log:** cut a truncated header on a rune boundary ([b8d38a9](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/b8d38a9d776e7729bd1a225ca02da39c537aa8d7))
+* **security:** bind sse/http to loopback and require a per-request token ([305bc62](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/305bc62f14bd05603c065fcecb2f84044bac4bcd))
+* **security:** bound the RATE of refusal logging, not just the size ([5445ab9](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/5445ab9a8796404015fbcd54192e6ec01573e6d4))
+* **security:** drop WriteTimeout, which capped the life of every stream ([616671f](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/616671f8a19f7b228aad14a62ef9030ac35cbd75))
+* **security:** land [#545](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/545) network transport hardening on the /v3 module path ([ea29e82](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/ea29e8297dbb40dc628d1fae308576e5dd4050fd)), closes [#562](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/562) [#562](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/562)
+
+### :memo: Documentation
+
+* **security:** correct a comment that described the rejected design ([0a4abd2](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/0a4abd2ddcaefedf588151f588be09a05b6875f6))
+
+### :zap: Refactor
+
+* 🏗️ bump the module path to /v3 ([bc31ad0](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/bc31ad0e24bee342866811445472eb253ca36d4f)), closes [#545](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/545) [#545](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/545) [#545](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/545)
+
+### :repeat: Chore
+
+* 🔧 make Renovate raise vulnerability PRs via OSV ([238234a](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/238234a74abdbcf5d603857f42af6382e54f36ba))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to 114d1b0 ([42996ff](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/42996fff0d12a148a7b4de7de2ef54db285745de))
+* **deps:** update quay.io/hummingbird/go:1.27.0-builder docker digest to fc73766 ([eaf7954](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/eaf79542a3771fbfe8f151ba9ac2c25ec9fda5bd))
+* merge main (mcp-go v1, [#554](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/554)) into the [#545](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/545) integration branch ([43219b4](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/43219b49c7d7a87861f6451b3102312427cf5213))
+
 ## [2.35.0](https://git.b4mad.industries/agentic-forges/forgejo-mcp/compare/v2.34.1...v2.35.0) (2026-09-06)
 
 ### :sparkles: Features
