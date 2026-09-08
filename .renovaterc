@@ -3,10 +3,20 @@
     "extends": [
         "config:best-practices",
         "default:automergeDigest",
-        "mergeConfidence:all-badges",
-        ":enableVulnerabilityAlertsWithLabel('security')"
+        "mergeConfidence:all-badges"
     ],
     "enabled": true,
+    "osvVulnerabilityAlerts": true,
+    "vulnerabilityAlerts": {
+        "description": [
+            "This block replaces ':enableVulnerabilityAlertsWithLabel('security')', which never fired on this instance: it reads GitHub security advisories and Forgejo has no advisory feed. 'osvVulnerabilityAlerts' makes Renovate query OSV directly instead, which works on any platform. It is also the only path by which an indirect gomod dependency gets a PR here -- indirect deps stay disabled by default (see the gomod packageRule below) and should, but a *vulnerable* indirect dep must still be bumpable. Labels are spelled out because the forge has no 'security' label: an unknown label name is silently dropped by the Forgejo API, so the preset would have produced unlabelled PRs even if it had fired. Diagnosed 2026-09-08: golang.org/x/crypto sat at v0.52.0 with four OSV advisories and Renovate had opened nothing."
+        ],
+        "enabled": true,
+        "labels": [
+            "Kind/Security",
+            "dependencies"
+        ]
+    },
     "enabledManagers": [
         "npm",
         "docker-compose",
