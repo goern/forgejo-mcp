@@ -5,7 +5,7 @@ package issue
 import (
 	"testing"
 
-	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/operation/resource"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation/resource"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 

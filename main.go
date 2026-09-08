@@ -3,7 +3,7 @@ package main
 import (
 	"runtime/debug"
 
-	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/cmd"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/cmd"
 )
 
 var Version = "dev"

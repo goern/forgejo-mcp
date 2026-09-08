@@ -11,8 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/operation/resource"
-	"git.b4mad.industries/agentic-forges/forgejo-mcp/v2/pkg/flag"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation/resource"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/flag"
 
 	"github.com/mark3labs/mcp-go/mcp"
 )

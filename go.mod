@@ -1,4 +1,4 @@
-module git.b4mad.industries/agentic-forges/forgejo-mcp/v2
+module git.b4mad.industries/agentic-forges/forgejo-mcp/v3
 
 go 1.25.5
 
