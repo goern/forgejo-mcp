@@ -71,9 +71,7 @@ Out of scope, rejected on the record in #582:
 - `stateless-http-auth`. In `resource-server` mode:
   - **Credential source.** The token-aware client factory and the raw-HTTP helper take their Forgejo credential from the issuer, never from the request's `Authorization` header. The header's value is not injected as a Forgejo token. The outbound header scheme stays `token`.
   - **Unauthenticated metadata routes.** The protected resource metadata, the OpenID discovery document and the JWKS are served to requests that carry no `Authorization` header. Host and Origin validation still apply to them. Every other path keeps the rule that a request without a token is refused with 401 before it reaches a handler.
-  - **Logging.** The existing rule that tokens are never logged extends to the inbound access token and the outbound JWT.
-
-  `passthrough` behaviour stays as specified.
+  `passthrough` behaviour stays as specified. The logging rules for the inbound access token and the outbound JWT are new behaviour of this mode. They are specified in `oauth-resource-server` and `forgejo-jwt-issuer`, not in this delta.
 
 ## Impact
 
