@@ -2,6 +2,7 @@ package operation
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -206,6 +207,23 @@ func Run(transport, version string) error {
 	mcpServer = newMCPServer(version)
 	RegisterTool(mcpServer)
 	RegisterCoreResources(mcpServer)
+
+	// Checked again here, not only in cmd, so that no caller of Run can reach a
+	// listener with a configuration the checks would refuse.
+	if err := ValidateAuthConfig(transport, false); err != nil {
+		return err
+	}
+	if resourceServerMode() {
+		if _, err := prepareResourceServer(context.Background()); err != nil {
+			return err
+		}
+		// The startup checks passed, but the request flow of this mode is not
+		// wired into the transport yet. Serving now would forward identity
+		// provider tokens to Forgejo, which is exactly what the mode exists to
+		// prevent, so refuse instead of starting half a mode.
+		return errors.New("refusing to start: -auth-mode resource-server passed its startup checks, " +
+			"but serving requests in this mode is not implemented yet")
+	}
 
 	// Test connection to Forgejo instance before starting the server
 	log.Info("Testing connection to Forgejo instance",

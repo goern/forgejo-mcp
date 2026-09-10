@@ -10,8 +10,8 @@ The implementation can land as several PRs, one per group or per pair of groups.
 
 ## 2. Configuration and keys
 
-- [ ] 2.1 Add the flags and environment variables from design D2 to `cmd/cmd.go` and `pkg/flag`, using the existing `flagWasPassed` precedence. Verify with tests in `cmd/config_test.go`: every default; env-only; flag over env, including a flag explicitly set to its default value.
-- [ ] 2.2 Refuse to start in `passthrough` mode when any setting that applies only to `resource-server` mode is present. Verify with a test per setting, reproducing the scenario "Issuer configured without the mode".
+- [x] 2.1 Add the flags and environment variables from design D2 to `cmd/cmd.go` and `pkg/flag`, using the existing `flagWasPassed` precedence. Verify with tests in `cmd/config_test.go`: every default; env-only; flag over env, including a flag explicitly set to its default value.
+- [x] 2.2 Refuse to start in `passthrough` mode when any setting that applies only to `resource-server` mode is present. Verify with a test per setting, reproducing the scenario "Issuer configured without the mode".
 - [x] 2.3 Implement key loading from PEM files:
   - key type to algorithm (EC P-256 → ES256, EC P-384 → ES384, Ed25519 → EdDSA, RSA ≥ 2048 bits → RS256);
   - RFC 7638 thumbprint as `kid`;
@@ -22,7 +22,7 @@ The implementation can land as several PRs, one per group or per pair of groups.
 
 ## 3. Startup sequence
 
-- [ ] 3.1 Implement design D7 checks 1–4 before any listener is bound:
+- [x] 3.1 Implement design D7 checks 1–4 before any listener is bound:
   - mode and transport, including `--cli`;
   - operator token and the fallback flag;
   - required settings and URL schemes;
@@ -30,8 +30,8 @@ The implementation can land as several PRs, one per group or per pair of groups.
   - the keys.
 
   Verify with a table test: one row per refusal condition in the requirement "resource-server mode refuses to start on an unusable configuration". Each row asserts that the message names the setting and that no socket was opened.
-- [ ] 3.2 Probe `GET /api/v1/version` without credentials, require Forgejo 16.0 or newer, and pass the version to every ephemeral SDK client via `SetForgejoVersion`. Verify with an `httptest` Forgejo that reports `15.0.3` (refused) and `16.0.3` (accepted). The test also asserts that a tool call in this mode makes no per-client `/version` request.
-- [ ] 3.3 Fetch the IdP's metadata at startup: OIDC discovery first, then RFC 8414. Require the issuer to match exactly and a `jwks_uri` to be present. Verify with tests for an unreachable IdP, a missing `jwks_uri`, and the scenario "Provider issuer mismatch" (a trailing slash).
+- [x] 3.2 Probe `GET /api/v1/version` without credentials, require Forgejo 16.0 or newer, and pass the version to every ephemeral SDK client via `SetForgejoVersion`. Verify with an `httptest` Forgejo that reports `15.0.3` (refused) and `16.0.3` (accepted). The test also asserts that a tool call in this mode makes no per-client `/version` request.
+- [x] 3.3 Fetch the IdP's metadata at startup: OIDC discovery first, then RFC 8414. Require the issuer to match exactly and a `jwks_uri` to be present. Verify with tests for an unreachable IdP, a missing `jwks_uri`, and the scenario "Provider issuer mismatch" (a trailing slash).
 
 ## 4. Routing and the request guard
 
@@ -89,7 +89,7 @@ The implementation can land as several PRs, one per group or per pair of groups.
 
 ## 7. Logging
 
-- [ ] 7.1 Log one warning at every start in `resource-server` mode, naming the `kid` and the issuer and stating the key's reach. Verify with the scenario "Startup warning" in a test that captures the log.
+- [x] 7.1 Log one warning at every start in `resource-server` mode, naming the `kid` and the issuer and stating the key's reach. Verify with the scenario "Startup warning" in a test that captures the log.
 - [ ] 7.2 Ensure that neither the inbound token nor the minted JWT, nor any part of their signatures, is ever logged, including at debug level. `sub` and the audience appear at debug level only. Verify the scenarios "Debug logging of a refusal" and "Minted JWTs are not logged" by scanning the captured logs of a full test request cycle for both tokens.
 
 ## 8. Documentation

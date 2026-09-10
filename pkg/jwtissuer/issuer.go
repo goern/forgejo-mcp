@@ -131,6 +131,11 @@ func checkIssuerURL(raw string) error {
 	return nil
 }
 
+// CheckIssuerURL reports whether raw has the shape an issuer URL must have:
+// absolute, without user information, query or fragment, and not ending with a
+// slash. It does not check the scheme.
+func CheckIssuerURL(raw string) error { return checkIssuerURL(raw) }
+
 func appendUnique(list []string, value string) []string {
 	for _, v := range list {
 		if v == value {
