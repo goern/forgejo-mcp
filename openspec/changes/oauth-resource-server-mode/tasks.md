@@ -46,8 +46,8 @@ The implementation can land as several PRs, one per group or per pair of groups.
 
 ## 5. Inbound validation (`oauth-resource-server`)
 
-- [ ] 5.1 Implement the IdP key-set cache: a minimum refresh interval, and at most one refetch per interval triggered by unknown `kid`s. Verify with the scenario "Burst of unknown key IDs": an `httptest` IdP counts fetches, and there is exactly one.
-- [ ] 5.2 Implement token validation as specified:
+- [x] 5.1 Implement the IdP key-set cache: a minimum refresh interval, and at most one refetch per interval triggered by unknown `kid`s. Verify with the scenario "Burst of unknown key IDs": an `httptest` IdP counts fetches, and there is exactly one.
+- [x] 5.2 Implement token validation as specified:
   - `Bearer` only;
   - asymmetric algorithm taken from the key;
   - exact `iss`, with `exp` required;
