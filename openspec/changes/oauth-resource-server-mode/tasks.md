@@ -95,7 +95,7 @@ The implementation can land as several PRs, one per group or per pair of groups.
 ## 8. Documentation
 
 - [x] 8.1 README, "Configuration Options": document `-auth-mode` and every D2 flag with its environment variable and default. Add a short "Remote operation as an OAuth resource server" section that links to the guides. Verify that every flag from `cmd/cmd.go` appears in the README.
-- [ ] 8.2 Add an operator guide under `docs/`. It covers:
+- [x] 8.2 Add an operator guide under `docs/`. It covers:
   - IdP requirements: JWT access tokens, the audience override, a custom claim from a user attribute;
   - deployment order: forgejo-mcp must be live before users save integrations;
   - proxy rules: no redirects on the metadata paths, and `-allowed-hosts`;
@@ -105,7 +105,7 @@ The implementation can land as several PRs, one per group or per pair of groups.
   - a worked Zitadel example, noting its reliance on Actions v1.
 
   Verify the guide by following it once for the deployment in 9.1.
-- [ ] 8.3 Add a user guide. It covers:
+- [x] 8.3 Add a user guide. It covers:
   - creating a Generic JWT Authorized Integration with the forgejo-mcp issuer;
   - the **mandatory** `sub` claim rule, and why a missing rule lets anyone holding the audience act as that user;
   - narrow scopes;

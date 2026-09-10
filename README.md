@@ -265,7 +265,7 @@ forgejo-mcp --transport http --url https://forgejo.example.org \
   --authorization-server https://id.example.org \
   --resource https://mcp.example.org/mcp \
   --forgejo-jwt-issuer https://mcp.example.org/issuer \
-  --forgejo-jwt-signing-key-file /run/credentials/forgejo-mcp/signing.pem
+  --forgejo-jwt-signing-key-file /run/credentials/forgejo-mcp.service/signing-key
 ```
 
 The mode is opt-in: without `--auth-mode`, everything above behaves as before. In

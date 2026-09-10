@@ -51,7 +51,7 @@ forgejo-mcp --transport http --url https://forgejo.example.org \
   --resource-audience <client ID of the MCP client at the provider> \
   --scopes-supported "openid profile email" \
   --forgejo-jwt-issuer https://mcp.example.org/issuer \
-  --forgejo-jwt-signing-key-file /run/credentials/forgejo-mcp/signing.pem
+  --forgejo-jwt-signing-key-file /run/credentials/forgejo-mcp.service/signing-key
 ```
 
 Every setting also has an environment variable; the [README](../../README.md#configuration-options) lists them.
@@ -105,7 +105,7 @@ The proxy must:
 - **not redirect** any of these paths. That rules out trailing-slash normalisation and any redirect on the paths Forgejo fetches; serve https on them directly. Forgejo refuses redirects.
 - **pass the `Host` header through unchanged**, because forgejo-mcp answers only hosts in `--allowed-hosts`.
 
-Serve nothing at the root `/.well-known/openid-configuration` of this host. Some MCP clients probe it, and a `404` is the right answer; they continue with the protected resource metadata.
+Nothing needs to be served at the root `/.well-known/openid-configuration` of this host. Forgejo reads the discovery document under the issuer path, and MCP clients find the provider through the protected resource metadata. Leave the root path at `404`.
 
 A Caddy site that does all of this:
 
@@ -125,7 +125,7 @@ mcp.example.org {
 
 ## Forgejo's network restrictions
 
-Forgejo fetches the issuer documents under the `[authorized_integration]` section of `app.ini`. These are its defaults:
+Forgejo fetches the issuer documents through an HTTP client restricted by the `[authorized_integration]` section of `app.ini`. These are its settings and defaults in Forgejo 16.0.3:
 
 ```ini
 [authorized_integration]
@@ -136,10 +136,18 @@ REQUEST_TIMEOUT = 10s
 CACHE_TTL = 10m
 ```
 
-With the defaults, Forgejo does not fetch from a host that resolves to a local network address, such as loopback. That happens, for example, when Forgejo and forgejo-mcp share a machine and the name is pinned to `127.0.0.1` there. There are two ways out:
+Forgejo's source applies them to every connection like this:
 
-- Let the name resolve to the public address. This needs no Forgejo setting.
-- Set `ALLOW_LOCALNETWORKS = true`, and set `ALLOWED_DOMAINS` to the issuer host. `ALLOWED_DOMAINS` then limits every integration on the instance to that host, so the relaxation does not extend to issuers that users enter themselves.
+- With `ALLOWED_DOMAINS` empty, only public addresses are allowed. A host that resolves to a loopback address, a private address (RFC 1918, RFC 4193, RFC 6598) or another non-global address is refused.
+- A non-empty `ALLOWED_DOMAINS` replaces that default. Only the listed host names, addresses and networks are allowed, and a listed host name is allowed whatever address it resolves to. The list applies to every integration on the instance.
+- `ALLOW_LOCALNETWORKS = true` additionally allows private and loopback addresses, for every integration.
+- `BLOCKED_DOMAINS` is checked as well and always wins.
+
+So Forgejo refuses forgejo-mcp's documents when forgejo-mcp's name resolves to a local address on the Forgejo host. That happens when both share a machine and the name is pinned to `127.0.0.1`, or when split-horizon DNS or NAT returns a private address. The ways out, best first:
+
+1. Let the name resolve to a public address on the Forgejo host. This needs no setting, and it is the only way exercised in a deployment so far.
+2. List forgejo-mcp's host in `ALLOWED_DOMAINS`. Integrations on the instance can then only use the listed issuer hosts, so list every issuer your users need.
+3. Set `ALLOW_LOCALNETWORKS = true`. It works, but it lets any user's integration make Forgejo fetch from internal addresses.
 
 `CACHE_TTL` also governs key rotation, below.
 
@@ -152,7 +160,7 @@ openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 -out signing.pem
 chmod 0400 signing.pem
 ```
 
-forgejo-mcp reads PKCS#8, SEC1 (`EC PRIVATE KEY`) and PKCS#1 encodings; it refuses encrypted keys. Supply the file through systemd `LoadCredential=`, a Kubernetes secret mount, or a file readable only by the server's user. The key's `kid` is its RFC 7638 thumbprint and needs no configuration; the startup warning prints it.
+forgejo-mcp reads PKCS#8, SEC1 (`EC PRIVATE KEY`) and PKCS#1 encodings; it refuses encrypted keys. Supply the file through systemd `LoadCredential=`, which places it at `/run/credentials/<unit name>.service/<credential name>`, through a Kubernetes secret mount, or as a file readable only by the server's user. The key's `kid` is its RFC 7638 thumbprint and needs no configuration; the startup warning prints it.
 
 **Rotation without downtime.** Forgejo caches forgejo-mcp's key set for `CACHE_TTL`. It fetches the key set again only on the first request after the cache has expired, and a JWT with an unknown `kid` does not make it fetch earlier.
 
@@ -161,7 +169,7 @@ forgejo-mcp reads PKCS#8, SEC1 (`EC PRIVATE KEY`) and PKCS#1 encodings; it refus
 3. Make the new key `--forgejo-jwt-signing-key-file`, move the old key to `--forgejo-jwt-published-key-files`, and restart.
 4. After five minutes, the lifetime of the last JWT signed with the old key, remove the old key and restart.
 
-**After a suspected leak**, replace the signing key with a fresh one and remove the leaked key in one restart. Until Forgejo's cache expires, Forgejo keeps accepting the leaked key and refuses JWTs signed with the new one. Users can also delete their integrations, which revokes access at once.
+**After a suspected leak**, replace the signing key with a fresh one and remove the leaked key in one restart. Forgejo refuses JWTs signed with the new key until its cached key set expires, which is up to `CACHE_TTL` after Forgejo last fetched it. During that window forgejo-mcp cannot reach Forgejo for any user, and the leaked key is still in Forgejo's cache. A user who cannot wait can delete their integration: Forgejo then finds no integration for a JWT with that audience.
 
 ## The signing key and the sub rule
 
@@ -182,7 +190,9 @@ forgejo-mcp accepts an access token until its `exp`, so the provider's access-to
 
 - Every start logs one warning with the signing key's `kid` and the issuer URL.
 - Neither the inbound access token nor the JWT signed for Forgejo is logged, at any level.
-- Refused requests are logged at debug level (`--debug`) with the reason, rate-limited. The client only ever sees the same `401`.
+- Requests refused for their `Host` or `Origin` header are logged as warnings, as in `passthrough` mode.
+- Refused tokens are logged at debug level (`--debug`) with the reason. The client only ever sees the same `401`.
+- Refusal lines are rate-limited.
 - For accepted requests, the subject and the Forgejo audience are logged at debug level.
 
 ## Worked example: Zitadel
@@ -192,7 +202,7 @@ This example uses Zitadel 4. The per-user claim relies on Actions v1, which Zita
 ### Project and application
 
 1. Create a project for forgejo-mcp alone. Zitadel puts the client ID of every application in a project into `aud`, so sharing the project widens the audience.
-2. Turn on **Check authorization on authentication** for the project. Create a role such as `user` and grant it to the people who may use forgejo-mcp; users without a grant cannot log in.
+2. Make the project require a role grant at login. In the Management API this is `projectRoleCheck`; the console labels it "Check authorization on authentication", or "Check Role Assignment on Authentication" in newer versions. Create a role such as `user` and grant it to the people who may use forgejo-mcp. The provider refuses the login of users without a grant.
 3. Add an application:
    - type **Native**;
    - authentication method **None**, which means PKCE and no client secret;
@@ -212,8 +222,8 @@ Store each user's Forgejo audience as user metadata with the key `forgejo_aud`. 
 
 ```bash
 curl -sS -X POST "https://id.example.org/management/v1/users/<user ID>/metadata/forgejo_aud" \
-  -H "Authorization: Bearer <administrator token>" -H 'Content-Type: application/json' \
-  -d "{\"value\": \"$(printf '%s' 'u:1:<uuid>' | base64 -w0)\"}"
+  -H "Authorization: Bearer <token of an account allowed to manage users>" -H 'Content-Type: application/json' \
+  -d "{\"value\": \"$(printf '%s' 'u:1:<uuid>' | base64 | tr -d '\n')\"}"
 ```
 
 Then create an action that copies the metadata into the access token:
@@ -240,9 +250,9 @@ function forgejoAud(ctx, api) {
 }
 ```
 
-Attach it to the flow **Complement Token**, trigger **Pre access token creation**. Setting a trigger's actions through the API replaces the whole list, so read the list first and keep the actions already on it.
+Attach it to the flow **Complement Token**, trigger **Pre access token creation**. Through the API, the call that sets a trigger's actions takes the complete list, so read the list first and include the actions already on it.
 
-A user whose metadata was set after their last login needs a new token, which means logging in again.
+The action runs when an access token is issued. A user whose metadata was set after their last login gets the claim with their next token; logging in again is the sure way to get one.
 
 ### forgejo-mcp and Forgejo
 
@@ -257,6 +267,8 @@ forgejo admin user create-authorized-integration \
   --claim-eq sub=<Zitadel user ID> \
   --scope read:repository --scope read:issue
 ```
+
+Always pass `--scope`. Without it, the integration gets the scope `all`, and without `--repo` it covers all repositories.
 
 The command outputs the audience Forgejo generated. Store that as the user's `forgejo_aud` metadata.
 

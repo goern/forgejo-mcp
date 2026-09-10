@@ -20,7 +20,7 @@ You set this up once, in three steps:
 
 ## 1. Create the Authorized Integration
 
-In Forgejo, open your user settings, go to **Authorized Integrations**, and add an integration of type **Generic JWT**:
+In Forgejo, open your user settings, go to **Authorized Integrations** (`/user/settings/authorized-integrations`), and add an integration of type **Generic JWT**:
 
 - **Name**: anything you recognise, such as `forgejo-mcp`.
 - **Issuer (`iss` Claim)**: the issuer URL from your operator, character for character.
@@ -44,7 +44,7 @@ With the rule, Forgejo refuses every subject but yours. forgejo-mcp cannot see y
 
 ### Choosing permissions
 
-Once you are logged in, forgejo-mcp lets you call every tool. The integration's permissions are the only limit on what the MCP client can do as you. Start narrow: for reading repositories and issues, `read:repository` and `read:issue` are enough. A tool that needs more fails with an error from Forgejo naming the scope it requires, and you can widen the integration then. You can also restrict the integration to selected repositories.
+Once you are logged in, forgejo-mcp lets you call every tool. The integration's permissions are the only limit on what the MCP client can do as you. Start narrow, for example with `read:repository` and `read:issue` to read code, pull requests and issues, plus `read:user` so that tools such as `get_my_user_info` can see who you are. A tool that needs more fails with an error from Forgejo naming the scope it requires, and you can widen the integration then. You can also restrict the integration to selected repositories.
 
 ## 2. Store the audience at the identity provider
 
@@ -61,7 +61,7 @@ For Claude Code, add the server to `.mcp.json`:
 ```json
 {
   "mcpServers": {
-    "forgejo": {
+    "forgejo-remote": {
       "type": "http",
       "url": "https://mcp.example.org/mcp",
       "oauth": {
@@ -80,7 +80,8 @@ Then run `/mcp` in Claude Code and authenticate the server. Your browser opens t
 
 | What you see | What to do |
 | --- | --- |
-| The login succeeds, but the client reports `401` again | forgejo-mcp refuses your token. Ask your operator to check the debug log. Common causes: you have no access grant for the application, or the client ID is not the one the deployment expects. |
+| The identity provider refuses your login | You have no access to the application. Ask your operator for a grant. |
+| The login succeeds, but the client reports `401` again | forgejo-mcp refuses your token. Ask your operator to check the debug log; a common cause is a client ID other than the one the deployment expects. |
 | `403` with a message naming `forgejo_aud` | Your token carries no audience. Store it as in step 2, then log in again. |
 | A tool fails with a Forgejo error about a missing scope | Widen the integration's permissions. |
 | Every tool fails with a Forgejo authentication error | The integration does not match. Check the issuer spelling and the value in the `sub` rule, and whether the stored audience belongs to a deleted integration. |
