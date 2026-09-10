@@ -1,3 +1,11 @@
+## [3.0.1](https://git.b4mad.industries/agentic-forges/forgejo-mcp/compare/v3.0.0...v3.0.1) (2026-09-10)
+
+### :repeat: Chore
+
+* **deps:** update module go.mongodb.org/mongo-driver to v1.17.7 [security] ([85d6655](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/85d66556a33f4f37bbef6b849880b8be0ea97157))
+* **deps:** update module golang.org/x/net to v0.56.0 [security] ([2c80f97](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/2c80f9704e21ba39f3d6eee7bb3a67ab3eba8804))
+* **dev-env:** resolve the forgejo-mcp executable from FORGEJO_MCP_EXEC ([9bfeb99](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/9bfeb9904721d889bfc7c323d58720853eebe9e7))
+
 ## [3.0.0](https://git.b4mad.industries/agentic-forges/forgejo-mcp/compare/v2.35.0...v3.0.0) (2026-09-08)
 
 ### ⚠ BREAKING CHANGES
