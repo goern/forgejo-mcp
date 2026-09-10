@@ -117,6 +117,15 @@ func TestKeySetPublishesPublicParametersOfEveryKey(t *testing.T) {
 	if strings.Join(kids, ",") != strings.Join(want, ",") {
 		t.Fatalf("key IDs = %v, want %v", kids, want)
 	}
+
+	// Publishing a key ahead of use must not make it sign.
+	token, err := iss.Mint("subject", "u:1:audience", time.Now())
+	if err != nil {
+		t.Fatalf("Mint: %v", err)
+	}
+	if header := decodeSegment(t, strings.Split(token, ".")[0]); header["kid"] != signing.KeyID() || header["alg"] != "ES256" {
+		t.Fatalf("minted with %v, want kid %q and ES256 of the signing key", header, signing.KeyID())
+	}
 }
 
 func TestTheSameKeyListedTwiceIsRefused(t *testing.T) {
@@ -235,6 +244,13 @@ func TestMintedTokenShape(t *testing.T) {
 	if err != nil || len(jti) < 16 {
 		t.Fatalf("jti %v is not at least 128 random bits", claims["jti"])
 	}
+
+	// The decoded header and claims, never the signature, so that the Showboat
+	// demo can show what Forgejo receives.
+	rawHeader, _ := base64.RawURLEncoding.DecodeString(parts[0])
+	rawClaims, _ := base64.RawURLEncoding.DecodeString(parts[1])
+	t.Logf("header %s", rawHeader)
+	t.Logf("claims %s", rawClaims)
 }
 
 // Every key type Forgejo accepts yields a token that verifies against the key
