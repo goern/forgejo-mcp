@@ -1,0 +1,108 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+
+## Why
+
+forgejo-mcp can already run as a shared remote service over the `http` transport. It authenticates by forwarding the caller's `Authorization` header to Forgejo unchanged. MCP authorization is optional, so this is permitted. It is also exactly the *token passthrough* that the MCP specification forbids for any server that does authorize: "The MCP server **MUST NOT** pass through the token it received from the MCP client". Until now there was no conformant alternative, because Forgejo only accepted credentials it had issued itself.
+
+Two things changed:
+
+- **Forgejo 16 added Authorized Integrations.** Forgejo accepts a JWT signed by an external issuer and acts as the user who owns the integration.
+- **MCP 2026-07-28 removed sessions.** forgejo-mcp already speaks that revision through mcp-go v1, so nothing per-connection has to be tied to an identity.
+
+Together they make a conformant remote mode possible without per-user state in forgejo-mcp. The research and decisions behind this change are recorded in agentic-forges/forgejo-mcp#582.
+
+The mode has a cost that operators must accept knowingly. forgejo-mcp holds a signing key that is a credential for every user whose integration trusts its issuer. A compromise of forgejo-mcp is a compromise of all of those users, bounded by each integration's scopes and repository selection.
+
+## What Changes
+
+- **New opt-in mode `--auth-mode resource-server`** (with `FORGEJO_MCP_AUTH_MODE`). The default stays `passthrough`, which is today's behaviour. `stdio` and `--cli` are untouched. Nothing existing breaks.
+- **forgejo-mcp validates callers as an OAuth 2.0 resource server.**
+  - Callers present a JWT access token from one configured OIDC issuer.
+  - forgejo-mcp checks the signature, `iss`, `exp` and `aud` locally against the issuer's JWKS.
+  - The expected audience defaults to the canonical resource URI. It can be set to another value for IdPs that cannot mint a URI audience. The value is accepted when it is contained in `aud`.
+  - Opaque tokens are refused; there is no introspection.
+  - Requests with no token, or with a token that fails any of these checks, receive `401` with a `WWW-Authenticate` challenge.
+  - forgejo-mcp serves RFC 9728 protected resource metadata.
+  - `scopes_supported` is configurable, because some IdPs refuse an authorize request without a scope.
+- **forgejo-mcp signs its own outbound JWT for Forgejo and never forwards the caller's token.**
+  - Each call to Forgejo carries a short-lived JWT, signed with an operator-provided asymmetric key in an algorithm Forgejo accepts.
+  - Its `sub` is the caller's verified `sub`.
+  - Its single `aud` is the caller's Forgejo integration audience, taken from a configurable claim in the caller's token.
+  - A caller whose valid token carries no usable audience is refused at the door with `403`. forgejo-mcp never mints a token without one and never falls back to any other credential.
+  - forgejo-mcp serves the OpenID discovery document and JWKS that Forgejo needs to verify these tokens. The issuer URL presented to Forgejo lives under a dedicated path of forgejo-mcp's public origin, not at the origin root. That way the origin is not mistaken for an OpenID provider. The URL is permanent once users have saved integrations.
+- **No per-user state in forgejo-mcp.** There is no mapping table and no token store. The only persistent input is the signing key, supplied as configuration and rotatable.
+- **Fail fast at startup.** In `resource-server` mode, forgejo-mcp refuses to start when any of these hold:
+  - the configuration is incomplete;
+  - the transport is `sse` or `stdio`, or `--cli` is used;
+  - `--allow-operator-token-fallback` is set, or an operator token (`--token`, `FORGEJO_ACCESS_TOKEN`) is present;
+  - the issuer URL is not https;
+  - the signing algorithm is not one Forgejo accepts (RS256/384/512, ES256/384/512, EdDSA);
+  - the configured Forgejo instance is older than 16.
+
+  In `passthrough` mode it refuses to start when issuer-related settings are present. The startup connection test runs unauthenticated in `resource-server` mode.
+- **Documentation for operators and users.** It must state plainly that the Forgejo claim rule on `sub` is the control. Forgejo accepts integrations with no rules and looks an integration up by `iss` and `aud` alone. Audiences are not secret: Forgejo documents them as safe to commit. So without a `sub` rule, any caller of forgejo-mcp's issuer who presents a user's audience acts as that user. forgejo-mcp cannot verify that the rule exists; the documentation is the control.
+
+Out of scope, rejected on the record in #582:
+- token exchange at the IdP (RFC 8693), because no IdP can mint Forgejo's per-user audience reliably;
+- Forgejo's own OAuth2 provider as the issuer, because its access tokens carry no `aud`, `iss` or `sub`;
+- admin `Sudo` impersonation;
+- a user mapping inside forgejo-mcp;
+- serving several forges from one process.
+
+## Capabilities
+
+### New Capabilities
+
+- `oauth-resource-server`: the `resource-server` auth mode on the `http` transport.
+  - Mode selection, and every startup fail-fast condition of the mode (including those that concern the signing key and the Forgejo version).
+  - JWT access-token validation against one configured issuer.
+  - Audience and issuer matching rules.
+  - JWKS caching, with a bound on refetches triggered by unknown key IDs.
+  - The `401` challenge and its parameters, including `scope`.
+  - RFC 9728 protected resource metadata and a configurable `scopes_supported`.
+- `forgejo-jwt-issuer`: how forgejo-mcp obtains a Forgejo credential in that mode.
+  - Minting the outbound JWT: claims, lifetime, and time claims that tolerate Forgejo's zero clock skew.
+  - The source claim for the audience, and the `403` response when that claim is absent, empty, not a string or multi-valued.
+  - Key configuration and rotation.
+  - Serving the OpenID discovery document and JWKS in the form Forgejo 16 Authorized Integrations requires.
+
+### Modified Capabilities
+
+- `stateless-http-auth`. In `resource-server` mode:
+  - **Credential source.** The token-aware client factory and the raw-HTTP helper take their Forgejo credential from the issuer, never from the request's `Authorization` header. The header's value is not injected as a Forgejo token. The outbound header scheme stays `token`.
+  - **Unauthenticated metadata routes.** The protected resource metadata, the OpenID discovery document and the JWKS are served to requests that carry no `Authorization` header. Host and Origin validation still apply to them. Every other path keeps the rule that a request without a token is refused with 401 before it reaches a handler.
+  - **Logging.** The existing rule that tokens are never logged extends to the inbound access token and the outbound JWT.
+
+  `passthrough` behaviour stays as specified.
+
+## Impact
+
+- **Code:**
+  - `cmd/cmd.go`: flags and environment variables.
+  - `operation/listen.go`: request guard, metadata and issuer routes.
+  - `operation/operation.go`: mode wiring and the startup connection test.
+  - `pkg/forgejo/credential.go`, `forgejo.go`, `rawhttp.go`: credential source per mode.
+  - New packages for inbound token validation and outbound signing.
+- **Dependencies:** one JOSE/JWT library for verification, signing and JWKS handling. `go.sum` has none today, and mcp-go v1 ships only client-side OAuth.
+- **Deployment order for operators and users:**
+  - The operator needs an OIDC IdP that issues JWT access tokens, or else a client-supplied audience (see below), and Forgejo 16 or newer.
+  - forgejo-mcp must already be running at its public https issuer URL, serving a non-empty JWKS, before any user can save an Authorized Integration. Forgejo validates the issuer when the integration is saved, refuses redirects, and caps each document at 16 KiB, so the reverse proxy must not redirect these paths.
+  - Forgejo blocks private and loopback issuers unless `[authorized_integration] ALLOW_LOCALNETWORKS` is set.
+  - Each user then creates an integration with a `sub` claim rule and makes its audience available to forgejo-mcp.
+- **Sequencing:** `openspec/changes/network-transport-hardening/` also modifies `stateless-http-auth`, including the 401 rule amended above. It has not been archived yet. Archive it first, so this change's delta applies to the current requirement text.
+- **Validation before specs are written.** A spike on a Forgejo 16 instance with Zitadel as the IdP must confirm five points:
+  1. The audience claim can be placed in the JWT **access** token.
+  2. Forgejo accepts the self-signed JWT on its REST API.
+  3. A wrong `sub` is rejected.
+  4. Discovery and JWKS are reachable at an issuer URL with a path, and key rotation behaves as Forgejo's source indicates.
+  5. Forgejo rejects a token whose `iat` lies in its future, and accepts one with `iat` omitted or backdated.
+
+  Preconditions for Zitadel, so that a negative result is attributable:
+  - a pre-registered app with JWT access tokens enabled (DCR clients receive opaque tokens);
+  - an MCP client that supports a pre-registered client ID;
+  - the expected-audience override, because Zitadel mints only numeric audiences.
+- **Open question for the design: where the audience comes from.**
+  - **IdP claim.** On Zitadel 4.x this relies on the deprecated Actions v1, which Zitadel v5 removes.
+  - **Client-supplied audience.** Needs no IdP feature at all, but makes the `sub` rule the sole authorization control. If adopted, the documentation must treat a missing rule as a full account compromise for that user.
+
+  Either way, forgejo-mcp fails closed when the audience is missing.
