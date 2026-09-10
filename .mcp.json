@@ -15,7 +15,7 @@
         },
         "codeberg": {
             "type": "stdio",
-            "command": "/home/goern/go/bin/forgejo-mcp",
+            "command": "${FORGEJO_MCP_EXEC:-forgejo-mcp}",
             "args": [
                 "-transport",
                 "stdio",
@@ -28,7 +28,7 @@
         },
         "b4mad": {
             "type": "stdio",
-            "command": "/home/goern/go/bin/forgejo-mcp",
+            "command": "${FORGEJO_MCP_EXEC:-forgejo-mcp}",
             "args": [
                 "-transport",
                 "stdio",
