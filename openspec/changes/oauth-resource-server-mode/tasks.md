@@ -132,13 +132,13 @@ The implementation can land as several PRs, one per group or per pair of groups.
 
 ## 10. Showboat demos (anchored)
 
-- [ ] 10.1 Add `<!-- demos-anchored: true -->` before the first H2 of `specs/oauth-resource-server/spec.md`. Create `specs/oauth-resource-server/oauth-resource-server.demo.md` following the anchored-mode convention:
+- [x] 10.1 Add `<!-- demos-anchored: true -->` before the first H2 of `specs/oauth-resource-server/spec.md`. Create `specs/oauth-resource-server/oauth-resource-server.demo.md` following the anchored-mode convention:
   - replay setup with `${FORGEJO_MCP_BIN:-forgejo-mcp}`;
   - provenance markers;
   - one proof block per `#### Scenario:`, in one consistent block shape.
 
   Use `showboat-cli` or captured `curl` evidence against the 9.1 deployment where the behaviour is observable from outside. Use `test-invocation` for scenarios only a test can trigger, such as a symmetric-algorithm token or a burst of unknown key IDs. Verify that `make check-demos` exits 0.
-- [ ] 10.2 Do the same for `specs/forgejo-jwt-issuer/spec.md` with `specs/forgejo-jwt-issuer/forgejo-jwt-issuer.demo.md`. Live evidence includes the discovery document and JWKS fetched from the deployment, and a decoded minted JWT (claims only, never the signature). Verify that `make check-demos` exits 0.
+- [x] 10.2 Do the same for `specs/forgejo-jwt-issuer/spec.md` with `specs/forgejo-jwt-issuer/forgejo-jwt-issuer.demo.md`. Live evidence includes the discovery document and JWKS fetched from the deployment, and a decoded minted JWT (claims only, never the signature). Verify that `make check-demos` exits 0.
 - [ ] 10.3 Prove the scenarios of the `stateless-http-auth` delta. Agree with the maintainer whether `openspec/specs/stateless-http-auth/spec.md` becomes anchored, since that would also require proofs for its existing scenarios. Otherwise add a non-anchored section to `oauth-resource-server.demo.md`. Verify that `make check-demos` exits 0 and the PR description links every demo.
 
 ## 11. Final verification
