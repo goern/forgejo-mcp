@@ -94,7 +94,7 @@ The implementation can land as several PRs, one per group or per pair of groups.
 
 ## 8. Documentation
 
-- [ ] 8.1 README, "Configuration Options": document `-auth-mode` and every D2 flag with its environment variable and default. Add a short "Remote operation as an OAuth resource server" section that links to the guides. Verify that every flag from `cmd/cmd.go` appears in the README.
+- [x] 8.1 README, "Configuration Options": document `-auth-mode` and every D2 flag with its environment variable and default. Add a short "Remote operation as an OAuth resource server" section that links to the guides. Verify that every flag from `cmd/cmd.go` appears in the README.
 - [ ] 8.2 Add an operator guide under `docs/`. It covers:
   - IdP requirements: JWT access tokens, the audience override, a custom claim from a user attribute;
   - deployment order: forgejo-mcp must be live before users save integrations;
@@ -128,7 +128,7 @@ The implementation can land as several PRs, one per group or per pair of groups.
   - `get_my_user_info` returns the integration owner;
   - a user without a grant is refused;
   - a token whose `forgejo_aud` claim is missing gets `403`.
-- [ ] 9.3 Regression check of `passthrough`: run the existing test suite, then one `stdio` and one `http` session with a PAT against a Forgejo instance. Verify that both behave as in 3.0.x.
+- [x] 9.3 Regression check of `passthrough`: run the existing test suite, then one `stdio` and one `http` session with a PAT against a Forgejo instance. Verify that both behave as in 3.0.x.
 
 ## 10. Showboat demos (anchored)
 

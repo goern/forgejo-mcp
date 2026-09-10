@@ -238,6 +238,49 @@ When using SSE mode, start the server first:
 forgejo-mcp --transport sse --url https://your-forgejo-instance.org --token <your-token>
 ```
 
+#### Remote operation as an OAuth resource server
+
+With `--auth-mode resource-server`, the `http` transport becomes an OAuth 2.0
+resource server as the MCP authorization specification defines it. Clients no
+longer send a Forgejo token. They log in at an OpenID Connect provider you choose
+and send its JWT access token. The server validates that token, signs a JWT that
+lives five minutes for the caller, and presents it to Forgejo through a Forgejo 16
+Authorized Integration. No forge token is configured anywhere, and the caller's
+access token never reaches Forgejo.
+
+The mode needs:
+
+- Forgejo 16.0 or newer;
+- an OpenID Connect provider that issues JWT access tokens and can add a per-user
+  claim (default `forgejo_aud`) holding the audience of that user's Authorized
+  Integration;
+- a public HTTPS origin for the server, because Forgejo fetches the server's issuer
+  documents from it;
+- a signing key file: EC P-256 or P-384, Ed25519, or RSA of at least 2048 bits.
+
+```bash
+forgejo-mcp --transport http --url https://forgejo.example.org \
+  --host 0.0.0.0 --allowed-hosts mcp.example.org \
+  --auth-mode resource-server \
+  --authorization-server https://id.example.org \
+  --resource https://mcp.example.org/mcp \
+  --forgejo-jwt-issuer https://mcp.example.org/issuer \
+  --forgejo-jwt-signing-key-file /run/credentials/forgejo-mcp/signing.pem
+```
+
+The mode is opt-in: without `--auth-mode`, everything above behaves as before. In
+this mode the server answers only `/mcp`, the protected resource metadata, and the
+discovery document and key set under the issuer path. It refuses to start on a
+configuration it cannot serve safely, and the refusal names the setting to fix.
+The signing key acts for every user whose integration trusts the issuer, so guard
+it like the forge token it replaces.
+
+- [Operator guide](docs/oauth-resource-server/operator.md): identity provider
+  requirements, deployment order, proxy rules, key rotation, and a worked Zitadel
+  example.
+- [User guide](docs/oauth-resource-server/user.md): creating the Authorized
+  Integration, the mandatory `sub` claim rule, and configuring an MCP client.
+
 ### 4. Start Using It
 
 Open your MCP-compatible AI assistant and try:
@@ -523,12 +566,23 @@ You can configure the server using command-line arguments or environment variabl
 | `--allowed-hosts` | `FORGEJO_MCP_ALLOWED_HOSTS` | Comma-separated `Host` names this server answers to; required when `--host` is not loopback |
 | `--allowed-origins` | `FORGEJO_MCP_ALLOWED_ORIGINS` | Comma-separated web origins allowed to send an `Origin` header, as full origins (`https://console.example.org`). Empty by default |
 | `--allow-operator-token-fallback` | `FORGEJO_MCP_ALLOW_OPERATOR_TOKEN_FALLBACK` | On `sse`/`http`, serve requests with no `Authorization` header using this server's own token. Off by default |
+| `--auth-mode` | `FORGEJO_MCP_AUTH_MODE` | `passthrough` (default) or `resource-server`; see [Remote operation as an OAuth resource server](#remote-operation-as-an-oauth-resource-server) |
+| `--authorization-server` | `FORGEJO_MCP_AUTHORIZATION_SERVER` | `resource-server` mode: issuer URL of the OpenID Connect provider, compared byte for byte |
+| `--resource` | `FORGEJO_MCP_RESOURCE` | `resource-server` mode: canonical URI of the MCP endpoint, for example `https://mcp.example.org/mcp` |
+| `--resource-audience` | `FORGEJO_MCP_RESOURCE_AUDIENCE` | `resource-server` mode: value an access token's `aud` must contain (default: the value of `--resource`) |
+| `--scopes-supported` | `FORGEJO_MCP_SCOPES_SUPPORTED` | `resource-server` mode: space-separated scopes published in the metadata and the `401` challenge (default: none published) |
+| `--forgejo-audience-claim` | `FORGEJO_MCP_FORGEJO_AUDIENCE_CLAIM` | `resource-server` mode: access-token claim holding the audience of the caller's Forgejo Authorized Integration (default: `forgejo_aud`) |
+| `--forgejo-jwt-issuer` | `FORGEJO_MCP_FORGEJO_JWT_ISSUER` | `resource-server` mode: issuer URL under which the server signs JWTs for Forgejo, for example `https://mcp.example.org/issuer`; https, without a trailing slash |
+| `--forgejo-jwt-signing-key-file` | `FORGEJO_MCP_FORGEJO_JWT_SIGNING_KEY_FILE` | `resource-server` mode: PEM private key that signs the JWTs for Forgejo (EC P-256 or P-384, Ed25519, or RSA of at least 2048 bits) |
+| `--forgejo-jwt-published-key-files` | `FORGEJO_MCP_FORGEJO_JWT_PUBLISHED_KEY_FILES` | `resource-server` mode: comma-separated PEM keys published next to the signing key, for key rotation |
 | `--cli` | - | Enter CLI mode for direct tool invocation |
 | `--user-agent` | `FORGEJO_USER_AGENT` | HTTP User-Agent header (default: `forgejo-mcp/<version>`) |
 | - | `FORGEJO_MCP_ALLOW_FILE_PATH_UPLOAD` | Allow `file_path` attachment uploads to read the host filesystem (`1`/`true`/`yes`/`on`; off by default) |
 | - | `FORGEJO_MCP_UPLOAD_ROOT` | Confine `file_path` uploads to this directory (default: anywhere the process can read) |
 
 Command-line arguments take priority over environment variables.
+
+The `resource-server` settings are refused in `passthrough` mode, so a configuration that sets them but forgets `--auth-mode resource-server` does not start.
 
 ### Uploading attachments from the host filesystem
 
