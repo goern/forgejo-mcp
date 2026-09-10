@@ -90,7 +90,7 @@ Out of scope, rejected on the record in #582:
   - Forgejo blocks private and loopback issuers unless `[authorized_integration] ALLOW_LOCALNETWORKS` is set.
   - Each user then creates an integration with a `sub` claim rule and makes its audience available to forgejo-mcp.
 - **Sequencing:** `openspec/changes/network-transport-hardening/` also modifies `stateless-http-auth`, including the 401 rule amended above. It has not been archived yet. Archive it first, so this change's delta applies to the current requirement text.
-- **Validation before specs are written.** A spike on a Forgejo 16 instance with Zitadel as the IdP must confirm five points:
+- **Validation before specs are written.** A spike on 2026-09-10, against Forgejo 16.0.3 with Zitadel 4.17.3 as the IdP, confirmed all five points below. The measurements are recorded in `design.md` (Context):
   1. The audience claim can be placed in the JWT **access** token.
   2. Forgejo accepts the self-signed JWT on its REST API.
   3. A wrong `sub` is rejected.
@@ -101,8 +101,8 @@ Out of scope, rejected on the record in #582:
   - a pre-registered app with JWT access tokens enabled (DCR clients receive opaque tokens);
   - an MCP client that supports a pre-registered client ID;
   - the expected-audience override, because Zitadel mints only numeric audiences.
-- **Open question for the design: where the audience comes from.**
-  - **IdP claim.** On Zitadel 4.x this relies on the deprecated Actions v1, which Zitadel v5 removes.
-  - **Client-supplied audience.** Needs no IdP feature at all, but makes the `sub` rule the sole authorization control. If adopted, the documentation must treat a missing rule as a full account compromise for that user.
+- **Where the audience comes from** is decided in `design.md` (D5): from the IdP claim only, in this change.
+  - On Zitadel 4.x this relies on the deprecated Actions v1, which Zitadel v5 removes.
+  - A client-supplied audience is left to a later, separate change. It needs no IdP feature, but it makes the `sub` rule the sole authorization control.
 
-  Either way, forgejo-mcp fails closed when the audience is missing.
+  forgejo-mcp fails closed when the audience is missing.
