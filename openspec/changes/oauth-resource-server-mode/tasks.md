@@ -6,13 +6,13 @@ The implementation can land as several PRs, one per group or per pair of groups.
 
 - [x] 1.1 Get `openspec/changes/network-transport-hardening/` archived, either by the maintainer or by a small PR running `openspec archive network-transport-hardening`. Verify on `main`: `openspec/specs/network-transport-binding/spec.md` exists, and `openspec list` no longer shows the change. **Done 2026-09-12:** the maintainer archived it after #585 made its delta consistent and #586 fixed the loopback bind rule.
 - [x] 1.2 Rebase this branch on `main`, then write `specs/stateless-http-auth/spec.md` as a delta. It covers two things: the credential source in `resource-server` mode, and unauthenticated access to the metadata, discovery and JWKS routes, while every other path keeps the 401-at-the-door rule. Verify with `openspec validate oauth-resource-server-mode --strict`, and by archiving into a scratch copy: `openspec validate --all --strict` must stay green and the resulting `stateless-http-auth` spec must keep every existing scenario.
-- [ ] 1.3 Add `github.com/lestrrat-go/jwx/v3` and review its transitive dependencies for licence compatibility with GPL-3.0-or-later. Verify that `make vendor` leaves `go.mod`/`go.sum` tidy and `make build` succeeds.
+- [x] 1.3 Add `github.com/lestrrat-go/jwx/v3` and review its transitive dependencies for licence compatibility with GPL-3.0-or-later. Verify that `make vendor` leaves `go.mod`/`go.sum` tidy and `make build` succeeds.
 
 ## 2. Configuration and keys
 
 - [ ] 2.1 Add the flags and environment variables from design D2 to `cmd/cmd.go` and `pkg/flag`, using the existing `flagWasPassed` precedence. Verify with tests in `cmd/config_test.go`: every default; env-only; flag over env, including a flag explicitly set to its default value.
 - [ ] 2.2 Refuse to start in `passthrough` mode when any setting that applies only to `resource-server` mode is present. Verify with a test per setting, reproducing the scenario "Issuer configured without the mode".
-- [ ] 2.3 Implement key loading from PEM files:
+- [x] 2.3 Implement key loading from PEM files:
   - key type to algorithm (EC P-256 → ES256, EC P-384 → ES384, Ed25519 → EdDSA, RSA ≥ 2048 bits → RS256);
   - RFC 7638 thumbprint as `kid`;
   - published keys;
@@ -70,7 +70,7 @@ The implementation can land as several PRs, one per group or per pair of groups.
 ## 6. Outbound issuer (`forgejo-jwt-issuer`)
 
 - [ ] 6.1 Extract the Forgejo audience from the configured claim and apply the "usable" rules. A valid token without a usable audience gets `403` with a body naming the claim, no `WWW-Authenticate` error, and no Forgejo request. Verify the scenarios "Claim missing", "Claim is an array" and "Custom claim name".
-- [ ] 6.2 Mint the outbound JWT for each authenticated request:
+- [x] 6.2 Mint the outbound JWT for each authenticated request:
   - header `alg`, thumbprint `kid`, `typ` `JWT`;
   - exact `iss`, `sub` and a single `aud`;
   - `iat` = now − 60 s, `exp` = now + 300 s;
