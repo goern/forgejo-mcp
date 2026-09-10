@@ -18,7 +18,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync/atomic"
+	"sync"
 	"testing"
 
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/flag"
@@ -27,6 +27,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 )
 
@@ -37,13 +38,13 @@ func withResourceServerConfig(t *testing.T) {
 	saved := struct {
 		mode, authServer, res, resAud, claim, issuer, keyFile, token, host, url string
 		scopes, published, settings, allowedHosts, allowedOrigins               []string
-		fallback                                                                bool
+		fallback, require                                                       bool
 		httpPort, ssePort                                                       int
 	}{
 		flag.AuthMode, flag.AuthorizationServer, flag.Resource, flag.ResourceAudience, flag.ForgejoAudienceClaim,
 		flag.ForgejoJWTIssuer, flag.ForgejoJWTSigningKeyFile, flag.Token, flag.Host, flag.URL,
 		flag.ScopesSupported, flag.ForgejoJWTPublishedKeyFiles, flag.ResourceServerSettings, flag.AllowedHosts, flag.AllowedOrigins,
-		flag.AllowOperatorTokenFallback, flag.HTTPPort, flag.SSEPort,
+		flag.AllowOperatorTokenFallback, forgejo.RequireRequestToken(), flag.HTTPPort, flag.SSEPort,
 	}
 	t.Cleanup(func() {
 		flag.AuthMode, flag.AuthorizationServer, flag.Resource = saved.mode, saved.authServer, saved.res
@@ -52,6 +53,7 @@ func withResourceServerConfig(t *testing.T) {
 		flag.ScopesSupported, flag.ForgejoJWTPublishedKeyFiles = saved.scopes, saved.published
 		flag.ResourceServerSettings, flag.AllowedHosts, flag.AllowedOrigins = saved.settings, saved.allowedHosts, saved.allowedOrigins
 		flag.AllowOperatorTokenFallback, flag.HTTPPort, flag.SSEPort = saved.fallback, saved.httpPort, saved.ssePort
+		forgejo.SetRequireRequestToken(saved.require)
 		forgejo.SetServerVersion("")
 	})
 
@@ -103,6 +105,8 @@ func TestValidateAuthConfig(t *testing.T) {
 			want: []string{"-resource", "-forgejo-jwt-signing-key-file"}},
 		{name: "missing forgejo jwt issuer", transport: "http", mutate: func() { flag.ForgejoJWTIssuer = "" },
 			want: []string{"-forgejo-jwt-issuer"}},
+		{name: "scope with a quote", transport: "http", mutate: func() { flag.ScopesSupported = []string{"openid", `pro"file`} },
+			want: []string{"-scopes-supported", "not a valid OAuth scope"}},
 		{name: "forgejo issuer over http", transport: "http", mutate: func() { flag.ForgejoJWTIssuer = "http://mcp.example.org/issuer" },
 			want: []string{"-forgejo-jwt-issuer", "https"}},
 		// Spec scenario "Issuer URL with a trailing slash".
@@ -189,26 +193,41 @@ func TestRefusedConfigurationNeverBinds(t *testing.T) {
 	assertPortFree(t, port)
 }
 
-// fixture serves a Forgejo version endpoint and an identity provider, and
-// writes a signing key, so prepareResourceServer can run for real.
+// fixture serves a Forgejo instance and an identity provider, and writes a
+// signing key, so prepareResourceServer and the request flow can run for real.
 type fixture struct {
-	forgejoAuthHeaders atomic.Int64
-	providerIssuer     string
+	providerIssuer string
+	providerKey    *ecdsa.PrivateKey
+	providerKid    string
+
+	mu sync.Mutex
+	// forgejoRequests records "<path> <Authorization header>" for every request
+	// Forgejo received.
+	forgejoRequests []string
+}
+
+func (f *fixture) requests() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]string(nil), f.forgejoRequests...)
 }
 
 func newFixture(t *testing.T, forgejoVersion string, signingKey crypto.PrivateKey, issuerSuffix string) *fixture {
 	t.Helper()
-	f := &fixture{}
+	f := &fixture{providerKid: "provider-1"}
 
 	forgejoSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Authorization") != "" {
-			f.forgejoAuthHeaders.Add(1)
-		}
-		if r.URL.Path != "/api/v1/version" {
+		f.mu.Lock()
+		f.forgejoRequests = append(f.forgejoRequests, r.URL.Path+" "+r.Header.Get("Authorization"))
+		f.mu.Unlock()
+		switch r.URL.Path {
+		case "/api/v1/version":
+			_ = json.NewEncoder(w).Encode(map[string]string{"version": forgejoVersion})
+		case "/api/v1/user":
+			_ = json.NewEncoder(w).Encode(map[string]any{"id": 1, "login": "synapse"})
+		default:
 			http.NotFound(w, r)
-			return
 		}
-		_ = json.NewEncoder(w).Encode(map[string]string{"version": forgejoVersion})
 	}))
 	t.Cleanup(forgejoSrv.Close)
 	flag.URL = forgejoSrv.URL
@@ -217,6 +236,7 @@ func newFixture(t *testing.T, forgejoVersion string, signingKey crypto.PrivateKe
 	if err != nil {
 		t.Fatal(err)
 	}
+	f.providerKey = providerKey
 	var idp *httptest.Server
 	idp = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -224,7 +244,7 @@ func newFixture(t *testing.T, forgejoVersion string, signingKey crypto.PrivateKe
 			_ = json.NewEncoder(w).Encode(map[string]string{"issuer": idp.URL + issuerSuffix, "jwks_uri": idp.URL + "/keys"})
 		case "/keys":
 			pub, _ := jwk.Import(providerKey.Public())
-			_ = pub.Set(jwk.KeyIDKey, "provider-1")
+			_ = pub.Set(jwk.KeyIDKey, f.providerKid)
 			set := jwk.NewSet()
 			_ = set.AddKey(pub)
 			_ = json.NewEncoder(w).Encode(set)
@@ -257,11 +277,11 @@ func mustP256(t *testing.T) *ecdsa.PrivateKey {
 	return k
 }
 
-// captureWarnings routes the package logger into an observer for the test.
-func captureWarnings(t *testing.T) *observer.ObservedLogs {
+// captureLogs routes the package logger into an observer for the test.
+func captureLogs(t *testing.T, level zapcore.Level) *observer.ObservedLogs {
 	t.Helper()
 	prev := log.Default()
-	core, logs := observer.New(zap.WarnLevel)
+	core, logs := observer.New(level)
 	log.SetDefault(zap.New(core))
 	t.Cleanup(func() { log.SetDefault(prev) })
 	return logs
@@ -271,14 +291,16 @@ func captureWarnings(t *testing.T) *observer.ObservedLogs {
 func TestPrepareResourceServerSucceedsAndWarnsAboutTheSigningKey(t *testing.T) {
 	withResourceServerConfig(t)
 	f := newFixture(t, "16.0.3", mustP256(t), "")
-	logs := captureWarnings(t)
+	logs := captureLogs(t, zap.WarnLevel)
 
 	rs, err := prepareResourceServer(context.Background())
 	if err != nil {
 		t.Fatalf("prepareResourceServer: %v", err)
 	}
-	if f.forgejoAuthHeaders.Load() != 0 {
-		t.Fatal("the Forgejo version probe sent an Authorization header")
+	for _, req := range f.requests() {
+		if !strings.HasSuffix(req, " ") {
+			t.Fatalf("the Forgejo version probe sent an Authorization header: %q", req)
+		}
 	}
 	var found bool
 	for _, entry := range logs.All() {
@@ -340,20 +362,4 @@ func TestPrepareResourceServerRefusesAProviderIssuerMismatch(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "-authorization-server") || !strings.Contains(err.Error(), "must match exactly") {
 		t.Fatalf("error = %v, want a refusal of the issuer mismatch", err)
 	}
-}
-
-// Until the request flow is wired, a configuration that passes every startup
-// check must still not serve: it would forward provider tokens to Forgejo.
-func TestRunRefusesToServeResourceServerModeUntilItIsWired(t *testing.T) {
-	withResourceServerConfig(t)
-	newFixture(t, "16.0.3", mustP256(t), "")
-	flag.Host = "127.0.0.1"
-	port := freePort(t)
-	flag.HTTPPort = port
-
-	err := Run("http", "test")
-	if err == nil || !strings.Contains(err.Error(), "not implemented yet") {
-		t.Fatalf("Run(http) error = %v, want the not-yet-wired refusal", err)
-	}
-	assertPortFree(t, port)
 }

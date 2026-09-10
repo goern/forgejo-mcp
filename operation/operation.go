@@ -2,7 +2,6 @@ package operation
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -40,6 +39,15 @@ const streamableHTTPEndpointPath = "/mcp"
 // requestTokenContextFunc lifts a per-request credential out of the
 // Authorization header and into the context the tool handlers see.
 func requestTokenContextFunc(ctx context.Context, r *http.Request) context.Context {
+	if resourceServerMode() {
+		// The Authorization header carries the identity provider's token, which
+		// must never reach Forgejo. The authentication layer has minted a Forgejo
+		// token for this request; only that one enters the handler context.
+		if token, ok := r.Context().Value(mintedTokenKey{}).(string); ok && token != "" {
+			return forgejo.WithToken(ctx, token)
+		}
+		return ctx
+	}
 	if token := extractToken(r.Header.Get("Authorization")); token != "" {
 		return forgejo.WithToken(ctx, token)
 	}
@@ -214,15 +222,29 @@ func Run(transport, version string) error {
 		return err
 	}
 	if resourceServerMode() {
-		if _, err := prepareResourceServer(context.Background()); err != nil {
+		// ValidateAuthConfig has already refused every transport but http.
+		rs, err := prepareResourceServer(context.Background())
+		if err != nil {
 			return err
 		}
-		// The startup checks passed, but the request flow of this mode is not
-		// wired into the transport yet. Serving now would forward identity
-		// provider tokens to Forgejo, which is exactly what the mode exists to
-		// prevent, so refuse instead of starting half a mode.
-		return errors.New("refusing to start: -auth-mode resource-server passed its startup checks, " +
-			"but serving requests in this mode is not implemented yet")
+		handler, err := rs.handler(newStreamableHTTPHandler(mcpServer))
+		if err != nil {
+			return fmt.Errorf("refusing to start: %w", err)
+		}
+		log.Info("Starting MCP streamable HTTP server in resource-server mode",
+			log.IntField("port", flag.HTTPPort),
+			log.StringField("resource", rs.resource),
+			log.StringField("authorization_server", rs.authServer),
+		)
+		if err := serveMCPOverHTTP("http", handler, flag.HTTPPort); err != nil {
+			log.Error("Failed to start streamable HTTP server",
+				log.IntField("port", flag.HTTPPort),
+				log.ErrorField(err),
+			)
+			return fmt.Errorf("failed to start streamable HTTP server: %w", err)
+		}
+		log.Info("MCP streamable HTTP server shutdown")
+		return nil
 	}
 
 	// Test connection to Forgejo instance before starting the server

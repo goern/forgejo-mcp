@@ -42,7 +42,7 @@ The implementation can land as several PRs, one per group or per pair of groups.
   - routes are registered as exact paths, and every other path returns `404`.
 
   Verify three things: every existing test in `operation/listen_test.go` passes unchanged in `passthrough` mode; the conformance table runs in both modes; `TestEveryNetworkTransportIsCovered` still holds.
-- [ ] 4.2 Add tests for the scenarios "Root OpenID discovery" and "Trailing slash" (`404`, never a redirect), and for `OPTIONS *` with a forged Host in `resource-server` mode (`403`).
+- [x] 4.2 Add tests for the scenarios "Root OpenID discovery" and "Trailing slash" (`404`, never a redirect), and for `OPTIONS *` with a forged Host in `resource-server` mode (`403`).
 
 ## 5. Inbound validation (`oauth-resource-server`)
 
@@ -57,7 +57,7 @@ The implementation can land as several PRs, one per group or per pair of groups.
   - the `typ` rule.
 
   Verify with a table test covering every scenario of "The MCP endpoint requires a valid bearer JWT access token".
-- [ ] 5.3 Implement the uniform `401` challenge:
+- [x] 5.3 Implement the uniform `401` challenge:
   - `resource_metadata`;
   - `scope` when configured;
   - `error="invalid_token"` only when a token was presented;
@@ -65,11 +65,11 @@ The implementation can land as several PRs, one per group or per pair of groups.
   - a debug log line through the rate-limited refusal logger.
 
   Verify the scenarios "No token" and "Expired and wrongly signed tokens are indistinguishable" by comparing the two responses byte for byte.
-- [ ] 5.4 Serve the RFC 9728 protected resource metadata at the path-specific location and at the root. Verify the scenarios "Metadata at the path-specific location" and "Metadata with a forged Host", and that `scopes_supported` appears only when configured.
+- [x] 5.4 Serve the RFC 9728 protected resource metadata at the path-specific location and at the root. Verify the scenarios "Metadata at the path-specific location" and "Metadata with a forged Host", and that `scopes_supported` appears only when configured.
 
 ## 6. Outbound issuer (`forgejo-jwt-issuer`)
 
-- [ ] 6.1 Extract the Forgejo audience from the configured claim and apply the "usable" rules. A valid token without a usable audience gets `403` with a body naming the claim, no `WWW-Authenticate` error, and no Forgejo request. Verify the scenarios "Claim missing", "Claim is an array" and "Custom claim name".
+- [x] 6.1 Extract the Forgejo audience from the configured claim and apply the "usable" rules. A valid token without a usable audience gets `403` with a body naming the claim, no `WWW-Authenticate` error, and no Forgejo request. Verify the scenarios "Claim missing", "Claim is an array" and "Custom claim name".
 - [x] 6.2 Mint the outbound JWT for each authenticated request:
   - header `alg`, thumbprint `kid`, `typ` `JWT`;
   - exact `iss`, `sub` and a single `aud`;
@@ -78,8 +78,8 @@ The implementation can land as several PRs, one per group or per pair of groups.
   - no `nbf`.
 
   Verify the scenarios "Claims of a minted JWT" and "Two MCP requests" by decoding the minted tokens in a test.
-- [ ] 6.3 Hand the minted token to the Forgejo clients. The auth layer stores it in the request context. In `resource-server` mode `requestTokenContextFunc` injects it with `forgejo.WithToken` and never reads the `Authorization` header. Verify with an `httptest` Forgejo that records every `Authorization` header on the typed SDK path and on the raw-HTTP path: both carry `token <minted jwt>`, and the inbound token never appears. This covers the scenarios "A tool call reaches Forgejo" and "Forgejo never sees the inbound token".
-- [ ] 6.4 Serve the discovery document and the JWKS under the issuer path:
+- [x] 6.3 Hand the minted token to the Forgejo clients. The auth layer stores it in the request context. In `resource-server` mode `requestTokenContextFunc` injects it with `forgejo.WithToken` and never reads the `Authorization` header. Verify with an `httptest` Forgejo that records every `Authorization` header on the typed SDK path and on the raw-HTTP path: both carry `token <minted jwt>`, and the inbound token never appears. This covers the scenarios "A tool call reaches Forgejo" and "Forgejo never sees the inbound token".
+- [x] 6.4 Serve the discovery document and the JWKS under the issuer path:
   - exactly three discovery members, including a `jwks_uri` on the same host;
   - `use`/`alg`/`kid` on every key, and no private key material;
   - additional published keys included;
@@ -90,7 +90,7 @@ The implementation can land as several PRs, one per group or per pair of groups.
 ## 7. Logging
 
 - [x] 7.1 Log one warning at every start in `resource-server` mode, naming the `kid` and the issuer and stating the key's reach. Verify with the scenario "Startup warning" in a test that captures the log.
-- [ ] 7.2 Ensure that neither the inbound token nor the minted JWT, nor any part of their signatures, is ever logged, including at debug level. `sub` and the audience appear at debug level only. Verify the scenarios "Debug logging of a refusal" and "Minted JWTs are not logged" by scanning the captured logs of a full test request cycle for both tokens.
+- [x] 7.2 Ensure that neither the inbound token nor the minted JWT, nor any part of their signatures, is ever logged, including at debug level. `sub` and the audience appear at debug level only. Verify the scenarios "Debug logging of a refusal" and "Minted JWTs are not logged" by scanning the captured logs of a full test request cycle for both tokens.
 
 ## 8. Documentation
 

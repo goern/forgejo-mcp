@@ -82,6 +82,11 @@ func ValidateAuthConfig(transport string, cli bool) error {
 	if len(missing) > 0 {
 		return fmt.Errorf("refusing to start: -auth-mode resource-server requires %s", strings.Join(missing, ", "))
 	}
+	for _, scope := range flag.ScopesSupported {
+		if !validScopeToken(scope) {
+			return fmt.Errorf("refusing to start: -scopes-supported contains %q, which is not a valid OAuth scope", scope)
+		}
+	}
 
 	if _, err := httpsOrLoopbackURL("-authorization-server", flag.AuthorizationServer); err != nil {
 		return err
