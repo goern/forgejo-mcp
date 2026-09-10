@@ -35,7 +35,7 @@ The implementation can land as several PRs, one per group or per pair of groups.
 
 ## 4. Routing and the request guard
 
-- [ ] 4.1 Restructure the guard in `operation/listen.go`:
+- [x] 4.1 Restructure the guard in `operation/listen.go`:
   - the public group (protected resource metadata, discovery, JWKS) never passes through the authentication layer;
   - the MCP endpoint does;
   - Host and Origin checks apply to both groups;
@@ -117,7 +117,7 @@ The implementation can land as several PRs, one per group or per pair of groups.
 
 ## 9. Live deployment and end-to-end verification
 
-- [ ] 9.1 Deploy the implementation branch in `resource-server` mode at `https://forgejo-mcp.byteflavour.dev`:
+- [x] 9.1 Deploy the implementation branch in `resource-server` mode at `https://forgejo-mcp.byteflavour.dev`:
   - forgejo-mcp takes over the discovery and JWKS routes from the spike's static documents;
   - a production signing key replaces the disposable spike keys;
   - Zitadel project `forgejo-mcp` is the IdP.

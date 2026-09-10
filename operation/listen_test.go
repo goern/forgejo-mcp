@@ -3,6 +3,7 @@
 package operation
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -47,21 +48,93 @@ func mustListenLoopback(t *testing.T) net.Listener {
 	return ln
 }
 
-// transportCase names one network transport and how to build its handler.
-// Every conformance case runs against both, so a transport that stops going
-// through the shared listener is a test failure rather than a silent gap.
+// transportCase names one network transport, the auth mode it runs in and how
+// to build its handler. Every conformance case runs against every row, so a
+// transport or mode that stops going through the shared listener is a test
+// failure rather than a silent gap.
 type transportCase struct {
-	name    string
-	handler func() http.Handler
-	path    string
+	name string
+	// transport is the value handed to resolveTransportConfig.
+	transport string
+	// resourceServer marks a row served in resource-server mode: its own
+	// routing and OAuth authentication replace the passthrough door.
+	resourceServer bool
+	handler        func(t *testing.T) http.Handler
+	path           string
+	// authorization returns an Authorization header value that passes
+	// authentication on this row. Call it after the server was started.
+	authorization func(t *testing.T) string
 }
 
 func transports() []transportCase {
 	newMCP := func() *server.MCPServer { return server.NewMCPServer("test", "0.0.0") }
+	decoy := func(*testing.T) string { return "Bearer decoy-per-request-value" }
+	rs := &resourceServerRow{}
 	return []transportCase{
-		{"sse", func() http.Handler { return newSSEHandler(newMCP()) }, "/sse"},
-		{"http", func() http.Handler { return newStreamableHTTPHandler(newMCP()) }, streamableHTTPEndpointPath},
+		{
+			name: "sse", transport: "sse", path: "/sse", authorization: decoy,
+			handler: func(*testing.T) http.Handler { return newSSEHandler(newMCP()) },
+		},
+		{
+			name: "http", transport: "http", path: streamableHTTPEndpointPath, authorization: decoy,
+			handler: func(*testing.T) http.Handler { return newStreamableHTTPHandler(newMCP()) },
+		},
+		{
+			name: "http+resource-server", transport: "http", resourceServer: true, path: streamableHTTPEndpointPath,
+			handler:       func(t *testing.T) http.Handler { return rs.handler(t, newStreamableHTTPHandler(newMCP())) },
+			authorization: rs.authorization,
+		},
 	}
+}
+
+// httpTransports is the subset of rows serving the Streamable HTTP transport.
+func httpTransports() []transportCase {
+	var rows []transportCase
+	for _, tr := range transports() {
+		if tr.transport == "http" {
+			rows = append(rows, tr)
+		}
+	}
+	return rows
+}
+
+// resourceServerRow builds the resource-server row against a fake Forgejo and
+// identity provider.
+type resourceServerRow struct{ fixture *fixture }
+
+// handler switches resource-server mode on and wraps mcp in its HTTP surface.
+// It keeps the Host, Origin and fallback settings the test chose before
+// starting the server, because those are what the conformance cases vary.
+// ValidateAuthConfig is deliberately not run: whether the resource host is
+// covered by the Host policy is a startup check with its own tests in
+// authmode_test.go, and here it would stop the cases that need a loopback-only
+// policy from running at all.
+func (row *resourceServerRow) handler(t *testing.T, mcp http.Handler) http.Handler {
+	t.Helper()
+	host, hosts, origins, fallback := flag.Host, flag.AllowedHosts, flag.AllowedOrigins, flag.AllowOperatorTokenFallback
+	withResourceServerConfig(t)
+	row.fixture = newFixture(t, "16.0.3", mustP256(t), "")
+	flag.ResourceAudience = rsClientID
+	flag.Host, flag.AllowedHosts, flag.AllowedOrigins, flag.AllowOperatorTokenFallback = host, hosts, origins, fallback
+
+	rs, err := prepareResourceServer(context.Background())
+	if err != nil {
+		t.Fatalf("prepareResourceServer: %v", err)
+	}
+	h, err := rs.handler(mcp)
+	if err != nil {
+		t.Fatalf("handler: %v", err)
+	}
+	return h
+}
+
+// authorization is a valid access token from the fake identity provider.
+func (row *resourceServerRow) authorization(t *testing.T) string {
+	t.Helper()
+	if row.fixture == nil {
+		t.Fatal("the resource-server row was asked for a token before it was started")
+	}
+	return "Bearer " + (&rsEnv{fixture: row.fixture}).accessToken(t, nil)
 }
 
 // startGuarded runs the transport behind the real policy stack on a loopback
@@ -76,13 +149,16 @@ func startGuarded(t *testing.T, tr transportCase) string {
 // defect they exist to detect.
 func startGuardedWith(t *testing.T, tr transportCase, tweak func(*http.Server)) string {
 	t.Helper()
-	cfg, err := resolveTransportConfig(tr.name)
+	// The handler comes first, as in Run: a resource-server row switches the
+	// mode on while it is built, and the listener must see that mode.
+	handler := tr.handler(t)
+	cfg, err := resolveTransportConfig(tr.transport)
 	if err != nil {
 		t.Fatalf("resolveTransportConfig: %v", err)
 	}
 	forgejo.SetRequireRequestToken(cfg.requireAuth)
 	ln := mustListenLoopback(t)
-	srv := newMCPHTTPServer(tr.handler(), cfg)
+	srv := newMCPHTTPServer(handler, cfg)
 	if tweak != nil {
 		tweak(srv)
 	}
@@ -334,6 +410,9 @@ func TestOperatorFallbackOptInReAdmitsAnonymousRequests(t *testing.T) {
 	// path. It must work, and it must be the only thing that switches this on.
 	for _, tr := range transports() {
 		t.Run(tr.name, func(t *testing.T) {
+			if tr.resourceServer {
+				t.Skip("resource-server mode refuses to start with the fallback; see TestValidateAuthConfig")
+			}
 			restoreFlags(t)
 			flag.AllowOperatorTokenFallback = true
 			addr := startGuarded(t, tr)
@@ -348,20 +427,24 @@ func TestOperatorFallbackOptInReAdmitsAnonymousRequests(t *testing.T) {
 }
 
 func TestAuthorizationHeaderShapesThatCarryNoTokenAreRefused(t *testing.T) {
-	restoreFlags(t)
-	addr := startGuarded(t, transports()[1])
-	for _, header := range []string{
-		"Authorization: ",
-		"Authorization: token",
-		"Authorization: token ",
-		"Authorization: Bearer",
-		"Authorization: Bearer ",
-		"Authorization: Basic abc",
-		"Authorization: Negotiate abc",
-	} {
-		if got := get(t, addr, streamableHTTPEndpointPath, "Host: "+addr, header); !strings.Contains(got, "401") {
-			t.Errorf("%q was accepted as an identity: %q", header, got)
-		}
+	for _, tr := range httpTransports() {
+		t.Run(tr.name, func(t *testing.T) {
+			restoreFlags(t)
+			addr := startGuarded(t, tr)
+			for _, header := range []string{
+				"Authorization: ",
+				"Authorization: token",
+				"Authorization: token ",
+				"Authorization: Bearer",
+				"Authorization: Bearer ",
+				"Authorization: Basic abc",
+				"Authorization: Negotiate abc",
+			} {
+				if got := get(t, addr, tr.path, "Host: "+addr, header); !strings.Contains(got, "401") {
+					t.Errorf("%q was accepted as an identity: %q", header, got)
+				}
+			}
+		})
 	}
 }
 
@@ -377,34 +460,37 @@ func TestDefaultReverseProxyDoesNotReAdmitTheOperatorCredential(t *testing.T) {
 	// The credential policy does not read the bind address at all, so the
 	// proxied request is refused for want of a token. This test exists to keep
 	// it that way.
-	restoreFlags(t)
-	tr := transports()[1]
-	addr := startGuarded(t, tr)
+	for _, tr := range httpTransports() {
+		t.Run(tr.name, func(t *testing.T) {
+			restoreFlags(t)
+			addr := startGuarded(t, tr)
 
-	target, err := url.Parse("http://" + addr)
-	if err != nil {
-		t.Fatalf("parse: %v", err)
-	}
-	proxy := httputil.NewSingleHostReverseProxy(target)
-	director := proxy.Director
-	proxy.Director = func(r *http.Request) {
-		director(r)
-		r.Host = target.Host // nginx's documented default: Host = $proxy_host
-	}
-	front := httptest.NewServer(proxy)
-	t.Cleanup(front.Close)
+			target, err := url.Parse("http://" + addr)
+			if err != nil {
+				t.Fatalf("parse: %v", err)
+			}
+			proxy := httputil.NewSingleHostReverseProxy(target)
+			director := proxy.Director
+			proxy.Director = func(r *http.Request) {
+				director(r)
+				r.Host = target.Host // nginx's documented default: Host = $proxy_host
+			}
+			front := httptest.NewServer(proxy)
+			t.Cleanup(front.Close)
 
-	resp, err := front.Client().Get(front.URL + streamableHTTPEndpointPath)
-	if err != nil {
-		t.Fatalf("through the proxy: %v", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
+			resp, err := front.Client().Get(front.URL + tr.path)
+			if err != nil {
+				t.Fatalf("through the proxy: %v", err)
+			}
+			defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("an anonymous request through a default-configured reverse proxy got %d, want 401", resp.StatusCode)
-	}
-	if forgejo.RequireRequestToken() != true {
-		t.Fatal("the credential fallback was live on a network transport")
+			if resp.StatusCode != http.StatusUnauthorized {
+				t.Fatalf("an anonymous request through a default-configured reverse proxy got %d, want 401", resp.StatusCode)
+			}
+			if forgejo.RequireRequestToken() != true {
+				t.Fatal("the credential fallback was live on a network transport")
+			}
+		})
 	}
 }
 
@@ -430,13 +516,16 @@ func TestOversizedHeaderIsRefusedRatherThanLogged(t *testing.T) {
 	// The refusal path logs the rejected header. Without a header cap, a
 	// stranger can write to the operator's disk for free using the very
 	// requests this server refuses.
-	restoreFlags(t)
-	tr := transports()[1]
-	addr := startGuarded(t, tr)
-	big := strings.Repeat("a", 200_000) + ".attacker.example.com"
-	got := get(t, addr, streamableHTTPEndpointPath, "Host: "+big)
-	if !strings.Contains(got, "431") && !strings.Contains(got, "400") {
-		t.Fatalf("a 200 KB Host header was not refused by the header cap: %q", got)
+	for _, tr := range httpTransports() {
+		t.Run(tr.name, func(t *testing.T) {
+			restoreFlags(t)
+			addr := startGuarded(t, tr)
+			big := strings.Repeat("a", 200_000) + ".attacker.example.com"
+			got := get(t, addr, tr.path, "Host: "+big)
+			if !strings.Contains(got, "431") && !strings.Contains(got, "400") {
+				t.Fatalf("a 200 KB Host header was not refused by the header cap: %q", got)
+			}
+		})
 	}
 }
 
@@ -452,15 +541,18 @@ func TestTruncateForLogBoundsAttackerInput(t *testing.T) {
 func TestTransportAnswersOnlyItsOwnPath(t *testing.T) {
 	// Serving the transport as the root handler instead of mounting it makes it
 	// answer on every path, which widens the surface without saying so.
-	restoreFlags(t)
-	tr := transports()[1]
-	addr := startGuarded(t, tr)
-	auth := "Authorization: token decoy"
-	if got := get(t, addr, "/", "Host: "+addr, auth); !strings.Contains(got, "404") {
-		t.Errorf("the transport answered on /: %q", got)
-	}
-	if got := get(t, addr, "/.well-known/anything", "Host: "+addr, auth); !strings.Contains(got, "404") {
-		t.Errorf("the transport answered on an arbitrary path: %q", got)
+	for _, tr := range httpTransports() {
+		t.Run(tr.name, func(t *testing.T) {
+			restoreFlags(t)
+			addr := startGuarded(t, tr)
+			auth := "Authorization: " + tr.authorization(t)
+			if got := get(t, addr, "/", "Host: "+addr, auth); !strings.Contains(got, "404") {
+				t.Errorf("the transport answered on /: %q", got)
+			}
+			if got := get(t, addr, "/.well-known/anything", "Host: "+addr, auth); !strings.Contains(got, "404") {
+				t.Errorf("the transport answered on an arbitrary path: %q", got)
+			}
+		})
 	}
 }
 
@@ -670,8 +762,16 @@ func TestEveryNetworkTransportIsCovered(t *testing.T) {
 	// would otherwise reduce coverage with nothing turning red.
 	src := mustReadSource(t, "operation.go")
 	covered := map[string]bool{}
+	resourceServerCovered := false
 	for _, tr := range transports() {
-		covered[tr.name] = true
+		covered[tr.transport] = true
+		resourceServerCovered = resourceServerCovered || tr.resourceServer
+	}
+	// resource-server mode wraps the http transport in its own routing and
+	// authentication, so it needs a row of its own for the cases to see that
+	// wrapper at all.
+	if strings.Contains(src, "resourceServerMode()") && !resourceServerCovered {
+		t.Error("operation.go implements resource-server mode but no conformance row runs in it")
 	}
 	for _, name := range []string{"stdio", "sse", "http"} {
 		if !strings.Contains(src, fmt.Sprintf("case %q:", name)) {
@@ -731,7 +831,7 @@ func TestAuthenticatedRequestPassesTheDoor(t *testing.T) {
 		t.Run(tr.name, func(t *testing.T) {
 			restoreFlags(t)
 			addr := startGuarded(t, tr)
-			got := get(t, addr, tr.path, "Host: "+addr, "Authorization: Bearer decoy-per-request-value")
+			got := get(t, addr, tr.path, "Host: "+addr, "Authorization: "+tr.authorization(t))
 			if strings.Contains(got, "401") || strings.Contains(got, "403") {
 				t.Fatalf("an authenticated request was refused: %q", got)
 			}
@@ -841,11 +941,12 @@ func TestSharedServerDeclaresNoWriteDeadline(t *testing.T) {
 	restoreFlags(t)
 	for _, tr := range transports() {
 		t.Run(tr.name, func(t *testing.T) {
-			cfg, err := resolveTransportConfig(tr.name)
+			handler := tr.handler(t)
+			cfg, err := resolveTransportConfig(tr.transport)
 			if err != nil {
 				t.Fatalf("resolveTransportConfig: %v", err)
 			}
-			if got := newMCPHTTPServer(tr.handler(), cfg).WriteTimeout; got != 0 {
+			if got := newMCPHTTPServer(handler, cfg).WriteTimeout; got != 0 {
 				t.Fatalf("WriteTimeout = %v, want 0: it caps the life of every stream", got)
 			}
 		})
