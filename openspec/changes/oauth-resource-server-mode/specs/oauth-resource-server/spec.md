@@ -39,6 +39,7 @@ In `resource-server` mode, the server SHALL check its configuration before bindi
 - **Operator credential.** An operator token is configured (`-token`, `FORGEJO_ACCESS_TOKEN` or its deprecated alias), or the operator-token fallback is enabled.
 - **Missing setting.** Any of `-authorization-server`, `-resource`, `-forgejo-jwt-issuer` or `-forgejo-jwt-signing-key-file` is unset.
 - **Forgejo issuer scheme.** The URL in `-forgejo-jwt-issuer` does not use `https`.
+- **Forgejo issuer shape.** The URL in `-forgejo-jwt-issuer` ends with `/`, or carries a query, a fragment or user information. Forgejo compares `iss` byte for byte, so only one spelling of the issuer may exist.
 - **Other URL schemes.** `-authorization-server` or `-resource` uses a scheme other than `https`. The only exception is `http` with a loopback host.
 - **Host not answered.** The host of `-resource` or of `-forgejo-jwt-issuer` is not a host this server answers to under its Host policy.
 - **Signing key.** The signing key or a published key cannot be loaded, is not of a supported type (see capability `forgejo-jwt-issuer`), or two published keys have the same key ID.
@@ -68,6 +69,12 @@ In `resource-server` mode, the server SHALL check its configuration before bindi
 - **WHEN** `-authorization-server` is `https://id.example.org` and the provider's metadata reports `issuer` as `https://id.example.org/`
 - **THEN** the server SHALL refuse to start
 - **AND** the message SHALL show both values
+
+#### Scenario: Issuer URL with a trailing slash
+
+- **WHEN** `-forgejo-jwt-issuer` is `https://mcp.example.org/issuer/`
+- **THEN** the server SHALL refuse to start
+- **AND** the message SHALL say that the issuer URL must not end with a slash
 
 #### Scenario: Issuer host not answered
 

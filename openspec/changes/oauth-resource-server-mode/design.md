@@ -217,7 +217,7 @@ In `resource-server` mode, `operation.Run` runs these checks before binding, in 
 1. **Mode and transport.** The mode value is valid, and the transport is `http`. `--cli`, `stdio` and `sse` refuse.
 2. **No legacy credentials.** No operator token and no fallback flag.
 3. **Required settings.** `-authorization-server`, `-resource`, `-forgejo-jwt-issuer` and the signing key file are all set.
-   - `-forgejo-jwt-issuer` must be https, because Forgejo requires it.
+   - `-forgejo-jwt-issuer` must be https, because Forgejo requires it. It must also not end with `/` or carry a query, a fragment or user information: `…/issuer/` would publish `…/issuer//jwks.json`, and Forgejo compares `iss` byte for byte.
    - `-authorization-server` and `-resource` must be https, or http on a loopback host only, for local development.
    - The hosts of `-resource` and `-forgejo-jwt-issuer` must be permitted by `-allowed-hosts`, or be loopback on a loopback bind. Otherwise the guard would refuse the very requests those routes exist for.
 4. **Keys.** The signing key loads and has a supported type. Published keys load, with no duplicate `kid`.
