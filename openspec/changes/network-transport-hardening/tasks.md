@@ -4,6 +4,9 @@
 
 - [x] `--host` / `FORGEJO_MCP_HOST`, default `127.0.0.1`; a loopback value binds both
       loopback families so a client resolving `localhost` to `::1` still connects.
+- [x] A loopback family is skipped only when this machine cannot use it
+      (`EADDRNOTAVAIL`, `EAFNOSUPPORT`), whichever family it is; any other bind
+      failure on either family, including a port already in use, refuses to start.
 - [x] `--allowed-hosts` / `FORGEJO_MCP_ALLOWED_HOSTS`; required for a non-loopback
       bind, validated before anything is bound so a misconfigured start never opens a
       public socket.

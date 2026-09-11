@@ -176,7 +176,10 @@ By default the `sse` and `http` transports listen on loopback only, so nothing o
 this machine can reach them. This follows the Model Context Protocol's guidance for
 locally-run servers, and it is a change in behaviour: earlier versions listened on
 every network interface. Both loopback families are bound, so a client that resolves
-`localhost` to either `127.0.0.1` or `::1` connects.
+`localhost` to either `127.0.0.1` or `::1` connects. If the port is already taken on
+either family the server refuses to start, rather than serve on the other family while
+some clients reach whatever holds the port. A family the machine cannot use at all —
+IPv6 disabled, say — is skipped, and the startup log says so.
 
 **If you run the server in a container, or serve remote clients, you must now say so
 explicitly.** The default will not accept connections from outside the machine — or,

@@ -8,9 +8,7 @@ The `sse` and `http` transports SHALL bind the address given by `--host` /
 `FORGEJO_MCP_HOST`, defaulting to `127.0.0.1`. They SHALL NOT bind the unspecified
 address unless the operator asks for it.
 
-When the configured address is a loopback name, the server SHALL listen on both
-loopback families, so that a client resolving `localhost` to `::1` can connect. Failure
-to bind one family SHALL NOT prevent startup when the other succeeded.
+When the configured address is a loopback name, the server SHALL listen on both loopback families, so that a client resolving `localhost` to `::1` can connect. A family this machine cannot use — IPv6 disabled, or absent from the kernel — SHALL NOT prevent startup when the other family bound, whichever family is the missing one. Any other failure to bind either family, including an address already in use, SHALL prevent startup, and every listener already bound SHALL be closed.
 
 The startup log SHALL state the address actually bound and who can reach it. It SHALL
 NOT print a fixed `localhost` URL.
@@ -28,6 +26,20 @@ NOT print a fixed `localhost` URL.
 - **THEN** the server SHALL refuse to start, naming the option that fixes it
 - **AND** it SHALL refuse before binding, so a misconfigured start never opens a
   public socket
+
+#### Scenario: An unavailable loopback family does not block startup
+
+- **WHEN** the server starts on a loopback address
+- **AND** this machine cannot use one loopback family, whichever one it is
+- **THEN** the server SHALL start on the other family
+- **AND** it SHALL log the skipped family at a level the default configuration shows
+
+#### Scenario: A loopback port taken on either family refuses to start
+
+- **WHEN** the server starts on a loopback address
+- **AND** binding one loopback family fails because the address is already in use
+- **THEN** the server SHALL refuse to start rather than serve on the other family alone
+- **AND** it SHALL close any listener it had already bound
 
 ### Requirement: Host and Origin are validated on every request
 
