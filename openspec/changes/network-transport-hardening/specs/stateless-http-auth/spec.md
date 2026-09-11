@@ -4,31 +4,18 @@
 
 ### Requirement: HTTP transport extracts per-request token from Authorization header
 
-When the server is started with `--transport http`, every incoming MCP request SHALL be
-inspected for an `Authorization` header. The header SHALL be parsed for one of two
-schemes, case-insensitively:
+When the server is started with `--transport http`, every incoming MCP request SHALL be inspected for an `Authorization` header. The header SHALL be parsed for one of two schemes, case-insensitively:
 
 1. `token <X>` — Forgejo's native token scheme.
 2. `Bearer <X>` — OAuth2-style bearer transport.
 
-When a recognized scheme is present, the parsed token value SHALL be injected into the
-request `context.Context` via `forgejo.WithToken(ctx, token)`. The MCP handler invoked
-for that request receives the augmented context.
+When a recognized scheme is present, the parsed token value SHALL be injected into the request `context.Context` via `forgejo.WithToken(ctx, token)`. The MCP handler invoked for that request receives the augmented context.
 
-When the `Authorization` header is absent, empty, or carries an unrecognized scheme, the
-request `context.Context` SHALL NOT carry a token, and the request SHALL be refused with
-`401 Unauthorized` before it reaches an MCP handler — unless the operator has set
-`--allow-operator-token-fallback`, in which case the request is admitted and downstream
-code falls back to the global singleton client (see "Token-aware client factory" below).
+When the `Authorization` header is absent, empty, or carries an unrecognized scheme, the request `context.Context` SHALL NOT carry a token, and the request SHALL be refused with `401 Unauthorized` before it reaches an MCP handler — unless the operator has set `--allow-operator-token-fallback`, in which case the request is admitted and downstream code falls back to the global singleton client (see "Token-aware client factory" below).
 
-The transport MUST NOT accept tokens without a scheme prefix; a header value that does
-not match one of the two named schemes SHALL be treated as if no header were present.
+The transport MUST NOT accept tokens without a scheme prefix; a header value that does not match one of the two named schemes SHALL be treated as if no header were present.
 
-This check establishes only that a credential is present and carries a recognized
-scheme. It does not validate the credential: a request carrying an invalid token passes
-it, and the forge refuses that token on the first call that reaches it. A request that
-never reaches the forge — `initialize`, `tools/list`, or holding an event stream open —
-is therefore not protected against a caller presenting any well-formed credential.
+This check establishes only that a credential is present and carries a recognized scheme. It does not validate the credential: a request carrying an invalid token passes it, and the forge refuses that token on the first call that reaches it. A request that never reaches the forge — `initialize`, `tools/list`, or holding an event stream open — is therefore not protected against a caller presenting any well-formed credential.
 
 #### Scenario: Request with `token` scheme injects the token
 
@@ -87,12 +74,7 @@ is therefore not protected against a caller presenting any well-formed credentia
 
 ### Requirement: SSE transport extracts per-request token from Authorization header
 
-When the server is started with `--transport sse`, the SSE server SHALL apply the same
-`Authorization`-header rules as the HTTP transport (above) — extraction via the SDK's
-`WithSSEContextFunc`, and refusal with `401 Unauthorized` of a request carrying no
-usable credential unless `--allow-operator-token-fallback` is set. The rules SHALL apply
-to every request, including each message posted to an existing session. All scenarios
-of the HTTP requirement apply identically.
+When the server is started with `--transport sse`, the SSE server SHALL apply the same `Authorization`-header rules as the HTTP transport (above) — extraction via the SDK's `WithSSEContextFunc`, and refusal with `401 Unauthorized` of a request carrying no usable credential unless `--allow-operator-token-fallback` is set. The rules SHALL apply to every request, including each message posted to an existing session. All scenarios of the HTTP requirement apply identically.
 
 #### Scenario: SSE request with `Bearer` scheme injects the token
 
@@ -161,15 +143,9 @@ so a request from the internet arrives on a loopback socket carrying a loopback
 
 ### Requirement: Raw HTTP path respects per-request token
 
-The raw-HTTP helpers in `pkg/forgejo/rawhttp.go` (`DoJSON`, `DoJSONList`, `DoAPIRaw`,
-`DoMultipart`, `DoRaw` and their variants) SHALL resolve the credential for an
-outbound call through the same function the token-aware client factory uses, and
-SHALL prefer the token carried in `ctx` over the global `flag.Token` value when setting
-the `Authorization` header.
+The raw-HTTP helpers in `pkg/forgejo/rawhttp.go` (`DoJSON`, `DoJSONList`, `DoAPIRaw`, `DoMultipart`, `DoRaw` and their variants) SHALL resolve the credential for an outbound call through the same function the token-aware client factory uses, and SHALL prefer the token carried in `ctx` over the global `flag.Token` value when setting the `Authorization` header.
 
-When no token is present in `ctx`, a helper SHALL fall back to `flag.Token` only where
-the token-aware client factory would. Otherwise it SHALL return `ErrNoRequestToken`
-without setting an `Authorization` header and without sending the request.
+When no token is present in `ctx`, a helper SHALL fall back to `flag.Token` only where the token-aware client factory would. Otherwise it SHALL return `ErrNoRequestToken` without setting an `Authorization` header and without sending the request.
 
 Attachment tool handlers in `operation/attachment/` SHALL pass their request `ctx` into
 these helpers so per-request identity is honored for binary operations.
