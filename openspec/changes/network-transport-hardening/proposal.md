@@ -29,9 +29,10 @@ reachable only by selecting a transport that is not the default.
 
 ## What Changes
 
-- **New `--host` / `FORGEJO_MCP_HOST`**, default `127.0.0.1`. A loopback value binds
+- **New `--host` / `FORGEJO_MCP_HOST`**, default `localhost`. A loopback NAME binds
   both loopback families, so a client that resolves `localhost` to `::1` still
-  connects.
+  connects; a loopback ADDRESS (`127.0.0.1`, `::1`) binds that family alone, which
+  is how an operator asks for one family.
 - **New `--allowed-hosts` / `FORGEJO_MCP_ALLOWED_HOSTS`.** Required when the bind
   address is not loopback: the server refuses to start without it rather than starting
   and rejecting every request. Loopback names remain acceptable on a loopback listener
