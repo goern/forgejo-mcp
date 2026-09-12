@@ -1,7 +1,7 @@
 # branch-protection Specification
 
 ## Purpose
-TBD - created by archiving change branch-protection-management. Update Purpose after archive.
+Read and manage Forgejo branch protection rules — list, get, create, edit with PATCH semantics, and delete — and expose them as MCP resources. This is what lets an agent inspect or adjust who may push to a protected branch without a human opening the repository settings UI.
 ## Requirements
 ### Requirement: List branch protection rules (bounded)
 

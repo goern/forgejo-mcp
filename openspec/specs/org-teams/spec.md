@@ -1,7 +1,7 @@
 # org-teams Specification
 
 ## Purpose
-TBD - created by archiving change add-org-management. Update Purpose after archive.
+Manage the teams inside an organization — list and create teams, add and remove members, and attach or detach repositories. Teams are how permissions are granted in bulk, so this is the capability that decides what an org's members can actually reach.
 ## Requirements
 ### Requirement: List organization teams
 The system SHALL provide a `list_org_teams` MCP tool that lists teams in an organization. The tool SHALL accept:

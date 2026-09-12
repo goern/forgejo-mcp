@@ -37,6 +37,17 @@
             "matchStrings": [
                 "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+ARG \\w+_VERSION=(?<currentValue>\\S+)"
             ]
+        },
+        {
+            "customType": "regex",
+            "description": "RELEASE_TOOLS_IMAGE defaults in .tekton/tasks/*.yaml. These pin the prebuilt release-tools image that six CI tasks run in. Tracked here because Renovate's tekton manager reads stepTemplate/step images, not a Task param default, so without this manager the pin would silently rot the way codeberg.org/operate-first/release-tools:latest did (#574).",
+            "managerFilePatterns": [
+                "/^\\.tekton/tasks/.*\\.yaml$/"
+            ],
+            "matchStrings": [
+                "default: (?<depName>git\\.b4mad\\.industries/agentic-forges/release-tools):(?<currentValue>v[0-9][^\\s]*)"
+            ],
+            "datasourceTemplate": "docker"
         }
     ],
     "description": [

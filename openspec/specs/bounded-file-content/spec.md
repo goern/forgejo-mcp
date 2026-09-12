@@ -1,7 +1,7 @@
 # bounded-file-content Specification
 
 ## Purpose
-TBD - created by archiving change add-bounded-text-responses. Update Purpose after archive.
+Serve repository file content in caller-controlled line ranges so an MCP client can read a large file without the response blowing past its context window. Slicing is the point: an unbounded file read is the failure mode this capability exists to prevent.
 ## Requirements
 ### Requirement: Line-range slicing of file content
 

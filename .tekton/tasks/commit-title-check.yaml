@@ -48,7 +48,7 @@ spec:
         Image carrying git + bash + grep. Reuses release-tools because it is
         already pulled by go-ci on every PR run.
       type: string
-      default: codeberg.org/operate-first/release-tools:latest
+      default: git.b4mad.industries/agentic-forges/release-tools:v1.0.4
     - name: CC_REGEX
       description: Conventional Commits regex (anchored, ERE).
       type: string

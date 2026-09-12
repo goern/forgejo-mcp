@@ -1,7 +1,7 @@
 # bounded-pr-diff Specification
 
 ## Purpose
-TBD - created by archiving change add-bounded-text-responses. Update Purpose after archive.
+Serve a pull-request diff one file at a time, so reviewing a large PR through an MCP client stays possible. A whole-PR diff is unbounded by nature; per-file slicing makes the size a function of what the caller asked for rather than of how big the PR happens to be.
 ## Requirements
 ### Requirement: Per-file slicing of pull-request diff
 

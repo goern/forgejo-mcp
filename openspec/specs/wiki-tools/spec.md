@@ -1,7 +1,7 @@
 # wiki-tools Specification
 
 ## Purpose
-TBD - created by archiving change add-wiki-support. Update Purpose after archive.
+Read and write repository wiki pages — list, get, get revisions, create, update, delete. Every read is bounded and resumable and every write base64-encodes content, because the wiki API returns encoded bodies and an unbounded page fetch is exactly what breaks an MCP client. Update never silently renames a page.
 ## Requirements
 ### Requirement: Wiki tools use direct REST calls, not the SDK
 

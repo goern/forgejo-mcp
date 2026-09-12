@@ -1,7 +1,7 @@
 # org-membership Specification
 
 ## Purpose
-TBD - created by archiving change add-org-management. Update Purpose after archive.
+List an organization's members, check whether a given user belongs to it, and remove a member. Membership is deliberately its own capability: it answers who is in the org, while org-crud answers what the org is and org-teams answers how members are grouped.
 ## Requirements
 ### Requirement: List organization members
 The system SHALL provide a `list_org_members` MCP tool that lists members of an organization. The tool SHALL accept:
