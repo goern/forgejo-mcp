@@ -10,7 +10,7 @@ spec:
       description: |
         Pre-built release-tools image containing openspec (and other tools).
       type: string
-      default: git.b4mad.industries/agentic-forges/release-tools:v1.0.3
+      default: git.b4mad.industries/agentic-forges/release-tools:v1.0.4
   workspaces:
     - name: source
       mountPath: /workspace/src

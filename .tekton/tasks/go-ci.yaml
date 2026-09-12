@@ -21,7 +21,7 @@ spec:
         Pre-built release-tools image containing govulncheck (and other tools).
         Used only for the govulncheck step.
       type: string
-      default: git.b4mad.industries/agentic-forges/release-tools:v1.0.3
+      default: git.b4mad.industries/agentic-forges/release-tools:v1.0.4
     - name: LINT_REQUIRED
       description: |
         If "true", lint findings fail the build. If "false", lint runs but its
