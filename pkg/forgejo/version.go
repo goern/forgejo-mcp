@@ -86,7 +86,7 @@ func MajorVersion(v string) (int, error) {
 	major, _, _ := strings.Cut(s, ".")
 	n, err := strconv.Atoi(major)
 	if err != nil || n < 0 {
-		return 0, fmt.Errorf("Forgejo version %q has no numeric major component", v)
+		return 0, fmt.Errorf("the Forgejo version %q has no numeric major component", v)
 	}
 	return n, nil
 }
