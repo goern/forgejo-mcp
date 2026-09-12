@@ -28,7 +28,7 @@ func restoreFlags(t *testing.T) {
 	t.Helper()
 	host, hosts, origins := flag.Host, flag.AllowedHosts, flag.AllowedOrigins
 	fallback, require := flag.AllowOperatorTokenFallback, forgejo.RequireRequestToken()
-	flag.Host, flag.AllowedHosts, flag.AllowedOrigins = "127.0.0.1", nil, nil
+	flag.Host, flag.AllowedHosts, flag.AllowedOrigins = "localhost", nil, nil
 	flag.AllowOperatorTokenFallback = false
 	t.Cleanup(func() {
 		flag.Host, flag.AllowedHosts, flag.AllowedOrigins = host, hosts, origins
@@ -479,12 +479,13 @@ func TestExposedListenerWithNoDeclaredHostsRefusesBeforeBinding(t *testing.T) {
 	}
 }
 
-func TestLoopbackConfigurationBindsBothLoopbackFamilies(t *testing.T) {
+func TestLoopbackNameBindsBothLoopbackFamilies(t *testing.T) {
 	// Binding only 127.0.0.1 leaves a client that resolves "localhost" to ::1
 	// unable to connect — and connecting to "localhost" is what this project's
-	// own documentation tells clients to do.
+	// own documentation tells clients to do. The flag's default is this name,
+	// so this is what an operator who configures nothing gets.
 	restoreFlags(t)
-	for _, host := range []string{"127.0.0.1", "localhost", "::1"} {
+	for _, host := range []string{"localhost", "LocalHost"} {
 		flag.Host = host
 		cfg, err := resolveTransportConfig("http")
 		if err != nil {
@@ -492,6 +493,34 @@ func TestLoopbackConfigurationBindsBothLoopbackFamilies(t *testing.T) {
 		}
 		if len(cfg.listenHosts) != 2 {
 			t.Errorf("%s: listens on %v, want both loopback families", host, cfg.listenHosts)
+		}
+		if !cfg.loopbackOnly {
+			t.Errorf("%s: not treated as loopback-only", host)
+		}
+	}
+}
+
+func TestLoopbackAddressBindsOnlyTheFamilyItNames(t *testing.T) {
+	// The escape hatch for a machine whose other loopback family fails in a way
+	// isFamilyUnavailable does not recognise: an operator who writes an address
+	// gets that address, and nothing else is attempted on their behalf.
+	restoreFlags(t)
+	for host, want := range map[string]string{
+		"127.0.0.1":  "127.0.0.1",
+		"127.0.0.53": "127.0.0.53",
+		"::1":        "::1",
+		"[::1]":      "::1",
+	} {
+		flag.Host = host
+		cfg, err := resolveTransportConfig("http")
+		if err != nil {
+			t.Fatalf("%s: %v", host, err)
+		}
+		if len(cfg.listenHosts) != 1 || cfg.listenHosts[0] != want {
+			t.Errorf("%s: listens on %v, want only %s", host, cfg.listenHosts, want)
+		}
+		if !cfg.loopbackOnly {
+			t.Errorf("%s: not treated as loopback-only", host)
 		}
 	}
 }

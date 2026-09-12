@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 	"unicode/utf8"
 
@@ -59,6 +60,13 @@ func isLoopbackHostname(host string) bool {
 		return false
 	}
 	return addr.IsLoopback()
+}
+
+// isIPLiteral reports whether host is an address rather than a name. Brackets
+// around an IPv6 literal are accepted, as in "[::1]".
+func isIPLiteral(host string) bool {
+	_, err := netip.ParseAddr(strings.Trim(host, "[]"))
+	return err == nil
 }
 
 // splitHostPort separates a "host" or "host:port" authority. It returns the
@@ -350,10 +358,16 @@ func guardRequests(next http.Handler, hosts hostPolicy, origins originPolicy, re
 // transportConfig is the decision this change exists to make explicit, resolved
 // once from configuration before anything is bound.
 type transportConfig struct {
-	// listenHosts are the addresses to bind. A loopback request resolves to
-	// both loopback families, because binding only 127.0.0.1 leaves a client
-	// that resolves "localhost" to ::1 unable to connect — and connecting to
-	// "localhost" is what this project's own documentation tells clients to do.
+	// listenHosts are the addresses to bind.
+	//
+	// A loopback NAME resolves to both loopback families, because binding only
+	// 127.0.0.1 leaves a client that resolves "localhost" to ::1 unable to
+	// connect — and connecting to "localhost" is what this project's own
+	// documentation tells clients to do.
+	//
+	// A loopback ADDRESS binds exactly itself. An operator who writes an address
+	// asked for that address, and that is the way out when this machine's other
+	// loopback family fails for a reason isFamilyUnavailable cannot recognise.
 	listenHosts []string
 	// loopbackOnly is the configured intent; the bound listeners are checked
 	// against it afterwards rather than trusted from here.
@@ -379,10 +393,11 @@ func resolveTransportConfig(transportName string) (transportConfig, error) {
 	}
 
 	cfg.loopbackOnly = isLoopbackHostname(host)
-	if cfg.loopbackOnly {
+	switch {
+	case !cfg.loopbackOnly, isIPLiteral(host):
+		cfg.listenHosts = []string{strings.Trim(host, "[]")}
+	default:
 		cfg.listenHosts = []string{"127.0.0.1", "::1"}
-	} else {
-		cfg.listenHosts = []string{host}
 	}
 
 	cfg.hosts = hostPolicy{allowed: normalizeList(flag.AllowedHosts), loopbackOnly: cfg.loopbackOnly}
@@ -445,6 +460,88 @@ func newMCPHTTPServer(handler http.Handler, cfg transportConfig) *http.Server {
 	}
 }
 
+// listenFunc has net.Listen's signature. bindListeners takes one so the tests
+// can make a chosen loopback family fail in a chosen way.
+type listenFunc func(network, address string) (net.Listener, error)
+
+// isFamilyUnavailable reports whether a bind error means this machine cannot use
+// the address family at all — IPv6 disabled, or absent from the kernel — as
+// opposed to the address being taken or forbidden.
+func isFamilyUnavailable(err error) bool {
+	return errors.Is(err, syscall.EADDRNOTAVAIL) || errors.Is(err, syscall.EAFNOSUPPORT)
+}
+
+// bindListeners binds every address in cfg.listenHosts on port.
+//
+// On a loopback configuration, a family this machine cannot use is skipped,
+// whichever family it is, so a host with IPv6 disabled still starts. Every other
+// bind failure refuses to start. That includes an address already in use, on
+// either family: starting on the other family alone would leave "localhost"
+// resolving, for some clients, to whatever process holds the port — and those
+// clients would send that process their Authorization header.
+func bindListeners(transportName string, cfg transportConfig, port int, listen listenFunc) ([]net.Listener, error) {
+	var listeners []net.Listener
+	var skipped []error
+	closeAll := func() {
+		for _, ln := range listeners {
+			_ = ln.Close()
+		}
+	}
+	for _, host := range cfg.listenHosts {
+		addr := net.JoinHostPort(host, strconv.Itoa(port))
+		ln, err := listen("tcp", addr)
+		if err != nil {
+			if cfg.loopbackOnly && isFamilyUnavailable(err) {
+				log.Info("Loopback address family unavailable on this machine, continuing without it",
+					log.StringField("address", addr),
+					log.ErrorField(err),
+				)
+				skipped = append(skipped, err)
+				continue
+			}
+			closeAll()
+			log.Error("Failed to bind listener",
+				log.StringField("transport", transportName),
+				log.StringField("address", addr),
+				log.ErrorField(err),
+			)
+			return nil, fmt.Errorf("failed to bind %s listener on %s: %w%s",
+				transportName, addr, err, oneFamilyHint(cfg))
+		}
+		if cfg.loopbackOnly && !addrIsLoopbackOnly(ln.Addr()) {
+			// The configuration said loopback and the kernel disagreed. Trust
+			// the listener, not the string.
+			closeAll()
+			_ = ln.Close()
+			return nil, fmt.Errorf(
+				"refusing to start: %s transport asked for loopback but bound %s",
+				transportName, ln.Addr())
+		}
+		listeners = append(listeners, ln)
+	}
+	if len(listeners) == 0 {
+		if why := errors.Join(skipped...); why != nil {
+			// Without the errnos, a machine with no usable loopback at all is
+			// indistinguishable from one whose families were never tried.
+			return nil, fmt.Errorf("failed to bind any %s listener: %w", transportName, why)
+		}
+		return nil, fmt.Errorf("failed to bind any %s listener", transportName)
+	}
+	return listeners, nil
+}
+
+// oneFamilyHint names the way out of a refusal the operator did not configure
+// directly. A loopback NAME expands to both families, so the failing address can
+// be one the operator never wrote down; saying which flag binds a single family
+// keeps that from being a source-reading exercise.
+func oneFamilyHint(cfg transportConfig) string {
+	if len(cfg.listenHosts) < 2 {
+		return ""
+	}
+	return "; a loopback host name binds both 127.0.0.1 and ::1, " +
+		"so pass -host 127.0.0.1 or -host ::1 (or FORGEJO_MCP_HOST) to bind one family only"
+}
+
 // serveMCPOverHTTP binds the listeners for a network transport and serves
 // handler on all of them.
 //
@@ -460,48 +557,15 @@ func serveMCPOverHTTP(transportName string, handler http.Handler, port int) erro
 
 	forgejo.SetRequireRequestToken(cfg.requireAuth)
 
-	var listeners []net.Listener
-	closeAll := func() {
+	listeners, err := bindListeners(transportName, cfg, port, net.Listen)
+	if err != nil {
+		return err
+	}
+	defer func() {
 		for _, ln := range listeners {
 			_ = ln.Close()
 		}
-	}
-	for _, host := range cfg.listenHosts {
-		addr := net.JoinHostPort(host, strconv.Itoa(port))
-		ln, err := net.Listen("tcp", addr)
-		if err != nil {
-			if cfg.loopbackOnly && len(listeners) > 0 {
-				// One loopback family is enough; a machine with IPv6 disabled
-				// must still start.
-				log.Debug("Loopback family unavailable, continuing",
-					log.StringField("address", addr),
-					log.ErrorField(err),
-				)
-				continue
-			}
-			closeAll()
-			log.Error("Failed to bind listener",
-				log.StringField("transport", transportName),
-				log.StringField("address", addr),
-				log.ErrorField(err),
-			)
-			return fmt.Errorf("failed to bind %s listener on %s: %w", transportName, addr, err)
-		}
-		if cfg.loopbackOnly && !addrIsLoopbackOnly(ln.Addr()) {
-			// The configuration said loopback and the kernel disagreed. Trust
-			// the listener, not the string.
-			closeAll()
-			_ = ln.Close()
-			return fmt.Errorf(
-				"refusing to start: %s transport asked for loopback but bound %s",
-				transportName, ln.Addr())
-		}
-		listeners = append(listeners, ln)
-	}
-	if len(listeners) == 0 {
-		return fmt.Errorf("failed to bind any %s listener", transportName)
-	}
-	defer closeAll()
+	}()
 
 	bound := make([]string, 0, len(listeners))
 	for _, ln := range listeners {
