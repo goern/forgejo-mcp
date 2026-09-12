@@ -6,7 +6,7 @@ See `proposal.md` for why this mode exists and what it adds. The design below is
 
 **Current code.**
 
-- **Request guard.** `operation/listen.go` owns both network listeners. `guardRequests` checks, in order, Host, then Origin, then Authorization. A request without a usable `Authorization` header gets `401` before it reaches the MCP handler.
+- **Request guard.** `operation/listen.go` owns both network listeners. `guardRequests` checks, in order, Host, then Origin, then Authorization. A request without a usable `Authorization` header gets `401` before it reaches the MCP handler. That last check reads presence and scheme, not validity: the forge decides whether a token is real, so a well-formed but invalid credential still reaches `initialize`, `tools/list` and an open event stream (#588).
 - **Token into context.** `requestTokenContextFunc` in `operation/operation.go` lifts the header's token into the request context, and mcp-go hands that context to every tool handler.
 - **Credential lookup.** `forgejo.Client(ctx)` and the raw-HTTP helper both resolve their credential through one function, `tokenForRequest` in `pkg/forgejo/credential.go`.
 - **Version probe.** Every ephemeral SDK client probes `/api/v1/version` on construction, which costs one round trip per tool call today.
@@ -289,7 +289,7 @@ In `resource-server` mode, `operation.Run` runs these checks before binding, in 
 
 **Rollback.** Set `-auth-mode passthrough` and remove the D2 flags. Users' integrations stay in Forgejo, unused. Previously minted tokens expire within 5 minutes.
 
-**Upstream sequencing.** `network-transport-hardening` is archived before this change's specs are written, so the `stateless-http-auth` delta is written against the current requirement text.
+**Upstream sequencing.** `network-transport-hardening` was archived on 2026-09-12, so the `stateless-http-auth` delta is written against the current requirement text — including the paragraph #585 added, which states that the door check is presence-and-shape rather than validation.
 
 ## Open Questions
 

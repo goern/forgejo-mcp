@@ -70,7 +70,8 @@ Out of scope, rejected on the record in #582:
 
 - `stateless-http-auth`. In `resource-server` mode:
   - **Credential source.** The token-aware client factory and the raw-HTTP helper take their Forgejo credential from the issuer, never from the request's `Authorization` header. The header's value is not injected as a Forgejo token. The outbound header scheme stays `token`.
-  - **Unauthenticated metadata routes.** The protected resource metadata, the OpenID discovery document and the JWKS are served to requests that carry no `Authorization` header. Host and Origin validation still apply to them. Every other path keeps the rule that a request without a token is refused with 401 before it reaches a handler.
+  - **A validated `401`, not a shape check.** In `passthrough` the door establishes only that a credential is present and carries a recognised scheme; the forge decides whether it is real. On the MCP endpoint in this mode the `401` is an authentication result: the token is verified against the provider's key set before anything else runs. That closes, for this mode only, the gap recorded in #588.
+  - **Unauthenticated metadata routes.** The protected resource metadata, the OpenID discovery document and the JWKS are served to requests that carry no `Authorization` header. Host and Origin validation still apply to them. Every other path keeps the rule that a request without a usable credential is refused with 401 before it reaches a handler.
   `passthrough` behaviour stays as specified. The logging rules for the inbound access token and the outbound JWT are new behaviour of this mode. They are specified in `oauth-resource-server` and `forgejo-jwt-issuer`, not in this delta.
 
 ## Impact
@@ -85,9 +86,9 @@ Out of scope, rejected on the record in #582:
 - **Deployment order for operators and users:**
   - The operator needs an OIDC IdP that issues JWT access tokens, or else a client-supplied audience (see below), and Forgejo 16 or newer.
   - forgejo-mcp must already be running at its public https issuer URL, serving a non-empty JWKS, before any user can save an Authorized Integration. Forgejo validates the issuer when the integration is saved, refuses redirects, and caps each document at 16 KiB, so the reverse proxy must not redirect these paths.
-  - Forgejo blocks private and loopback issuers unless `[authorized_integration] ALLOW_LOCALNETWORKS` is set.
+  - Forgejo fetches those documents through a client that, with `[authorized_integration] ALLOWED_DOMAINS` empty, reaches public addresses only. An issuer resolving to a loopback or private address therefore needs either a non-empty `ALLOWED_DOMAINS` naming its host, or `ALLOW_LOCALNETWORKS = true`.
   - Each user then creates an integration with a `sub` claim rule and makes its audience available to forgejo-mcp.
-- **Sequencing:** `openspec/changes/network-transport-hardening/` also modifies `stateless-http-auth`, including the 401 rule amended above. It has not been archived yet. Archive it first, so this change's delta applies to the current requirement text.
+- **Sequencing:** `network-transport-hardening` also modified `stateless-http-auth`, including the 401 rule amended above. It was archived on 2026-09-12, after #585 made its delta consistent and #586 fixed the loopback bind rule, so this change's delta is written against the current requirement text.
 - **Validation before specs are written.** A spike on 2026-09-10, against Forgejo 16.0.3 with Zitadel 4.17.3 as the IdP, confirmed all five points below. The measurements are recorded in `design.md` (Context):
   1. The audience claim can be placed in the JWT **access** token.
   2. Forgejo accepts the self-signed JWT on its REST API.

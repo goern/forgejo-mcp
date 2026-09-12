@@ -4,8 +4,8 @@ The implementation can land as several PRs, one per group or per pair of groups.
 
 ## 1. Prerequisites
 
-- [ ] 1.1 Get `openspec/changes/network-transport-hardening/` archived, either by the maintainer or by a small PR running `openspec archive network-transport-hardening`. Verify on `main`: `openspec/specs/network-transport-binding/spec.md` exists, and `openspec list` no longer shows the change. **Blocked on the maintainer, see #583.**
-- [ ] 1.2 Rebase this branch on `main`, then write `specs/stateless-http-auth/spec.md` as a delta. It covers two things: the credential source in `resource-server` mode, and unauthenticated access to the metadata, discovery and JWKS routes, while every other path keeps the 401-at-the-door rule. Verify with `openspec validate oauth-resource-server-mode --strict`.
+- [x] 1.1 Get `openspec/changes/network-transport-hardening/` archived, either by the maintainer or by a small PR running `openspec archive network-transport-hardening`. Verify on `main`: `openspec/specs/network-transport-binding/spec.md` exists, and `openspec list` no longer shows the change. **Done 2026-09-12:** the maintainer archived it after #585 made its delta consistent and #586 fixed the loopback bind rule.
+- [x] 1.2 Rebase this branch on `main`, then write `specs/stateless-http-auth/spec.md` as a delta. It covers two things: the credential source in `resource-server` mode, and unauthenticated access to the metadata, discovery and JWKS routes, while every other path keeps the 401-at-the-door rule. Verify with `openspec validate oauth-resource-server-mode --strict`, and by archiving into a scratch copy: `openspec validate --all --strict` must stay green and the resulting `stateless-http-auth` spec must keep every existing scenario.
 - [ ] 1.3 Add `github.com/lestrrat-go/jwx/v3` and review its transitive dependencies for licence compatibility with GPL-3.0-or-later. Verify that `make vendor` leaves `go.mod`/`go.sum` tidy and `make build` succeeds.
 
 ## 2. Configuration and keys
