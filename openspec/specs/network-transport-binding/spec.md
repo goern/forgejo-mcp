@@ -1,7 +1,15 @@
 # network-transport-binding Specification
 
 ## Purpose
-TBD - created by archiving change network-transport-hardening. Update Purpose after archive.
+
+Decide what the `sse` and `http` transports expose on the network: the address they
+bind, the `Host` and `Origin` values they answer to, and how a loopback family that
+cannot be bound is treated. Both bind loopback by default and refuse to start on a
+network-reachable address unless the operator declares the host names clients will use,
+so a misconfigured start never opens a public socket. A loopback name binds both
+families, because a client that resolves `localhost` to either one must reach the same
+server; only a family this machine cannot use at all is skipped, and any other bind
+failure refuses the start.
 
 ## Requirements
 
