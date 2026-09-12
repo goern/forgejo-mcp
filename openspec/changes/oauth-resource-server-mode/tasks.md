@@ -113,7 +113,7 @@ The implementation can land as several PRs, one per group or per pair of groups.
   - configuring an MCP client with a pre-registered client ID.
 
   Verify by onboarding one user with it in 9.1.
-- [ ] 8.4 `SECURITY.md`, "Deployment notes": add a note on `resource-server` mode. forgejo-mcp then holds a signing key instead of a forge token, and that key acts for every user whose integration trusts it. Verify by review in the PR.
+- [x] 8.4 `SECURITY.md`, "Deployment notes": add a note on `resource-server` mode. forgejo-mcp then holds a signing key instead of a forge token, and that key acts for every user whose integration trusts it. Verify by review in the PR.
 
 ## 9. Live deployment and end-to-end verification
 
@@ -139,11 +139,11 @@ The implementation can land as several PRs, one per group or per pair of groups.
 
   Use `showboat-cli` or captured `curl` evidence against the 9.1 deployment where the behaviour is observable from outside. Use `test-invocation` for scenarios only a test can trigger, such as a symmetric-algorithm token or a burst of unknown key IDs. Verify that `make check-demos` exits 0.
 - [x] 10.2 Do the same for `specs/forgejo-jwt-issuer/spec.md` with `specs/forgejo-jwt-issuer/forgejo-jwt-issuer.demo.md`. Live evidence includes the discovery document and JWKS fetched from the deployment, and a decoded minted JWT (claims only, never the signature). Verify that `make check-demos` exits 0.
-- [ ] 10.3 Prove the scenarios of the `stateless-http-auth` delta. Agree with the maintainer whether `openspec/specs/stateless-http-auth/spec.md` becomes anchored, since that would also require proofs for its existing scenarios. Otherwise add a non-anchored section to `oauth-resource-server.demo.md`. Verify that `make check-demos` exits 0 and the PR description links every demo.
+- [x] 10.3 Prove the scenarios of the `stateless-http-auth` delta. Agree with the maintainer whether `openspec/specs/stateless-http-auth/spec.md` becomes anchored, since that would also require proofs for its existing scenarios. Otherwise add a non-anchored section to `oauth-resource-server.demo.md`. Verify that `make check-demos` exits 0 and the PR description links every demo.
 
 ## 11. Final verification
 
-- [ ] 11.1 Run all quality gates on the final branch and confirm each exits 0:
+- [x] 11.1 Run all quality gates on the final branch and confirm each exits 0:
   - `go vet ./...`
   - `go test ./...`
   - `make build`

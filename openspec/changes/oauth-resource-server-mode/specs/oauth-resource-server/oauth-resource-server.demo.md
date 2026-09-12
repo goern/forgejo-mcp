@@ -653,3 +653,97 @@ proof ./operation/ -run '^TestNeitherTokenIsLoggedAtAnyLevel$'
 --- PASS: TestNeitherTokenIsLoggedAtAnyLevel
 ok  	git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation
 ```
+
+## The `stateless-http-auth` delta
+
+`openspec/specs/stateless-http-auth/spec.md` is not an anchored spec, so this change's
+delta to it is proven here rather than in a sibling demo of its own. Making that spec
+anchored would oblige every one of its existing scenarios to carry a proof, which is the
+maintainer's call — see the note in the pull request.
+
+### Scenario: Metadata and issuer documents are served without a credential
+
+The three public documents answer with no `Authorization` header at all; the MCP
+endpoint of the same deployment does not, and its refusal carries the challenge that
+tells a client where to authenticate.
+
+<!-- evidence-kind: showboat-cli -->
+
+```bash
+for path in /.well-known/oauth-protected-resource/mcp /issuer/.well-known/openid-configuration /issuer/jwks.json /mcp; do
+  curl -sS -o /dev/null -w "%{http_code}  $path\n" "$FORGEJO_MCP_LIVE$path"
+done
+curl -sS -o /dev/null -D - -X POST "$FORGEJO_MCP_LIVE/mcp" | tr -d "\r" | grep -iE "^(HTTP/|www-authenticate:)"
+```
+
+```output
+200  /.well-known/oauth-protected-resource/mcp
+200  /issuer/.well-known/openid-configuration
+200  /issuer/jwks.json
+401  /mcp
+HTTP/2 401 
+www-authenticate: Bearer resource_metadata="https://forgejo-mcp.byteflavour.dev/.well-known/oauth-protected-resource/mcp", scope="openid profile email"
+```
+
+### Scenario: The header carries a bearer access token, not a Forgejo token
+
+`token <jwt>` counts as no bearer token at all, so its challenge carries no `error`
+parameter. A malformed `Bearer` value is a token that was presented and failed
+validation, so its challenge adds `error="invalid_token"`. Neither reaches Forgejo.
+
+<!-- evidence-kind: showboat-cli -->
+
+```bash
+for scheme in token Bearer; do
+  curl -sS -o /dev/null -D - -X POST "$FORGEJO_MCP_LIVE/mcp" \
+    -H "Authorization: $scheme eyJhbGciOiJFUzI1NiJ9.e30.x" | tr -d "\r" | grep -iE "^www-authenticate:"
+done
+```
+
+```output
+www-authenticate: Bearer resource_metadata="https://forgejo-mcp.byteflavour.dev/.well-known/oauth-protected-resource/mcp", scope="openid profile email"
+www-authenticate: Bearer resource_metadata="https://forgejo-mcp.byteflavour.dev/.well-known/oauth-protected-resource/mcp", scope="openid profile email", error="invalid_token"
+```
+
+### Scenario: The inbound access token is not a Forgejo credential
+
+An in-process Forgejo records the `Authorization` header of every request a handler
+makes. Both client paths carry the minted JWT, the inbound token appears nowhere, and
+neither token reaches the log even at debug level.
+
+<!-- evidence-kind: test-invocation -->
+
+```bash
+proof ./operation/ -run '^(TestAToolCallReachesForgejoWithTheMintedTokenOnly|TestNeitherTokenIsLoggedAtAnyLevel)$'
+```
+
+```output
+--- PASS: TestAToolCallReachesForgejoWithTheMintedTokenOnly
+--- PASS: TestNeitherTokenIsLoggedAtAnyLevel
+ok  	git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation
+```
+
+### Scenario: Every Forgejo call uses a minted token, and the singleton is never built
+
+The singleton is constructed from an operator token. This mode refuses to start when one
+is configured, when the fallback flag is set, and on the transports where the singleton
+is the credential — so in a running `resource-server` process there is nothing for the
+factory to fall back to. `TestAuthorizationSchemes` covers the other half: `token <jwt>`
+is not a bearer token, while `bearer` and `BEARER` are.
+
+<!-- evidence-kind: test-invocation -->
+
+```bash
+proof ./operation/ ./pkg/oauthrs/ -run '^(TestValidateAuthConfig|TestAuthorizationSchemes)$/^(operator_token_present|operator_token_fallback|cli_mode|sse_transport)$'
+```
+
+```output
+--- PASS: TestValidateAuthConfig
+    --- PASS: TestValidateAuthConfig/sse_transport
+    --- PASS: TestValidateAuthConfig/cli_mode
+    --- PASS: TestValidateAuthConfig/operator_token_present
+    --- PASS: TestValidateAuthConfig/operator_token_fallback
+ok  	git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation
+--- PASS: TestAuthorizationSchemes
+ok  	git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/oauthrs
+```
