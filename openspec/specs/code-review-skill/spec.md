@@ -1,7 +1,7 @@
 # code-review-skill Specification
 
 ## Purpose
-TBD - created by archiving change forgejo-code-review-skill. Update Purpose after archive.
+Drive an end-to-end pull-request review from a slash command: pre-screen the PR, gather context, summarize the change, fan out to parallel review agents, score and filter findings by confidence, then render to the terminal or post back to Forgejo. The confidence filter is central — the skill is judged on not flooding a PR with low-signal comments.
 ## Requirements
 ### Requirement: Skill invocation via slash command
 

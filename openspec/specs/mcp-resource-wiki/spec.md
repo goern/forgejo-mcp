@@ -1,7 +1,7 @@
 # mcp-resource-wiki Specification
 
 ## Purpose
-TBD - created by archiving change add-wiki-support. Update Purpose after archive.
+Expose wiki pages as addressable MCP resources via a URI template, so a client can reference a wiki page as a resource rather than calling a tool. Content and revisions are bounded, and the page name is parsed from the escaped URI path and must be non-empty — an unbounded or ambiguous wiki read is the case this is written to exclude.
 ## Requirements
 ### Requirement: Wiki page resource template
 

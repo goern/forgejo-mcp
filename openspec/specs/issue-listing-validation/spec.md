@@ -1,7 +1,7 @@
 # issue-listing-validation Specification
 
 ## Purpose
-TBD - created by openspec-sync-specs from change add-search-issues-tool. Update Purpose after archive.
+Reject repo-scoped issue listings that name an empty repository, so the caller gets a clear validation error instead of a confusing empty result or an upstream API error. Small on purpose: it fixes one specific way a listing call can be malformed.
 ## Requirements
 ### Requirement: Repo-scoped listing rejects an empty repository
 

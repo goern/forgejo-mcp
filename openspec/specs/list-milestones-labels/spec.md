@@ -1,7 +1,7 @@
 # list-milestones-labels Specification
 
 ## Purpose
-TBD - created by archiving change list-milestones-labels. Update Purpose after archive.
+List a repository's milestones and labels, the two vocabularies an agent needs before it can file or triage an issue correctly. Without them a caller has to guess at valid names and gets rejected on write.
 ## Requirements
 ### Requirement: List repository milestones
 The system SHALL expose a `list_repo_milestones` MCP tool that returns all milestones for a given repository. The tool SHALL accept `owner` and `repo` as required string parameters. The tool SHALL accept `page` (number, required, default 1, min 1) and `limit` (number, required, default 100, min 1) parameters for pagination. The tool SHALL accept an optional `state` string parameter with values `open`, `closed`, or `all` (default: `open`). The tool SHALL call the Forgejo SDK `ListRepoMilestones` method and return a JSON array where each element contains at minimum `id` (numeric), `title` (string), `description` (string), `state` (string), `open_issues` (number), and `closed_issues` (number).

@@ -1,7 +1,7 @@
 # org-crud Specification
 
 ## Purpose
-TBD - created by archiving change add-org-management. Update Purpose after archive.
+Create, read, edit and delete Forgejo organizations, and list the organizations visible to a user or to the authenticated caller. This is the organization lifecycle itself, separate from who belongs to one (org-membership) and how they are grouped (org-teams).
 ## Requirements
 ### Requirement: Create organization
 The system SHALL provide a `create_org` MCP tool that creates a new organization on the Forgejo instance. The tool SHALL accept:

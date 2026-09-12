@@ -1,7 +1,7 @@
 # search-issues Specification
 
 ## Purpose
-TBD - created by openspec-sync-specs from change add-search-issues-tool. Update Purpose after archive.
+Search issues across everything an owner can see, rather than one repository at a time. The result is caller-bounded and returns a resumable envelope, so a search that matches thousands of issues is paged deliberately instead of truncated silently or returned whole.
 ## Requirements
 ### Requirement: Owner-scoped issue search tool
 
