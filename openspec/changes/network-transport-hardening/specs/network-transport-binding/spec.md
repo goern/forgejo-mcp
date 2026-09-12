@@ -5,10 +5,20 @@
 ### Requirement: Network transports bind loopback by default
 
 The `sse` and `http` transports SHALL bind the address given by `--host` /
-`FORGEJO_MCP_HOST`, defaulting to `127.0.0.1`. They SHALL NOT bind the unspecified
+`FORGEJO_MCP_HOST`, defaulting to `localhost`. They SHALL NOT bind the unspecified
 address unless the operator asks for it.
 
-When the configured address is a loopback name, the server SHALL listen on both loopback families, so that a client resolving `localhost` to `::1` can connect. A family this machine cannot use — IPv6 disabled, or absent from the kernel — SHALL NOT prevent startup when the other family bound, whichever family is the missing one. Any other failure to bind either family, including an address already in use, SHALL prevent startup, and every listener already bound SHALL be closed.
+When the configured value is a loopback NAME, the server SHALL listen on both loopback
+families, so that a client resolving `localhost` to `::1` can connect. When it is a
+loopback ADDRESS, the server SHALL listen on that address alone: naming one family is
+how an operator asks for one family.
+
+A family this machine cannot use — IPv6 disabled, or absent from the kernel — SHALL NOT
+prevent startup when the other family bound, whichever family is the missing one. Any
+other failure to bind either family, including an address already in use, SHALL prevent
+startup, and every listener already bound SHALL be closed. A refusal naming an address
+the operator did not configure SHALL state that a loopback name binds both families, and
+SHALL name the setting that binds one.
 
 The startup log SHALL state the address actually bound and who can reach it. It SHALL
 NOT print a fixed `localhost` URL.
@@ -33,6 +43,12 @@ NOT print a fixed `localhost` URL.
 - **AND** this machine cannot use one loopback family, whichever one it is
 - **THEN** the server SHALL start on the other family
 - **AND** it SHALL log the skipped family at a level the default configuration shows
+
+#### Scenario: A loopback address binds only the family it names
+
+- **WHEN** the server starts with `--host ::1`
+- **THEN** it SHALL bind `::1` alone
+- **AND** it SHALL start even when `127.0.0.1` could not be bound
 
 #### Scenario: A loopback port taken on either family refuses to start
 

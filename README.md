@@ -175,11 +175,15 @@ See [demos/multi-tenant-http.md](demos/multi-tenant-http.md) for a copy-pasteabl
 By default the `sse` and `http` transports listen on loopback only, so nothing outside
 this machine can reach them. This follows the Model Context Protocol's guidance for
 locally-run servers, and it is a change in behaviour: earlier versions listened on
-every network interface. Both loopback families are bound, so a client that resolves
-`localhost` to either `127.0.0.1` or `::1` connects. If the port is already taken on
-either family the server refuses to start, rather than serve on the other family while
-some clients reach whatever holds the port. A family the machine cannot use at all —
-IPv6 disabled, say — is skipped, and the startup log says so.
+every network interface. The default, `localhost`, binds both loopback families, so a
+client that resolves `localhost` to either `127.0.0.1` or `::1` connects. If the port is
+already taken on either family the server refuses to start, rather than serve on the
+other family while some clients reach whatever holds the port. A family the machine
+cannot use at all — IPv6 disabled, say — is skipped, and the startup log says so.
+
+Pass an address rather than a name — `--host 127.0.0.1` or `--host ::1` — to bind that
+family alone. Use it when the other family is unusable on this machine in a way the
+server cannot recognise as "absent", so that it would otherwise refuse to start.
 
 **If you run the server in a container, or serve remote clients, you must now say so
 explicitly.** The default will not accept connections from outside the machine — or,
@@ -515,7 +519,7 @@ You can configure the server using command-line arguments or environment variabl
 | `--transport` | - | Transport mode: `stdio`, `sse`, or `http` |
 | `--sse-port` | - | Port for SSE mode (default: 8080) |
 | `--http-port` | - | Port for streamable HTTP mode (default: 8080) |
-| `--host` | `FORGEJO_MCP_HOST` | Address the `sse` and `http` transports bind to (default: `127.0.0.1`, reachable from this machine only) |
+| `--host` | `FORGEJO_MCP_HOST` | Address the `sse` and `http` transports bind to (default: `localhost`, reachable from this machine only, binding both `127.0.0.1` and `::1`; pass one of those addresses to bind that family alone) |
 | `--allowed-hosts` | `FORGEJO_MCP_ALLOWED_HOSTS` | Comma-separated `Host` names this server answers to; required when `--host` is not loopback |
 | `--allowed-origins` | `FORGEJO_MCP_ALLOWED_ORIGINS` | Comma-separated web origins allowed to send an `Origin` header, as full origins (`https://console.example.org`). Empty by default |
 | `--allow-operator-token-fallback` | `FORGEJO_MCP_ALLOW_OPERATOR_TOKEN_FALLBACK` | On `sse`/`http`, serve requests with no `Authorization` header using this server's own token. Off by default |

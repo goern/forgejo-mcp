@@ -96,8 +96,9 @@ func initFlags() {
 	fs.StringVar(
 		&host,
 		"host",
-		"127.0.0.1",
-		"Address the sse and http transports bind to. The default reaches this machine only; "+
+		"localhost",
+		"Address the sse and http transports bind to. The default reaches this machine only, "+
+			"binding both 127.0.0.1 and ::1; pass one of those addresses to bind that family alone; "+
 			"set 0.0.0.0 to accept connections from the network, which also requires -allowed-hosts",
 	)
 	fs.StringVar(

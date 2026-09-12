@@ -69,13 +69,26 @@ func (s *scriptedListen) requireAllClosed(t *testing.T) {
 	}
 }
 
-// loopbackConfig resolves the default configuration: loopback, both families.
+// loopbackConfig resolves the default configuration: the loopback NAME, which
+// binds both families.
 func loopbackConfig(t *testing.T) transportConfig {
 	t.Helper()
 	restoreFlags(t)
 	cfg, err := resolveTransportConfig("http")
 	if err != nil {
 		t.Fatalf("resolveTransportConfig: %v", err)
+	}
+	return cfg
+}
+
+// literalConfig resolves a configuration that names one loopback address.
+func literalConfig(t *testing.T, host string) transportConfig {
+	t.Helper()
+	restoreFlags(t)
+	flag.Host = host
+	cfg, err := resolveTransportConfig("http")
+	if err != nil {
+		t.Fatalf("resolveTransportConfig(%s): %v", host, err)
 	}
 	return cfg
 }
@@ -167,8 +180,64 @@ func TestNoUsableLoopbackFamilyRefusesToStart(t *testing.T) {
 		v4Loopback: syscall.EADDRNOTAVAIL,
 		v6Loopback: syscall.EAFNOSUPPORT,
 	}}
-	if listeners, err := bindListeners("http", cfg, 8080, s.listen); err == nil {
+	listeners, err := bindListeners("http", cfg, 8080, s.listen)
+	if err == nil {
 		t.Fatalf("started with no loopback family available, on %v", boundAddrs(listeners))
+	}
+	// The refusal carries what each family said. Reporting only "failed to bind
+	// any listener" leaves a machine with no loopback at all indistinguishable
+	// from one whose families were never tried.
+	for _, errno := range []syscall.Errno{syscall.EADDRNOTAVAIL, syscall.EAFNOSUPPORT} {
+		if !errors.Is(err, errno) {
+			t.Errorf("the refusal dropped %v: %v", errno, err)
+		}
+	}
+}
+
+func TestLoopbackAddressBindsOnlyItselfEvenWhenTheOtherFamilyIsTaken(t *testing.T) {
+	// The escape hatch. isFamilyUnavailable allowlists two errnos, and a stack
+	// that fails with a third one would otherwise leave the operator with a
+	// server that refuses to start and no flag that makes it start. Naming one
+	// address means the other family is never touched, whatever it would answer.
+	cfg := literalConfig(t, "::1")
+	s := &scriptedListen{failures: map[string]syscall.Errno{
+		v4Loopback: syscall.EPROTONOSUPPORT, // an errno the allowlist does not know
+	}}
+
+	listeners, err := bindListeners("http", cfg, 8080, s.listen)
+	if err != nil {
+		t.Fatalf("startup was refused although only the unnamed family failed: %v", err)
+	}
+	if got := boundAddrs(listeners); len(got) != 1 || got[0] != v6Loopback {
+		t.Fatalf("bound %v, want only %s", got, v6Loopback)
+	}
+}
+
+func TestRefusalOnALoopbackNameNamesTheSingleFamilyRemedy(t *testing.T) {
+	// A loopback name expands to two addresses, so the failing one can be an
+	// address the operator never wrote down. The refusal has to say that, and
+	// say which flag binds one family.
+	nameCfg := loopbackConfig(t)
+	s := &scriptedListen{failures: map[string]syscall.Errno{v6Loopback: syscall.EADDRINUSE}}
+	_, err := bindListeners("http", nameCfg, 8080, s.listen)
+	if err == nil {
+		t.Fatal("a taken loopback port was allowed to start")
+	}
+	for _, want := range []string{"binds both", "-host 127.0.0.1", "-host ::1"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("the refusal does not mention %q: %v", want, err)
+		}
+	}
+
+	// An operator who named the address already knows which family it is.
+	literal := literalConfig(t, "::1")
+	s = &scriptedListen{failures: map[string]syscall.Errno{v6Loopback: syscall.EADDRINUSE}}
+	_, err = bindListeners("http", literal, 8080, s.listen)
+	if err == nil {
+		t.Fatal("a taken port on the named address was allowed to start")
+	}
+	if strings.Contains(err.Error(), "binds both") {
+		t.Errorf("the refusal offers a remedy the operator already applied: %v", err)
 	}
 }
 
