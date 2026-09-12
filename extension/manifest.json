@@ -59,7 +59,7 @@
   "tools": [
     {
       "name": "add_issue_labels",
-      "description": "Add labels to issue"
+      "description": "Add labels to issue, by label name or numeric ID"
     },
     {
       "name": "add_issue_time",
@@ -111,7 +111,7 @@
     },
     {
       "name": "create_issue",
-      "description": "Create issue"
+      "description": "Create issue, optionally with labels (by name or ID), assignees and a milestone in the same call"
     },
     {
       "name": "create_issue_attachment",
@@ -555,7 +555,7 @@
     },
     {
       "name": "remove_issue_labels",
-      "description": "Remove labels from issue"
+      "description": "Remove labels from issue, by label name or numeric ID"
     },
     {
       "name": "remove_org_member",
@@ -611,7 +611,7 @@
     },
     {
       "name": "update_issue",
-      "description": "Update issue"
+      "description": "Update issue. 'set_labels' replaces the issue's whole label set; use add_issue_labels or remove_issue_labels to change it incrementally"
     },
     {
       "name": "update_pull_request",

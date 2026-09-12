@@ -156,13 +156,18 @@ exist. **It never deletes**, so retiring a label means removing it from the
 file *and* deleting it on the forge by hand.
 
 Do NOT hardcode label IDs in documentation — they are per-forge and did not
-survive the Codeberg → git.b4mad.industries migration. List them first:
+survive the Codeberg → git.b4mad.industries migration. Pass the names, which
+`add_issue_labels`, `remove_issue_labels`, `create_issue` (`labels`) and
+`update_issue` (`set_labels`) all resolve:
 
 ```
-mcp__b4mad__list_repo_labels(owner: "agentic-forges", repo: "forgejo-mcp")
 mcp__b4mad__add_issue_labels(owner: "agentic-forges", repo: "forgejo-mcp",
-                             index: <number>, labels: "<numeric ids, comma separated>")
+                             index: <number>, labels: "Kind/Feature,Kind/OpenSpec")
 ```
+
+An unrecognised name is an error and nothing is applied, so a typo cannot
+half-label an issue. Reach for `list_repo_labels` to discover what exists, or
+to get an ID for the rare name that exists at both repo and org level.
 
 ### Review states
 

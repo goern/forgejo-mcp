@@ -119,7 +119,7 @@ var (
 
 	CreateIssueTool = mcp.NewTool(
 		CreateIssueToolName,
-		mcp.WithDescription("Create issue"),
+		mcp.WithDescription("Create issue, optionally with labels (by name or ID), assignees and a milestone in the same call"),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithString("title", mcp.Required(), mcp.Description(params.Title)),
@@ -140,7 +140,7 @@ var (
 
 	UpdateIssueTool = mcp.NewTool(
 		UpdateIssueToolName,
-		mcp.WithDescription("Update issue"),
+		mcp.WithDescription("Update issue. 'set_labels' replaces the issue's whole label set; use add_issue_labels or remove_issue_labels to change it incrementally"),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.IssueIndex)),
@@ -156,7 +156,7 @@ var (
 
 	AddIssueLabelsTools = mcp.NewTool(
 		AddIssueLabelsToolName,
-		mcp.WithDescription("Add labels to issue"),
+		mcp.WithDescription("Add labels to issue, by label name or numeric ID"),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.IssueIndex)),
@@ -165,7 +165,7 @@ var (
 
 	RemoveIssueLabelsTools = mcp.NewTool(
 		RemoveIssueLabelsToolName,
-		mcp.WithDescription("Remove labels from issue"),
+		mcp.WithDescription("Remove labels from issue, by label name or numeric ID"),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.IssueIndex)),
