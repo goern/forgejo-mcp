@@ -10,7 +10,7 @@ spec:
       description: |
         Pre-built release-tools image containing openspec (and other tools).
       type: string
-      default: codeberg.org/operate-first/release-tools:latest
+      default: git.b4mad.industries/agentic-forges/release-tools:v1.0.3
   workspaces:
     - name: source
       mountPath: /workspace/src

@@ -22,7 +22,7 @@ spec:
         Pre-built release-tools image containing go, goreleaser, syft, cosign,
         govulncheck, node, npm, jq, curl, mcpb, and openspec.
       type: string
-      default: codeberg.org/operate-first/release-tools:latest
+      default: git.b4mad.industries/agentic-forges/release-tools:v1.0.3
     - name: TAG
       description: Tag ref name (e.g. v2.24.0).
       type: string
