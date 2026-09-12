@@ -9,10 +9,10 @@ from the local network by default, while the startup log line reads
 
 Neither transport validates `Host` or `Origin`. The Model Context Protocol makes
 `Origin` validation a MUST for the Streamable HTTP transport and a loopback bind a
-SHOULD, for exactly this reason. `mcp-go` v0.58.0 does ship DNS-rebinding protection,
-on by default, but it only fires when the connection's local address is loopback; with
-the listener on every interface it does not apply to a request arriving on a network
-interface. The library's default is correct for a loopback-bound server, and this
+SHOULD, for exactly this reason. `mcp-go` v0.58.0 — and v1.0.0, which this change
+landed on — does ship DNS-rebinding protection, on by default, but it only fires when
+the connection's local address is loopback; with the listener on every interface it
+does not apply to a request arriving on a network interface. The library's default is correct for a loopback-bound server, and this
 server is not one.
 
 Compounding both: `Client(ctx)` and `setCommonHeaders` fall back to the server's own
@@ -48,8 +48,12 @@ reachable only by selecting a transport that is not the default.
   as the library's own `Start` does, so it does not begin answering on every path.
 - **The credential fallback is refused on `sse` and `http`**, and a request with no
   usable `Authorization` header is refused at the door with `401` rather than at the
-  forge client — so an anonymous caller cannot open a session, enumerate the tool
-  catalogue, or hold an event stream open either. `stdio` is untouched.
+  forge client — so a caller presenting no credential cannot open a session, enumerate
+  the tool catalogue, or hold an event stream open either. The door checks only that
+  a credential is present and well-formed, not that it is valid: a caller presenting
+  any string under a recognised scheme still reaches everything that does not call
+  the forge, and the forge refuses the string on the first call that does. `stdio` is
+  untouched.
 - **New `--allow-operator-token-fallback`**, off by default, for an operator who
   genuinely wants the old behaviour on a network transport.
 
@@ -87,7 +91,9 @@ default, and what the packaged editor extension uses — is unaffected in every 
 - Every client of a network transport must send its own `Authorization` header, or the
   operator must set `--allow-operator-token-fallback` and accept what it means.
 
-The version implication needs a maintainer decision: the module path is `/v2`, and a
-`BREAKING CHANGE` footer would have the release tooling cut `v3.0.0`, which `go get`
-cannot consume on a `/v2` path. The footer is deliberately omitted from the commit for
-that reason, and the breakage is described in prose instead.
+On the version implication: when this was proposed the module path was `/v2`, and a
+`BREAKING CHANGE` footer would have had the release tooling cut `v3.0.0`, which `go get`
+cannot consume on a `/v2` path, so the original commit omitted the footer and described
+the breakage in prose. That question resolved itself before the change landed: the
+module path moved to `/v3` (#562) first, the change was merged onto that path with the
+footer on its merge commit, and it shipped in `v3.0.0`.

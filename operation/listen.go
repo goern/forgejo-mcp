@@ -314,9 +314,12 @@ func logRefusal(msg string, fields ...zap.Field) {
 //     allowed: a non-browser client — which is what an MCP client normally is —
 //     sends none, and the Host check still applies to it.
 //   - Authorization, when this server does not fall back to its own credential.
-//     Refusing at the door rather than at the forge client means an anonymous
-//     caller cannot open a session, enumerate the tool catalogue, or hold an
-//     event stream open either.
+//     Refusing at the door rather than at the forge client means a caller that
+//     presents no credential cannot open a session, enumerate the tool
+//     catalogue, or hold an event stream open either. The check is for presence
+//     and shape only: any string under a recognised scheme passes, and it is the
+//     forge that rejects an invalid one, on the first call that reaches it. A
+//     call that never reaches the forge is not protected by this check.
 func guardRequests(next http.Handler, hosts hostPolicy, origins originPolicy, requireAuth bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !hosts.permits(r.Host) {
