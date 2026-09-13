@@ -123,11 +123,13 @@ The planning artifacts and the implementation land together in one pull request.
   - Zitadel project `forgejo-mcp` is the IdP.
 
   This is tracked in nixos-config, where the change `chiba-forgejo-mcp` holds the follow-ups for the spike keys. Verify that discovery and JWKS answer from forgejo-mcp itself, and that the existing integration still authenticates after the key change, observing the rotation procedure.
-- [ ] 9.2 End to end with Claude Code against the deployment. Verify:
+- [x] 9.2 End to end with Claude Code against the deployment. Verify:
   - login through Zitadel succeeds;
   - `get_my_user_info` returns the integration owner;
   - a user without a grant is refused;
   - a token whose `forgejo_aud` claim is missing gets `403`.
+
+  **Done 2026-09-13** with a throwaway Zitadel user, `forgejo-mcp-test`, and a separate Claude Code server entry, so the operator's account and token stayed untouched. Without a role grant, Zitadel accepted the password but refused the authorization with `Errors.User.GrantRequired` and never redirected back to the client, so no token was issued. With the grant but without `forgejo_aud` metadata, Zitadel issued a token, and forgejo-mcp answered the first MCP request with `403` and a body naming `forgejo_aud`.
 - [x] 9.3 Regression check of `passthrough`: run the existing test suite, then one `stdio` and one `http` session with a PAT against a Forgejo instance. Verify that both behave as in 3.0.x.
 
 ## 10. Showboat demos (anchored)
@@ -150,4 +152,4 @@ The planning artifacts and the implementation land together in one pull request.
   - `scripts/ci/check-api-path-escaping.sh`
   - `openspec validate oauth-resource-server-mode --strict`
   - `make check-demos`
-- [ ] 11.2 Take the PR out of WIP once the checks pass and every task above is checked. Verify that the PR description lists the demos and carries the planning questions for the maintainer.
+- [x] 11.2 Take the PR out of WIP once the checks pass and every task above is checked. Verify that the PR description lists the demos and carries the planning questions for the maintainer. **Done 2026-09-13**, after 9.2.

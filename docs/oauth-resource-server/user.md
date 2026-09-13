@@ -80,7 +80,7 @@ Then run `/mcp` in Claude Code and authenticate the server. Your browser opens t
 
 | What you see | What to do |
 | --- | --- |
-| The identity provider refuses your login | You have no access to the application. Ask your operator for a grant. |
+| The identity provider refuses your login, possibly as "unknown error" | You have no access to the application. Ask your operator for a grant. |
 | The login succeeds, but the client reports `401` again | forgejo-mcp refuses your token. Ask your operator to check the debug log; a common cause is a client ID other than the one the deployment expects. |
 | `403` with a message naming `forgejo_aud` | Your token carries no audience. Store it as in step 2, then log in again. |
 | A tool fails with a Forgejo error about a missing scope | Widen the integration's permissions. |

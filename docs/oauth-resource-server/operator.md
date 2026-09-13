@@ -202,7 +202,7 @@ This example uses Zitadel 4. The per-user claim relies on Actions v1, which Zita
 ### Project and application
 
 1. Create a project for forgejo-mcp alone. Zitadel puts the client ID of every application in a project into `aud`, so sharing the project widens the audience.
-2. Make the project require a role grant at login. In the Management API this is `projectRoleCheck`; the console labels it "Check authorization on authentication", or "Check Role Assignment on Authentication" in newer versions. Create a role such as `user` and grant it to the people who may use forgejo-mcp. The provider refuses the login of users without a grant.
+2. Make the project require a role grant at login. In the Management API this is `projectRoleCheck`; the console labels it "Check authorization on authentication", or "Check Role Assignment on Authentication" in newer versions. Create a role such as `user` and grant it to the people who may use forgejo-mcp. The provider refuses the login of users without a grant. Zitadel 4.17.3 shows that refusal in the browser only as "unknown error", logs `Errors.User.GrantRequired`, and does not redirect back to the MCP client.
 3. Add an application:
    - type **Native**;
    - authentication method **None**, which means PKCE and no client secret;

@@ -162,6 +162,35 @@ proof ./operation/ -run '^TestATokenWithoutAUsableForgejoAudienceIsForbidden$/^c
 ok  	git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation
 ```
 
+<!-- evidence-kind: external-artifact -->
+*Proof:* the same refusal against the deployment. A throwaway Zitadel user holding the project grant but no `forgejo_aud` metadata logged in through Claude Code. Zitadel issued an access token without the claim, and forgejo-mcp answered the first MCP request with `403` and the body naming it. Captured from Claude Code's log for that server entry, which records no token values.
+
+```text
+# 2026-09-13, times UTC. Claude Code 2.1.266, MCP server entry "chiba-forge-test" -> https://forgejo-mcp.byteflavour.dev/mcp
+# Logged in through Zitadel as forgejo-mcp-test: role grant on project forgejo-mcp, no forgejo_aud metadata.
+```
+
+```output
+13:37:29 Saving tokens
+13:37:29 Token expires in: 43199
+13:37:30 HTTP Connection failed after 163ms: Error POSTing to endpoint: Forbidden: the access token carries no usable "forgejo_aud" claim. It must hold the audience of your Forgejo Authorized Integration for this server.
+```
+
+<!-- evidence-kind: external-artifact -->
+*Proof:* the server side of the same attempt. The deployment's access log shows the requests that carried the token: `403` with 149 bytes of `text/plain` and no `WWW-Authenticate` header. The proxy does not log bodies, but 149 bytes is exactly the length of forgejo-mcp's refusal text for the claim `forgejo_aud`. Captured on the deployment host; the `Authorization` header value is not reproduced here.
+
+```text
+# Caddy access log for forgejo-mcp.byteflavour.dev, 2026-09-13 since 13:00 UTC,
+# requests carrying an Authorization header: time, method, path, status, size, WWW-Authenticate present, user agent
+```
+
+```output
+13:37:30 POST /mcp 403 size=149 WWW-Authenticate=no claude-code/2.1.266 (cli)
+13:37:30 POST /mcp 403 size=149 WWW-Authenticate=no claude-code/2.1.266 (cli)
+13:37:30 POST /mcp 403 size=149 WWW-Authenticate=no claude-code/2.1.266 (cli)
+13:37:30 POST /mcp 403 size=149 WWW-Authenticate=no claude-code/2.1.266 (cli)
+```
+
 <!-- spec-scenario: forgejo-jwt-issuer#claim-is-an-array -->
 **Proves:** [spec.md → Scenario: Claim is an array](./spec.md#scenario-claim-is-an-array)
 
