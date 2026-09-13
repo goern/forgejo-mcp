@@ -127,7 +127,7 @@
     },
     {
       "name": "create_org_label",
-      "description": "Create an organization-level label. Returns the created label including its numeric id."
+      "description": "Create an organization-level label. Returns the created label including its numeric id, exclusive, and is_archived. exclusive=true requires a scoped name (a '/' not at either end)."
     },
     {
       "name": "create_org_team",
@@ -159,7 +159,7 @@
     },
     {
       "name": "create_repo_label",
-      "description": "Create a repository label. Returns the created label including its numeric id."
+      "description": "Create a repository label. Returns the created label including its numeric id, exclusive, and is_archived. exclusive=true requires a scoped name (a '/' not at either end)."
     },
     {
       "name": "create_review_requests",
@@ -283,7 +283,7 @@
     },
     {
       "name": "edit_org_label",
-      "description": "Edit an organization-level label (PATCH \u2014 only supplied fields change). Providing no fields is an error."
+      "description": "Edit an organization-level label (PATCH \u2014 only supplied fields change). Providing no fields is an error. Optional exclusive and is_archived; exclusive=true with a new name requires a scoped name (a '/' not at either end). Exclusive-only edit does not re-read the current name."
     },
     {
       "name": "edit_release",
@@ -303,7 +303,7 @@
     },
     {
       "name": "edit_repo_label",
-      "description": "Edit a repository label (PATCH \u2014 only supplied fields change). Providing no fields is an error."
+      "description": "Edit a repository label (PATCH \u2014 only supplied fields change). Providing no fields is an error. Optional exclusive and is_archived; exclusive=true with a new name requires a scoped name (a '/' not at either end). Exclusive-only edit does not re-read the current name."
     },
     {
       "name": "fork_repo",
@@ -367,7 +367,7 @@
     },
     {
       "name": "get_org_label",
-      "description": "Get a single organization-level label by ID."
+      "description": "Get a single organization-level label by ID. Includes exclusive and is_archived (false is present, not omitted)."
     },
     {
       "name": "get_package",
@@ -407,7 +407,7 @@
     },
     {
       "name": "get_repo_label",
-      "description": "Get a single repository label by ID."
+      "description": "Get a single repository label by ID. Includes exclusive and is_archived (false is present, not omitted)."
     },
     {
       "name": "get_repo_tree",
@@ -471,7 +471,7 @@
     },
     {
       "name": "list_org_labels",
-      "description": "List organization-level labels. Each label carries a scope field of \"org\"."
+      "description": "List organization-level labels. Each label carries a scope field of \"org\", plus exclusive and is_archived (false is present, not omitted)."
     },
     {
       "name": "list_org_members",
@@ -527,7 +527,7 @@
     },
     {
       "name": "list_repo_labels",
-      "description": "List repository labels"
+      "description": "List repository labels. When the owner is an organization and include_org_labels is true (default), org-level labels are merged into the response. Each label carries a scope field of \"repo\" or \"org\", plus exclusive and is_archived (false is present, not omitted)."
     },
     {
       "name": "list_repo_milestones",

@@ -15,19 +15,19 @@
 `remove_issue_labels`). Creating, renaming, recoloring, or deleting a label
 required falling back to raw `curl`.
 
-This change adds the missing lifecycle half:
+This change adds the missing lifecycle half. Repo and org create/edit/get
+now use raw HTTP (`DoJSON`) so `exclusive` and `is_archived` round-trip;
+the pinned SDK `Label` type does not model those fields.
 
-**Repo-label CRUD (via `forgejo-sdk/v3`):**
-- `create_repo_label` — create a label, get its numeric id back
-- `edit_repo_label` — PATCH one or more fields (only supplied fields change)
-- `delete_repo_label` — safe-by-default delete: refuses when the label is in
-  use and reports the reference count; `delete_mode=force` overrides
-- `get_repo_label` — read one label by id
-
-**Org-label CRUD (via raw-HTTP `DoJSON` — no SDK method exists):**
-- `create_org_label` / `edit_org_label` / `delete_org_label` / `get_org_label`
-  — same shape as the repo tools; org in-use count is best-effort over repos
-  the token can see
+**Repo- and org-label CRUD:**
+- `create_repo_label` / `create_org_label` — optional `exclusive` and
+  `is_archived`. `exclusive=true` requires a scoped name (a `/` not at
+  either end)
+- `edit_repo_label` / `edit_org_label` — PATCH; exclusive-only edit does
+  not re-read the current name
+- `delete_repo_label` / `delete_org_label` — safe-by-default delete
+- `get_repo_label` / `get_org_label` / `list_*` — `exclusive` and
+  `is_archived` are always present (`false` is not omitted)
 
 **Three URI-addressable resource templates:**
 - `forgejo://repo/{owner}/{repo}/label/{id}` — single label
@@ -40,15 +40,14 @@ All eight tools share a `color` normaliser that accepts `rrggbb` or `#rrggbb`
 ## Replay setup
 
 ```bash
-export FORGEJO_URL=https://codeberg.org
+export FORGEJO_URL=https://git.b4mad.industries
 export FORGEJO_ACCESS_TOKEN=<your-token>
 export FORGEJO_MCP_BIN="${FORGEJO_MCP_BIN:-./forgejo-mcp}"
 make build   # produces ./forgejo-mcp
 ```
 
-Spec: `openspec/changes/label-crud/specs/label-crud/spec.md`
-      `openspec/changes/label-crud/specs/mcp-resource-label/spec.md`
-Issue: codeberg.org/goern/forgejo-mcp/issues/190
+Spec: `openspec/specs/label-exclusive/spec.md`
+      (CRUD baseline still in unarchived `openspec/changes/label-crud/`)
 
 ## 1. Tool surface
 
@@ -57,14 +56,14 @@ ${FORGEJO_MCP_BIN:-./forgejo-mcp} --cli list 2>/dev/null | grep -E "(create|edit
 ```
 
 ```output
-  create_org_label                         Create an organization-level label. Returns the created label including its numeric id.
-  create_repo_label                        Create a repository label. Returns the created label including its numeric id.
+  create_org_label                         Create an organization-level label. Returns the created label including its numeric id, exclusive, and is_archived. exclusive=true requires a scoped name (a '/' not at either end).
+  create_repo_label                        Create a repository label. Returns the created label including its numeric id, exclusive, and is_archived. exclusive=true requires a scoped name (a '/' not at either end).
   delete_org_label                         Delete an organization-level label. By default refuses if the label is in use; set delete_mode=force to override. Note: in-use count is best-effort over repos visible to the token and may under-count.
   delete_repo_label                        Delete a repository label. By default refuses if the label is in use; set delete_mode=force to override.
-  edit_org_label                           Edit an organization-level label (PATCH — only supplied fields change). Providing no fields is an error.
-  edit_repo_label                          Edit a repository label (PATCH — only supplied fields change). Providing no fields is an error.
-  get_org_label                            Get a single organization-level label by ID.
-  get_repo_label                           Get a single repository label by ID.
+  edit_org_label                           Edit an organization-level label (PATCH — only supplied fields change). Providing no fields is an error. Optional exclusive and is_archived; exclusive=true with a new name requires a scoped name (a '/' not at either end). Exclusive-only edit does not re-read the current name.
+  edit_repo_label                          Edit a repository label (PATCH — only supplied fields change). Providing no fields is an error. Optional exclusive and is_archived; exclusive=true with a new name requires a scoped name (a '/' not at either end). Exclusive-only edit does not re-read the current name.
+  get_org_label                            Get a single organization-level label by ID. Includes exclusive and is_archived (false is present, not omitted).
+  get_repo_label                           Get a single repository label by ID. Includes exclusive and is_archived (false is present, not omitted).
 ```
 
 ## 2. create_repo_label — full create/read cycle
@@ -318,3 +317,47 @@ repos), the same workflow applies to `create_org_label` / `edit_org_label` /
 `delete_org_label` — the org-level delete guard counts usage across all
 org repos the token can read and discloses when the count may be
 under-reported due to inaccessible repos.
+
+## 9. exclusive and is_archived
+
+Forgejo Exclusive is a checkbox on the Edit label form. Without these
+fields MCP can create `kind/bug` and the flag stays off. `is_archived`
+is the other checkbox on the same form.
+
+Host for this slice: `https://git.b4mad.industries` (Forgejo 16).
+Sections 2–8 above are the original Codeberg `label-crud` capture and
+do not show `exclusive`.
+
+### 9a. Unscoped exclusive is rejected with no HTTP
+
+```bash
+${FORGEJO_MCP_BIN} --cli create_repo_label \
+  --args '{"owner":"OWNER","repo":"REPO","name":"bug","color":"0088ff","exclusive":true}'
+```
+
+```output
+exclusive=true requires a scoped label name (a '/' not at either end), e.g. kind/bug, got "bug"
+```
+
+Captured 2026-09-13 against this binary (no request is sent).
+
+### 9b. Create scoped exclusive, list/get round-trip, archive
+
+```bash
+export FORGEJO_URL=https://git.b4mad.industries
+# TODO: re-run against live instance — no token in this environment
+${FORGEJO_MCP_BIN} --cli create_repo_label \
+  --args '{"owner":"OWNER","repo":"REPO","name":"kind/x","color":"ee0701","exclusive":true}'
+${FORGEJO_MCP_BIN} --cli list_repo_labels \
+  --args '{"owner":"OWNER","repo":"REPO","include_org_labels":false}'
+${FORGEJO_MCP_BIN} --cli edit_repo_label \
+  --args '{"owner":"OWNER","repo":"REPO","id":ID,"is_archived":true}'
+${FORGEJO_MCP_BIN} --cli get_repo_label \
+  --args '{"owner":"OWNER","repo":"REPO","id":ID}'
+```
+
+Expected on a live Forgejo 16: create returns `"exclusive":true`; list/get
+show the same; color-only edit leaves exclusive set; `is_archived=true`
+round-trips. Applying a second exclusive label of the same scope on one
+issue is Forgejo behaviour, not this tool.
+

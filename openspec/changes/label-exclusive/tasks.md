@@ -19,5 +19,5 @@
 
 ## 4. Docs and demo
 
-- [ ] 4.1 README tool rows and `extension/manifest.json` descriptions mention the flags and the scoped-name rule
-- [ ] 4.2 Update `demos/label-management.md` for raw-HTTP + exclusive/archived; host is the Forgejo 16 instance actually used, not Codeberg
+- [x] 4.1 README tool rows and `extension/manifest.json` descriptions mention the flags and the scoped-name rule
+- [x] 4.2 Update `demos/label-management.md` for raw-HTTP + exclusive/archived; host is the Forgejo 16 instance actually used, not Codeberg
