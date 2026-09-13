@@ -299,10 +299,10 @@ List all my repositories
 | `list_repo_issues` | List issues in a repository (page/limit). Optional `sort` orders server-side: `relevance`, `latest`, `oldest`, `recentupdate`, `leastupdate`, `mostcomment`, `leastcomment`, `nearduedate`, `farduedate` (the last two are the due-date directions). |
 | `search_issues` | Search issues across every repository of one owner (page/limit); returns `{issues,page,limit,count,has_next,total_count}` — `total_count` is present only when Forgejo reports `X-Total-Count` |
 | `get_issue_by_index` | Get a specific issue |
-| `create_issue` | Create a new issue |
-| `add_issue_labels` | Add labels to an issue (requires numeric label IDs) |
-| `remove_issue_labels` | Remove labels from an issue (requires numeric label IDs) |
-| `update_issue` | Update an existing issue (requires numeric milestone ID). `due_date` sets the deadline (RFC3339); `clear_due_date=true` removes it. The two are mutually exclusive — setting both is an error, and omitting both leaves the deadline unchanged. |
+| `create_issue` | Create a new issue. Optional `labels` (comma-separated names or IDs), `assignees` (comma-separated usernames) and `milestone` (numeric ID) are applied by the same request that creates the issue. |
+| `add_issue_labels` | Add labels to an issue. `labels` takes comma-separated label names or numeric IDs; an unrecognised name is an error and nothing is applied. |
+| `remove_issue_labels` | Remove labels from an issue. `labels` takes comma-separated label names or numeric IDs. |
+| `update_issue` | Update an existing issue (requires numeric milestone ID). `due_date` sets the deadline (RFC3339); `clear_due_date=true` removes it. The two are mutually exclusive — setting both is an error, and omitting both leaves the deadline unchanged. `set_labels` replaces the issue's entire label set (names or IDs); an empty string clears every label. |
 | `issue_state_change` | Open or close an issue |
 | `list_issue_dependencies` | List issues the given issue depends on. Bounded by `page` (1-based) + `limit` (page size); the response echoes `page`/`limit` so callers can fetch the next page. |
 | `list_issue_dependents` | List issues that depend on the given issue. Bounded by `page` (1-based) + `limit` (page size); the response echoes `page`/`limit` so callers can fetch the next page. |
@@ -310,8 +310,8 @@ List all my repositories
 | `remove_issue_dependency` | Remove a dependency from an issue |
 | `list_repo_milestones` | List milestones with their IDs (use with `update_issue`) |
 | `list_repo_labels` | List labels with their IDs. Merges org-level labels for org-owned repos (set `include_org_labels=false` to opt out). Each entry carries a `scope` field (`"repo"` or `"org"`). |
-| `list_org_labels` | List organization-level labels with their IDs (use with `add_issue_labels`, `remove_issue_labels`). |
-| `create_repo_label` | Create a repository label (`name`, `color` as 6-digit hex, optional `description`). Returns numeric `id` for immediate use in `add_issue_labels`. |
+| `list_org_labels` | List organization-level labels with their IDs. The assignment tools accept label names directly, so this is for discovery and for the rare name that exists in both the repo and the org scope. |
+| `create_repo_label` | Create a repository label (`name`, `color` as 6-digit hex, optional `description`). Returns the numeric `id`; `add_issue_labels` also takes the name. |
 | `edit_repo_label` | Edit a repository label (PATCH — only supplied fields change: `name`, `color`, `description`). |
 | `delete_repo_label` | Delete a repository label. Refuses by default when the label is in use (reports count); set `delete_mode=force` to override. |
 | `get_repo_label` | Get a single repository label by numeric `id`. |

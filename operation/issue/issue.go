@@ -119,11 +119,14 @@ var (
 
 	CreateIssueTool = mcp.NewTool(
 		CreateIssueToolName,
-		mcp.WithDescription("Create issue"),
+		mcp.WithDescription("Create issue, optionally with labels (by name or ID), assignees and a milestone in the same call"),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithString("title", mcp.Required(), mcp.Description(params.Title)),
 		mcp.WithString("body", mcp.Description(params.Body)),
+		mcp.WithString("labels", mcp.Description(labelsArgDescription("Labels for the new issue"))),
+		mcp.WithString("assignees", mcp.Description("Assignee usernames (comma-separated)")),
+		mcp.WithString("milestone", mcp.Description(params.Milestone)),
 	)
 
 	CreateIssueCommentTool = mcp.NewTool(
@@ -137,7 +140,7 @@ var (
 
 	UpdateIssueTool = mcp.NewTool(
 		UpdateIssueToolName,
-		mcp.WithDescription("Update issue"),
+		mcp.WithDescription("Update issue. 'set_labels' replaces the issue's whole label set; use add_issue_labels or remove_issue_labels to change it incrementally"),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.IssueIndex)),
@@ -148,24 +151,25 @@ var (
 		mcp.WithString("milestone", mcp.Description(params.Milestone)),
 		mcp.WithString("due_date", mcp.Description("Set the issue's due date (RFC3339, e.g. 2026-08-20T00:00:00Z). Mutually exclusive with 'clear_due_date'; setting both is an error.")),
 		mcp.WithBoolean("clear_due_date", mcp.Description("Clear the issue's due date. Mutually exclusive with 'due_date'.")),
+		mcp.WithString("set_labels", mcp.Description(labelsArgDescription("Replace the issue's entire label set")+" Pass an empty string to remove every label. To add or drop individual labels without restating the set, use add_issue_labels or remove_issue_labels.")),
 	)
 
 	AddIssueLabelsTools = mcp.NewTool(
 		AddIssueLabelsToolName,
-		mcp.WithDescription("Add labels to issue"),
+		mcp.WithDescription("Add labels to issue, by label name or numeric ID"),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.IssueIndex)),
-		mcp.WithString("labels", mcp.Required(), mcp.Description("Labels to add (comma-separated)")),
+		mcp.WithString("labels", mcp.Required(), mcp.Description(labelsArgDescription("Labels to add"))),
 	)
 
 	RemoveIssueLabelsTools = mcp.NewTool(
 		RemoveIssueLabelsToolName,
-		mcp.WithDescription("Remove labels from issue"),
+		mcp.WithDescription("Remove labels from issue, by label name or numeric ID"),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.IssueIndex)),
-		mcp.WithString("labels", mcp.Required(), mcp.Description("Labels to remove (comma-separated label IDs)")),
+		mcp.WithString("labels", mcp.Required(), mcp.Description(labelsArgDescription("Labels to remove"))),
 	)
 
 	IssueStateChangeTool = mcp.NewTool(
@@ -535,11 +539,34 @@ func CreateIssueFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	repo, _ := req.GetArguments()["repo"].(string)
 	title, _ := req.GetArguments()["title"].(string)
 	body, _ := req.GetArguments()["body"].(string)
+	labels, labelsProvided := req.GetArguments()["labels"].(string)
+	assigneesRaw, assigneesProvided := req.GetArguments()["assignees"].(string)
+	milestone, _ := req.GetArguments()["milestone"].(string)
 
 	opt := forgejo_sdk.CreateIssueOption{
 		Title: title,
 		Body:  body,
 	}
+	// Labels resolve before the POST, not after it: a typo must not leave a
+	// real unlabelled issue behind for someone to clean up.
+	if labelsProvided {
+		labelIDs, rerr := resolveIssueLabelIDs(ctx, owner, repo, labels)
+		if rerr != nil {
+			return to.ErrorResult(rerr)
+		}
+		opt.Labels = labelIDs
+	}
+	if assigneesProvided {
+		opt.Assignees = splitCSV(assigneesRaw)
+	}
+	if milestone != "" {
+		milestoneID, merr := strconv.ParseInt(milestone, 10, 64)
+		if merr != nil {
+			return to.ErrorResult(fmt.Errorf("invalid milestone ID: %w", merr))
+		}
+		opt.Milestone = milestoneID
+	}
+
 	client, err := forgejo.Client(ctx)
 	if err != nil {
 		return to.ErrorResult(err)
@@ -584,6 +611,15 @@ func UpdateIssueFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	milestone, _ := req.GetArguments()["milestone"].(string)
 	dueDate, _ := req.GetArguments()["due_date"].(string)
 	clearDueDate, _ := req.GetArguments()["clear_due_date"].(bool)
+	setLabelsRaw, setLabelsProvided := req.GetArguments()["set_labels"].(string)
+
+	// The Forgejo edit-issue endpoint has no labels field and ignores one if
+	// sent, so set_labels is a separate request (PUT to replace, DELETE to
+	// clear) rather than part of this PATCH. patchRequested keeps a labels-only
+	// update from sending an empty PATCH, which would move updated_at for
+	// nothing; with no set_labels at all the handler behaves exactly as before.
+	patchRequested := title != "" || body != "" || assigneesProvided || assignee != "" ||
+		milestone != "" || dueDate != "" || clearDueDate
 
 	opt := forgejo_sdk.EditIssueOption{}
 
@@ -627,14 +663,53 @@ func UpdateIssueFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 		opt.Deadline = &parsed
 	}
 
+	// Resolve before either request so an unknown label name leaves the issue
+	// untouched instead of half-updated.
+	var setLabelIDs []int64
+	clearLabels := false
+	if setLabelsProvided {
+		if len(splitCSV(setLabelsRaw)) == 0 {
+			clearLabels = true
+		} else {
+			ids, rerr := resolveIssueLabelIDs(ctx, owner, repo, setLabelsRaw)
+			if rerr != nil {
+				return to.ErrorResult(rerr)
+			}
+			setLabelIDs = ids
+		}
+	}
+
 	client, err := forgejo.Client(ctx)
 	if err != nil {
 		return to.ErrorResult(err)
 	}
-	issue, _, err := client.EditIssue(owner, repo, int64(index), opt)
-	if err != nil {
-		return to.ErrorResult(fmt.Errorf("update issue err: %w", err))
+
+	var issue *forgejo_sdk.Issue
+	if patchRequested || !setLabelsProvided {
+		issue, _, err = client.EditIssue(owner, repo, int64(index), opt)
+		if err != nil {
+			return to.ErrorResult(fmt.Errorf("update issue err: %w", err))
+		}
 	}
+
+	if setLabelsProvided {
+		if clearLabels {
+			if _, cerr := client.ClearIssueLabels(owner, repo, int64(index)); cerr != nil {
+				return to.ErrorResult(fmt.Errorf("clear issue labels err: %w", cerr))
+			}
+		} else if _, _, rerr := client.ReplaceIssueLabels(owner, repo, int64(index), forgejo_sdk.IssueLabelsOption{
+			Labels: setLabelIDs,
+		}); rerr != nil {
+			return to.ErrorResult(fmt.Errorf("replace issue labels err: %w", rerr))
+		}
+		// Re-read: any issue returned by the PATCH above predates the label
+		// change, so returning it would report the old label set.
+		issue, _, err = client.GetIssue(owner, repo, int64(index))
+		if err != nil {
+			return to.ErrorResult(fmt.Errorf("get updated issue err: %w", err))
+		}
+	}
+
 	return to.TextResult(issue)
 }
 
@@ -645,21 +720,11 @@ func AddIssueLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	index, _ := to.Float64(req.GetArguments()["index"])
 	labels, _ := req.GetArguments()["labels"].(string)
 
-	// Get the ID for each label
-	// Since we can't directly use label names, we need to fetch the IDs first
-	// This modified approach treats the labels as numeric IDs
-	labelIDs := []int64{}
-
-	for _, labelStr := range strings.Split(labels, ",") {
-		labelStr = strings.TrimSpace(labelStr)
-		labelID, err := strconv.ParseInt(labelStr, 10, 64)
-		if err != nil {
-			return to.ErrorResult(fmt.Errorf("invalid label ID '%s': %w - labels must be numeric IDs", labelStr, err))
-		}
-		labelIDs = append(labelIDs, labelID)
+	labelIDs, err := resolveIssueLabelIDs(ctx, owner, repo, labels)
+	if err != nil {
+		return to.ErrorResult(err)
 	}
 
-	// Create IssueLabelsOption with numeric IDs
 	opt := forgejo_sdk.IssueLabelsOption{
 		Labels: labelIDs,
 	}
@@ -688,20 +753,19 @@ func RemoveIssueLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Cal
 	index, _ := to.Float64(req.GetArguments()["index"])
 	labels, _ := req.GetArguments()["labels"].(string)
 
+	labelIDs, err := resolveIssueLabelIDs(ctx, owner, repo, labels)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+
 	client, err := forgejo.Client(ctx)
 	if err != nil {
 		return to.ErrorResult(err)
 	}
 
-	for _, labelStr := range strings.Split(labels, ",") {
-		labelStr = strings.TrimSpace(labelStr)
-		labelID, err := strconv.ParseInt(labelStr, 10, 64)
-		if err != nil {
-			return to.ErrorResult(fmt.Errorf("invalid label ID '%s': %w - labels must be numeric IDs", labelStr, err))
-		}
-		_, err = client.DeleteIssueLabel(owner, repo, int64(index), labelID)
-		if err != nil {
-			return to.ErrorResult(fmt.Errorf("remove issue label err: %w", err))
+	for _, labelID := range labelIDs {
+		if _, derr := client.DeleteIssueLabel(owner, repo, int64(index), labelID); derr != nil {
+			return to.ErrorResult(fmt.Errorf("remove issue label err: %w", derr))
 		}
 	}
 

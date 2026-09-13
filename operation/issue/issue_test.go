@@ -1157,6 +1157,102 @@ func TestCreateIssueFn(t *testing.T) {
 	}
 }
 
+func TestCreateIssueFn_LabelNamesBecomeIDs(t *testing.T) {
+	records, _ := newResolveBackend(t, resolveBackendOptions{
+		repoLabels: []catalogLabel{{ID: 5, Name: "bug"}},
+		orgLabels:  []catalogLabel{{ID: 91, Name: "dogfood"}},
+		next: func(w http.ResponseWriter, _ *http.Request, _ *[]recordedReq) {
+			_, _ = w.Write([]byte(`{"id":1,"number":1,"title":"new issue"}`))
+		},
+	})
+
+	res, err := CreateIssueFn(context.Background(), makeReq(map[string]any{
+		"owner": "agentic-forges", "repo": "forgejo-mcp", "title": "new issue",
+		"labels": "bug,dogfood",
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("CreateIssueFn err: %v res=%+v", err, res)
+	}
+	if len(*records) != 1 {
+		t.Fatalf("expected one create request, got %d: %+v", len(*records), *records)
+	}
+	post := (*records)[0]
+	if post.method != http.MethodPost {
+		t.Fatalf("expected POST, got %s", post.method)
+	}
+	// A repo label and an org label, both named, both sent as IDs in the one
+	// request that creates the issue.
+	if got := labelsFromBody(t, post.rawBody); !equalInt64s(got, []int64{5, 91}) {
+		t.Fatalf("expected labels [5 91], got %v (body: %s)", got, post.rawBody)
+	}
+}
+
+func TestCreateIssueFn_AssigneesAndMilestone(t *testing.T) {
+	_, records := newPatchBackend(t, `{"id":1,"number":1,"title":"new issue"}`)
+
+	res, err := CreateIssueFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern", "repo": "forgejo-mcp", "title": "new issue",
+		"assignees": "alice, bob", "milestone": "4",
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("CreateIssueFn err: %v res=%+v", err, res)
+	}
+	if len(*records) != 1 {
+		t.Fatalf("expected one request, got %d", len(*records))
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal((*records)[0].rawBody, &payload); err != nil {
+		t.Fatalf("invalid JSON body: %v\nbody: %s", err, (*records)[0].rawBody)
+	}
+	assignees, ok := payload["assignees"].([]any)
+	if !ok || len(assignees) != 2 || assignees[0] != "alice" || assignees[1] != "bob" {
+		t.Fatalf("expected assignees [alice bob], got %v", payload["assignees"])
+	}
+	if milestone, ok := payload["milestone"].(float64); !ok || milestone != 4 {
+		t.Fatalf("expected milestone 4, got %v", payload["milestone"])
+	}
+}
+
+func TestCreateIssueFn_UnknownLabelCreatesNothing(t *testing.T) {
+	// Resolution happens before the POST precisely so a typo does not leave a
+	// real unlabelled issue behind.
+	records, _ := newResolveBackend(t, resolveBackendOptions{
+		repoLabels: []catalogLabel{{ID: 5, Name: "bug"}},
+		orgStatus:  http.StatusNotFound,
+	})
+
+	res, err := CreateIssueFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern", "repo": "forgejo-mcp", "title": "new issue", "labels": "nope",
+	}))
+	if res != nil {
+		t.Fatalf("expected nil result for an unknown label, got %+v", res)
+	}
+	if err == nil {
+		t.Fatal("expected an error for an unknown label")
+	}
+	if len(*records) != 0 {
+		t.Fatalf("expected no issue to be created, got %+v", *records)
+	}
+}
+
+func TestCreateIssueFn_InvalidMilestone(t *testing.T) {
+	_, records := newPatchBackend(t, `{"id":1}`)
+
+	res, err := CreateIssueFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern", "repo": "forgejo-mcp", "title": "new issue", "milestone": "soon",
+	}))
+	if res != nil {
+		t.Fatalf("expected nil result for a non-numeric milestone, got %+v", res)
+	}
+	if err == nil {
+		t.Fatal("expected an error for a non-numeric milestone")
+	}
+	if len(*records) != 0 {
+		t.Fatalf("expected no request, got %+v", *records)
+	}
+}
+
 func TestCreateIssueCommentFn(t *testing.T) {
 	_, records := newPatchBackend(t, `{"id":1,"body":"a comment"}`)
 	res, err := CreateIssueCommentFn(context.Background(), makeReq(map[string]any{
@@ -1173,52 +1269,275 @@ func TestCreateIssueCommentFn(t *testing.T) {
 	}
 }
 
-func TestAddIssueLabelsFn(t *testing.T) {
-	// AddIssueLabels (POST .../labels) returns a label list; the trailing
-	// GetIssue call returns the refreshed issue. Distinguish by method.
-	_, records := newQueryBackend(t, func(w http.ResponseWriter, r *http.Request, _ *[]recordedReq) {
-		if r.Method == http.MethodPost {
-			_, _ = w.Write([]byte(`[{"id":5},{"id":6}]`))
-			return
-		}
-		_, _ = w.Write([]byte(`{"id":1,"number":1,"labels":[{"id":5},{"id":6}]}`))
+// addLabelsBackend serves the assignment endpoints for a label catalogue of
+// bug=5 and triage=6: POST .../labels answers with a label list, anything else
+// with the refreshed issue.
+func addLabelsBackend(t *testing.T) (*[]recordedReq, *int) {
+	t.Helper()
+	return newResolveBackend(t, resolveBackendOptions{
+		repoLabels: []catalogLabel{{ID: 5, Name: "bug"}, {ID: 6, Name: "triage"}},
+		orgStatus:  http.StatusNotFound,
+		next: func(w http.ResponseWriter, r *http.Request, _ *[]recordedReq) {
+			if r.Method == http.MethodPost {
+				_, _ = w.Write([]byte(`[{"id":5},{"id":6}]`))
+				return
+			}
+			_, _ = w.Write([]byte(`{"id":1,"number":1,"labels":[{"id":5},{"id":6}]}`))
+		},
 	})
+}
+
+func TestUpdateIssue_SetLabelsReplaces(t *testing.T) {
+	records, _ := newResolveBackend(t, resolveBackendOptions{
+		repoLabels: []catalogLabel{{ID: 5, Name: "bug"}},
+		orgStatus:  http.StatusNotFound,
+		next: func(w http.ResponseWriter, r *http.Request, _ *[]recordedReq) {
+			if r.Method == http.MethodPut {
+				_, _ = w.Write([]byte(`[{"id":5}]`))
+				return
+			}
+			_, _ = w.Write([]byte(`{"id":1,"number":42,"labels":[{"id":5}]}`))
+		},
+	})
+
+	res, err := UpdateIssueFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern", "repo": "forgejo-mcp", "index": float64(42), "set_labels": "bug",
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("UpdateIssueFn err: %v res=%+v", err, res)
+	}
+	// set_labels alone: a replace and the re-read, and deliberately no PATCH —
+	// an empty edit would move updated_at for nothing.
+	if len(*records) != 2 {
+		t.Fatalf("expected two requests, got %d: %+v", len(*records), *records)
+	}
+	put := (*records)[0]
+	if put.method != http.MethodPut || !strings.HasSuffix(put.path, "/issues/42/labels") {
+		t.Fatalf("expected PUT to the issue labels endpoint, got %s %s", put.method, put.path)
+	}
+	if got := labelsFromBody(t, put.rawBody); !equalInt64s(got, []int64{5}) {
+		t.Fatalf("expected labels [5] in the PUT body, got %v", got)
+	}
+	for _, rec := range *records {
+		if rec.method == http.MethodPatch {
+			t.Fatalf("expected no PATCH when set_labels is the only argument, got %+v", rec)
+		}
+	}
+}
+
+func TestUpdateIssue_SetLabelsEmptyClears(t *testing.T) {
+	records, catalogReads := newResolveBackend(t, resolveBackendOptions{
+		repoLabels: []catalogLabel{{ID: 5, Name: "bug"}},
+		orgStatus:  http.StatusNotFound,
+		next: func(w http.ResponseWriter, _ *http.Request, _ *[]recordedReq) {
+			_, _ = w.Write([]byte(`{"id":1,"number":42,"labels":[]}`))
+		},
+	})
+
+	res, err := UpdateIssueFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern", "repo": "forgejo-mcp", "index": float64(42), "set_labels": "",
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("UpdateIssueFn err: %v res=%+v", err, res)
+	}
+	if len(*records) != 2 {
+		t.Fatalf("expected a clear and a re-read, got %d: %+v", len(*records), *records)
+	}
+	clear := (*records)[0]
+	if clear.method != http.MethodDelete || !strings.HasSuffix(clear.path, "/issues/42/labels") {
+		t.Fatalf("expected DELETE of the labels collection, got %s %s", clear.method, clear.path)
+	}
+	// Nothing to resolve when clearing, so the catalogue is never read.
+	if *catalogReads != 0 {
+		t.Fatalf("expected no catalogue read when clearing, got %d", *catalogReads)
+	}
+}
+
+func TestUpdateIssue_SetLabelsWithTitlePatchesFirst(t *testing.T) {
+	records, _ := newResolveBackend(t, resolveBackendOptions{
+		repoLabels: []catalogLabel{{ID: 5, Name: "bug"}},
+		orgStatus:  http.StatusNotFound,
+		next: func(w http.ResponseWriter, r *http.Request, _ *[]recordedReq) {
+			switch r.Method {
+			case http.MethodPatch:
+				_, _ = w.Write([]byte(`{"id":1,"number":42,"title":"renamed","labels":[]}`))
+			case http.MethodPut:
+				_, _ = w.Write([]byte(`[{"id":5}]`))
+			default:
+				_, _ = w.Write([]byte(`{"id":1,"number":42,"title":"renamed","labels":[{"id":5}]}`))
+			}
+		},
+	})
+
+	res, err := UpdateIssueFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern", "repo": "forgejo-mcp", "index": float64(42),
+		"title": "renamed", "set_labels": "bug",
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("UpdateIssueFn err: %v res=%+v", err, res)
+	}
+	if len(*records) != 3 {
+		t.Fatalf("expected PATCH, PUT and a re-read, got %d: %+v", len(*records), *records)
+	}
+	if (*records)[0].method != http.MethodPatch {
+		t.Fatalf("expected the PATCH first, got %s", (*records)[0].method)
+	}
+	if (*records)[1].method != http.MethodPut {
+		t.Fatalf("expected the label replacement second, got %s", (*records)[1].method)
+	}
+	// The edit endpoint has no labels field and ignores one, so sending it
+	// would be a silent no-op the caller could not detect.
+	var patch map[string]any
+	if err := json.Unmarshal((*records)[0].rawBody, &patch); err != nil {
+		t.Fatalf("invalid PATCH body: %v", err)
+	}
+	if _, present := patch["labels"]; present {
+		t.Fatalf("PATCH body must not carry labels: %s", (*records)[0].rawBody)
+	}
+	// The issue returned by the PATCH predates the replacement, so the handler
+	// re-reads and the caller sees the new set.
+	if !strings.Contains(textOf(res), `"id":5`) {
+		t.Fatalf("expected the returned issue to carry the new label: %s", textOf(res))
+	}
+}
+
+func TestUpdateIssue_WithoutSetLabelsIsUnchanged(t *testing.T) {
+	records, catalogReads := newResolveBackend(t, resolveBackendOptions{
+		repoLabels: []catalogLabel{{ID: 5, Name: "bug"}},
+		orgStatus:  http.StatusNotFound,
+		next: func(w http.ResponseWriter, _ *http.Request, _ *[]recordedReq) {
+			_, _ = w.Write([]byte(`{"id":1,"number":42,"title":"renamed"}`))
+		},
+	})
+
+	res, err := UpdateIssueFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern", "repo": "forgejo-mcp", "index": float64(42), "title": "renamed",
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("UpdateIssueFn err: %v res=%+v", err, res)
+	}
+	if len(*records) != 1 || (*records)[0].method != http.MethodPatch {
+		t.Fatalf("expected exactly one PATCH, got %+v", *records)
+	}
+	if *catalogReads != 0 {
+		t.Fatalf("expected no catalogue read without set_labels, got %d", *catalogReads)
+	}
+}
+
+func TestUpdateIssue_SetLabelsUnknownWritesNothing(t *testing.T) {
+	records, _ := newResolveBackend(t, resolveBackendOptions{
+		repoLabels: []catalogLabel{{ID: 5, Name: "bug"}},
+		orgStatus:  http.StatusNotFound,
+	})
+
+	res, err := UpdateIssueFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern", "repo": "forgejo-mcp", "index": float64(42),
+		"title": "renamed", "set_labels": "nope",
+	}))
+	if res != nil {
+		t.Fatalf("expected nil result for an unknown label, got %+v", res)
+	}
+	if err == nil {
+		t.Fatal("expected an error for an unknown label")
+	}
+	// Resolution precedes the PATCH, so the title is not changed either.
+	if len(*records) != 0 {
+		t.Fatalf("expected no writes at all, got %+v", *records)
+	}
+}
+
+func TestAddIssueLabelsFn_ByName(t *testing.T) {
+	records, _ := addLabelsBackend(t)
+
+	res, err := AddIssueLabelsFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern", "repo": "forgejo-mcp", "index": float64(1), "labels": "bug,triage",
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("AddIssueLabelsFn err: %v res=%+v", err, res)
+	}
+	// Two calls under test: AddIssueLabels then GetIssue. The catalogue reads
+	// the names needed are counted separately, not recorded here.
+	if len(*records) != 2 {
+		t.Fatalf("expected two requests, got %d: %+v", len(*records), *records)
+	}
+
+	post := (*records)[0]
+	if post.method != http.MethodPost || !strings.HasSuffix(post.path, "/issues/1/labels") {
+		t.Fatalf("expected POST to the issue labels endpoint, got %s %s", post.method, post.path)
+	}
+	// The names must reach Forgejo as IDs: it accepts names, but drops the
+	// ones it does not know and still answers 200.
+	if got := labelsFromBody(t, post.rawBody); !equalInt64s(got, []int64{5, 6}) {
+		t.Fatalf("expected labels [5 6] in the POST body, got %v (body: %s)", got, post.rawBody)
+	}
+}
+
+func TestAddIssueLabelsFn_ByID(t *testing.T) {
+	records, _ := addLabelsBackend(t)
+
 	res, err := AddIssueLabelsFn(context.Background(), makeReq(map[string]any{
 		"owner": "goern", "repo": "forgejo-mcp", "index": float64(1), "labels": "5,6",
 	}))
 	if err != nil || res == nil || res.IsError {
 		t.Fatalf("AddIssueLabelsFn err: %v res=%+v", err, res)
 	}
-	// Two calls: AddIssueLabels then GetIssue to return the refreshed issue.
-	if len(*records) != 2 {
-		t.Fatalf("expected two requests, got %d", len(*records))
+	if got := labelsFromBody(t, (*records)[0].rawBody); !equalInt64s(got, []int64{5, 6}) {
+		t.Fatalf("expected numeric IDs to keep working, got %v", got)
 	}
 }
 
-func TestAddIssueLabelsFn_InvalidLabelID(t *testing.T) {
-	_, _ = newPatchBackend(t, `{"id":1}`)
+func TestAddIssueLabelsFn_UnknownLabel(t *testing.T) {
+	records, _ := addLabelsBackend(t)
+
 	res, err := AddIssueLabelsFn(context.Background(), makeReq(map[string]any{
-		"owner": "goern", "repo": "forgejo-mcp", "index": float64(1), "labels": "not-a-number",
+		"owner": "goern", "repo": "forgejo-mcp", "index": float64(1), "labels": "not-a-label",
 	}))
 	if res != nil {
-		t.Fatalf("expected nil result on invalid label ID, got %+v", res)
+		t.Fatalf("expected nil result for an unknown label, got %+v", res)
 	}
 	if err == nil {
-		t.Fatal("expected error for non-numeric label ID")
+		t.Fatal("expected an error for an unknown label")
+	}
+	if len(*records) != 0 {
+		t.Fatalf("expected no write when a label cannot be resolved, got %+v", *records)
 	}
 }
 
-func TestRemoveIssueLabelsFn(t *testing.T) {
-	_, records := newPatchBackend(t, `{"id":1,"number":1,"labels":[]}`)
+func TestAddIssueLabelsFn_EmptyLabels(t *testing.T) {
+	records, _ := addLabelsBackend(t)
+
+	if _, err := AddIssueLabelsFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern", "repo": "forgejo-mcp", "index": float64(1), "labels": "",
+	})); err == nil {
+		t.Fatal("expected an error when labels names nothing")
+	}
+	if len(*records) != 0 {
+		t.Fatalf("expected no write for an empty labels argument, got %+v", *records)
+	}
+}
+
+func TestRemoveIssueLabelsFn_ByName(t *testing.T) {
+	records, _ := newResolveBackend(t, resolveBackendOptions{
+		repoLabels: []catalogLabel{{ID: 5, Name: "bug"}},
+		orgStatus:  http.StatusNotFound,
+		next: func(w http.ResponseWriter, _ *http.Request, _ *[]recordedReq) {
+			_, _ = w.Write([]byte(`{"id":1,"number":1,"labels":[]}`))
+		},
+	})
+
 	res, err := RemoveIssueLabelsFn(context.Background(), makeReq(map[string]any{
-		"owner": "goern", "repo": "forgejo-mcp", "index": float64(1), "labels": "5",
+		"owner": "goern", "repo": "forgejo-mcp", "index": float64(1), "labels": "bug",
 	}))
 	if err != nil || res == nil || res.IsError {
 		t.Fatalf("RemoveIssueLabelsFn err: %v res=%+v", err, res)
 	}
-	// Two calls: DeleteIssueLabel then GetIssue to return the refreshed issue.
+	// Two calls under test: DeleteIssueLabel then GetIssue.
 	if len(*records) != 2 {
-		t.Fatalf("expected two requests, got %d", len(*records))
+		t.Fatalf("expected two requests, got %d: %+v", len(*records), *records)
+	}
+	del := (*records)[0]
+	if del.method != http.MethodDelete || !strings.HasSuffix(del.path, "/issues/1/labels/5") {
+		t.Fatalf("expected DELETE of label 5, got %s %s", del.method, del.path)
 	}
 }
 
