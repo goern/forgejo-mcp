@@ -77,14 +77,16 @@ Out of scope, rejected on the record in #582:
 ## Impact
 
 - **Code:**
-  - `cmd/cmd.go`: flags and environment variables.
-  - `operation/listen.go`: request guard, metadata and issuer routes.
-  - `operation/operation.go`: mode wiring and the startup connection test.
-  - `pkg/forgejo/credential.go`, `forgejo.go`, `rawhttp.go`: credential source per mode.
-  - New packages for inbound token validation and outbound signing.
+  - `cmd/cmd.go`, `cmd/auth_config.go`: flags, environment variables and their precedence.
+  - `operation/authmode.go`: the startup checks, and preparing the mode before anything is bound.
+  - `operation/resource_server_http.go`: exact routing, the metadata and issuer documents, and the authentication layer on `/mcp`.
+  - `operation/operation.go`: mode wiring, and `requestTokenContextFunc` handing the minted token to the Forgejo clients.
+  - `operation/listen.go`: the passthrough door check is skipped in this mode; Host and Origin validation still apply.
+  - `pkg/forgejo/forgejo.go`, `pkg/forgejo/version.go`: the unauthenticated version probe, passed to every client.
+  - New packages: `pkg/oauthrs` for inbound token validation, `pkg/jwtissuer` for outbound signing, discovery and the key set.
 - **Dependencies:** one JOSE/JWT library for verification, signing and JWKS handling. `go.sum` has none today, and mcp-go v1 ships only client-side OAuth.
 - **Deployment order for operators and users:**
-  - The operator needs an OIDC IdP that issues JWT access tokens, or else a client-supplied audience (see below), and Forgejo 16 or newer.
+  - The operator needs an OIDC IdP that issues JWT access tokens and can add a per-user claim holding the Forgejo audience, and Forgejo 16 or newer.
   - forgejo-mcp must already be running at its public https issuer URL, serving a non-empty JWKS, before any user can save an Authorized Integration. Forgejo validates the issuer when the integration is saved, refuses redirects, and caps each document at 16 KiB, so the reverse proxy must not redirect these paths.
   - Forgejo fetches those documents through a client that, with `[authorized_integration] ALLOWED_DOMAINS` empty, reaches public addresses only. An issuer resolving to a loopback or private address therefore needs either a non-empty `ALLOWED_DOMAINS` naming its host, or `ALLOW_LOCALNETWORKS = true`.
   - Each user then creates an integration with a `sub` claim rule and makes its audience available to forgejo-mcp.

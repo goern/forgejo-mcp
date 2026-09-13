@@ -685,9 +685,9 @@ HTTP/2 401
 www-authenticate: Bearer resource_metadata="https://forgejo-mcp.byteflavour.dev/.well-known/oauth-protected-resource/mcp", scope="openid profile email"
 ```
 
-### Scenario: The header carries a bearer access token, not a Forgejo token
+### Scenario: Scheme matching is case-insensitive
 
-`token <jwt>` counts as no bearer token at all, so its challenge carries no `error`
+This proves the `resource-server` clause of the scenario: `Bearer` is accepted as a bearer token and `token` is not. `token <jwt>` counts as no bearer token at all, so its challenge carries no `error`
 parameter. A malformed `Bearer` value is a token that was presented and failed
 validation, so its challenge adds `error="invalid_token"`. Neither reaches Forgejo.
 
@@ -723,7 +723,7 @@ proof ./operation/ -run '^(TestAToolCallReachesForgejoWithTheMintedTokenOnly|Tes
 ok  	git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation
 ```
 
-### Scenario: Every Forgejo call uses a minted token, and the singleton is never built
+### Scenario: Every Forgejo call in resource-server mode uses a minted token
 
 The singleton is constructed from an operator token. This mode refuses to start when one
 is configured, when the fallback flag is set, and on the transports where the singleton

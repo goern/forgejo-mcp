@@ -293,5 +293,7 @@ In `resource-server` mode, `operation.Run` runs these checks before binding, in 
 
 ## Open Questions
 
-- The exact refresh floor for the IdP JWKS cache. 5 minutes is proposed, and it can be tuned without touching specs or tasks.
-- Whether RSA keys below 3072 bits should draw a startup warning. They are accepted from 2048 bits.
+None remain open. The two raised while planning are settled:
+
+- **Refresh floor for the IdP JWKS cache:** 5 minutes, as proposed (`DefaultMinRefreshInterval` in `pkg/oauthrs/keyset.go`). It can still be tuned without touching specs or tasks.
+- **A startup warning for RSA keys below 3072 bits:** not added. RSA keys are accepted from 2048 bits without comment; the operator guide's example generates an EC P-256 key.

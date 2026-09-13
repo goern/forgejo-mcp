@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
-The implementation can land as several PRs, one per group or per pair of groups. Every PR keeps `passthrough` behaviour unchanged and CI green. Specs and design are the reference: `specs/oauth-resource-server/spec.md`, `specs/forgejo-jwt-issuer/spec.md` and `design.md` (D1–D8).
+The planning artifacts and the implementation land together in one pull request. It keeps `passthrough` behaviour unchanged and CI green. Specs and design are the reference: `specs/oauth-resource-server/spec.md`, `specs/forgejo-jwt-issuer/spec.md` and `design.md` (D1–D8).
 
 ## 1. Prerequisites
 
@@ -10,7 +10,7 @@ The implementation can land as several PRs, one per group or per pair of groups.
 
 ## 2. Configuration and keys
 
-- [x] 2.1 Add the flags and environment variables from design D2 to `cmd/cmd.go` and `pkg/flag`, using the existing `flagWasPassed` precedence. Verify with tests in `cmd/config_test.go`: every default; env-only; flag over env, including a flag explicitly set to its default value.
+- [x] 2.1 Add the flags and environment variables from design D2 to `cmd/cmd.go` and `pkg/flag`, using the existing `flagWasPassed` precedence. Verify with tests in `cmd/auth_config_test.go`: every default; env-only; flag over env, including a flag explicitly set to its default value.
 - [x] 2.2 Refuse to start in `passthrough` mode when any setting that applies only to `resource-server` mode is present. Verify with a test per setting, reproducing the scenario "Issuer configured without the mode".
 - [x] 2.3 Implement key loading from PEM files:
   - key type to algorithm (EC P-256 → ES256, EC P-384 → ES384, Ed25519 → EdDSA, RSA ≥ 2048 bits → RS256);
@@ -35,7 +35,7 @@ The implementation can land as several PRs, one per group or per pair of groups.
 
 ## 4. Routing and the request guard
 
-- [x] 4.1 Restructure the guard in `operation/listen.go`:
+- [x] 4.1 Separate the public routes from the protected one. The routing lives in `operation/resource_server_http.go`; `operation/listen.go` keeps owning the listener and its Host and Origin checks:
   - the public group (protected resource metadata, discovery, JWKS) never passes through the authentication layer;
   - the MCP endpoint does;
   - Host and Origin checks apply to both groups;
@@ -150,4 +150,4 @@ The implementation can land as several PRs, one per group or per pair of groups.
   - `scripts/ci/check-api-path-escaping.sh`
   - `openspec validate oauth-resource-server-mode --strict`
   - `make check-demos`
-- [ ] 11.2 Take the PR out of WIP once the checks pass and every task above is checked. Verify that the PR description lists the demos and the upstream sequencing.
+- [ ] 11.2 Take the PR out of WIP once the checks pass and every task above is checked. Verify that the PR description lists the demos and carries the planning questions for the maintainer.
