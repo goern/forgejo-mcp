@@ -20,6 +20,7 @@ import (
 type recordedReq struct {
 	method  string
 	path    string
+	escaped string
 	query   string
 	rawBody []byte
 }
@@ -38,6 +39,7 @@ func newPatchBackend(t *testing.T, respBody string) (*httptest.Server, *[]record
 		records = append(records, recordedReq{
 			method:  r.Method,
 			path:    r.URL.Path,
+			escaped: r.URL.EscapedPath(),
 			query:   r.URL.RawQuery,
 			rawBody: body,
 		})
@@ -169,7 +171,7 @@ func newLabelsBackend(
 	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
-		records = append(records, recordedReq{method: r.Method, path: r.URL.Path, rawBody: body})
+		records = append(records, recordedReq{method: r.Method, path: r.URL.Path, escaped: r.URL.EscapedPath(), rawBody: body})
 		w.Header().Set("Content-Type", "application/json")
 		switch {
 		case strings.HasPrefix(r.URL.Path, "/api/v1/repos/") && strings.HasSuffix(r.URL.Path, "/labels"):
@@ -228,6 +230,9 @@ func TestListOrgLabels_Success(t *testing.T) {
 	if !strings.Contains(textOf(res), `"scope":"org"`) {
 		t.Fatalf("expected scope=org in result, got %q", textOf(res))
 	}
+	if !strings.Contains(textOf(res), `"exclusive"`) || !strings.Contains(textOf(res), `"is_archived"`) {
+		t.Errorf("expected exclusive and is_archived on org list rows, got %q", textOf(res))
+	}
 }
 
 func TestListOrgLabels_404IsEmpty(t *testing.T) {
@@ -266,6 +271,9 @@ func TestListRepoLabels_MergeWithOrgLabels(t *testing.T) {
 	}
 	if !strings.Contains(out, `"good-first-issue"`) || !strings.Contains(out, `"security"`) {
 		t.Fatalf("expected both label names in merged result, got %q", out)
+	}
+	if !strings.Contains(out, `"exclusive"`) || !strings.Contains(out, `"is_archived"`) {
+		t.Errorf("expected exclusive and is_archived on list rows, got %q", out)
 	}
 }
 
