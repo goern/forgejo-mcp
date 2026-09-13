@@ -22,5 +22,5 @@
 
 ## 3. Docs and demo
 
-- [ ] 3.1 README tool table two rows and CLI examples; `extension/manifest.json` two tools
-- [ ] 3.2 Append a link/unlink section to `demos/packages.md`; update `demos/README.md` index; host is the instance actually used, or `--help` plus honest gaps
+- [x] 3.1 README tool table two rows and CLI examples; `extension/manifest.json` two tools
+- [x] 3.2 Append a link/unlink section to `demos/packages.md`; update `demos/README.md` index; host is the instance actually used, or `--help` plus honest gaps

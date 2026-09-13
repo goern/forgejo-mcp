@@ -228,11 +228,12 @@ File listing has no server paging — the tool slices client-side.
 
 | Demo | Tools | What it shows |
 |------|-------|---------------|
-| [packages.md](packages.md) | `list_packages`, `get_package`, `list_package_files`, `delete_package` | One row per version, `type`/`q` filters, server-paged list envelope, projected get, client-sliced files with `has_next` and no `total_count`. `delete_package` is `--help` only |
+| [packages.md](packages.md) | `list_packages`, `get_package`, `list_package_files`, `delete_package`, `link_package`, `unlink_package` | One row per version, `type`/`q` filters, server-paged list envelope, projected get, client-sliced files. `delete_package` is `--help` only. Link/unlink are name-scoped Settings buttons; `repo` containing `/` is rejected with no HTTP |
 
 **Use case.** Inventory container and generic versions for an owner, inspect
-what a tag actually uploaded, then delete one stale version — without
-dropping every version of the name.
+what a tag actually uploaded, link a name onto a repository so the Packages
+tab is not empty, then delete one stale version — without dropping every
+version of the name.
 
 ---
 

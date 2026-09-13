@@ -426,6 +426,8 @@ List all my repositories
 | `get_package` | Get one package version. Does not embed owner/creator users |
 | `delete_package` | Delete one package version (not every version of the name). No preflight. 4xx/5xx stay errors |
 | `list_package_files` | List files of one package version. Client-paged via `page`/`limit` (default 30, max 50); envelope `{files, page, limit, count, has_next, total_count}` (`total_count` is the fetched list length) |
+| `link_package` | Link a package name to a repository under the same owner. `repo` is the repository name, not `owner/repo`. Cross-owner is 404 upstream. No `version` — every version of that name shares the repository. 4xx/5xx stay errors |
+| `unlink_package` | Unlink a package name from its repository. On the name, not a version. 4xx/5xx stay errors |
 | **Actions** | |
 | `dispatch_workflow` | Trigger a workflow run via `workflow_dispatch` event |
 | `list_workflow_runs` | List workflow runs with optional filtering by status, event, run number, or SHA |
@@ -628,8 +630,15 @@ forgejo-mcp --cli get_package \
 forgejo-mcp --cli list_package_files \
   --args '{"owner":"OWNER","type":"container","name":"app","version":"1.0.0"}' \
   --output=text
+forgejo-mcp --cli link_package \
+  --args '{"owner":"OWNER","type":"generic","name":"dist","repo":"core"}' \
+  --output=text
+forgejo-mcp --cli unlink_package \
+  --args '{"owner":"OWNER","type":"generic","name":"dist"}' \
+  --output=text
 
 # delete_package removes one version. Do not invoke it against a registry you do not own.
+# link_package repo is the same-owner repository name, not owner/repo.
 
 # cancel_workflow_run and delete_workflow_run need Forgejo v16+.
 # cancel_workflow_run is 204 even when the run already finished.

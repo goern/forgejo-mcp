@@ -5,11 +5,12 @@
 Forgejo's built-in registry is owner-scoped. `GET /packages/{owner}` is
 `SearchVersions`: each row is one **version**, not one package name. Optional
 `type` and `q` filter; `page`/`limit` are sent to the server. File listing has
-no paging on the API — the tool fetches the list and slices it.
+no paging on the API — the tool fetches the list and slices it. A repository's
+Packages tab stays empty until the package name is linked.
 
 Do **not** run `delete_package` against a registry you do not own. This
 walkthrough shows `--help` for delete and the read-only list/get/files
-surface against a fictional `OWNER`.
+surface against a fictional `OWNER`. Link/unlink live capture is section 6.
 
 ## Setup
 
@@ -25,14 +26,16 @@ Spec: `openspec/specs/packages/spec.md`
 ## 1. Tool surface
 
 ```bash
-${FORGEJO_MCP_BIN} --cli list 2>/dev/null | grep -E "list_packages|get_package|delete_package|list_package_files"
+${FORGEJO_MCP_BIN} --cli list 2>/dev/null | grep -E "list_packages|get_package|delete_package|list_package_files|link_package|unlink_package"
 ```
 
 ```
   delete_package                           Delete one package version. Removes that version only, not every version of the name. No preflight GET. HTTP 204 returns {owner, type, name, version, status: "deleted"}; 4xx/5xx stay errors.
   get_package                              Get one package version (id, type, name, version, html_url, created_at, repository full_name). Does not embed owner or creator users.
+  link_package                             Link a package name to a repository under the same owner. repo is the repository name, not owner/repo. Cross-owner is 404 upstream. Link is on the package name, not a version; every version of that name shares the repository. HTTP 201 returns {owner, type, name, repo, status: "linked"}; 4xx/5xx stay errors.
   list_package_files                       List files of one package version. Forgejo returns the full file list with no paging; page (default 1) and limit (default 30, maximum 50) slice it client-side. Returns {files, page, limit, count, has_next, total_count}. total_count is the fetched list length (the files endpoint has no X-Total-Count). Each file is id, name, size, sha256.
   list_packages                            List package versions for a user or org (Forgejo SearchVersions: one row per version, not one per name). Optional type and q filter; page (default 1) and limit (default 30, maximum 50) are sent as query parameters. Returns {packages, page, limit, count, has_next} and total_count when Forgejo sets X-Total-Count. has_next is Link rel=next. A missing owner is an error, not an empty list.
+  unlink_package                           Unlink a package name from its repository. Unlink is on the package name, not a version. HTTP 204 returns {owner, type, name, status: "unlinked"}; 4xx/5xx stay errors.
 ```
 
 ```bash
@@ -40,11 +43,16 @@ ${FORGEJO_MCP_BIN} --cli list_packages --help
 ${FORGEJO_MCP_BIN} --cli get_package --help
 ${FORGEJO_MCP_BIN} --cli list_package_files --help
 ${FORGEJO_MCP_BIN} --cli delete_package --help
+${FORGEJO_MCP_BIN} --cli link_package --help
+${FORGEJO_MCP_BIN} --cli unlink_package --help
 ```
 
 `list_packages` takes `owner` and optional `type`, `q`, `page`, `limit`.
 `get_package` / `delete_package` / `list_package_files` take `owner`, `type`,
-`name`, `version`. Files add `page` and `limit`.
+`name`, `version`. Files add `page` and `limit`. `link_package` takes `owner`,
+`type`, `name`, `repo` (same-owner repository name, not `owner/repo`).
+`unlink_package` takes `owner`, `type`, `name`. Neither link tool takes
+`version`.
 
 ## 2. List versions (read-only)
 
@@ -103,3 +111,46 @@ Do not invoke it against this demo's sample owner.
 ```bash
 ${FORGEJO_MCP_BIN} --cli delete_package --help
 ```
+
+## 6. Link and unlink a package name
+
+Link is on the **name**, not a version. `repo` is the repository name under the
+same owner. Cross-owner is 404 upstream ([forgejo#11483](https://codeberg.org/forgejo/forgejo/issues/11483)).
+Do not delete versions as part of this walkthrough.
+
+Host for this slice: `https://git.b4mad.industries` (Forgejo 16). Sections 2-5
+above are the original `#543` capture and do not show link/unlink.
+
+### 6a. `owner/repo` as `repo` is rejected with no HTTP
+
+```bash
+${FORGEJO_MCP_BIN} --cli link_package \
+  --args '{"owner":"cnvr","type":"npm","name":"oss","repo":"cnvr/oss"}'
+```
+
+```output
+Error: tool execution failed: repo must be the repository name under the same owner, not owner/repo, got "cnvr/oss"
+```
+
+Captured 2026-09-13 against this binary (no request is sent).
+
+### 6b. Live link, get, unlink
+
+```bash
+export FORGEJO_URL=https://git.b4mad.industries
+# TODO: re-run against live instance -- no token in this environment
+${FORGEJO_MCP_BIN} --cli get_package \
+  --args '{"owner":"OWNER","type":"generic","name":"dist","version":"1.0.0"}'
+${FORGEJO_MCP_BIN} --cli link_package \
+  --args '{"owner":"OWNER","type":"generic","name":"dist","repo":"REPO"}'
+${FORGEJO_MCP_BIN} --cli get_package \
+  --args '{"owner":"OWNER","type":"generic","name":"dist","version":"1.0.0"}'
+${FORGEJO_MCP_BIN} --cli unlink_package \
+  --args '{"owner":"OWNER","type":"generic","name":"dist"}'
+```
+
+Expected on a live Forgejo 16: get before omits `repository` (or documents
+that it was already linked); link returns `"status":"linked"`; get after
+shows `"repository":"OWNER/REPO"`; unlink then get omits `repository` again.
+Already-linked and unlink-when-not-linked are upstream 400; they stay MCP
+errors, not `"linked"` / `"unlinked"`.
