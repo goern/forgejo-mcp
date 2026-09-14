@@ -1,11 +1,11 @@
 ---
-description: Multi-agent PR code review for Forgejo repositories
+description: Multi-agent PR simple code review for Forgejo repositories
 argument-hint: [PR#] [--dry-run]
 model: sonnet
 allowed-tools: Read, Bash(git branch:*), Bash(git remote:*), Bash(forgejo-mcp --cli:*), AskUserQuestion, Task, mcp__codeberg__get_pull_request_by_index, mcp__codeberg__list_repo_pull_requests, mcp__codeberg__list_pull_request_files, mcp__codeberg__get_pull_request_diff, mcp__codeberg__get_file_content, mcp__codeberg__create_pull_review, mcp__codeberg__list_pull_reviews, mcp__codeberg__list_pull_review_comments
 ---
 
-# Code Review
+# simple Code Review
 
 Automated multi-agent PR review for Forgejo. Dispatches specialized agents in parallel, scores findings independently, and posts inline comments to the PR.
 
@@ -22,10 +22,10 @@ Parse `$ARGUMENTS` to extract:
 
 Examples:
 
-- `/code-review` - auto-detect PR, post review to Forgejo
-- `/code-review 42` - review PR #42, post review to Forgejo
-- `/code-review 42 --dry-run` - review PR #42, terminal output only
-- `/code-review --dry-run` - auto-detect PR, terminal output only
+- `/simple-code-review` - auto-detect PR, post review to Forgejo
+- `/simple-code-review 42` - review PR #42, post review to Forgejo
+- `/simple-code-review 42 --dry-run` - review PR #42, terminal output only
+- `/simple-code-review --dry-run` - auto-detect PR, terminal output only
 
 ## Step 2: Determine Repository Owner and Name
 
