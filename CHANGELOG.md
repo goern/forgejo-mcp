@@ -1,3 +1,43 @@
+## [3.1.0](https://git.b4mad.industries/agentic-forges/forgejo-mcp/compare/v3.0.1...v3.1.0) (2026-09-14)
+
+### :sparkles: Features
+
+* **issue:** accept label names on create, assignment and replace ([e721fff](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/e721fff0a767cbe85d7341e31d2ed7117c38bafb))
+
+### :bug: Fixes
+
+* **attachment:** address PR 534 review — release attachments DID accept base64, dedupe source validation, self-building sweep test ([4317cc9](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/4317cc9f8b147b501ba27a275645314fc0b48626))
+* **attachment:** harden create_*_attachment against runaway/stuck uploads ([0825918](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/0825918a33e4d54237211dc30f2a236c412db35b))
+* **ci:** 🐛 point CI tasks at the current release-tools image ([a0a9989](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/a0a9989ccf6c0fe87c6ef00c91d99d04f9ac40f6)), closes [#574](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/574) [#574](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/574) [#574](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/574) [#574](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/574)
+* **transport:** let an operator bind a single loopback family ([5dad093](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/5dad093764f76b69860977636c92d8befd10acd1))
+* **transport:** refuse to start when a loopback port is taken on either family ([5719ea4](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/5719ea4df5103630ecb231eeaf18ef98684f1560))
+
+### :memo: Documentation
+
+* describe label names on the issue tools ([464a7b7](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/464a7b7763d55aa5d363d2e479ad32c9dcc2ee76))
+* **openspec:** 📝 archive network-transport-hardening ([5864074](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/586407420550eac945716494a50b89d855011f09)), closes [pre-#545](https://git.b4mad.industries/agentic-forges/pre-/issues/545) [#586](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/586) [#586](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/586) [#585](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/585)
+* **openspec:** 📝 archive upload-safety-limits ([1f959b6](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/1f959b62aae27273cf8d047bd878fb02b51f6108)), closes [#534](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/534)
+* **openspec:** 📝 correct the --host default in the proposal ([7064827](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/706482721c973a6f7883b5f87b68d8abc45314c1)), closes [#586](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/586) [#586](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/586) [#586](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/586)
+* **openspec:** 📝 write the 13 placeholder Purpose sections ([0e3044c](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/0e3044cc3fc141be7e42c1c267a7a8ecd89c4217)), closes [#574](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/574) [#574](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/574)
+* **openspec:** add Upload safety limits requirement for attachment uploads ([699c105](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/699c105fa61262ad196ddfda3219ed75436c0984)), closes [#487](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/487)
+* **openspec:** make network-transport-hardening archivable without contradicting stateless-http-auth ([efcd8fa](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/efcd8fa9484f835938e417b6a869f05496c645e2)), closes [#562](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/562)
+* **openspec:** propose issue label assignment by name ([cd41dbd](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/cd41dbdd394673d3b1a4cdf95b8aeff443264da9))
+* **openspec:** put stateless-http-auth requirement statements on one line ([e0a8813](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/e0a881322e91708c9b4b23a017f45bd940dcbde6))
+* **openspec:** write the Purpose for network-transport-binding ([395ac31](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/395ac3151248afacd48448a8c31052c9f61417c0))
+
+### :white_check_mark: Tests
+
+* **attachment:** prove the upload timeout actually fires ([afc81c6](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/afc81c6ff6204ddb762b21525b51b01715d10a56))
+
+### :repeat: CI
+
+* 🚀 bump the pinned release-tools image to v1.0.4 ([52f290c](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/52f290c1c87e7391061a39a60826b33791dfae75)), closes [#574](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/574)
+
+### :repeat: Chore
+
+* archive the issue-labels-by-name change ([729cb91](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/729cb91f575bd9aab8f8525f15312a4e0a84c3e3))
+* **deps:** 🔧 update golang.org/x/crypto to v0.55.0 ([b9bf62a](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/b9bf62a76b9bf8b43acf71ff35828fa2af3a1fb0)), closes [#579](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/579) [#577](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/577) [#577](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/577)
+
 ## [3.0.1](https://git.b4mad.industries/agentic-forges/forgejo-mcp/compare/v3.0.0...v3.0.1) (2026-09-10)
 
 ### :repeat: Chore
