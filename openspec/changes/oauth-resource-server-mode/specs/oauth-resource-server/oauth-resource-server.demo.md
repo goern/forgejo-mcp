@@ -5,7 +5,8 @@
 *Captured: 2026-09-10 via Showboat 0.6.1*
 <!-- captured-for: PR #584 -->
 <!-- captured-at: 2026-09-10 -->
-<!-- captured-against: 8d525d7 (byteflavour/feat/oauth-rs-issuer-core); live evidence against https://forgejo-mcp.byteflavour.dev running 7d48e99 (tag deploy/chiba-20260910) -->
+<!-- captured-against: 8d525d7 (byteflavour/feat/oauth-rs-issuer-core); live evidence against https://forgejo-mcp.byteflavour.dev running 7d48e99 (tag deploy/chiba-20260910); review follow-ups and every refusal re-captured 2026-09-14 against the same branch after 5b065d6 -->
+<!-- re-capture changed only the log line of each refusal, cmd/cmd.go:294 to :295, moved by later commits to cmd/cmd.go -->
 
 Proves the `oauth-resource-server` capability of the change `oauth-resource-server-mode` against its [spec](./spec.md).
 
@@ -99,7 +100,7 @@ refusal -url https://forgejo.example.org -transport http -auth-mode oauth
 ```
 
 ```output
-FATAL	cmd/cmd.go:294	Invalid authentication configuration	{"error": "refusing to start: -auth-mode \"oauth\" is not valid; use passthrough or resource-server"}
+FATAL	cmd/cmd.go:295	Invalid authentication configuration	{"error": "refusing to start: -auth-mode \"oauth\" is not valid; use passthrough or resource-server"}
 exit status 1
 ```
 
@@ -119,7 +120,7 @@ refusal -url https://forgejo.example.org -transport sse -auth-mode resource-serv
 ```
 
 ```output
-FATAL	cmd/cmd.go:294	Invalid authentication configuration	{"error": "refusing to start: -auth-mode resource-server requires the http transport, not \"sse\""}
+FATAL	cmd/cmd.go:295	Invalid authentication configuration	{"error": "refusing to start: -auth-mode resource-server requires the http transport, not \"sse\""}
 exit status 1
 ```
 
@@ -151,7 +152,7 @@ FORGEJO_ACCESS_TOKEN=decoy-operator-value refusal -url https://forgejo.example.o
 ```
 
 ```output
-FATAL	cmd/cmd.go:294	Invalid authentication configuration	{"error": "refusing to start: -auth-mode resource-server takes no operator token; unset -token and FORGEJO_ACCESS_TOKEN (and GITEA_ACCESS_TOKEN)"}
+FATAL	cmd/cmd.go:295	Invalid authentication configuration	{"error": "refusing to start: -auth-mode resource-server takes no operator token; unset -token and FORGEJO_ACCESS_TOKEN (and GITEA_ACCESS_TOKEN)"}
 exit status 1
 ```
 
@@ -217,7 +218,7 @@ refusal -url https://forgejo.example.org -transport http -host 0.0.0.0 \
 ```
 
 ```output
-FATAL	cmd/cmd.go:294	Invalid authentication configuration	{"error": "refusing to start: -forgejo-jwt-issuer: issuer URL \"https://mcp.example.org/issuer/\" must not end with a slash"}
+FATAL	cmd/cmd.go:295	Invalid authentication configuration	{"error": "refusing to start: -forgejo-jwt-issuer: issuer URL \"https://mcp.example.org/issuer/\" must not end with a slash"}
 exit status 1
 ```
 
@@ -241,7 +242,31 @@ refusal -url https://forgejo.example.org -transport http -host 0.0.0.0 \
 ```
 
 ```output
-FATAL	cmd/cmd.go:294	Invalid authentication configuration	{"error": "refusing to start: the host of -forgejo-jwt-issuer (mcp.example.org) is not one this server answers to; add it to -allowed-hosts"}
+FATAL	cmd/cmd.go:295	Invalid authentication configuration	{"error": "refusing to start: the host of -forgejo-jwt-issuer (mcp.example.org) is not one this server answers to; add it to -allowed-hosts"}
+exit status 1
+```
+
+<!-- spec-scenario: oauth-resource-server#resource-names-another-path -->
+**Proves:** [spec.md → Scenario: Resource names another path](./spec.md#scenario-resource-names-another-path)
+
+#### Scenario: Resource names another path
+- **WHEN** `-resource` is `https://mcp.example.org/api/mcp`
+- **THEN** the server SHALL refuse to start
+- **AND** the message SHALL name `-resource` and the endpoint path `/mcp`
+
+<!-- evidence-kind: showboat-cli -->
+*Proof:* the binary refuses a resource URL whose host is answered but whose path is not `/mcp`, before it reads the key file, which does not exist here.
+
+```bash
+refusal -url https://forgejo.example.org -transport http -host 0.0.0.0 \
+  -auth-mode resource-server -authorization-server https://id.example.org \
+  -forgejo-jwt-signing-key-file signing.pem \
+  -allowed-hosts mcp.example.org -resource https://mcp.example.org/api/mcp \
+  -forgejo-jwt-issuer https://mcp.example.org/issuer
+```
+
+```output
+FATAL	cmd/cmd.go:295	Invalid authentication configuration	{"error": "refusing to start: the path of -resource (\"/api/mcp\") must be \"/mcp\", the MCP endpoint this server serves"}
 exit status 1
 ```
 
@@ -261,7 +286,7 @@ FORGEJO_MCP_AUTHORIZATION_SERVER=https://id.example.org refusal -url https://for
 ```
 
 ```output
-FATAL	cmd/cmd.go:294	Invalid authentication configuration	{"error": "refusing to start: FORGEJO_MCP_AUTHORIZATION_SERVER requires -auth-mode resource-server; remove it, or enable that mode"}
+FATAL	cmd/cmd.go:295	Invalid authentication configuration	{"error": "refusing to start: FORGEJO_MCP_AUTHORIZATION_SERVER requires -auth-mode resource-server; remove it, or enable that mode"}
 exit status 1
 ```
 
@@ -498,6 +523,26 @@ proof ./pkg/oauthrs/ -run '^TestUnknownKeyIDsTriggerAtMostOneFetchPerInterval$'
 
 ```output
 --- PASS: TestUnknownKeyIDsTriggerAtMostOneFetchPerInterval
+ok  	git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/oauthrs
+```
+
+<!-- spec-scenario: oauth-resource-server#caller-disconnects-during-a-refetch -->
+**Proves:** [spec.md → Scenario: Caller disconnects during a refetch](./spec.md#scenario-caller-disconnects-during-a-refetch)
+
+#### Scenario: Caller disconnects during a refetch
+- **WHEN** a request past the refresh interval names a key ID the provider has just added, and its client disconnects before the key set is fetched
+- **THEN** the server SHALL complete the fetch
+- **AND** a later request within the same interval SHALL find the new key without another fetch
+
+<!-- evidence-kind: test-invocation -->
+*Proof:* past the refresh interval, a lookup of a key the provider has just added, made with an already-cancelled context, refetches the set and finds the key; a second lookup finds it without another fetch. With the fetch bound to the caller's context, the test fails with `context canceled`.
+
+```bash
+proof ./pkg/oauthrs/ -run '^TestARefetchCompletesWhenTheRequestThatTriggeredItIsCancelled$'
+```
+
+```output
+--- PASS: TestARefetchCompletesWhenTheRequestThatTriggeredItIsCancelled
 ok  	git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/oauthrs
 ```
 

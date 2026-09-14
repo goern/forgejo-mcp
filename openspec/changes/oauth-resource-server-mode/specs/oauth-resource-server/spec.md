@@ -43,6 +43,7 @@ In `resource-server` mode, the server SHALL check its configuration before bindi
 - **Forgejo issuer shape.** The URL in `-forgejo-jwt-issuer` ends with `/`, or carries a query, a fragment or user information. Forgejo compares `iss` byte for byte, so only one spelling of the issuer may exist.
 - **Other URL schemes.** `-authorization-server` or `-resource` uses a scheme other than `https`. The only exception is `http` with a loopback host.
 - **Host not answered.** The host of `-resource` or of `-forgejo-jwt-issuer` is not a host this server answers to under its Host policy.
+- **Resource path.** The path of `-resource` is not `/mcp`, the path of the MCP endpoint. The protected resource metadata names `-resource` as the resource, so any other path publishes a resource this server does not serve.
 - **Signing key.** The signing key or a published key cannot be loaded, is not of a supported type (see capability `forgejo-jwt-issuer`), or two published keys have the same key ID.
 - **Forgejo version.** The configured Forgejo instance does not report its version, or reports a version below 16.0.
 - **Identity provider metadata.** The provider's metadata cannot be retrieved, its `issuer` differs from `-authorization-server` by even one character, or it names no `jwks_uri`.
@@ -82,6 +83,12 @@ In `resource-server` mode, the server SHALL check its configuration before bindi
 - **WHEN** `-forgejo-jwt-issuer` is `https://mcp.example.org/issuer`, the listener is not loopback-only, and `-allowed-hosts` does not include `mcp.example.org`
 - **THEN** the server SHALL refuse to start
 - **AND** the message SHALL name `-allowed-hosts`
+
+#### Scenario: Resource names another path
+
+- **WHEN** `-resource` is `https://mcp.example.org/api/mcp`
+- **THEN** the server SHALL refuse to start
+- **AND** the message SHALL name `-resource` and the endpoint path `/mcp`
 
 ### Requirement: passthrough mode refuses resource-server settings
 
@@ -172,11 +179,19 @@ The response SHALL NOT reveal which condition failed; the reason SHALL be logged
 
 The server SHALL cache the provider's published keys. When a token names a key ID that is not in the cache, the server SHALL refetch the key set at most once per minimum refresh interval. It SHALL refuse the token if the key is still unknown. The server SHALL NOT fetch the provider's keys once per request.
 
+A refetch SHALL run to completion even when the request that triggered it is cancelled. Otherwise a client that disconnects mid-fetch spends the interval without the key set being refreshed, and repeating that once per interval would keep the server from ever learning a rotated key.
+
 #### Scenario: Burst of unknown key IDs
 
 - **WHEN** many requests within one refresh interval carry tokens with different unknown key IDs
 - **THEN** the server SHALL fetch the provider's key set at most once during that interval
 - **AND** every such request SHALL receive `401`
+
+#### Scenario: Caller disconnects during a refetch
+
+- **WHEN** a request past the refresh interval names a key ID the provider has just added, and its client disconnects before the key set is fetched
+- **THEN** the server SHALL complete the fetch
+- **AND** a later request within the same interval SHALL find the new key without another fetch
 
 ### Requirement: Protected resource metadata is published without authentication
 

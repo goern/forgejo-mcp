@@ -94,7 +94,7 @@ Every option is a flag with an environment variable. The precedence is the one i
 |---|---|---|---|
 | `-auth-mode` | `FORGEJO_MCP_AUTH_MODE` | `passthrough` or `resource-server` | `passthrough` |
 | `-authorization-server` | `FORGEJO_MCP_AUTHORIZATION_SERVER` | IdP issuer URL; published in `authorization_servers` | – |
-| `-resource` | `FORGEJO_MCP_RESOURCE` | Canonical resource URI of the MCP endpoint, e.g. `https://mcp.example.org/mcp` | – |
+| `-resource` | `FORGEJO_MCP_RESOURCE` | Canonical resource URI of the MCP endpoint, e.g. `https://mcp.example.org/mcp`; its path must be `/mcp` | – |
 | `-resource-audience` | `FORGEJO_MCP_RESOURCE_AUDIENCE` | Value that must be contained in an inbound `aud` | value of `-resource` |
 | `-scopes-supported` | `FORGEJO_MCP_SCOPES_SUPPORTED` | Space-separated scopes for metadata and challenge | unset: neither field emitted |
 | `-forgejo-audience-claim` | `FORGEJO_MCP_FORGEJO_AUDIENCE_CLAIM` | Inbound claim holding the caller's Forgejo integration audience | `forgejo_aud` |
@@ -146,7 +146,7 @@ Every route sits behind the existing Host and Origin checks. The routes split in
 **Per request.**
 
 1. **Header.** `Authorization: Bearer <jwt>` is required. The scheme is matched case-insensitively. `token` is not accepted in this mode.
-2. **Signature.** Verify it with the key named by `kid`, from a JWKS cache with a refresh floor of 5 minutes. An unknown `kid` triggers at most one refetch per floor interval, so a stranger sending random key IDs cannot make forgejo-mcp hammer the IdP.
+2. **Signature.** Verify it with the key named by `kid`, from a JWKS cache with a refresh floor of 5 minutes. An unknown `kid` triggers at most one refetch per floor interval, so a stranger sending random key IDs cannot make forgejo-mcp hammer the IdP. The refetch is detached from the request that triggered it, so a caller that disconnects cannot fail it and still spend the interval.
 3. **Algorithm.** Take it from the JWK, and accept only asymmetric algorithms. Zitadel signs with RS256.
 4. **Issuer and time claims.** `iss` must match exactly, and `exp` is required. `nbf` and `iat` are honoured with 60 s of leeway; Forgejo's zero leeway applies to its own checks, not ours.
 5. **Audience.** `aud` must contain `-resource-audience`, whether `aud` arrives as a string or as an array.
@@ -163,7 +163,7 @@ Every route sits behind the existing Host and Origin checks. The routes split in
   - The reason is logged at debug level, rate-limited through the existing `logRefusal`.
 - **Valid token, no usable Forgejo audience.** Answered with `403` and a plain-text body naming the claim.
   - "Usable" means the claim is present and is a single non-empty string of at most 256 characters, without whitespace or control characters.
-  - The response has no `WWW-Authenticate` error parameter. An `insufficient_scope` hint would send spec-following clients into a step-up authorization loop that cannot succeed, because the fix is data in the IdP, not a scope.
+  - The response carries no `WWW-Authenticate` header at all. An `insufficient_scope` hint would send spec-following clients into a step-up authorization loop that cannot succeed, because the fix is data in the IdP, not a scope.
 
 ### D5: Where the Forgejo audience comes from: the IdP claim only, in this change
 
@@ -220,6 +220,7 @@ In `resource-server` mode, `operation.Run` runs these checks before binding, in 
    - `-forgejo-jwt-issuer` must be https, because Forgejo requires it. It must also not end with `/` or carry a query, a fragment or user information: `…/issuer/` would publish `…/issuer//jwks.json`, and Forgejo compares `iss` byte for byte.
    - `-authorization-server` and `-resource` must be https, or http on a loopback host only, for local development.
    - The hosts of `-resource` and `-forgejo-jwt-issuer` must be permitted by `-allowed-hosts`, or be loopback on a loopback bind. Otherwise the guard would refuse the very requests those routes exist for.
+   - The path of `-resource` must be `/mcp`, where the endpoint is served. The metadata publishes `-resource` as the resource, and `-resource` is also the default inbound audience, so any other path starts cleanly and then names a resource the server does not serve.
 4. **Keys.** The signing key loads and has a supported type. Published keys load, with no duplicate `kid`.
 5. **Forgejo version.** `GET /api/v1/version`, unauthenticated, must report 16.0 or newer.
    - The reported version is kept and passed to every ephemeral SDK client as `SetForgejoVersion`.

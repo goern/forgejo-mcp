@@ -61,7 +61,7 @@ The claim is usable only if it is present and is a single non-empty string of at
 
 When the token is valid but its claim is not usable, the server SHALL:
 - respond `403`, with a plain-text body that names the claim;
-- send no `WWW-Authenticate` error parameter;
+- send no `WWW-Authenticate` header, because a challenge would invite a re-authorization or scope step-up that cannot succeed;
 - sign no JWT;
 - make no request to Forgejo.
 

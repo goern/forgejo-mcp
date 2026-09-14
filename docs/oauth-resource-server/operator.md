@@ -56,8 +56,8 @@ forgejo-mcp --transport http --url https://forgejo.example.org \
 
 Every setting also has an environment variable; the [README](../../README.md#configuration-options) lists them.
 
-- **`--authorization-server`** is the provider's issuer URL, spelled exactly as its discovery document states it. At startup forgejo-mcp fetches `/.well-known/openid-configuration` under it, then the RFC 8414 location. It refuses to start if the `issuer` there differs by a single character, a trailing slash included.
-- **`--resource`** is the canonical URL of the MCP endpoint. forgejo-mcp publishes it in the protected resource metadata at `/.well-known/oauth-protected-resource/mcp` and at `/.well-known/oauth-protected-resource`.
+- **`--authorization-server`** is the provider's issuer URL, spelled exactly as its discovery document states it. At startup forgejo-mcp fetches `/.well-known/openid-configuration` under it, then the RFC 8414 location. It refuses to start if the `issuer` there differs by a single character, a trailing slash included. It then fetches the key set from the `jwks_uri` that document names, at startup and again whenever it refreshes the keys. That URL may be on another host than the issuer, as Google's is, so forgejo-mcp needs outbound https access to both, and trusting `--authorization-server` means trusting the `jwks_uri` it names.
+- **`--resource`** is the canonical URL of the MCP endpoint. forgejo-mcp publishes it in the protected resource metadata at `/.well-known/oauth-protected-resource/mcp` and at `/.well-known/oauth-protected-resource`. Its path must be `/mcp`, where the endpoint is served; forgejo-mcp refuses to start otherwise, so serving the endpoint under another path behind a proxy is not supported.
 - **`--resource-audience`** is the value an access token's `aud` must contain. It defaults to `--resource`, as the MCP specification asks, but many providers cannot put a URL there. Choose the narrowest value the provider offers, usually the client ID of the MCP client. A value shared by several clients, such as a project ID, admits tokens issued to all of them.
 - **`--scopes-supported`** is published in the metadata and in the `401` challenge, and clients request these scopes at login. forgejo-mcp does not check scopes; the permissions of each Authorized Integration are the permission boundary.
 - **`--forgejo-audience-claim`** names the access-token claim that holds the user's Forgejo audience. The default is `forgejo_aud`.
@@ -70,6 +70,7 @@ forgejo-mcp refuses to start, before it binds a socket, when:
 - an operator token (`--token`, `FORGEJO_ACCESS_TOKEN`) or `--allow-operator-token-fallback` is set;
 - a required setting is missing, or a URL does not use https;
 - the host of `--resource` or `--forgejo-jwt-issuer` is not in `--allowed-hosts`;
+- the path of `--resource` is not `/mcp`;
 - the key cannot be used;
 - Forgejo is older than 16.0;
 - the provider's metadata is unreachable, names another issuer or names no key set.

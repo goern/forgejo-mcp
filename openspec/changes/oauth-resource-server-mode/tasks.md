@@ -153,3 +153,10 @@ The planning artifacts and the implementation land together in one pull request.
   - `openspec validate oauth-resource-server-mode --strict`
   - `make check-demos`
 - [x] 11.2 Take the PR out of WIP once the checks pass and every task above is checked. Verify that the PR description lists the demos and carries the planning questions for the maintainer. **Done 2026-09-13**, after 9.2.
+
+## 12. Review follow-ups
+
+- [x] 12.1 Refuse to start when the path of `-resource` is not `/mcp`, the path the endpoint is served at. Verify with rows in `TestValidateAuthConfig` for another path and for a trailing slash, the scenario "Resource names another path", and a refusal captured from the binary in the demo.
+- [x] 12.2 Detach a key-set refetch from the request that triggered it, so a caller that disconnects cannot fail it and still spend the interval. Verify with `TestARefetchCompletesWhenTheRequestThatTriggeredItIsCancelled` and the scenario "Caller disconnects during a refetch", and check that the test fails with the fetch bound to the caller's context.
+- [x] 12.3 Record in the code why a valid token without a usable audience gets a `403` with no `WWW-Authenticate` header, and state that header rule in the `forgejo-jwt-issuer` spec. Verify that the existing `403` test still asserts the absent header.
+- [x] 12.4 State in the operator guide that forgejo-mcp fetches the provider's `jwks_uri`, which may be on another host, at startup and on every refresh.
