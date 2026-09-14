@@ -1,11 +1,12 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!-- demos-anchored: true -->
 
-## Purpose
+# forgejo-jwt-issuer Specification
 
+## Purpose
 Defines how forgejo-mcp, in `resource-server` mode, obtains a Forgejo credential for the calling person. forgejo-mcp signs a short-lived JWT that Forgejo 16 accepts through Authorized Integrations, and it publishes the discovery document and key set that Forgejo needs to verify that JWT.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Forgejo calls carry a JWT signed by forgejo-mcp
 

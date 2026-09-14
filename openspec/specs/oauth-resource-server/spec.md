@@ -1,8 +1,9 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!-- demos-anchored: true -->
 
-## Purpose
+# oauth-resource-server Specification
 
+## Purpose
 This capability lets forgejo-mcp run on the `http` transport as an OAuth 2.0 resource server, as the MCP authorization specification defines it. Callers authenticate with a JWT access token from one configured OpenID Connect provider.
 
 It covers:
@@ -12,7 +13,7 @@ It covers:
 - the `401` challenge;
 - the public metadata that tells clients how to authorise.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Auth mode is selected explicitly and defaults to passthrough
 
