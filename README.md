@@ -568,7 +568,7 @@ You can configure the server using command-line arguments or environment variabl
 | `--allow-operator-token-fallback` | `FORGEJO_MCP_ALLOW_OPERATOR_TOKEN_FALLBACK` | On `sse`/`http`, serve requests with no `Authorization` header using this server's own token. Off by default |
 | `--auth-mode` | `FORGEJO_MCP_AUTH_MODE` | `passthrough` (default) or `resource-server`; see [Remote operation as an OAuth resource server](#remote-operation-as-an-oauth-resource-server) |
 | `--authorization-server` | `FORGEJO_MCP_AUTHORIZATION_SERVER` | `resource-server` mode: issuer URL of the OpenID Connect provider, compared byte for byte |
-| `--resource` | `FORGEJO_MCP_RESOURCE` | `resource-server` mode: canonical URI of the MCP endpoint, for example `https://mcp.example.org/mcp` |
+| `--resource` | `FORGEJO_MCP_RESOURCE` | `resource-server` mode: canonical URI of the MCP endpoint, for example `https://mcp.example.org/mcp`; its path must be `/mcp` |
 | `--resource-audience` | `FORGEJO_MCP_RESOURCE_AUDIENCE` | `resource-server` mode: value an access token's `aud` must contain (default: the value of `--resource`) |
 | `--scopes-supported` | `FORGEJO_MCP_SCOPES_SUPPORTED` | `resource-server` mode: space-separated scopes published in the metadata and the `401` challenge (default: none published) |
 | `--forgejo-audience-claim` | `FORGEJO_MCP_FORGEJO_AUDIENCE_CLAIM` | `resource-server` mode: access-token claim holding the audience of the caller's Forgejo Authorized Integration (default: `forgejo_aud`) |

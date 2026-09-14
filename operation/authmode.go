@@ -95,6 +95,14 @@ func ValidateAuthConfig(transport string, cli bool) error {
 	if err != nil {
 		return err
 	}
+	// The metadata publishes -resource as the resource and derives its own
+	// location from its path, while the endpoint is always served at
+	// streamableHTTPEndpointPath. Any other path starts cleanly and then names
+	// a resource this server does not serve, which clients must reject.
+	if resourceURL.Path != streamableHTTPEndpointPath {
+		return fmt.Errorf("refusing to start: the path of -resource (%q) must be %q, the MCP endpoint this server serves",
+			resourceURL.Path, streamableHTTPEndpointPath)
+	}
 	issuerURL, err := url.Parse(flag.ForgejoJWTIssuer)
 	if err != nil || issuerURL.Scheme != "https" || issuerURL.Host == "" {
 		return fmt.Errorf("refusing to start: -forgejo-jwt-issuer %q must be an https URL, because Forgejo only fetches https issuers",

@@ -119,6 +119,11 @@ func TestValidateAuthConfig(t *testing.T) {
 		{name: "authorization server over http on loopback", transport: "http", mutate: func() { flag.AuthorizationServer = "http://127.0.0.1:8081" }},
 		{name: "resource host not answered", transport: "http", mutate: func() { flag.Resource = "https://other.example.org/mcp" },
 			want: []string{"-resource", "-allowed-hosts"}},
+		// Spec scenario "Resource names another path".
+		{name: "resource path is not the MCP endpoint", transport: "http", mutate: func() { flag.Resource = "https://mcp.example.org/api/mcp" },
+			want: []string{"-resource", `"/mcp"`}},
+		{name: "resource path with a trailing slash", transport: "http", mutate: func() { flag.Resource = "https://mcp.example.org/mcp/" },
+			want: []string{"-resource", `"/mcp"`}},
 		// Spec scenario "Issuer host not answered".
 		{name: "issuer host not answered", transport: "http", mutate: func() { flag.ForgejoJWTIssuer = "https://issuer.example.org/issuer" },
 			want: []string{"-forgejo-jwt-issuer", "-allowed-hosts"}},
