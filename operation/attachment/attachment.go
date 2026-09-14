@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation/params"
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/forgejo"
@@ -20,6 +21,43 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
+
+// Upload timeout. Multiple agents reported
+// create_*_attachment (issue and comment attachments) failing with "illegal
+// base64 data" at a variable byte
+// offset (~1.5KB-4.9KB observed) and, once, hanging a caller for ~30
+// minutes. A size-sweep repro against the real stdio transport (see
+// test/transport/sweep_test.go) found no corruption or hang in this server
+// for payloads from 1KB to 100KB — the root cause is upstream of this
+// process (the calling MCP client/harness), not in this server's read,
+// decode, or upload path. This guard exists regardless, as defense in
+// depth: it bounds worst-case wall-clock time for a stuck network path so a
+// broken upload always fails fast with a clear, actionable error instead of
+// hanging.
+//
+// This timeout is scoped to create_issue_attachment / create_comment_attachment
+// only — it is NOT applied to create_release_attachment. Release assets can
+// legitimately be much larger than an issue/comment attachment (build
+// artifacts, archives, container images) and may need more than 45s of
+// upload headroom; create_release_attachment relies on the underlying HTTP
+// client's own (longer) timeout instead. The base64 `content` size cap and
+// received-length decode diagnostic, by contrast, live in pkg/upload.Open
+// and apply uniformly to all three attachment-creating tools, since
+// create_release_attachment accepts base64 `content` exactly like the
+// issue/comment tools do (see operation/release/release.go).
+const (
+	// defaultAttachmentUploadTimeout bounds the multipart upload call so a
+	// stuck network path fails with a clear, specific error well inside the
+	// caller's own patience, instead of running to the underlying HTTP
+	// client's 60s timeout (or beyond, if something upstream never returns
+	// control at all).
+	defaultAttachmentUploadTimeout = 45 * time.Second
+)
+
+// attachmentUploadTimeout is a var (not const) so tests can shrink it to
+// exercise the timeout path without a real 45s wait; production code never
+// reassigns it, so it always behaves as the 45s constant above.
+var attachmentUploadTimeout = defaultAttachmentUploadTimeout
 
 const (
 	// Issue-scoped tool names
@@ -262,10 +300,13 @@ func CreateIssueAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	}
 	defer reader.Close()
 
+	uploadCtx, cancel := context.WithTimeout(ctx, attachmentUploadTimeout)
+	defer cancel()
+
 	var att forgejo_sdk.Attachment
 	path := forgejo.APIPath("repos", owner, repo, "issues", int64(index), "assets")
-	if err := forgejo.DoMultipart(ctx, http.MethodPost, path, multipartFieldName, filename, mimeType, reader, &att); err != nil {
-		return to.ErrorResult(fmt.Errorf("create issue attachment err: %w", err))
+	if err := forgejo.DoMultipart(uploadCtx, http.MethodPost, path, multipartFieldName, filename, mimeType, reader, &att); err != nil {
+		return to.ErrorResult(fmt.Errorf("create issue attachment err: %w", wrapUploadTimeout(ctx, uploadCtx, err)))
 	}
 	return to.TextResult(att)
 }
@@ -392,10 +433,13 @@ func CreateCommentAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*m
 	}
 	defer reader.Close()
 
+	uploadCtx, cancel := context.WithTimeout(ctx, attachmentUploadTimeout)
+	defer cancel()
+
 	var att forgejo_sdk.Attachment
 	path := forgejo.APIPath("repos", owner, repo, "issues", "comments", int64(cid), "assets")
-	if err := forgejo.DoMultipart(ctx, http.MethodPost, path, multipartFieldName, filename, mimeType, reader, &att); err != nil {
-		return to.ErrorResult(fmt.Errorf("create comment attachment err: %w", err))
+	if err := forgejo.DoMultipart(uploadCtx, http.MethodPost, path, multipartFieldName, filename, mimeType, reader, &att); err != nil {
+		return to.ErrorResult(fmt.Errorf("create comment attachment err: %w", wrapUploadTimeout(ctx, uploadCtx, err)))
 	}
 	return to.TextResult(att)
 }
@@ -443,6 +487,30 @@ func DeleteCommentAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*m
 		return to.ErrorResult(fmt.Errorf("delete comment attachment err: %w", err))
 	}
 	return to.TextResult(map[string]string{"status": "deleted"})
+}
+
+// wrapUploadTimeout annotates err with a clear, specific message when the
+// upload's own context deadline (attachmentUploadTimeout) is what ended the
+// call, so a caller sees "upload timed out after 45s" instead of a bare
+// "context deadline exceeded" buried inside an HTTP transport error.
+//
+// parent is the caller's original context (before attachmentUploadTimeout
+// was applied) and uploadCtx is the child context actually passed to the
+// upload call. Both must be checked: if parent's own deadline is what
+// elapsed — e.g. an overall request timeout imposed by the MCP host, unaware
+// of and unrelated to attachmentUploadTimeout — parent.Err() is already
+// DeadlineExceeded by the time the upload call returns (context.WithTimeout
+// derives uploadCtx from parent, so a parent-caused expiry propagates the
+// same error down), and the message must not claim "upload timed out after
+// 45s" for a deadline this function's own budget had nothing to do with.
+func wrapUploadTimeout(parent, uploadCtx context.Context, err error) error {
+	if !errors.Is(uploadCtx.Err(), context.DeadlineExceeded) {
+		return err
+	}
+	if errors.Is(parent.Err(), context.DeadlineExceeded) {
+		return err
+	}
+	return fmt.Errorf("upload timed out after %s: %w", attachmentUploadTimeout, err)
 }
 
 // --- shared helpers ---------------------------------------------------------

@@ -4,6 +4,7 @@ package upload
 
 import (
 	"encoding/base64"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -190,6 +191,44 @@ func TestOpenConfinesToUploadRootRejectsSiblingPrefixDir(t *testing.T) {
 	}
 	if err == nil || !strings.Contains(err.Error(), UploadRootEnv) {
 		t.Fatalf("expected sibling-prefix dir %q to be rejected against root %q, got %v", siblingDir, root, err)
+	}
+}
+
+// TestOpenRejectsOversizedContent covers the defense-in-depth
+// guard: a runaway/malformed base64 `content` argument must be rejected
+// immediately, before decode is attempted, with a clear size-limit error.
+// This guard lives here (not in operation/attachment) so it applies uniformly
+// to every caller of Open, including create_release_attachment.
+func TestOpenRejectsOversizedContent(t *testing.T) {
+	huge := strings.Repeat("A", MaxContentB64Bytes+1)
+	reader, _, err := Open(Source{Content: &huge, Filename: "f.bin"})
+	if reader != nil {
+		_ = reader.Close()
+	}
+	if err == nil {
+		t.Fatalf("expected error for oversized content")
+	}
+	if !strings.Contains(err.Error(), "too large") {
+		t.Fatalf("expected a size-limit error, got: %v", err)
+	}
+}
+
+// TestOpenNonBase64ReportsReceivedLength covers the
+// received-length diagnostic improvement: a decode failure must report how many bytes THIS
+// SERVER received, so a caller can tell at a glance whether truncation
+// happened upstream of this process.
+func TestOpenNonBase64ReportsReceivedLength(t *testing.T) {
+	content := "not base64!!!"
+	reader, _, err := Open(Source{Content: &content, Filename: "f.bin"})
+	if reader != nil {
+		_ = reader.Close()
+	}
+	if err == nil {
+		t.Fatalf("expected error for non-base64 content")
+	}
+	wantFragment := fmt.Sprintf("received %d bytes", len(content))
+	if !strings.Contains(err.Error(), wantFragment) {
+		t.Fatalf("error %q does not report received length (want fragment %q)", err.Error(), wantFragment)
 	}
 }
 

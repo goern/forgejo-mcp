@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -14,6 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/flag"
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/forgejo"
@@ -403,6 +405,194 @@ func TestCreateIssueAttachmentFn_RejectsNonBase64(t *testing.T) {
 	}))
 	if err == nil {
 		t.Fatalf("expected error for non-base64 content")
+	}
+}
+
+// TestCreateIssueAttachmentFn_RejectsNonBase64_ReportsReceivedLength covers
+// the received-length diagnostic improvement: a decode failure must report
+// how many bytes THIS SERVER received, so a caller can tell at a glance
+// whether truncation happened upstream of this process.
+func TestCreateIssueAttachmentFn_RejectsNonBase64_ReportsReceivedLength(t *testing.T) {
+	newBackend(t)
+	content := "not base64!!!"
+	_, err := CreateIssueAttachmentFn(context.Background(), req(map[string]any{
+		"owner": "o", "repo": "r", "index": 3.0,
+		"content": content, "filename": "f.bin",
+	}))
+	if err == nil {
+		t.Fatalf("expected error for non-base64 content")
+	}
+	wantFragment := fmt.Sprintf("received %d bytes", len(content))
+	if !strings.Contains(err.Error(), wantFragment) {
+		t.Fatalf("error %q does not report received length (want fragment %q)", err.Error(), wantFragment)
+	}
+}
+
+// TestCreateCommentAttachmentFn_RejectsOversizedContent covers the
+// defense-in-depth guard: a runaway/malformed content
+// argument must be rejected immediately, before decode or upload is
+// attempted, with a clear size-limit error.
+func TestCreateCommentAttachmentFn_RejectsOversizedContent(t *testing.T) {
+	newBackend(t)
+	huge := strings.Repeat("A", upload.MaxContentB64Bytes+1)
+	_, err := CreateCommentAttachmentFn(context.Background(), req(map[string]any{
+		"owner": "o", "repo": "r", "comment_id": 1.0,
+		"content": huge, "filename": "f.bin",
+	}))
+	if err == nil {
+		t.Fatalf("expected error for oversized content")
+	}
+	if !strings.Contains(err.Error(), "too large") {
+		t.Fatalf("expected a size-limit error, got: %v", err)
+	}
+}
+
+// withShortUploadTimeout shrinks attachmentUploadTimeout for the duration of
+// a test, restoring the production 45s value on cleanup. A stuck upload was
+// once reported to hang a caller for ~30 minutes; the fix wraps
+// create_*_attachment uploads in a context timeout so a stuck
+// network path can never again present as an unbounded hang; these tests
+// prove that path actually fires and bounds wall-clock time, rather than
+// just asserting the constant exists.
+func withShortUploadTimeout(t *testing.T, d time.Duration) {
+	t.Helper()
+	orig := attachmentUploadTimeout
+	attachmentUploadTimeout = d
+	t.Cleanup(func() { attachmentUploadTimeout = orig })
+}
+
+// hangingHandler never writes a response; it blocks until the request
+// context is canceled (i.e. until the client-side upload timeout fires),
+// simulating a stuck network path / unresponsive Codeberg backend.
+func hangingHandler(w http.ResponseWriter, r *http.Request) {
+	<-r.Context().Done()
+}
+
+func TestCreateIssueAttachmentFn_UploadTimeout(t *testing.T) {
+	withShortUploadTimeout(t, 100*time.Millisecond)
+	newBackend(t, route{
+		method:     http.MethodPost,
+		pathPrefix: "/api/v1/repos/o/r/issues/3/assets",
+		handler:    hangingHandler,
+	})
+
+	start := time.Now()
+	_, err := CreateIssueAttachmentFn(context.Background(), req(map[string]any{
+		"owner": "o", "repo": "r", "index": 3.0,
+		"content": base64.StdEncoding.EncodeToString([]byte("hang me")), "filename": "f.bin",
+	}))
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatalf("expected a timeout error, got nil (upload should not hang forever)")
+	}
+	if !strings.Contains(err.Error(), "upload timed out after") {
+		t.Fatalf("expected a clear upload-timeout error, got: %v", err)
+	}
+	// Generous bound (10x the injected timeout) to absorb scheduler jitter
+	// while still proving the call returned promptly rather than hanging
+	// for the production 45s (or indefinitely, as in the original report).
+	if elapsed > time.Second {
+		t.Fatalf("upload took %s to time out; want well under the injected 100ms bound (bounded, not hung)", elapsed)
+	}
+}
+
+func TestCreateCommentAttachmentFn_UploadTimeout(t *testing.T) {
+	withShortUploadTimeout(t, 100*time.Millisecond)
+	newBackend(t, route{
+		method:     http.MethodPost,
+		pathPrefix: "/api/v1/repos/o/r/issues/comments/1/assets",
+		handler:    hangingHandler,
+	})
+
+	start := time.Now()
+	_, err := CreateCommentAttachmentFn(context.Background(), req(map[string]any{
+		"owner": "o", "repo": "r", "comment_id": 1.0,
+		"content": base64.StdEncoding.EncodeToString([]byte("hang me")), "filename": "f.bin",
+	}))
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatalf("expected a timeout error, got nil (upload should not hang forever)")
+	}
+	if !strings.Contains(err.Error(), "upload timed out after") {
+		t.Fatalf("expected a clear upload-timeout error, got: %v", err)
+	}
+	if elapsed > time.Second {
+		t.Fatalf("upload took %s to time out; want well under the injected 100ms bound (bounded, not hung)", elapsed)
+	}
+}
+
+// TestWrapUploadTimeout_ParentDeadlineNotMisattributed is a fast, direct unit
+// test of wrapUploadTimeout's context bookkeeping (no real HTTP round trip):
+// when the parent context's own deadline already elapsed, the function must
+// not claim the upload's 45s budget is what fired.
+func TestWrapUploadTimeout_ParentDeadlineNotMisattributed(t *testing.T) {
+	parentCtx, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
+	defer cancel()
+	<-parentCtx.Done() // ensure the parent's own deadline has actually elapsed
+
+	uploadCtx, uploadCancel := context.WithTimeout(parentCtx, attachmentUploadTimeout)
+	defer uploadCancel()
+	<-uploadCtx.Done()
+
+	got := wrapUploadTimeout(parentCtx, uploadCtx, errors.New("context deadline exceeded"))
+	if strings.Contains(got.Error(), "upload timed out after") {
+		t.Fatalf("wrapUploadTimeout misattributed a parent-deadline expiry to attachmentUploadTimeout: %v", got)
+	}
+}
+
+// TestWrapUploadTimeout_OwnBudgetStillReported is the companion case: when
+// the parent context has no deadline of its own (or has not yet elapsed),
+// the upload's own attachmentUploadTimeout budget elapsing must still be
+// reported as "upload timed out after <duration>".
+func TestWrapUploadTimeout_OwnBudgetStillReported(t *testing.T) {
+	parentCtx := context.Background()
+	uploadCtx, uploadCancel := context.WithTimeout(parentCtx, time.Nanosecond)
+	defer uploadCancel()
+	<-uploadCtx.Done()
+
+	got := wrapUploadTimeout(parentCtx, uploadCtx, errors.New("context deadline exceeded"))
+	if !strings.Contains(got.Error(), "upload timed out after") {
+		t.Fatalf("expected wrapUploadTimeout to attribute the timeout to attachmentUploadTimeout, got: %v", got)
+	}
+}
+
+// TestCreateIssueAttachmentFn_ParentDeadlineNotMisattributed covers the
+// wrapUploadTimeout fix: when the CALLER's own context deadline is what ends
+// the call — not attachmentUploadTimeout — the error must not claim "upload
+// timed out after 45s". The parent deadline here (20ms) fires well before
+// attachmentUploadTimeout (shrunk to 5s, itself far longer than the parent
+// budget), so any "upload timed out after 45s"/injected-timeout wording in
+// the error would be a lie about which budget actually expired.
+func TestCreateIssueAttachmentFn_ParentDeadlineNotMisattributed(t *testing.T) {
+	withShortUploadTimeout(t, 5*time.Second)
+	newBackend(t, route{
+		method:     http.MethodPost,
+		pathPrefix: "/api/v1/repos/o/r/issues/3/assets",
+		handler:    hangingHandler,
+	})
+
+	parentCtx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+
+	start := time.Now()
+	_, err := CreateIssueAttachmentFn(parentCtx, req(map[string]any{
+		"owner": "o", "repo": "r", "index": 3.0,
+		"content": base64.StdEncoding.EncodeToString([]byte("hang me")), "filename": "f.bin",
+	}))
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatalf("expected an error when the caller's own context deadline elapses")
+	}
+	if strings.Contains(err.Error(), "upload timed out after") {
+		t.Fatalf("error wrongly attributes a caller-deadline expiry to attachmentUploadTimeout: %v", err)
+	}
+	// The call must still return promptly — bounded by the parent's 20ms
+	// deadline, not by the (much longer) 5s attachmentUploadTimeout.
+	if elapsed > time.Second {
+		t.Fatalf("upload took %s; want well under the injected 5s upload-timeout bound (parent deadline should have fired first)", elapsed)
 	}
 }
 

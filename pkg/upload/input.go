@@ -24,6 +24,17 @@ const (
 	// Paths resolving outside it — via `..`, an absolute path, or a symlink —
 	// are rejected. Empty means "anywhere the process can read".
 	UploadRootEnv = "FORGEJO_MCP_UPLOAD_ROOT"
+
+	// MaxContentB64Bytes caps the base64 `content` argument accepted by every
+	// attachment upload source that goes through Open — issue, comment, and
+	// release attachments alike. Multiple agents previously reported
+	// create_issue_attachment/create_comment_attachment failing with
+	// "illegal base64 data" at a variable byte offset, and once hanging a
+	// caller for ~30 minutes. 64MiB of raw file data is ~85MiB of base64;
+	// no attachment upload has a legitimate reason to be anywhere near that,
+	// so this exists only to reject a runaway/malformed argument immediately
+	// rather than paying to allocate and decode it first.
+	MaxContentB64Bytes = 90 * 1024 * 1024
 )
 
 // filePathUploadsEnabled reports whether AllowFilePathEnv is set to a truthy value.
@@ -91,9 +102,18 @@ func Open(source Source) (io.ReadCloser, string, error) {
 		if source.Filename == "" {
 			return nil, "", fmt.Errorf("filename is required when content is used")
 		}
+		// Reject an oversized argument before paying to allocate/decode it —
+		// see MaxContentB64Bytes.
+		if len(*source.Content) > MaxContentB64Bytes {
+			return nil, "", fmt.Errorf("content too large: %d base64 bytes exceeds the %d byte limit", len(*source.Content), MaxContentB64Bytes)
+		}
 		raw, err := base64.StdEncoding.DecodeString(*source.Content)
 		if err != nil {
-			return nil, "", fmt.Errorf("content must be base64-encoded: %w", err)
+			// Report how many bytes THIS process received alongside the
+			// stdlib error: the single most useful diagnostic for a
+			// truncated/corrupted-upload report, since it immediately shows
+			// whether truncation happened before or after this process.
+			return nil, "", fmt.Errorf("content must be base64-encoded (received %d bytes): %w", len(*source.Content), err)
 		}
 		return io.NopCloser(bytes.NewReader(raw)), source.Filename, nil
 	}
