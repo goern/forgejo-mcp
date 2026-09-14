@@ -152,6 +152,11 @@ func (rs *resourceServer) authenticate(next http.Handler, challenge string) http
 				log.StringField("claim", rs.audienceClaim),
 				log.StringField("sub", truncateForLog(claims.Subject)),
 			)
+			// No WWW-Authenticate challenge, deliberately (design D4). The token
+			// is valid; what is missing is data at the identity provider, not
+			// authorization or scope. A challenge, with or without
+			// error="insufficient_scope", invites a spec-following client to
+			// re-authorize or step up its scopes, and that loop cannot succeed.
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			w.WriteHeader(http.StatusForbidden)
 			_, _ = fmt.Fprintf(w,
