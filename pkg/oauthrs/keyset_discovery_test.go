@@ -70,6 +70,36 @@ func TestAKeyAddedAtTheProviderIsUsedOnceTheIntervalHasPassed(t *testing.T) {
 	}
 }
 
+// Spec oauth-resource-server, scenario "Caller disconnects during a refetch".
+func TestARefetchCompletesWhenTheRequestThatTriggeredItIsCancelled(t *testing.T) {
+	clock := newFakeClock()
+	p := newTestProvider(t)
+	p.addECKey("ec-1")
+	ks := newTestKeySet(t, p, clock)
+
+	// The provider rotates, and a request for the new key arrives past the
+	// floor, but its client has already gone away.
+	clock.Advance(6 * time.Minute)
+	p.addECKey("ec-2")
+	gone, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := ks.Lookup(gone, "ec-2"); err != nil {
+		t.Fatalf("a cancelled caller failed the refetch: %v", err)
+	}
+	if got := p.fetches.Load(); got != 2 {
+		t.Fatalf("fetches = %d, want 2: the one at start and the refetch", got)
+	}
+
+	// A later request inside the same interval finds the rotated key without
+	// another fetch.
+	if _, err := ks.Lookup(context.Background(), "ec-2"); err != nil {
+		t.Fatalf("the rotated key is not known after the refetch: %v", err)
+	}
+	if got := p.fetches.Load(); got != 2 {
+		t.Fatalf("fetches = %d, want still 2", got)
+	}
+}
+
 func TestAWithdrawnKeyStopsWorkingOnceTheSetIsTooOld(t *testing.T) {
 	clock := newFakeClock()
 	p := newTestProvider(t)

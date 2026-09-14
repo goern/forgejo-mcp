@@ -120,7 +120,12 @@ func (k *KeySet) Lookup(ctx context.Context, kid string) (jwk.Key, error) {
 		return k.known(kid)
 	}
 	k.lastAttempt = k.now()
-	if err := k.fetch(ctx); err != nil {
+	// Detach the fetch from the request that triggered it. A cancellable fetch
+	// lets a client that disconnects mid-fetch fail the refetch and still spend
+	// the interval, and by doing that once per interval a stranger could keep
+	// the key set from ever learning a rotated key. getJSON bounds the fetch
+	// with its own timeout either way.
+	if err := k.fetch(context.WithoutCancel(ctx)); err != nil {
 		if key, lookupErr := k.known(kid); lookupErr == nil {
 			return key, nil
 		}
