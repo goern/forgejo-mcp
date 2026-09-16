@@ -892,7 +892,7 @@ forgejo-mcp is shaped by everyone who files issues, writes code, reviews PRs, an
 | Ronmi Ren | Co-creator; SSE/HTTP transport, issue blocking, CI/CD improvements, logo, Glama spec |
 | [twstagg](https://codeberg.org/twstagg) (Tristin Stagg) | User agent configuration support (PR #89) |
 | [mattdm](https://codeberg.org/mattdm) (Matthew Miller) | Logging improvements, FORGEJO_* migration, README, URL refactor |
-| [byteflavour](https://codeberg.org/byteflavour) | `check_notifications` + full notification management API (PR #84, #86); stateless per-request auth for HTTP/SSE transports (PR #138); NixOS installation docs (PR #146); feature requests #80, #85 |
+| [byteflavour](https://codeberg.org/byteflavour) | `check_notifications` + full notification management API (PR #84, #86); stateless per-request auth for HTTP/SSE transports (PR #138); NixOS installation docs (PR #146); network transport hardening — loopback-by-default bind, `Host`/`Origin` checks, per-request credential (PR #545, landed as #573; #586, #585, #589); **OAuth resource-server mode** — inbound JWT validation and outbound Forgejo 16 Authorized Integration signing, with operator and user guides and 40 anchored demo scenarios (PR #584, researched in #582); dev-env `FORGEJO_MCP_EXEC` (PR #580); feature requests #80, #85 |
 | [jesterret](https://codeberg.org/jesterret) | Pull request reviews and comments support (PR #51) |
 | [appleboy](https://codeberg.org/appleboy) | Custom SSE port support, bug fixes |
 | [ignasgil](https://codeberg.org/ignasgil) | `remove_issue_labels` tool (PR #96) |
@@ -908,8 +908,9 @@ forgejo-mcp is shaped by everyone who files issues, writes code, reviews PRs, an
 | [Guruprasad Kulkarni](https://codeberg.org/comdotlinux) | Arch Linux AUR installation docs (PR #69) |
 | [Mario Wolff](https://codeberg.org/mariowolff) | Contributions |
 | [Massimo Fraschetti](https://codeberg.org/fraschetti) | Contributions |
-| [synath](https://codeberg.org/synath) (David Paul Turley) | Repository-scoped token support via `ServerVersion` probe (PR #112); merge status-code check (PR #113); Claude Desktop Extension (.mcpb) packaging (PR #118) |
+| [synath](https://codeberg.org/synath) (David Paul Turley) | Repository-scoped token support via `ServerVersion` probe (PR #112); merge status-code check (PR #113); Claude Desktop Extension (.mcpb) packaging (PR #118, #123); issue `due_date` + server-side sort (PR #483); bounded issue-list and comment-thread resources (PR #487); `total_count` on paginated envelopes from `X-Total-Count` (PR #507); `create_*_attachment` timeout hardening (PR #534, #536); cross-repo issue dependencies (PR #535) |
 | [BrilliantKahn](https://codeberg.org/BrilliantKahn) | `get_file_content` plain-text default (PR #116); `list_repo_contents` and `get_repo_tree` tools (PR #117). **First-ever open source contribution** — welcome aboard! 🎉 |
+| [nesvet](https://git.b4mad.industries/nesvet) (Eugene Nesvetaev) | `get_repo`/`edit_repo` (PR #527); repository topic tools (PR #528); Actions run cancel/delete and run artifacts (PR #533); `get_commit_statuses` (PR #542); package list/get/delete/files tools (PR #543); label names accepted on issue create, assignment and replace (PR #591) |
 | [pisco](https://git.b4mad.industries/pisco) (Marco Pisco) | `file_path` uploads for issue, comment, and release attachments, with streaming multipart so large release assets no longer round-trip through base64 (PR #481) |
 
 ### Community contributors
@@ -933,6 +934,7 @@ Issue reporters and discussion participants who shaped the direction of the proj
 | [janbaer](https://codeberg.org/janbaer) | Filed #98 (reply to review comment) |
 | [fraschm98](https://codeberg.org/fraschm98) | Early issue reports |
 | [heathen711](https://codeberg.org/heathen711) | Filed #106 (issue/comment attachments — since implemented); shaped the 1 MiB inline cap + `browser_download_url` fall-through design |
+| [decarvalhoaa](https://git.b4mad.industries/decarvalhoaa) (Antonio De Carvalho) | Filed #593 (server-side response size cap) from a real context-window overflow behind Open WebUI, with the measurement that prompted the `list_repo_pull_requests` payload work in #596 |
 | [chris420](https://git.b4mad.industries/chris420) (Chris Oloff) | Filed #452 (org-wide issue search — since implemented as `search_issues`); design review on PR #458 that replaced the next-page probe with instance-ceiling enforcement, and caught the response envelope misreporting its own `limit` |
 
 ### Cyborg contributors
