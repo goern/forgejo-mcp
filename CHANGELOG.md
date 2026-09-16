@@ -1,3 +1,71 @@
+## [3.2.0](https://git.b4mad.industries/agentic-forges/forgejo-mcp/compare/v3.1.0...v3.2.0) (2026-09-16)
+
+### :sparkles: Features
+
+* **auth:** configure and validate the resource-server auth mode ([a8fa10d](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/a8fa10dfafe7424f62af65ebeb47ad07a2f8bb2e)), closes [#582](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/582)
+* **auth:** serve MCP requests in resource-server mode ([e11a230](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/e11a2308b35a5756d0d73f06995e3644395f5cd5)), closes [#582](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/582)
+* **issue:** cross-repo dependency support via optional depends_on_owner/depends_on_repo ([905f6f4](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/905f6f45865ee1af9e582ffb00ef71f8ef162b5c))
+* **jwtissuer:** sign Forgejo Authorized Integration tokens ([5d9768f](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/5d9768f05aeeb56baa1d44ec2f147f29d5b9ec78)), closes [PKCS#8](https://git.b4mad.industries/agentic-forges/PKCS/issues/8) [#582](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/582)
+* **oauthrs:** validate provider-issued JWT access tokens ([ce7d5ca](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/ce7d5ca7c254d24ce4efb0d15c84d48ac5d29a93)), closes [#582](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/582)
+* **packages:** add list, get, delete, and file listing tools ([9281d5f](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/9281d5fc410551007d9d35da90dcb2d8d5ab6b2c))
+* **repo:** add get_commit_statuses tool ([ede6d79](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/ede6d793ae0a5275b3ba76e25c014e4d9c98c057))
+
+### :bug: Fixes
+
+* **auth:** refuse a -resource whose path is not /mcp ([3346d99](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/3346d996249b5476215b264c978ae6510f8a09cd))
+* **issue:** 🐛 refuse a malformed cross-repo owner or repo argument ([3366391](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/3366391d1ea01510240299834f40523c4e47bac3)), closes [#535](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/535) [#535](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/535)
+* **issue:** address PR 535 review — remove-side cross-repo test, README docs, harden self-dependency check ([a7342bc](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/a7342bc0bf6f12fec4e4519ae52c396b6a200675))
+* **issue:** compare owner and repo case-insensitively in the self-dependency check ([3348d12](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/3348d12980c0dcd166d39201c1eabfe6eec16255))
+* **oauthrs:** finish a key-set refetch when its caller goes away ([e00ff47](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/e00ff4769b44e827dfe663da094cfe5ab8262379))
+* **packages:** emit files total_count and list has_next ([9945c3d](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/9945c3d78b3d67da29d70eca719eb4b62aaba742))
+* **repo:** import v3 module path after rebase onto main ([cf6de11](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/cf6de11cfc8f5972c831d19ad3e6f72c250a912e))
+* **repo:** share status mapping and emit total_count ([66a009a](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/66a009a853b741e464dd33ddd64df6fc49125229))
+
+### :memo: Documentation
+
+* 📝 correct the stale bd dolt push note ([3d13b3f](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/3d13b3f916093fab4dea6d15bf65e4412530d206))
+* 📝 credit nesvet and decarvalhoaa, refresh two stale entries ([50e3078](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/50e3078dc19015a50b1b1dfaecd102779af4fe73)), closes [#527](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/527) [#528](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/528) [#533](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/533) [#542](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/542) [#543](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/543) [#591](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/591) [#593](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/593) [#146](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/146) [#545](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/545) [#573](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/573) [#585](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/585) [#586](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/586) [#589](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/589) [#584](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/584) [#118](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/118) [#483](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/483) [#487](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/487) [#507](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/507) [#534](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/534) [#536](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/536)
+* 📝 document 22 missing tools, 4 resources, and drop a fixed blocker ([34ab424](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/34ab42458a05c8e84742d3baa1caf77acb10b589)), closes [116/#117](https://git.b4mad.industries/116/forgejo-mcp/issues/117)
+* 📝 replace the stale [#124](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/124) retrofit umbrella pointer ([7b1976b](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/7b1976b0cd5b662cb28cf4815c04ec00801b2059)), closes [#596](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/596) [#593](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/593) [#596](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/596)
+* **auth:** say why the audience 403 carries no challenge ([976c458](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/976c458cfcdba7f36724c49804706ccf2495f4f3))
+* correct the resource-server guides against the live deployment ([00c716e](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/00c716e24bbfb2131d11bc34360c801fb434a565))
+* **openspec:** 📝 close two drifts in issue-dependency-management ([36f7a67](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/36f7a67872c1cf548ecfc24cdbbe651161b43c95)), closes [#598](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/598) [#535](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/535) [#598](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/598)
+* **openspec:** add issue-dependency-management capability package ([e0f6048](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/e0f60482d96206b6a7731996f65ffda0353afe74)), closes [#487](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/487)
+* **openspec:** add tasks for oauth-resource-server-mode ([d60ce5e](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/d60ce5e8f5ae064be1b2d08a129d3011ab7b4b42)), closes [#582](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/582)
+* **openspec:** align oauth-resource-server-mode with what landed ([99dd3d5](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/99dd3d5615afeafdc4009170cdb189131385f3a3))
+* **openspec:** anchored Showboat demos for the resource-server capabilities ([255f6ea](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/255f6eabaed0502e94451526e00f85fc84578084))
+* **openspec:** archive oauth-resource-server-mode ([70f2fc4](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/70f2fc40c885f0631cede7296b92cc3c8c0f8873))
+* **openspec:** design oauth-resource-server-mode ([529dd4e](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/529dd4e55d0c329ce68b484c898b44d15721c4bb)), closes [#582](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/582)
+* **openspec:** fold spike results into oauth-resource-server-mode ([b033314](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/b0333142e99a8059fbafb5f5b43dc5eb263773ec)), closes [#582](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/582)
+* **openspec:** propose oauth-resource-server-mode ([5db2fe0](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/5db2fe0a98113ae20d00b3f356406f738f50de0a)), closes [#582](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/582)
+* **openspec:** prove the stateless-http-auth delta in the demo ([50fee17](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/50fee173ccae8a2cd9f1bb87665d7d3c5474987d))
+* **openspec:** record the live negative checks for resource-server mode ([5b065d6](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/5b065d6b7288bb5993da85f06e8a63364e552de2))
+* **openspec:** record the review follow-ups on resource-server mode ([0364aad](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/0364aad82d9bceda89aafc93064e14c14ac0f297))
+* **openspec:** refuse ambiguous Forgejo issuer URL spellings ([e0d0cdb](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/e0d0cdbd54cfa65794653ed08418a35ecc82751a)), closes [#582](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/582)
+* **openspec:** specify oauth-resource-server and forgejo-jwt-issuer ([c8228f2](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/c8228f22a330ba79f42a4eea672658f3956bce7c)), closes [#582](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/582)
+* **openspec:** write the stateless-http-auth delta for resource-server mode ([80a340f](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/80a340fefbbca372c0197c54746e9493ce1efd8a)), closes [#585](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/585) [#588](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/588)
+* operator and user guides for resource-server mode ([86305a4](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/86305a463667791d254eace8ea79c0d30003cbde))
+
+### :barber: Code-style
+
+* **forgejo:** lower-case the version parse error ([03da0a0](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/03da0a0c9e7c3acdbe39f3761e6e9a283e5cfcb6))
+
+### :white_check_mark: Tests
+
+* **auth:** run the transport conformance table in resource-server mode ([64bf744](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/64bf744bcfa6d8f182178c2e20d4ef5169b8e061))
+* **jwtissuer:** show minted claims and pin the signing key under a staged key ([0cd6f53](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/0cd6f533f5d9dccfc12d97c8a5f9312af0d1aed8))
+
+### :repeat: CI
+
+* 🚀 fail the build on a tool or resource missing its README row ([750213f](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/750213f42178fb6933ef6de09b7d84cf310b2b18)), closes [116/#117](https://git.b4mad.industries/116/forgejo-mcp/issues/117)
+
+### :repeat: Chore
+
+* 🔧 archive the commit-statuses change ([22f8df6](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/22f8df6a8ed8704f4f81df9045174ceefd4ba95c))
+* archive the packages change ([56163a3](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/56163a30088f468cb72ac388dea593f25fa9e634))
+* **claude:** renamed the command, it was shadowing anthropics code-review ([0fa52ec](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/0fa52ec5d0c49d9c06f0d58c1681ce2d96afa905))
+* **skills:** update project-wide skills ([619aacf](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/619aacf41bd78df4dda6a97ce09e139ba36b5730))
+
 ## [3.1.0](https://git.b4mad.industries/agentic-forges/forgejo-mcp/compare/v3.0.1...v3.1.0) (2026-09-14)
 
 ### :sparkles: Features
