@@ -52,6 +52,7 @@ func registerToolsWithDomains(s *server.MCPServer) {
 		{"version", operation.RegisterVersionTool},
 		{"actions", operation.RegisterActionsTool},
 		{"org", operation.RegisterOrgTool},
+		{"packages", operation.RegisterPackagesTool},
 		{"tracking", operation.RegisterTrackingTool},
 		{"attachment", operation.RegisterAttachmentTool},
 		{"release", operation.RegisterReleaseTool},

@@ -12,6 +12,7 @@ import (
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation/hook"
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation/issue"
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation/org"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation/packages"
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation/pull"
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation/release"
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation/repo"
@@ -97,6 +98,7 @@ func RegisterTool(s *server.MCPServer) {
 	RegisterVersionTool(s)
 	RegisterActionsTool(s)
 	RegisterOrgTool(s)
+	RegisterPackagesTool(s)
 	RegisterTrackingTool(s)
 	RegisterAttachmentTool(s)
 	RegisterReleaseTool(s)
@@ -152,6 +154,11 @@ func RegisterActionsTool(s *server.MCPServer) {
 func RegisterOrgTool(s *server.MCPServer) {
 	org.RegisterTool(s)
 	log.Debug("Registered org tools")
+}
+
+func RegisterPackagesTool(s *server.MCPServer) {
+	packages.RegisterTool(s)
+	log.Debug("Registered packages tools")
 }
 
 func RegisterTrackingTool(s *server.MCPServer) {

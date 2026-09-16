@@ -337,6 +337,11 @@ List all my repositories
 | `get_pull_request_diff` | Get the unified diff of a pull request. Optional `file_path` returns only that file's hunks (matches on either pre- or post-rename path). |
 | `merge_pull_request` | Merge a pull request (style: merge/rebase/rebase-merge/squash; optional title/message/delete-branch/force-merge/wait-for-checks). |
 | `create_pull_review` | Create a review on a pull request (state: APPROVED/REQUEST_CHANGES/COMMENT) with optional inline comments. |
+| **Packages** | |
+| `list_packages` | List package versions of a user or org (one row per version). Optional `type` and `q`. Server-paged via `page`/`limit` (default 30, max 50). Envelope `{packages, page, limit, count, has_next, total_count?}`. A missing owner is an error, not an empty list |
+| `get_package` | Get one package version. Does not embed owner/creator users |
+| `delete_package` | Delete one package version (not every version of the name). No preflight. 4xx/5xx stay errors |
+| `list_package_files` | List files of one package version. Client-paged via `page`/`limit` (default 30, max 50); envelope `{files, page, limit, count, has_next, total_count}` (`total_count` is the fetched list length) |
 | **Actions** | |
 | `dispatch_workflow` | Trigger a workflow run via `workflow_dispatch` event |
 | `list_workflow_runs` | List workflow runs with optional filtering by status, event, or SHA |
@@ -493,6 +498,19 @@ forgejo-mcp --cli list_action_run_artifacts \
 forgejo-mcp --cli get_action_artifact \
   --args '{"owner":"goern","repo":"forgejo-mcp","artifact_id":789}' \
   --output=text
+
+# List package versions for an owner, then inspect one version's files
+forgejo-mcp --cli list_packages \
+  --args '{"owner":"OWNER","type":"container","limit":30}' \
+  --output=text
+forgejo-mcp --cli get_package \
+  --args '{"owner":"OWNER","type":"container","name":"app","version":"1.0.0"}' \
+  --output=text
+forgejo-mcp --cli list_package_files \
+  --args '{"owner":"OWNER","type":"container","name":"app","version":"1.0.0"}' \
+  --output=text
+
+# delete_package removes one version. Do not invoke it against a registry you do not own.
 
 # cancel_workflow_run is 204 even when the run already finished.
 # delete_workflow_run only succeeds for a completed run; a live run is an error.
