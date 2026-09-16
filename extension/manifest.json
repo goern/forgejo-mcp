@@ -326,6 +326,10 @@
       "description": "Get metadata for a single comment attachment."
     },
     {
+      "name": "get_commit_statuses",
+      "description": "List per-context commit statuses for a full 40-character SHA. Bounded by page (default 1) and limit (default 30, maximum 50). Combined aggregate stays on the commit status resource. Not Actions runs."
+    },
+    {
       "name": "get_file_content",
       "description": "Get file content as plain text by default. Set `with_metadata=true` for binary files, or when you need the SHA/encoding/"
     },

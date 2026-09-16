@@ -231,7 +231,12 @@ printf '%s\n' \
 reflects all statuses returned. The `truncated` field is omitted when false
 (`omitempty`); when over the embedded-list cap it appears as
 `"truncated": true` alongside `"list_tool": "get_commit_statuses"` —
-use the named tool for paginated enumeration.
+use the named tool for paginated enumeration. `page=2` continues after
+the resource's embedded cap of 30:
+
+```bash
+${FORGEJO_MCP_BIN:-./forgejo-mcp} --cli get_commit_statuses --args '{"owner":"goern","repo":"forgejo-mcp","sha":"872d4c559868128fedd794327c14e0f74d257a84","page":2}'
+```
 
 ## 6. Issue — forgejo://repo/{owner}/{repo}/issue/{index}
 

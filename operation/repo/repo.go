@@ -82,6 +82,7 @@ func RegisterTool(s *server.MCPServer) {
 
 	// Commit
 	s.AddTool(ListRepoCommitsTool, ListRepoCommitsFn)
+	s.AddTool(GetCommitStatusesTool, GetCommitStatusesFn)
 
 	// Contents / Tree
 	s.AddTool(ListRepoContentsTool, ListRepoContentsFn)

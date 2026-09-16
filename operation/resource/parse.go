@@ -148,7 +148,7 @@ func ParseCommit(uri string) (CommitParams, error) {
 		return CommitParams{}, fmt.Errorf("%w: expected forgejo://repo/{owner}/{repo}/commit/{sha}, got %q", ErrInvalidParams, uri)
 	}
 	sha := parts[3]
-	if err := validateSHA(sha); err != nil {
+	if err := ValidateSHA(sha); err != nil {
 		return CommitParams{}, fmt.Errorf("%w: invalid URI %q: %w", ErrInvalidParams, uri, err)
 	}
 	return CommitParams{Owner: parts[0], Repo: parts[1], SHA: sha}, nil
@@ -241,7 +241,7 @@ func ParseStatus(uri string) (StatusParams, error) {
 		return StatusParams{}, fmt.Errorf("%w: expected forgejo://repo/{owner}/{repo}/commit/{sha}/status, got %q", ErrInvalidParams, uri)
 	}
 	sha := parts[3]
-	if err := validateSHA(sha); err != nil {
+	if err := ValidateSHA(sha); err != nil {
 		return StatusParams{}, fmt.Errorf("%w: invalid URI %q: %w", ErrInvalidParams, uri, err)
 	}
 	return StatusParams{Owner: parts[0], Repo: parts[1], SHA: sha}, nil
@@ -528,9 +528,9 @@ func splitPath(path string) []string {
 	return result
 }
 
-// validateSHA returns an error if sha is not exactly 40 hex characters
-// (either case).
-func validateSHA(sha string) error {
+// ValidateSHA returns an error if sha is not exactly 40 hex characters
+// (either case). The commit status resource and get_commit_statuses share this rule.
+func ValidateSHA(sha string) error {
 	if len(sha) != 40 {
 		return fmt.Errorf("%w: sha must be exactly 40 hex characters, got %d", ErrInvalidParams, len(sha))
 	}
