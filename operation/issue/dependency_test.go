@@ -157,6 +157,80 @@ func TestAddIssueDependency_SendsPostWithIssueMeta(t *testing.T) {
 	}
 }
 
+func TestAddIssueDependency_CrossRepoBodyShape(t *testing.T) {
+	_, records := newDependenciesBackend(t)
+
+	res, err := AddIssueDependencyFn(context.Background(), makeReq(map[string]any{
+		"owner":            "goern",
+		"repo":             "forgejo-mcp",
+		"index":            float64(42),
+		"depends_on_index": float64(7),
+		"depends_on_owner": "other-org",
+		"depends_on_repo":  "other-repo",
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("AddIssueDependencyFn returned error: err=%v res=%+v", err, res)
+	}
+
+	last := (*records)[len(*records)-1]
+	want := "/api/v1/repos/goern/forgejo-mcp/issues/42/dependencies"
+	if last.path != want {
+		t.Fatalf("unexpected path: got %s want %s", last.path, want)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(last.rawBody, &payload); err != nil {
+		t.Fatalf("invalid JSON body: %v\nbody: %s", err, last.rawBody)
+	}
+	if payload["owner"] != "other-org" || payload["repo"] != "other-repo" || payload["index"] != float64(7) {
+		t.Fatalf("expected cross-repo IssueMeta body, got %v", payload)
+	}
+}
+
+func TestAddIssueDependency_SelfDependencyIsCaseInsensitive(t *testing.T) {
+	_, records := newDependenciesBackend(t)
+
+	// Forgejo treats owner and repository names case-insensitively, so a
+	// differently-cased spelling names the same repository. Comparing the two
+	// exactly let that spelling past the early check, which then reported a
+	// generic server-side error instead of the clear one.
+	_, err := AddIssueDependencyFn(context.Background(), makeReq(map[string]any{
+		"owner":            "goern",
+		"repo":             "forgejo-mcp",
+		"index":            float64(7),
+		"depends_on_index": float64(7),
+		"depends_on_owner": "Goern",
+		"depends_on_repo":  "Forgejo-MCP",
+	}))
+	if err == nil {
+		t.Fatal("a differently-cased spelling of the same repo was not caught as a self-dependency")
+	}
+	if !strings.Contains(err.Error(), "cannot depend on itself") {
+		t.Fatalf("wrong error for a case-differing self-dependency: %v", err)
+	}
+	if len(*records) > 0 {
+		t.Fatalf("expected no HTTP request, got %d", len(*records))
+	}
+}
+
+func TestAddIssueDependency_CrossRepoSameIndexAllowed(t *testing.T) {
+	_, records := newDependenciesBackend(t)
+
+	// Same index in a DIFFERENT repo is not a self-dependency.
+	res, err := AddIssueDependencyFn(context.Background(), makeReq(map[string]any{
+		"owner":            "goern",
+		"repo":             "forgejo-mcp",
+		"index":            float64(42),
+		"depends_on_index": float64(42),
+		"depends_on_repo":  "other-repo",
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("expected cross-repo same-index to be allowed: err=%v res=%+v", err, res)
+	}
+	if len(*records) == 0 {
+		t.Fatal("expected an HTTP request for cross-repo same-index dependency")
+	}
+}
+
 func TestAddIssueDependency_SelfDependencyRejected(t *testing.T) {
 	_, records := newDependenciesBackend(t)
 
@@ -171,6 +245,33 @@ func TestAddIssueDependency_SelfDependencyRejected(t *testing.T) {
 	}
 	if len(*records) > 0 {
 		t.Fatalf("expected no HTTP request for self-dependency, got %d", len(*records))
+	}
+}
+
+// TestAddIssueDependency_MissingDependsOnIndexIsNotMisreportedAsSelfDependency
+// guards the self-dependency check: index and depends_on_index must be
+// validated BEFORE that check runs. Previously both were parsed with
+// to.Float64's error discarded, so a missing/malformed depends_on_index
+// silently coerced to 0 — indistinguishable from a genuine index=0 — and, if
+// index also happened to be 0, would misreport as "an issue cannot depend on
+// itself" instead of the real problem (a missing required argument).
+func TestAddIssueDependency_MissingDependsOnIndexIsNotMisreportedAsSelfDependency(t *testing.T) {
+	_, records := newDependenciesBackend(t)
+
+	_, err := AddIssueDependencyFn(context.Background(), makeReq(map[string]any{
+		"owner": "goern",
+		"repo":  "forgejo-mcp",
+		"index": float64(42),
+		// depends_on_index intentionally omitted.
+	}))
+	if err == nil {
+		t.Fatal("expected an error for missing depends_on_index")
+	}
+	if strings.Contains(err.Error(), "cannot depend on itself") {
+		t.Fatalf("missing depends_on_index was misreported as a self-dependency: %v", err)
+	}
+	if len(*records) > 0 {
+		t.Fatalf("expected no HTTP request for missing depends_on_index, got %d", len(*records))
 	}
 }
 
@@ -208,6 +309,45 @@ func TestRemoveIssueDependency_SendsDeleteWithIssueMeta(t *testing.T) {
 	}
 	if !strings.Contains(textOf(res), "Removed dependency") {
 		t.Fatalf("expected success message, got %q", textOf(res))
+	}
+}
+
+// TestRemoveIssueDependency_CrossRepoBodyShape mirrors
+// TestAddIssueDependency_CrossRepoBodyShape for the DELETE body: the
+// dependency_owner/dependency_repo arguments must resolve into the
+// IssueMeta request body, not the target issue's own owner/repo.
+func TestRemoveIssueDependency_CrossRepoBodyShape(t *testing.T) {
+	_, records := newDependenciesBackend(t)
+
+	res, err := RemoveIssueDependencyFn(context.Background(), makeReq(map[string]any{
+		"owner":            "goern",
+		"repo":             "forgejo-mcp",
+		"index":            float64(42),
+		"dependency_index": float64(7),
+		"dependency_owner": "other-org",
+		"dependency_repo":  "other-repo",
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("RemoveIssueDependencyFn returned error: err=%v res=%+v", err, res)
+	}
+
+	last := (*records)[len(*records)-1]
+	if last.method != http.MethodDelete {
+		t.Fatalf("expected DELETE, got %s", last.method)
+	}
+	want := "/api/v1/repos/goern/forgejo-mcp/issues/42/dependencies"
+	if last.path != want {
+		t.Fatalf("unexpected path: got %s want %s", last.path, want)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(last.rawBody, &payload); err != nil {
+		t.Fatalf("invalid JSON body: %v\nbody: %s", err, last.rawBody)
+	}
+	if payload["owner"] != "other-org" || payload["repo"] != "other-repo" || payload["index"] != float64(7) {
+		t.Fatalf("expected cross-repo IssueMeta body, got %v", payload)
+	}
+	if !strings.Contains(textOf(res), "other-org/other-repo#7") {
+		t.Fatalf("expected success message to name the cross-repo dependency, got %q", textOf(res))
 	}
 }
 
