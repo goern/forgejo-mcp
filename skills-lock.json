@@ -29,7 +29,7 @@
       "source": "juliusbrussee/caveman",
       "sourceType": "github",
       "skillPath": "skills/caveman-help/SKILL.md",
-      "computedHash": "845394fef650bb63b44e2e28391de704505f881c6f968ebfdfb0278343ecbd7c"
+      "computedHash": "8b03b0526c2c96f9b44dfde8f2d0063351ec9bbfa946de7a6316c96f6024ca75"
     },
     "caveman-review": {
       "source": "juliusbrussee/caveman",
@@ -83,7 +83,7 @@
       "source": "fission-ai/openspec",
       "sourceType": "github",
       "skillPath": "skills/openspec-explore/SKILL.md",
-      "computedHash": "2be6f219a7677c93970a475851832e89d352ddef90699d7eda1ee42ff2da60ad"
+      "computedHash": "ad73050b5f44236f61296786376602e8fec756a072dadcb45d564981698d201d"
     },
     "openspec-ff-change": {
       "source": "fission-ai/openspec",
@@ -107,7 +107,7 @@
       "source": "fission-ai/openspec",
       "sourceType": "github",
       "skillPath": "skills/openspec-propose/SKILL.md",
-      "computedHash": "6c010375d281873d2227e5456bf89564bd9b33269ff44df93b7b658d41c0b60a"
+      "computedHash": "1669f507f90412f61706c2b42640b79bd7d8435172b7c7ebda49679e5ecc5539"
     },
     "openspec-sync-specs": {
       "source": "fission-ai/openspec",
