@@ -26,3 +26,14 @@
 - [x] README documents the optional cross-repo arguments on
       add_issue_dependency/remove_issue_dependency.
 - [x] `go build ./...`, `go vet ./...`, `go test ./...` clean.
+- [x] The self-dependency requirement states that owner and repository are
+      compared case-insensitively, matching `strings.EqualFold` in the code and
+      `TestAddIssueDependency_SelfDependencyIsCaseInsensitive`, with a scenario
+      for a case-differing spelling.
+- [x] An optional cross-repo argument that is present but not a string is
+      refused with an error naming it, before any request goes out, while an
+      omitted/null/empty one still resolves to the target's own owner/repo
+      (PR #598). Covered by TestAddIssueDependency_NonStringCrossRepoOwnerIsRefused,
+      TestAddIssueDependency_NonStringCrossRepoRepoIsRefused,
+      TestRemoveIssueDependency_NonStringCrossRepoOwnerIsRefused and
+      TestAddIssueDependency_NullCrossRepoOwnerDefaultsToTargetRepo.
