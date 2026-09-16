@@ -8,10 +8,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-
-	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/forgejo"
-
-	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
 )
 
 const (
@@ -46,11 +42,6 @@ func labelsArgDescription(lead string) string {
 // catalogue, since resolution failures here are reported to the caller as
 // "unknown label".
 func listAssignableLabels(ctx context.Context, owner, repo string) ([]ScopedLabel, error) {
-	client, err := forgejo.Client(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	catalog := []ScopedLabel{}
 
 	for page := 1; ; page++ {
@@ -60,14 +51,12 @@ func listAssignableLabels(ctx context.Context, owner, repo string) ([]ScopedLabe
 				owner, repo, maxLabelCatalogPages*labelCatalogPageSize,
 			)
 		}
-		repoLabels, _, lerr := client.ListRepoLabels(owner, repo, forgejo_sdk.ListLabelsOptions{
-			ListOptions: forgejo_sdk.ListOptions{Page: page, PageSize: labelCatalogPageSize},
-		})
+		repoLabels, _, lerr := fetchRepoLabels(ctx, owner, repo, page, labelCatalogPageSize)
 		if lerr != nil {
 			return nil, fmt.Errorf("list repo labels err: %w", lerr)
 		}
 		for _, l := range repoLabels {
-			catalog = append(catalog, ScopedLabel{Label: l, Scope: "repo"})
+			catalog = append(catalog, ScopedLabel{labelDTO: l, Scope: "repo"})
 		}
 		if len(repoLabels) < labelCatalogPageSize {
 			break
