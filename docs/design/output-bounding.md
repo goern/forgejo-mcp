@@ -98,8 +98,8 @@ proves only the plumbing, not the availability. Check the upstream handler
 (or a live response) before adding the field to a new tool.
 
 Tools that still return a bare array with no pagination envelope at all
-(most `list_*`/`search_*` tools — see the retrofit umbrella below) are out of
-scope for `total_count` until they gain an envelope in the first place.
+(most `list_*`/`search_*` tools — see "Retrofitting existing tools" below) are
+out of scope for `total_count` until they gain an envelope in the first place.
 
 Envelope `total_count` always means the same thing: the grand total the server
 reports for the whole query, not the size of the payload in hand. It usually
@@ -140,5 +140,29 @@ If any answer is "none" or "unclear", the tool is not ready to merge.
 
 ## Retrofitting existing tools
 
-Tracked as the umbrella in [#124](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/124).
-Sub-issues should target one tool at a time and reference this document.
+**There is no open umbrella issue.** This section used to point at
+[#124](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/124) as one.
+That issue was closed on 2026-05-12 and was scoped to `get_pull_request_diff`
+paging specifically, not to the retrofit as a whole — the pointer had been stale
+long enough that a contributor followed it and found a closed issue
+([#593](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/593)).
+
+File retrofit work as standalone issues, one tool at a time, each referencing
+this document. If the retrofit is picked up as a campaign rather than
+opportunistically, open a fresh umbrella and link it here.
+
+Two shapes of retrofit, which are worth keeping distinct:
+
+1. **Add a missing bound.** A tool whose output is data-proportional and exposes
+   no `page`/`limit`, range, or per-file parameter at all. This is the sub-rule 2
+   gap and the original motivation for this document.
+2. **Shrink an already-bounded payload.** A tool that honours `page`/`limit` but
+   returns raw SDK structs, so a bounded page is still enormous. Field projection
+   is the fix, and the resource layer is the precedent — `forgejo://…/issues`
+   returns projected rows with no bodies while the equivalent list tool does not.
+   [#596](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/596)
+   (`list_repo_pull_requests`, where `PRBranchInfo` embeds a complete `Repository`
+   twice per row) is the worked example.
+
+Both change a tool's output shape, so both are breaking for existing callers and
+should say so in the issue rather than in the release notes alone.
