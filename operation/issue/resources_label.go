@@ -80,16 +80,11 @@ type labelResourcePayload struct {
 	IsArchived  bool   `json:"is_archived"`
 }
 
+// The two structs differ only in the URL json tag (the resource payload always
+// emits url, the DTO omits it when empty); tags are ignored by conversion, so
+// this is a field-for-field copy that keeps the payload's tags.
 func labelResourceFromDTO(l labelDTO) labelResourcePayload {
-	return labelResourcePayload{
-		ID:          l.ID,
-		Name:        l.Name,
-		Color:       l.Color,
-		Description: l.Description,
-		URL:         l.URL,
-		Exclusive:   l.Exclusive,
-		IsArchived:  l.IsArchived,
-	}
+	return labelResourcePayload(l)
 }
 
 func repoLabelResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
