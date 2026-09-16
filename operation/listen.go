@@ -441,8 +441,12 @@ func normalizeList(values []string) []string {
 // newMCPHTTPServer wraps handler in the policy stack for an already-resolved
 // configuration.
 func newMCPHTTPServer(handler http.Handler, cfg transportConfig) *http.Server {
+	// In resource-server mode the handler authenticates its protected route
+	// itself, and its public documents must be reachable without a token, so the
+	// door does not look at Authorization. The credential fallback stays refused
+	// either way: cfg.requireAuth still drives forgejo.SetRequireRequestToken.
 	return &http.Server{
-		Handler:           guardRequests(handler, cfg.hosts, cfg.origins, cfg.requireAuth),
+		Handler:           guardRequests(handler, cfg.hosts, cfg.origins, cfg.requireAuth && !resourceServerMode()),
 		ReadHeaderTimeout: readHeaderTimeout,
 		ReadTimeout:       readTimeout,
 		IdleTimeout:       idleTimeout,

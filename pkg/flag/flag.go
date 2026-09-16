@@ -39,5 +39,39 @@ var (
 	// the fallback is always available and this setting is irrelevant.
 	AllowOperatorTokenFallback bool
 
+	// AuthMode selects how the http transport authenticates callers:
+	// "passthrough" (the default) forwards the caller's Authorization header to
+	// Forgejo; "resource-server" validates an identity provider's JWT access
+	// token and signs a Forgejo Authorized Integration token instead.
+	AuthMode string
+
+	// The settings below apply only to AuthMode "resource-server".
+
+	// AuthorizationServer is the identity provider's issuer URL.
+	AuthorizationServer string
+	// Resource is the canonical URI of this server's MCP endpoint.
+	Resource string
+	// ResourceAudience is the value an inbound token's aud must contain. Empty
+	// means Resource.
+	ResourceAudience string
+	// ScopesSupported lists the scopes advertised to clients.
+	ScopesSupported []string
+	// ForgejoAudienceClaim names the inbound claim carrying the caller's Forgejo
+	// integration audience.
+	ForgejoAudienceClaim string
+	// ForgejoJWTIssuer is the issuer URL this server presents to Forgejo.
+	ForgejoJWTIssuer string
+	// ForgejoJWTSigningKeyFile is the PEM private key Forgejo tokens are signed
+	// with.
+	ForgejoJWTSigningKeyFile string
+	// ForgejoJWTPublishedKeyFiles are PEM keys published without signing with
+	// them, for rotation.
+	ForgejoJWTPublishedKeyFiles []string
+
+	// ResourceServerSettings names every resource-server-only setting that was
+	// given at all, as a flag or an environment variable. passthrough mode
+	// refuses to start when it is not empty.
+	ResourceServerSettings []string
+
 	Debug bool
 )
