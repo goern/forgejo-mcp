@@ -51,8 +51,8 @@ go install .
 
 Ensure `$GOPATH/bin` (typically `~/go/bin`) is in your PATH.
 
-> **Note:** `go install` from the module path works from the first release
-> after the module was renamed (see [Known Issues](#known-issues)):
+> **Note:** you can also install straight from the module path, without
+> cloning:
 >
 > ```bash
 > go install git.b4mad.industries/agentic-forges/forgejo-mcp/v3@latest
@@ -95,12 +95,12 @@ podman run --rm -i \
   --transport stdio --url https://your-forgejo-instance.org
 
 # Or pin a specific version
-podman run --rm -i git.b4mad.industries/agentic-forges/forgejo-mcp:v2.24.0 --help
+podman run --rm -i git.b4mad.industries/agentic-forges/forgejo-mcp:v3.1.0 --help
 ```
 
 | Tag             | Meaning                                                         |
 |-----------------|----------------------------------------------------------------|
-| `vMAJOR.MINOR.PATCH` | Immutable — the exact release (e.g. `v2.24.0`). Use in production. |
+| `vMAJOR.MINOR.PATCH` | Immutable — the exact release (e.g. `v3.1.0`). Use in production. |
 | `latest`        | Moving — tracks the most recent release. Convenience only.     |
 
 The image is single-arch (`linux/amd64`), signed with cosign, and carries an
@@ -333,6 +333,8 @@ List all my repositories
 | `test_repo_hook` | Trigger a test delivery for a repository webhook — WARNING: triggers a live HTTP delivery |
 | **Files** | |
 | `get_file_content` | Get the content of a file. Optional `start_line`/`end_line` request a 1-indexed inclusive line range (clamps to file extent; ignored when `with_metadata=true`). |
+| `list_repo_contents` | List files and directories at a path. `path=""` lists the repository root. Returns one level; for a full tree use `get_repo_tree` with `recursive=true`. |
+| `get_repo_tree` | Get the Git tree. `recursive=true` returns the complete file tree in one response (subject to the server's tree-endpoint size cap); `recursive=false` (default) returns one level. |
 | `create_file` | Create a new file |
 | `update_file` | Update an existing file |
 | `delete_file` | Delete a file |
@@ -381,6 +383,11 @@ List all my repositories
 | `get_pull_request_diff` | Get the unified diff of a pull request. Optional `file_path` returns only that file's hunks (matches on either pre- or post-rename path). |
 | `merge_pull_request` | Merge a pull request (style: merge/rebase/rebase-merge/squash; optional title/message/delete-branch/force-merge/wait-for-checks). |
 | `create_pull_review` | Create a review on a pull request (state: APPROVED/REQUEST_CHANGES/COMMENT) with optional inline comments. |
+| `submit_pull_review` | Submit a pending pull request review |
+| `dismiss_pull_review` | Dismiss a pull request review |
+| `delete_pull_review` | Delete a pending pull request review |
+| `create_review_requests` | Request reviews from specific users or teams |
+| `delete_review_requests` | Cancel pending review requests |
 | **Packages** | |
 | `list_packages` | List package versions of a user or org (one row per version). Optional `type` and `q`. Server-paged via `page`/`limit` (default 30, max 50). Envelope `{packages, page, limit, count, has_next, total_count?}`. A missing owner is an error, not an empty list |
 | `get_package` | Get one package version. Does not embed owner/creator users |
@@ -397,7 +404,22 @@ List all my repositories
 | `list_action_run_artifacts` | List artifacts of a workflow run. Server-paged via `page`/`limit` (default 30, max 50); optional `name` filter. Envelope `{artifacts, page, limit, count, total_count?}` |
 | `get_action_artifact` | Get metadata for one Actions artifact. Does not download the zip |
 | **Organizations** | |
+| `list_my_orgs` | List my organizations |
+| `list_user_orgs` | List a user's organizations |
+| `get_org` | Get organization details |
+| `create_org` | Create an organization |
+| `edit_org` | Edit organization settings |
+| `delete_org` | Delete an organization — **destructive and irreversible**: all repos, teams and data are permanently removed |
+| `list_org_members` | List members of an organization |
+| `check_org_membership` | Check if a user is a member of an organization |
+| `remove_org_member` | Remove a member from an organization |
+| `list_org_teams` | List teams in an organization |
 | `search_org_teams` | Search for teams in an organization |
+| `create_org_team` | Create a team in an organization |
+| `add_team_member` | Add a user to a team |
+| `remove_team_member` | Remove a user from a team |
+| `add_team_repo` | Add a repository to a team |
+| `remove_team_repo` | Remove a repository from a team |
 | **Time Tracking** | |
 | `list_issue_tracked_times` | List tracked time entries on an issue or PR |
 | `list_repo_tracked_times` | List tracked time entries across a repository |
@@ -468,6 +490,10 @@ Resources that embed a list (issue, pr) cap the embedded array at 30 items. When
 | `forgejo://repo/{owner}/{repo}/{kind}/{index}/comment/{id}` | application/json (+ text/markdown sidecar) | Single comment by id; kind ∈ {issue, pr}. |
 | `forgejo://repo/{owner}/{repo}/{kind}/{index}/comments{?page,limit}` | application/json | Bounded comment thread with **full bodies** (the single-issue resource excerpts them at 200 chars); kind ∈ {issue, pr}; cap 30, sentinel names `list_issue_comments`. |
 | `forgejo://repo/{owner}/{repo}/pr/{index}` | application/json (+ text/markdown sidecar) | PR metadata, head/base refs, mergeability, bounded recent comments (cap 30, sentinel `list_issue_comments`) and reviews (cap 30, sentinel `list_pull_reviews`). |
+| `forgejo://repo/{owner}/{repo}/branch_protections` | application/json | Bounded list of branch protection rules. |
+| `forgejo://repo/{owner}/{repo}/branch_protection/{rule}` | application/json | Single branch protection rule. Rule names are branch patterns, so encode a literal `/` as `%2F` and spaces as `%20` (`release%2Fv1`); a raw `/` does not resolve. |
+| `forgejo://repo/{owner}/{repo}/hooks` | application/json | Bounded list of repository webhooks (cap 30, sentinel names `list_repo_hooks`). The secret is never returned. |
+| `forgejo://repo/{owner}/{repo}/hook/{id}` | application/json | Single repository webhook by id. The secret is never returned. |
 | `forgejo://repo/{owner}/{repo}/label/{id}` | application/json | Single repository label by numeric id. |
 | `forgejo://repo/{owner}/{repo}/labels{?page,limit}` | application/json | Bounded list of repository labels (cap 30, sentinel names `list_repo_labels`). |
 | `forgejo://org/{org}/labels{?page,limit}` | application/json | Bounded list of organization-level labels (cap 30, sentinel names `list_org_labels`). |
@@ -695,11 +721,11 @@ automation.
 
 ### 3. Download the release artifacts
 
-Pick the tag you installed (e.g. `v2.23.1`) and grab the checksum file,
+Pick the tag you installed (e.g. `v3.1.0`) and grab the checksum file,
 its signature, and the binary archive:
 
 ```bash
-TAG=v2.23.1
+TAG=v3.1.0
 VERSION="${TAG#v}"
 BASE="https://git.b4mad.industries/agentic-forges/forgejo-mcp/releases/download/${TAG}"
 
@@ -778,7 +804,7 @@ Tekton Chains. Reuse the `cosign-images.pub` key fetched above.
 Verify the signature:
 
 ```bash
-IMAGE_TAG=v2.24.0   # substitute the release you are pulling
+IMAGE_TAG=v3.1.0   # substitute the release you are pulling
 cosign verify \
   --key cosign-images.pub \
   "git.b4mad.industries/agentic-forges/forgejo-mcp:${IMAGE_TAG}" \
@@ -868,17 +894,17 @@ See [DEVELOPER.md](DEVELOPER.md) for build instructions, architecture overview, 
 
 ## Known Issues
 
-- **`go install ...@latest` needs a post-rename release** — The Go module path
-  was `codeberg.org/goern/forgejo-mcp/v2` until the forge move; Go resolves
-  modules by the path declared in `go.mod`, so the
-  `git.b4mad.industries/...` path only becomes installable once a release is
-  tagged carrying the renamed `go.mod`. Until then, use the clone-and-build
-  workflow shown in [Quick Start](#quick-start). The old
-  `go install codeberg.org/goern/forgejo-mcp/v2@latest` still resolves against
-  the read-only Codeberg mirror, but that mirror lags behind the current
-  release — do not rely on it. The earlier `replace`-directive blocker
-  ([#67](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/67)) is
-  gone; `go.mod` no longer contains one.
+- **Installing from the old Codeberg module path** — `go install
+  codeberg.org/goern/forgejo-mcp/v2@latest` still resolves, against the
+  read-only mirror, but that mirror lags behind the current release. Use
+  `git.b4mad.industries/agentic-forges/forgejo-mcp/v3@latest` instead.
+
+  This entry used to say that the new path was not installable until a
+  release carried the renamed `go.mod`. That release has happened —
+  `v3.0.0` onwards declare `module git.b4mad.industries/agentic-forges/forgejo-mcp/v3`
+  — so the new path installs normally. The earlier `replace`-directive
+  blocker ([#67](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/67))
+  is also gone; `go.mod` no longer contains one.
 
 ## Contributors
 
