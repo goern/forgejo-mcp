@@ -2,7 +2,6 @@ package repo
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"strings"
 
@@ -37,11 +36,12 @@ var (
 
 	CreateFileTool = mcp.NewTool(
 		CreateFileToolName,
-		mcp.WithDescription("Create file"),
+		mcp.WithDescription("Create file. Supply exactly one of `content` (plain text) or `content_base64` (strict standard Base64 representing exact bytes)."),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithString("filePath", mcp.Required(), mcp.Description(params.FilePath)),
-		mcp.WithString("content", mcp.Required(), mcp.Description(params.Content)),
+		mcp.WithString("content", mcp.Description("Plain-text content. Exactly one of content/content_base64 is required; an explicit empty string is valid.")),
+		mcp.WithString("content_base64", mcp.Description("Strict RFC 4648 standard Base64 for the exact file bytes. Exactly one of content/content_base64 is required; an explicit empty string represents zero bytes.")),
 		mcp.WithString("message", mcp.Required(), mcp.Description(params.Message)),
 		mcp.WithString("branch_name", mcp.Required(), mcp.Description(params.BranchName)),
 		mcp.WithString("new_branch_name", mcp.Description(params.NewBranchName)),
@@ -49,11 +49,12 @@ var (
 
 	UpdateFileTool = mcp.NewTool(
 		UpdateFileToolName,
-		mcp.WithDescription("Update file"),
+		mcp.WithDescription("Update file. Supply exactly one of `content` (plain text) or `content_base64` (strict standard Base64 representing exact bytes)."),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithString("filePath", mcp.Required(), mcp.Description(params.FilePath)),
-		mcp.WithString("content", mcp.Required(), mcp.Description(params.Content)),
+		mcp.WithString("content", mcp.Description("Plain-text content. Exactly one of content/content_base64 is required; an explicit empty string is valid.")),
+		mcp.WithString("content_base64", mcp.Description("Strict RFC 4648 standard Base64 for the exact file bytes. Exactly one of content/content_base64 is required; an explicit empty string represents zero bytes.")),
 		mcp.WithString("message", mcp.Required(), mcp.Description(params.Message)),
 		mcp.WithString("branch_name", mcp.Required(), mcp.Description(params.BranchName)),
 		mcp.WithString("sha", mcp.Required(), mcp.Description(params.SHA)),
@@ -153,13 +154,17 @@ func SliceLines(content string, start, end int) (string, error) {
 
 func CreateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called CreateFileFn")
-	owner, _ := req.GetArguments()["owner"].(string)
-	repo, _ := req.GetArguments()["repo"].(string)
-	filePath, _ := req.GetArguments()["filePath"].(string)
-	content, _ := req.GetArguments()["content"].(string)
-	message, _ := req.GetArguments()["message"].(string)
-	branchName, _ := req.GetArguments()["branch_name"].(string)
-	newBranchName, ok := req.GetArguments()["new_branch_name"].(string)
+	args := req.GetArguments()
+	owner, _ := args["owner"].(string)
+	repo, _ := args["repo"].(string)
+	filePath, _ := args["filePath"].(string)
+	encodedContent, err := selectRepositoryWriteContent(args)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	message, _ := args["message"].(string)
+	branchName, _ := args["branch_name"].(string)
+	newBranchName, ok := args["new_branch_name"].(string)
 	if !ok || newBranchName == "" {
 		newBranchName = ""
 	}
@@ -169,7 +174,7 @@ func CreateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 			BranchName:    branchName,
 			NewBranchName: newBranchName,
 		},
-		Content: base64.StdEncoding.EncodeToString([]byte(content)),
+		Content: encodedContent,
 	}
 	client, err := forgejo.Client(ctx)
 	if err != nil {
@@ -184,14 +189,18 @@ func CreateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 
 func UpdateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called UpdateFileFn")
-	owner, _ := req.GetArguments()["owner"].(string)
-	repo, _ := req.GetArguments()["repo"].(string)
-	filePath, _ := req.GetArguments()["filePath"].(string)
-	content, _ := req.GetArguments()["content"].(string)
-	message, _ := req.GetArguments()["message"].(string)
-	branchName, _ := req.GetArguments()["branch_name"].(string)
-	sha, _ := req.GetArguments()["sha"].(string)
-	newBranchName, ok := req.GetArguments()["new_branch_name"].(string)
+	args := req.GetArguments()
+	owner, _ := args["owner"].(string)
+	repo, _ := args["repo"].(string)
+	filePath, _ := args["filePath"].(string)
+	encodedContent, err := selectRepositoryWriteContent(args)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+	message, _ := args["message"].(string)
+	branchName, _ := args["branch_name"].(string)
+	sha, _ := args["sha"].(string)
+	newBranchName, ok := args["new_branch_name"].(string)
 	if !ok || newBranchName == "" {
 		newBranchName = ""
 	}
@@ -202,7 +211,7 @@ func UpdateFileFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 			NewBranchName: newBranchName,
 		},
 		SHA:     sha,
-		Content: base64.StdEncoding.EncodeToString([]byte(content)),
+		Content: encodedContent,
 	}
 	client, err := forgejo.Client(ctx)
 	if err != nil {
