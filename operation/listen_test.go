@@ -469,11 +469,12 @@ func TestDefaultReverseProxyDoesNotReAdmitTheOperatorCredential(t *testing.T) {
 			if err != nil {
 				t.Fatalf("parse: %v", err)
 			}
-			proxy := httputil.NewSingleHostReverseProxy(target)
-			director := proxy.Director
-			proxy.Director = func(r *http.Request) {
-				director(r)
-				r.Host = target.Host // nginx's documented default: Host = $proxy_host
+			proxy := &httputil.ReverseProxy{
+				Rewrite: func(r *httputil.ProxyRequest) {
+					r.SetURL(target)
+					r.SetXForwarded()
+					r.Out.Host = target.Host // nginx's documented default: Host = $proxy_host
+				},
 			}
 			front := httptest.NewServer(proxy)
 			t.Cleanup(front.Close)
