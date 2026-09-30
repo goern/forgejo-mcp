@@ -403,6 +403,12 @@ List all my repositories
 | `delete_workflow_run` | Delete a completed workflow run. A live run is an API error. Removes the run and its job logs; Forgejo marks that run's artifacts deleted |
 | `list_action_run_artifacts` | List artifacts of a workflow run. Server-paged via `page`/`limit` (default 30, max 50); optional `name` filter. Envelope `{artifacts, page, limit, count, total_count?}` |
 | `get_action_artifact` | Get metadata for one Actions artifact. Does not download the zip |
+| `list_repo_action_secrets` | List a repository's Actions secrets (names only; Forgejo never returns values). Client-paged via `page`/`limit` (default 30, max 50) |
+| `create_or_update_repo_action_secret` | Create or update a repository Actions secret. Overwrites any existing secret with the same name; the value is never echoed back |
+| `delete_repo_action_secret` | Delete a repository Actions secret |
+| `list_org_action_secrets` | List an organization's Actions secrets (names only; Forgejo never returns values). Client-paged via `page`/`limit` (default 30, max 50) |
+| `create_or_update_org_action_secret` | Create or update an organization Actions secret. Overwrites any existing secret with the same name; the value is never echoed back |
+| `delete_org_action_secret` | Delete an organization Actions secret |
 | **Organizations** | |
 | `list_my_orgs` | List my organizations |
 | `list_user_orgs` | List a user's organizations |

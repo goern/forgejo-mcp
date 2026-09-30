@@ -79,6 +79,8 @@ const (
 	LogOffset    = "0-based byte offset; omit to return the tail of the log"
 	LogMaxBytes  = "Maximum log bytes to return (default 32768, maximum 262144)"
 	Status       = "Filter by status (e.g. waiting, running, success, failure, cancelled)"
+	SecretName   = "Secret name (letters, digits, underscores; cannot start with GITEA_ or GITHUB_)"
+	SecretData   = "Secret value (plaintext in transit; stored encrypted by Forgejo, never returned by the API)"
 
 	// Misc parameters
 	Description = "Description"
