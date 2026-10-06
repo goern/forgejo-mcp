@@ -51,8 +51,8 @@ go install .
 
 Ensure `$GOPATH/bin` (typically `~/go/bin`) is in your PATH.
 
-> **Note:** `go install` from the module path works from the first release
-> after the module was renamed (see [Known Issues](#known-issues)):
+> **Note:** you can also install straight from the module path, without
+> cloning:
 >
 > ```bash
 > go install git.b4mad.industries/agentic-forges/forgejo-mcp/v3@latest
@@ -95,12 +95,12 @@ podman run --rm -i \
   --transport stdio --url https://your-forgejo-instance.org
 
 # Or pin a specific version
-podman run --rm -i git.b4mad.industries/agentic-forges/forgejo-mcp:v2.24.0 --help
+podman run --rm -i git.b4mad.industries/agentic-forges/forgejo-mcp:v3.1.0 --help
 ```
 
 | Tag             | Meaning                                                         |
 |-----------------|----------------------------------------------------------------|
-| `vMAJOR.MINOR.PATCH` | Immutable — the exact release (e.g. `v2.24.0`). Use in production. |
+| `vMAJOR.MINOR.PATCH` | Immutable — the exact release (e.g. `v3.1.0`). Use in production. |
 | `latest`        | Moving — tracks the most recent release. Convenience only.     |
 
 The image is single-arch (`linux/amd64`), signed with cosign, and carries an
@@ -238,6 +238,49 @@ When using SSE mode, start the server first:
 forgejo-mcp --transport sse --url https://your-forgejo-instance.org --token <your-token>
 ```
 
+#### Remote operation as an OAuth resource server
+
+With `--auth-mode resource-server`, the `http` transport becomes an OAuth 2.0
+resource server as the MCP authorization specification defines it. Clients no
+longer send a Forgejo token. They log in at an OpenID Connect provider you choose
+and send its JWT access token. The server validates that token, signs a JWT that
+lives five minutes for the caller, and presents it to Forgejo through a Forgejo 16
+Authorized Integration. No forge token is configured anywhere, and the caller's
+access token never reaches Forgejo.
+
+The mode needs:
+
+- Forgejo 16.0 or newer;
+- an OpenID Connect provider that issues JWT access tokens and can add a per-user
+  claim (default `forgejo_aud`) holding the audience of that user's Authorized
+  Integration;
+- a public HTTPS origin for the server, because Forgejo fetches the server's issuer
+  documents from it;
+- a signing key file: EC P-256 or P-384, Ed25519, or RSA of at least 2048 bits.
+
+```bash
+forgejo-mcp --transport http --url https://forgejo.example.org \
+  --host 0.0.0.0 --allowed-hosts mcp.example.org \
+  --auth-mode resource-server \
+  --authorization-server https://id.example.org \
+  --resource https://mcp.example.org/mcp \
+  --forgejo-jwt-issuer https://mcp.example.org/issuer \
+  --forgejo-jwt-signing-key-file /run/credentials/forgejo-mcp.service/signing-key
+```
+
+The mode is opt-in: without `--auth-mode`, everything above behaves as before. In
+this mode the server answers only `/mcp`, the protected resource metadata, and the
+discovery document and key set under the issuer path. It refuses to start on a
+configuration it cannot serve safely, and the refusal names the setting to fix.
+The signing key acts for every user whose integration trusts the issuer, so guard
+it like the forge token it replaces.
+
+- [Operator guide](docs/oauth-resource-server/operator.md): identity provider
+  requirements, deployment order, proxy rules, key rotation, and a worked Zitadel
+  example.
+- [User guide](docs/oauth-resource-server/user.md): creating the Authorized
+  Integration, the mandatory `sub` claim rule, and configuring an MCP client.
+
 ### 4. Start Using It
 
 Open your MCP-compatible AI assistant and try:
@@ -290,6 +333,8 @@ List all my repositories
 | `test_repo_hook` | Trigger a test delivery for a repository webhook — WARNING: triggers a live HTTP delivery |
 | **Files** | |
 | `get_file_content` | Get the content of a file. Optional `start_line`/`end_line` request a 1-indexed inclusive line range (clamps to file extent; ignored when `with_metadata=true`). |
+| `list_repo_contents` | List files and directories at a path. `path=""` lists the repository root. Returns one level; for a full tree use `get_repo_tree` with `recursive=true`. |
+| `get_repo_tree` | Get the Git tree. `recursive=true` returns the complete file tree in one response (subject to the server's tree-endpoint size cap); `recursive=false` (default) returns one level. |
 | `create_file` | Create a new file |
 | `update_file` | Update an existing file |
 | `delete_file` | Delete a file |
@@ -338,6 +383,11 @@ List all my repositories
 | `get_pull_request_diff` | Get the unified diff of a pull request. Optional `file_path` returns only that file's hunks (matches on either pre- or post-rename path). |
 | `merge_pull_request` | Merge a pull request (style: merge/rebase/rebase-merge/squash; optional title/message/delete-branch/force-merge/wait-for-checks). |
 | `create_pull_review` | Create a review on a pull request (state: APPROVED/REQUEST_CHANGES/COMMENT) with optional inline comments. |
+| `submit_pull_review` | Submit a pending pull request review |
+| `dismiss_pull_review` | Dismiss a pull request review |
+| `delete_pull_review` | Delete a pending pull request review |
+| `create_review_requests` | Request reviews from specific users or teams |
+| `delete_review_requests` | Cancel pending review requests |
 | **Packages** | |
 | `list_packages` | List package versions of a user or org (one row per version). Optional `type` and `q`. Server-paged via `page`/`limit` (default 30, max 50). Envelope `{packages, page, limit, count, has_next, total_count?}`. A missing owner is an error, not an empty list |
 | `get_package` | Get one package version. Does not embed owner/creator users |
@@ -353,8 +403,29 @@ List all my repositories
 | `delete_workflow_run` | Delete a completed workflow run. A live run is an API error. Removes the run and its job logs; Forgejo marks that run's artifacts deleted |
 | `list_action_run_artifacts` | List artifacts of a workflow run. Server-paged via `page`/`limit` (default 30, max 50); optional `name` filter. Envelope `{artifacts, page, limit, count, total_count?}` |
 | `get_action_artifact` | Get metadata for one Actions artifact. Does not download the zip |
+| `list_repo_action_secrets` | List a repository's Actions secrets (names only; Forgejo never returns values). Client-paged via `page`/`limit` (default 30, max 50) |
+| `create_or_update_repo_action_secret` | Create or update a repository Actions secret. Overwrites any existing secret with the same name; the value is never echoed back |
+| `delete_repo_action_secret` | Delete a repository Actions secret |
+| `list_org_action_secrets` | List an organization's Actions secrets (names only; Forgejo never returns values). Client-paged via `page`/`limit` (default 30, max 50) |
+| `create_or_update_org_action_secret` | Create or update an organization Actions secret. Overwrites any existing secret with the same name; the value is never echoed back |
+| `delete_org_action_secret` | Delete an organization Actions secret |
 | **Organizations** | |
+| `list_my_orgs` | List my organizations |
+| `list_user_orgs` | List a user's organizations |
+| `get_org` | Get organization details |
+| `create_org` | Create an organization |
+| `edit_org` | Edit organization settings |
+| `delete_org` | Delete an organization — **destructive and irreversible**: all repos, teams and data are permanently removed |
+| `list_org_members` | List members of an organization |
+| `check_org_membership` | Check if a user is a member of an organization |
+| `remove_org_member` | Remove a member from an organization |
+| `list_org_teams` | List teams in an organization |
 | `search_org_teams` | Search for teams in an organization |
+| `create_org_team` | Create a team in an organization |
+| `add_team_member` | Add a user to a team |
+| `remove_team_member` | Remove a user from a team |
+| `add_team_repo` | Add a repository to a team |
+| `remove_team_repo` | Remove a repository from a team |
 | **Time Tracking** | |
 | `list_issue_tracked_times` | List tracked time entries on an issue or PR |
 | `list_repo_tracked_times` | List tracked time entries across a repository |
@@ -425,6 +496,10 @@ Resources that embed a list (issue, pr) cap the embedded array at 30 items. When
 | `forgejo://repo/{owner}/{repo}/{kind}/{index}/comment/{id}` | application/json (+ text/markdown sidecar) | Single comment by id; kind ∈ {issue, pr}. |
 | `forgejo://repo/{owner}/{repo}/{kind}/{index}/comments{?page,limit}` | application/json | Bounded comment thread with **full bodies** (the single-issue resource excerpts them at 200 chars); kind ∈ {issue, pr}; cap 30, sentinel names `list_issue_comments`. |
 | `forgejo://repo/{owner}/{repo}/pr/{index}` | application/json (+ text/markdown sidecar) | PR metadata, head/base refs, mergeability, bounded recent comments (cap 30, sentinel `list_issue_comments`) and reviews (cap 30, sentinel `list_pull_reviews`). |
+| `forgejo://repo/{owner}/{repo}/branch_protections` | application/json | Bounded list of branch protection rules. |
+| `forgejo://repo/{owner}/{repo}/branch_protection/{rule}` | application/json | Single branch protection rule. Rule names are branch patterns, so encode a literal `/` as `%2F` and spaces as `%20` (`release%2Fv1`); a raw `/` does not resolve. |
+| `forgejo://repo/{owner}/{repo}/hooks` | application/json | Bounded list of repository webhooks (cap 30, sentinel names `list_repo_hooks`). The secret is never returned. |
+| `forgejo://repo/{owner}/{repo}/hook/{id}` | application/json | Single repository webhook by id. The secret is never returned. |
 | `forgejo://repo/{owner}/{repo}/label/{id}` | application/json | Single repository label by numeric id. |
 | `forgejo://repo/{owner}/{repo}/labels{?page,limit}` | application/json | Bounded list of repository labels (cap 30, sentinel names `list_repo_labels`). |
 | `forgejo://org/{org}/labels{?page,limit}` | application/json | Bounded list of organization-level labels (cap 30, sentinel names `list_org_labels`). |
@@ -542,12 +617,23 @@ You can configure the server using command-line arguments or environment variabl
 | `--allowed-hosts` | `FORGEJO_MCP_ALLOWED_HOSTS` | Comma-separated `Host` names this server answers to; required when `--host` is not loopback |
 | `--allowed-origins` | `FORGEJO_MCP_ALLOWED_ORIGINS` | Comma-separated web origins allowed to send an `Origin` header, as full origins (`https://console.example.org`). Empty by default |
 | `--allow-operator-token-fallback` | `FORGEJO_MCP_ALLOW_OPERATOR_TOKEN_FALLBACK` | On `sse`/`http`, serve requests with no `Authorization` header using this server's own token. Off by default |
+| `--auth-mode` | `FORGEJO_MCP_AUTH_MODE` | `passthrough` (default) or `resource-server`; see [Remote operation as an OAuth resource server](#remote-operation-as-an-oauth-resource-server) |
+| `--authorization-server` | `FORGEJO_MCP_AUTHORIZATION_SERVER` | `resource-server` mode: issuer URL of the OpenID Connect provider, compared byte for byte |
+| `--resource` | `FORGEJO_MCP_RESOURCE` | `resource-server` mode: canonical URI of the MCP endpoint, for example `https://mcp.example.org/mcp`; its path must be `/mcp` |
+| `--resource-audience` | `FORGEJO_MCP_RESOURCE_AUDIENCE` | `resource-server` mode: value an access token's `aud` must contain (default: the value of `--resource`) |
+| `--scopes-supported` | `FORGEJO_MCP_SCOPES_SUPPORTED` | `resource-server` mode: space-separated scopes published in the metadata and the `401` challenge (default: none published) |
+| `--forgejo-audience-claim` | `FORGEJO_MCP_FORGEJO_AUDIENCE_CLAIM` | `resource-server` mode: access-token claim holding the audience of the caller's Forgejo Authorized Integration (default: `forgejo_aud`) |
+| `--forgejo-jwt-issuer` | `FORGEJO_MCP_FORGEJO_JWT_ISSUER` | `resource-server` mode: issuer URL under which the server signs JWTs for Forgejo, for example `https://mcp.example.org/issuer`; https, without a trailing slash |
+| `--forgejo-jwt-signing-key-file` | `FORGEJO_MCP_FORGEJO_JWT_SIGNING_KEY_FILE` | `resource-server` mode: PEM private key that signs the JWTs for Forgejo (EC P-256 or P-384, Ed25519, or RSA of at least 2048 bits) |
+| `--forgejo-jwt-published-key-files` | `FORGEJO_MCP_FORGEJO_JWT_PUBLISHED_KEY_FILES` | `resource-server` mode: comma-separated PEM keys published next to the signing key, for key rotation |
 | `--cli` | - | Enter CLI mode for direct tool invocation |
 | `--user-agent` | `FORGEJO_USER_AGENT` | HTTP User-Agent header (default: `forgejo-mcp/<version>`) |
 | - | `FORGEJO_MCP_ALLOW_FILE_PATH_UPLOAD` | Allow `file_path` attachment uploads to read the host filesystem (`1`/`true`/`yes`/`on`; off by default) |
 | - | `FORGEJO_MCP_UPLOAD_ROOT` | Confine `file_path` uploads to this directory (default: anywhere the process can read) |
 
 Command-line arguments take priority over environment variables.
+
+The `resource-server` settings are refused in `passthrough` mode, so a configuration that sets them but forgets `--auth-mode resource-server` does not start.
 
 ### Uploading attachments from the host filesystem
 
@@ -641,11 +727,11 @@ automation.
 
 ### 3. Download the release artifacts
 
-Pick the tag you installed (e.g. `v2.23.1`) and grab the checksum file,
+Pick the tag you installed (e.g. `v3.1.0`) and grab the checksum file,
 its signature, and the binary archive:
 
 ```bash
-TAG=v2.23.1
+TAG=v3.1.0
 VERSION="${TAG#v}"
 BASE="https://git.b4mad.industries/agentic-forges/forgejo-mcp/releases/download/${TAG}"
 
@@ -724,7 +810,7 @@ Tekton Chains. Reuse the `cosign-images.pub` key fetched above.
 Verify the signature:
 
 ```bash
-IMAGE_TAG=v2.24.0   # substitute the release you are pulling
+IMAGE_TAG=v3.1.0   # substitute the release you are pulling
 cosign verify \
   --key cosign-images.pub \
   "git.b4mad.industries/agentic-forges/forgejo-mcp:${IMAGE_TAG}" \
@@ -814,17 +900,17 @@ See [DEVELOPER.md](DEVELOPER.md) for build instructions, architecture overview, 
 
 ## Known Issues
 
-- **`go install ...@latest` needs a post-rename release** — The Go module path
-  was `codeberg.org/goern/forgejo-mcp/v2` until the forge move; Go resolves
-  modules by the path declared in `go.mod`, so the
-  `git.b4mad.industries/...` path only becomes installable once a release is
-  tagged carrying the renamed `go.mod`. Until then, use the clone-and-build
-  workflow shown in [Quick Start](#quick-start). The old
-  `go install codeberg.org/goern/forgejo-mcp/v2@latest` still resolves against
-  the read-only Codeberg mirror, but that mirror lags behind the current
-  release — do not rely on it. The earlier `replace`-directive blocker
-  ([#67](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/67)) is
-  gone; `go.mod` no longer contains one.
+- **Installing from the old Codeberg module path** — `go install
+  codeberg.org/goern/forgejo-mcp/v2@latest` still resolves, against the
+  read-only mirror, but that mirror lags behind the current release. Use
+  `git.b4mad.industries/agentic-forges/forgejo-mcp/v3@latest` instead.
+
+  This entry used to say that the new path was not installable until a
+  release carried the renamed `go.mod`. That release has happened —
+  `v3.0.0` onwards declare `module git.b4mad.industries/agentic-forges/forgejo-mcp/v3`
+  — so the new path installs normally. The earlier `replace`-directive
+  blocker ([#67](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/67))
+  is also gone; `go.mod` no longer contains one.
 
 ## Contributors
 
@@ -838,7 +924,7 @@ forgejo-mcp is shaped by everyone who files issues, writes code, reviews PRs, an
 | Ronmi Ren | Co-creator; SSE/HTTP transport, issue blocking, CI/CD improvements, logo, Glama spec |
 | [twstagg](https://codeberg.org/twstagg) (Tristin Stagg) | User agent configuration support (PR #89) |
 | [mattdm](https://codeberg.org/mattdm) (Matthew Miller) | Logging improvements, FORGEJO_* migration, README, URL refactor |
-| [byteflavour](https://codeberg.org/byteflavour) | `check_notifications` + full notification management API (PR #84, #86); stateless per-request auth for HTTP/SSE transports (PR #138); NixOS installation docs (PR #146); feature requests #80, #85 |
+| [byteflavour](https://codeberg.org/byteflavour) | `check_notifications` + full notification management API (PR #84, #86); stateless per-request auth for HTTP/SSE transports (PR #138); NixOS installation docs (PR #146); network transport hardening — loopback-by-default bind, `Host`/`Origin` checks, per-request credential (PR #545, landed as #573; #586, #585, #589); **OAuth resource-server mode** — inbound JWT validation and outbound Forgejo 16 Authorized Integration signing, with operator and user guides and 40 anchored demo scenarios (PR #584, researched in #582); dev-env `FORGEJO_MCP_EXEC` (PR #580); feature requests #80, #85 |
 | [jesterret](https://codeberg.org/jesterret) | Pull request reviews and comments support (PR #51) |
 | [appleboy](https://codeberg.org/appleboy) | Custom SSE port support, bug fixes |
 | [ignasgil](https://codeberg.org/ignasgil) | `remove_issue_labels` tool (PR #96) |
@@ -854,8 +940,9 @@ forgejo-mcp is shaped by everyone who files issues, writes code, reviews PRs, an
 | [Guruprasad Kulkarni](https://codeberg.org/comdotlinux) | Arch Linux AUR installation docs (PR #69) |
 | [Mario Wolff](https://codeberg.org/mariowolff) | Contributions |
 | [Massimo Fraschetti](https://codeberg.org/fraschetti) | Contributions |
-| [synath](https://codeberg.org/synath) (David Paul Turley) | Repository-scoped token support via `ServerVersion` probe (PR #112); merge status-code check (PR #113); Claude Desktop Extension (.mcpb) packaging (PR #118) |
+| [synath](https://codeberg.org/synath) (David Paul Turley) | Repository-scoped token support via `ServerVersion` probe (PR #112); merge status-code check (PR #113); Claude Desktop Extension (.mcpb) packaging (PR #118, #123); issue `due_date` + server-side sort (PR #483); bounded issue-list and comment-thread resources (PR #487); `total_count` on paginated envelopes from `X-Total-Count` (PR #507); `create_*_attachment` timeout hardening (PR #534, #536); cross-repo issue dependencies (PR #535) |
 | [BrilliantKahn](https://codeberg.org/BrilliantKahn) | `get_file_content` plain-text default (PR #116); `list_repo_contents` and `get_repo_tree` tools (PR #117). **First-ever open source contribution** — welcome aboard! 🎉 |
+| [nesvet](https://git.b4mad.industries/nesvet) (Eugene Nesvetaev) | `get_repo`/`edit_repo` (PR #527); repository topic tools (PR #528); Actions run cancel/delete and run artifacts (PR #533); `get_commit_statuses` (PR #542); package list/get/delete/files tools (PR #543); label names accepted on issue create, assignment and replace (PR #591) |
 | [pisco](https://git.b4mad.industries/pisco) (Marco Pisco) | `file_path` uploads for issue, comment, and release attachments, with streaming multipart so large release assets no longer round-trip through base64 (PR #481) |
 
 ### Community contributors
@@ -879,6 +966,7 @@ Issue reporters and discussion participants who shaped the direction of the proj
 | [janbaer](https://codeberg.org/janbaer) | Filed #98 (reply to review comment) |
 | [fraschm98](https://codeberg.org/fraschm98) | Early issue reports |
 | [heathen711](https://codeberg.org/heathen711) | Filed #106 (issue/comment attachments — since implemented); shaped the 1 MiB inline cap + `browser_download_url` fall-through design |
+| [decarvalhoaa](https://git.b4mad.industries/decarvalhoaa) (Antonio De Carvalho) | Filed #593 (server-side response size cap) from a real context-window overflow behind Open WebUI, with the measurement that prompted the `list_repo_pull_requests` payload work in #596 |
 | [chris420](https://git.b4mad.industries/chris420) (Chris Oloff) | Filed #452 (org-wide issue search — since implemented as `search_issues`); design review on PR #458 that replaced the next-page probe with instance-ceiling enforcement, and caught the response envelope misreporting its own `limit` |
 
 ### Cyborg contributors

@@ -9,7 +9,7 @@ spec:
     - name: GO_IMAGE
       description: Container image carrying the Go toolchain.
       type: string
-      default: docker.io/library/golang:1.25
+      default: docker.io/library/golang:1.26
     - name: GOLANGCI_LINT_IMAGE
       description: |
         golangci-lint image (must be Go-version compatible with GO_IMAGE and
@@ -21,7 +21,7 @@ spec:
         Pre-built release-tools image containing govulncheck (and other tools).
         Used only for the govulncheck step.
       type: string
-      default: git.b4mad.industries/agentic-forges/release-tools:v1.0.4
+      default: git.b4mad.industries/agentic-forges/release-tools:v1.2.0
     - name: LINT_REQUIRED
       description: |
         If "true", lint findings fail the build. If "false", lint runs but its
@@ -81,6 +81,14 @@ spec:
         set -euo pipefail
         git config --global --add safe.directory "$(workspaces.source.path)"
         ./scripts/ci/check-api-path-escaping.sh
+
+    - name: readme-tool-coverage
+      image: $(params.GO_IMAGE)
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        git config --global --add safe.directory "$(workspaces.source.path)"
+        ./scripts/ci/check-readme-tool-coverage.sh
 
     - name: mod-tidy-check
       image: $(params.GO_IMAGE)

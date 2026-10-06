@@ -81,8 +81,9 @@ images, `.mcpb` bundles).
 - The `git.b4mad.industries` forge instance, our CI, or any other b4mad
   infrastructure. Those are separate systems with separate operators.
 - Findings that require an attacker who already has the operator's forge token,
-  shell access as the server's user, or the ability to modify its
-  configuration. Those are not boundaries this server defends.
+  the `resource-server` signing key, shell access as the server's user, or the
+  ability to modify its configuration. Those are not boundaries this server
+  defends.
 
 ## Supported versions
 
@@ -97,7 +98,7 @@ usually days rather than months.
 
 ## Deployment notes
 
-Two properties of this server are worth understanding before you expose it,
+Three properties of this server are worth understanding before you expose it,
 because they shape what a vulnerability report even means:
 
 1. **The server holds a forge access token** with whatever permissions you
@@ -111,6 +112,15 @@ because they shape what a vulnerability report even means:
    the request authentication and whatever sits in front of it. Read the
    transport section of the [README](README.md) before running either, and
    treat the port as sensitive.
+3. **In `--auth-mode resource-server` the server holds a signing key instead of
+   a forge token.** Forgejo accepts a JWT signed with that key for every user
+   whose Authorized Integration trusts the server's issuer, within that
+   integration's permissions. A leaked key therefore acts for all of those users
+   at once, until it is rotated out. Supply the key as a file readable only by
+   the server's user. Every integration needs a `sub` claim rule and narrow
+   permissions. Read the
+   [operator guide](docs/oauth-resource-server/operator.md) before deploying.
+   The server repeats this warning at every start.
 
 Reports that a network transport is reachable or misconfigured *in your own
 deployment* are support questions, not vulnerabilities — the tracker is the

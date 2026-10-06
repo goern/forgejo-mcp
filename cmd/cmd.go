@@ -137,6 +137,8 @@ func initFlags() {
 		"debug mode",
 	)
 
+	registerAuthFlags(fs)
+
 	// ExitOnError: Parse exits the process on error, so the return is moot.
 	_ = fs.Parse(os.Args[1:])
 
@@ -243,6 +245,8 @@ func initConfig() {
 			}
 		}
 	}
+
+	resolveAuthSettings()
 }
 
 func validateURL(urlStr string) error {
@@ -283,6 +287,12 @@ func Execute(version string) {
 		log.Debug("Using default user agent",
 			log.StringField("user_agent", flagPkg.UserAgent),
 		)
+	}
+
+	// Checked before either entry point, so that --cli, which never reaches
+	// operation.Run, cannot run with an auth configuration the server refuses.
+	if err := operation.ValidateAuthConfig(transport, cliMode); err != nil {
+		log.Fatal("Invalid authentication configuration", log.ErrorField(err))
 	}
 
 	// Sync flushes buffered logs at exit; its error (e.g. syncing stderr) is

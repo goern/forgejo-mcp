@@ -40,10 +40,10 @@ func Client(ctx context.Context) (*forgejo.Client, error) {
 			userAgent = "forgejo-mcp/" + flag.Version
 		}
 
-		c, err := forgejo.NewClient(flag.URL,
+		c, err := forgejo.NewClient(flag.URL, clientOptions(
 			forgejo.SetToken(token),
 			forgejo.SetUserAgent(userAgent),
-		)
+		)...)
 		if err != nil {
 			log.ErrorCtx(ctx, "Failed to create ephemeral Forgejo client",
 				log.SanitizedURLField("url", flag.URL),
@@ -81,10 +81,10 @@ func Client(ctx context.Context) (*forgejo.Client, error) {
 		userAgent = "forgejo-mcp/" + flag.Version
 	}
 
-	c, err := forgejo.NewClient(flag.URL,
+	c, err := forgejo.NewClient(flag.URL, clientOptions(
 		forgejo.SetToken(flag.Token),
 		forgejo.SetUserAgent(userAgent),
-	)
+	)...)
 	if err != nil {
 		log.Error("Failed to create Forgejo client",
 			log.SanitizedURLField("url", flag.URL),

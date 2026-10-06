@@ -38,6 +38,17 @@ repos:
         pass_filenames: false
         files: ^(operation/.*\.go|pkg/.*\.go|scripts/ci/check-api-path-escaping\.sh)$
 
+      - id: check-readme-tool-coverage
+        name: check README documents every tool and resource
+        description: >-
+          Reject a registered tool or forgejo:// resource template with no row
+          in the README tables. Mirrors the readme-tool-coverage step in
+          .tekton/tasks/go-ci.yaml.
+        entry: scripts/ci/check-readme-tool-coverage.sh
+        language: script
+        pass_filenames: false
+        files: ^(operation/.*\.go|README\.md|scripts/ci/check-readme-tool-coverage\.sh)$
+
       - id: check-demos
         name: check anchored spec demos
         description: Validate anchored Showboat demos against their specs.

@@ -126,16 +126,40 @@ func ListIssueDependentsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 
 // crossRepoArgs resolves the optional owner/repo pair naming the repository a
 // dependency issue lives in, defaulting to the target issue's own repository.
-func crossRepoArgs(args map[string]any, ownerKey, repoKey, defaultOwner, defaultRepo string) (string, string) {
-	depOwner, _ := args[ownerKey].(string)
-	if depOwner == "" {
-		depOwner = defaultOwner
+//
+// Absent and malformed are kept apart, the way pkg/to separates Float64 from
+// Float64Ok: an omitted, nil or empty argument means "the target's own repo",
+// but a value of the wrong type is an error. Collapsing the two would write a
+// SAME-repo dependency for a caller that asked for a different one and report
+// success, which is worse than refusing.
+func crossRepoArgs(args map[string]any, ownerKey, repoKey, defaultOwner, defaultRepo string) (string, string, error) {
+	depOwner, err := optionalString(args, ownerKey, defaultOwner)
+	if err != nil {
+		return "", "", err
 	}
-	depRepo, _ := args[repoKey].(string)
-	if depRepo == "" {
-		depRepo = defaultRepo
+	depRepo, err := optionalString(args, repoKey, defaultRepo)
+	if err != nil {
+		return "", "", err
 	}
-	return depOwner, depRepo
+	return depOwner, depRepo, nil
+}
+
+// optionalString returns the string under key, fallback when it is absent, nil
+// or empty, and an error naming the argument when it is present but not a
+// string.
+func optionalString(args map[string]any, key, fallback string) (string, error) {
+	raw, present := args[key]
+	if !present || raw == nil {
+		return fallback, nil
+	}
+	s, ok := raw.(string)
+	if !ok {
+		return "", fmt.Errorf("%s: expected a string, got %T", key, raw)
+	}
+	if s == "" {
+		return fallback, nil
+	}
+	return s, nil
 }
 
 func parsePageLimit(args map[string]any) (page, limit int) {
@@ -164,7 +188,10 @@ func AddIssueDependencyFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("depends_on_index: %w", err))
 	}
-	depOwner, depRepo := crossRepoArgs(req.GetArguments(), "depends_on_owner", "depends_on_repo", owner, repo)
+	depOwner, depRepo, err := crossRepoArgs(req.GetArguments(), "depends_on_owner", "depends_on_repo", owner, repo)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
 
 	// Scoped to same-repo (including the defaulted case, since depOwner/depRepo
 	// already fall back to owner/repo above): a same-index dependency in a
@@ -202,7 +229,10 @@ func RemoveIssueDependencyFn(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("dependency_index: %w", err))
 	}
-	depOwner, depRepo := crossRepoArgs(req.GetArguments(), "dependency_owner", "dependency_repo", owner, repo)
+	depOwner, depRepo, err := crossRepoArgs(req.GetArguments(), "dependency_owner", "dependency_repo", owner, repo)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
 
 	path := forgejo.APIPath("repos", owner, repo, "issues", int64(index), "dependencies")
 	body := issueMetaBody{Index: int64(dependencyIndex), Owner: depOwner, Repo: depRepo}

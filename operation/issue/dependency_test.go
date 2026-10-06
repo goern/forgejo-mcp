@@ -570,5 +570,101 @@ func TestRemoveIssueDependency_APIErrorSurfaces(t *testing.T) {
 	}
 }
 
+// A non-string cross-repo argument is malformed, not absent. Before this was
+// fixed, crossRepoArgs discarded the failed type assertion, so the zero value
+// was indistinguishable from an omitted argument and the request silently
+// resolved to the TARGET's own repository — a dependency written against the
+// wrong repo, reported as success. These tests pin the refusal and, more
+// importantly, that nothing reaches the network.
+func TestAddIssueDependency_NonStringCrossRepoOwnerIsRefused(t *testing.T) {
+	_, records := newDependenciesBackend(t)
+
+	_, err := AddIssueDependencyFn(context.Background(), makeReq(map[string]any{
+		"owner":            "goern",
+		"repo":             "forgejo-mcp",
+		"index":            float64(42),
+		"depends_on_index": float64(7),
+		"depends_on_owner": float64(123),
+	}))
+	if err == nil {
+		t.Fatal("a non-string depends_on_owner was accepted and silently defaulted to the target repo")
+	}
+	if !strings.Contains(err.Error(), "depends_on_owner") {
+		t.Fatalf("error does not name the offending argument: %v", err)
+	}
+	if len(*records) > 0 {
+		t.Fatalf("expected no HTTP request for a malformed argument, got %d", len(*records))
+	}
+}
+
+func TestAddIssueDependency_NonStringCrossRepoRepoIsRefused(t *testing.T) {
+	_, records := newDependenciesBackend(t)
+
+	_, err := AddIssueDependencyFn(context.Background(), makeReq(map[string]any{
+		"owner":            "goern",
+		"repo":             "forgejo-mcp",
+		"index":            float64(42),
+		"depends_on_index": float64(7),
+		"depends_on_repo":  true,
+	}))
+	if err == nil {
+		t.Fatal("a non-string depends_on_repo was accepted and silently defaulted to the target repo")
+	}
+	if !strings.Contains(err.Error(), "depends_on_repo") {
+		t.Fatalf("error does not name the offending argument: %v", err)
+	}
+	if len(*records) > 0 {
+		t.Fatalf("expected no HTTP request for a malformed argument, got %d", len(*records))
+	}
+}
+
+func TestRemoveIssueDependency_NonStringCrossRepoOwnerIsRefused(t *testing.T) {
+	_, records := newDependenciesBackend(t)
+
+	_, err := RemoveIssueDependencyFn(context.Background(), makeReq(map[string]any{
+		"owner":            "goern",
+		"repo":             "forgejo-mcp",
+		"index":            float64(42),
+		"dependency_index": float64(7),
+		"dependency_owner": float64(123),
+	}))
+	if err == nil {
+		t.Fatal("a non-string dependency_owner was accepted and silently defaulted to the target repo")
+	}
+	if !strings.Contains(err.Error(), "dependency_owner") {
+		t.Fatalf("error does not name the offending argument: %v", err)
+	}
+	if len(*records) > 0 {
+		t.Fatalf("expected no HTTP request for a malformed argument, got %d", len(*records))
+	}
+}
+
+// An explicit JSON null is absent, not malformed: a client that spells an
+// omitted optional argument as null must keep the documented default rather
+// than be refused.
+func TestAddIssueDependency_NullCrossRepoOwnerDefaultsToTargetRepo(t *testing.T) {
+	_, records := newDependenciesBackend(t)
+
+	res, err := AddIssueDependencyFn(context.Background(), makeReq(map[string]any{
+		"owner":            "goern",
+		"repo":             "forgejo-mcp",
+		"index":            float64(42),
+		"depends_on_index": float64(7),
+		"depends_on_owner": nil,
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("a null depends_on_owner should default to the target repo: err=%v res=%+v", err, res)
+	}
+
+	last := (*records)[len(*records)-1]
+	var payload map[string]any
+	if err := json.Unmarshal(last.rawBody, &payload); err != nil {
+		t.Fatalf("invalid JSON body: %v\nbody: %s", err, last.rawBody)
+	}
+	if payload["owner"] != "goern" || payload["repo"] != "forgejo-mcp" {
+		t.Fatalf("expected the target repo in the body, got %v", payload)
+	}
+}
+
 // Ensure CallToolRequest is used for the shared makeReq helper.
 var _ mcp.CallToolRequest = mcp.CallToolRequest{}

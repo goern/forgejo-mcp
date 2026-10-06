@@ -61,6 +61,13 @@ Do not add a copyright line — the SPDX identifier line alone is sufficient.
    semantics), the tool MUST satisfy [docs/design/output-bounding.md](docs/design/output-bounding.md):
    client-controlled bound + resumability + documented parameters. Use the
    checklist there in the PR description.
+7. **Add the README row.** Every registered tool needs a row in the README
+   "Available Tools" table, and every `forgejo://` resource template a row in
+   the "Resources" table. `scripts/ci/check-readme-tool-coverage.sh` fails the
+   build on a tool or template with no row — it compares the `…ToolName`
+   constants and registered URI templates under `operation/` against the
+   tables. This was unenforced until #601, by which point 22 of 155 tools and
+   4 of 17 templates had drifted out, `delete_org` among them.
 
 See [DEVELOPER.md](DEVELOPER.md) for complete code examples and patterns.
 
