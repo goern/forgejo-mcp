@@ -423,3 +423,119 @@ func TestGetFileContentFn_DefaultIsPlainText(t *testing.T) {
 		t.Errorf("default (no with_metadata) did not return plain text\n  got:  %q\n  want: %q", wrapper.Result, plainText)
 	}
 }
+
+func TestCreateFileFn_AcceptsBase64Content(t *testing.T) {
+	srv, captured := setupMockServer(t)
+	defer srv.Close()
+
+	encoded := base64.StdEncoding.EncodeToString([]byte{0x00, 0xff, 0x10, 0x80})
+
+	req := newCallToolRequest(map[string]interface{}{
+		"owner":          "testowner",
+		"repo":           "testrepo",
+		"filePath":       "binary.dat",
+		"content_base64": encoded,
+		"message":        "add binary file",
+		"branch_name":    "main",
+	})
+
+	result, err := CreateFileFn(context.Background(), req)
+	if err != nil {
+		t.Fatalf("CreateFileFn returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("CreateFileFn returned tool error: %v", result.Content)
+	}
+
+	var body apiFileRequest
+	if err := json.Unmarshal(*captured, &body); err != nil {
+		t.Fatalf("unmarshaling captured body: %v", err)
+	}
+	if body.Content != encoded {
+		t.Errorf("base64 content changed: got %q want %q", body.Content, encoded)
+	}
+}
+
+func TestUpdateFileFn_AcceptsBase64Content(t *testing.T) {
+	srv, captured := setupMockServer(t)
+	defer srv.Close()
+
+	encoded := base64.StdEncoding.EncodeToString([]byte{0xde, 0xad, 0xbe, 0xef})
+
+	req := newCallToolRequest(map[string]interface{}{
+		"owner":          "testowner",
+		"repo":           "testrepo",
+		"filePath":       "binary.dat",
+		"content_base64": encoded,
+		"message":        "update binary file",
+		"branch_name":    "main",
+		"sha":            "abc123",
+	})
+
+	result, err := UpdateFileFn(context.Background(), req)
+	if err != nil {
+		t.Fatalf("UpdateFileFn returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("UpdateFileFn returned tool error: %v", result.Content)
+	}
+
+	var body apiFileRequest
+	if err := json.Unmarshal(*captured, &body); err != nil {
+		t.Fatalf("unmarshaling captured body: %v", err)
+	}
+	if body.Content != encoded {
+		t.Errorf("base64 content changed: got %q want %q", body.Content, encoded)
+	}
+}
+
+func TestRepositoryWriteContentRejectsMissingAndAmbiguousContent(t *testing.T) {
+	tests := []struct {
+		name string
+		args map[string]any
+	}{
+		{
+			name: "missing",
+			args: map[string]any{},
+		},
+		{
+			name: "both",
+			args: map[string]any{
+				"content":        "text",
+				"content_base64": "dGV4dA==",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := selectRepositoryWriteContent(tt.args); err == nil {
+				t.Fatal("expected content selection error")
+			}
+		})
+	}
+}
+
+func TestRepositoryWriteContentRejectsInvalidBase64(t *testing.T) {
+	_, err := selectRepositoryWriteContent(map[string]any{
+		"content_base64": "%%%not-base64%%%",
+	})
+	if err == nil {
+		t.Fatal("expected invalid base64 error")
+	}
+}
+
+func TestRepositoryWriteContentAcceptsExplicitEmptyValues(t *testing.T) {
+	for _, args := range []map[string]any{
+		{"content": ""},
+		{"content_base64": ""},
+	} {
+		got, err := selectRepositoryWriteContent(args)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got != "" {
+			t.Fatalf("expected zero-byte encoded content, got %q", got)
+		}
+	}
+}

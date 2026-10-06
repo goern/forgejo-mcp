@@ -335,9 +335,10 @@ List all my repositories
 | `get_file_content` | Get the content of a file. Optional `start_line`/`end_line` request a 1-indexed inclusive line range (clamps to file extent; ignored when `with_metadata=true`). |
 | `list_repo_contents` | List files and directories at a path. `path=""` lists the repository root. Returns one level; for a full tree use `get_repo_tree` with `recursive=true`. |
 | `get_repo_tree` | Get the Git tree. `recursive=true` returns the complete file tree in one response (subject to the server's tree-endpoint size cap); `recursive=false` (default) returns one level. |
-| `create_file` | Create a new file |
-| `update_file` | Update an existing file |
+| `create_file` | Create a new file. Supply exactly one of plain-text `content` or binary-safe `content_base64` (strict standard Base64). |
+| `update_file` | Update an existing file. Supply exactly one of plain-text `content` or binary-safe `content_base64` (strict standard Base64). |
 | `delete_file` | Delete a file |
+| `change_files` | Atomically create, update, and delete multiple files in one native Forgejo commit; create/update operations accept `content` or `content_base64`. |
 | **Commits** | |
 | `list_repo_commits` | List commits in a repository |
 | `get_commit_statuses` | List per-context commit statuses for a full 40-character SHA. Bounded by `page` (default 1) + `limit` (default 30, maximum 50); returns `{sha, statuses, page, limit, count, total_count}` — `total_count` is present only when Forgejo reports `X-Total-Count`. Combined aggregate stays on the commit status resource. Not Actions runs (`list_workflow_runs`). |
