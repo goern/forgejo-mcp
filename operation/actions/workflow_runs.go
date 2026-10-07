@@ -106,7 +106,7 @@ func ListWorkflowRunsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 			duration = fmt.Sprintf(" | Duration: %s", run.Stopped.Sub(run.Started).Round(1e9).String())
 		}
 
-		fmt.Fprintf(&sb, "#%d - %s\n", run.ID, run.Title)
+		fmt.Fprintf(&sb, "#%d (run number %d) - %s\n", run.ID, run.RunNumber, run.Title)
 		fmt.Fprintf(&sb, "  Status: %s | Event: %s | SHA: %.7s%s\n",
 			run.Status, run.Event, run.CommitSHA, duration)
 		if !run.Started.IsZero() {
@@ -172,7 +172,7 @@ func GetWorkflowRunFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		stoppedStr = run.Stopped.Format("2006-01-02 15:04:05")
 	}
 
-	result := fmt.Sprintf(`Workflow Run #%d
+	result := fmt.Sprintf(`Workflow Run #%d (run number %d)
 
 Title: %s
 Status: %s
@@ -188,6 +188,7 @@ Duration: %s
 
 URL: %s`,
 		run.ID,
+		run.RunNumber,
 		run.Title,
 		run.Status,
 		run.Event,
