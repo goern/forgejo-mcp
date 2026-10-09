@@ -307,6 +307,88 @@ func TestGetWorkflowRunFn_ReturnsRun(t *testing.T) {
 	}
 }
 
+func TestListWorkflowRunsFn_OmitsZeroRunNumber(t *testing.T) {
+	// An older Forgejo may omit index_in_repo entirely; RunNumber decodes as 0.
+	mockResponse := map[string]interface{}{
+		"total_count": 1,
+		"workflow_runs": []map[string]interface{}{
+			{
+				"id":         1,
+				"title":      "Run CI",
+				"status":     "success",
+				"event":      "push",
+				"commit_sha": "abc1234567890",
+				"html_url":   "https://example.com/runs/1",
+			},
+		},
+	}
+
+	srv, _ := setupListRunsMockServer(t, mockResponse, http.StatusOK)
+	defer srv.Close()
+
+	req := newCallToolRequest(map[string]interface{}{
+		"owner": "testowner",
+		"repo":  "testrepo",
+	})
+
+	result, err := ListWorkflowRunsFn(context.Background(), req)
+	if err != nil {
+		t.Fatalf("ListWorkflowRunsFn returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("ListWorkflowRunsFn returned tool error")
+	}
+
+	text := result.Content[0].(mcp.TextContent).Text
+	if !strings.Contains(text, "#1 - Run CI") {
+		t.Errorf("output missing plain run label, got:\n%s", text)
+	}
+	if strings.Contains(text, "(run number 0)") {
+		t.Errorf("output shows a zero run number, got:\n%s", text)
+	}
+}
+
+func TestGetWorkflowRunFn_OmitsZeroRunNumber(t *testing.T) {
+	// An older Forgejo may omit index_in_repo entirely; RunNumber decodes as 0.
+	mockResponse := map[string]interface{}{
+		"id":         42,
+		"title":      "CI Pipeline",
+		"status":     "success",
+		"event":      "push",
+		"commit_sha": "deadbeef",
+		"html_url":   "https://example.com/runs/1",
+		"trigger_user": map[string]interface{}{
+			"login":     "testuser",
+			"full_name": "Test User",
+		},
+	}
+
+	srv, _ := setupListRunsMockServer(t, mockResponse, http.StatusOK)
+	defer srv.Close()
+
+	req := newCallToolRequest(map[string]interface{}{
+		"owner":  "testowner",
+		"repo":   "testrepo",
+		"run_id": float64(42),
+	})
+
+	result, err := GetWorkflowRunFn(context.Background(), req)
+	if err != nil {
+		t.Fatalf("GetWorkflowRunFn returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("GetWorkflowRunFn returned tool error")
+	}
+
+	text := result.Content[0].(mcp.TextContent).Text
+	if !strings.Contains(text, "Workflow Run #42") {
+		t.Errorf("output missing plain header, got:\n%s", text)
+	}
+	if strings.Contains(text, "(run number 0)") {
+		t.Errorf("output shows a zero run number, got:\n%s", text)
+	}
+}
+
 func TestGetWorkflowRunFn_InvalidRunID(t *testing.T) {
 	req := newCallToolRequest(map[string]interface{}{
 		"owner":  "testowner",
