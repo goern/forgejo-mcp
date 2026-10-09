@@ -17,9 +17,7 @@ import (
 )
 
 // setupSDKClientFor points both the SDK client and the raw-HTTP helper at srv.
-// The label resources use one path each — repo labels through the SDK, org
-// labels through the raw-HTTP helper — so a test that switches backends has to
-// move both.
+// Label resources read through DoJSON (flag.URL); delete still uses the SDK.
 func setupSDKClientFor(t *testing.T, url string) {
 	t.Helper()
 	flag.URL = url

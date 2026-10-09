@@ -39,12 +39,37 @@ func isValidIssueSort(s string) bool {
 	return false
 }
 
-// ScopedLabel wraps forgejo_sdk.Label with a scope marker so callers of
+// ScopedLabel wraps labelDTO with a scope marker so callers of
 // list_repo_labels and list_org_labels can tell repo- and org-scoped
 // labels apart in a merged response.
 type ScopedLabel struct {
-	*forgejo_sdk.Label
+	labelDTO
 	Scope string `json:"scope"`
+}
+
+func paginatedLabelsPath(segments []any, page, limit int) string {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 100
+	}
+	return forgejo.APIPath(segments...) + fmt.Sprintf("?page=%d&limit=%d", page, limit)
+}
+
+// fetchRepoLabels GETs /repos/{owner}/{repo}/labels via DoJSON. A missing
+// repo is an error, not an empty list.
+func fetchRepoLabels(ctx context.Context, owner, repo string, page, limit int) ([]labelDTO, http.Header, error) {
+	path := paginatedLabelsPath([]any{"repos", owner, repo, "labels"}, page, limit)
+	raw := make([]labelDTO, 0)
+	header, err := forgejo.DoJSONWithHeader(ctx, http.MethodGet, path, nil, &raw)
+	if err != nil {
+		return nil, header, err
+	}
+	if raw == nil {
+		raw = []labelDTO{}
+	}
+	return raw, header, nil
 }
 
 // fetchOrgLabels GETs /orgs/{org}/labels via the raw-HTTP helper and
@@ -56,21 +81,15 @@ type ScopedLabel struct {
 // Link/X-Total-Count to decide whether more rows exist. Tool callers that
 // enumerate without bounds can discard them.
 func fetchOrgLabels(ctx context.Context, org string, page, limit int) ([]ScopedLabel, http.Header, error) {
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 {
-		limit = 100
-	}
-	path := forgejo.APIPath("orgs", org, "labels") + fmt.Sprintf("?page=%d&limit=%d", page, limit)
-	var raw []*forgejo_sdk.Label
+	path := paginatedLabelsPath([]any{"orgs", org, "labels"}, page, limit)
+	var raw []labelDTO
 	header, err := forgejo.DoJSONListWithHeader(ctx, http.MethodGet, path, &raw)
 	if err != nil {
 		return nil, header, err
 	}
 	out := make([]ScopedLabel, 0, len(raw))
 	for _, l := range raw {
-		out = append(out, ScopedLabel{Label: l, Scope: "org"})
+		out = append(out, ScopedLabel{labelDTO: l, Scope: "org"})
 	}
 	return out, header, nil
 }
@@ -230,7 +249,7 @@ var (
 
 	ListRepoLabelsTool = mcp.NewTool(
 		ListRepoLabelsToolName,
-		mcp.WithDescription("List repository labels. When the owner is an organization and include_org_labels is true (default), org-level labels are merged into the response. Each label carries a scope field of \"repo\" or \"org\"."),
+		mcp.WithDescription("List repository labels. When the owner is an organization and include_org_labels is true (default), org-level labels are merged into the response. Each label carries a scope field of \"repo\" or \"org\", plus exclusive and is_archived (false is present, not omitted)."),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithNumber("page", mcp.Description(params.Page), mcp.DefaultNumber(1)),
@@ -240,7 +259,7 @@ var (
 
 	ListOrgLabelsTool = mcp.NewTool(
 		ListOrgLabelsToolName,
-		mcp.WithDescription("List organization-level labels. Each label carries a scope field of \"org\"."),
+		mcp.WithDescription("List organization-level labels. Each label carries a scope field of \"org\", plus exclusive and is_archived (false is present, not omitted)."),
 		mcp.WithString("org", mcp.Required(), mcp.Description("Organization name")),
 		mcp.WithNumber("page", mcp.Description(params.Page), mcp.DefaultNumber(1)),
 		mcp.WithNumber("limit", mcp.Description(params.Limit), mcp.DefaultNumber(100)),
@@ -964,24 +983,13 @@ func ListRepoLabelsFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 		includeOrg = v
 	}
 
-	opt := forgejo_sdk.ListLabelsOptions{
-		ListOptions: forgejo_sdk.ListOptions{
-			Page:     int(page),
-			PageSize: int(limit),
-		},
-	}
-
-	client, err := forgejo.Client(ctx)
-	if err != nil {
-		return to.ErrorResult(err)
-	}
-	repoLabels, _, err := client.ListRepoLabels(owner, repo, opt)
+	repoLabels, _, err := fetchRepoLabels(ctx, owner, repo, int(page), int(limit))
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("list repo labels err: %w", err))
 	}
 	merged := make([]ScopedLabel, 0, len(repoLabels))
 	for _, l := range repoLabels {
-		merged = append(merged, ScopedLabel{Label: l, Scope: "repo"})
+		merged = append(merged, ScopedLabel{labelDTO: l, Scope: "repo"})
 	}
 
 	if includeOrg {

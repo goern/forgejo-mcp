@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strconv"
 
@@ -13,7 +14,6 @@ import (
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/forgejo"
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/log"
 
-	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -76,6 +76,15 @@ type labelResourcePayload struct {
 	Color       string `json:"color"`
 	Description string `json:"description"`
 	URL         string `json:"url"`
+	Exclusive   bool   `json:"exclusive"`
+	IsArchived  bool   `json:"is_archived"`
+}
+
+// The two structs differ only in the URL json tag (the resource payload always
+// emits url, the DTO omits it when empty); tags are ignored by conversion, so
+// this is a field-for-field copy that keeps the payload's tags.
+func labelResourceFromDTO(l labelDTO) labelResourcePayload {
+	return labelResourcePayload(l)
 }
 
 func repoLabelResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
@@ -85,26 +94,12 @@ func repoLabelResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) 
 		return nil, resource.MapForgejoError(uri, err)
 	}
 
-	client, err := forgejo.Client(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("forgejo client: %w", err)
-	}
-
-	label, resp, err := client.GetRepoLabel(p.Owner, p.Repo, p.ID)
-	if err != nil {
-		if resp != nil {
-			return nil, resource.MapForgejoError(uri, fmt.Errorf("%d %s", resp.StatusCode, err.Error()))
-		}
+	var label labelDTO
+	if err := forgejo.DoJSON(ctx, http.MethodGet, forgejo.APIPath("repos", p.Owner, p.Repo, "labels", p.ID), nil, &label); err != nil {
 		return nil, resource.MapForgejoError(uri, err)
 	}
 
-	payload := labelResourcePayload{
-		ID:          label.ID,
-		Name:        label.Name,
-		Color:       label.Color,
-		Description: label.Description,
-		URL:         label.URL,
-	}
+	payload := labelResourceFromDTO(label)
 
 	jsonBytes, err := json.Marshal(payload)
 	if err != nil {
@@ -136,24 +131,14 @@ func repoLabelsResourceHandler(ctx context.Context, req mcp.ReadResourceRequest)
 
 	page, limit := pageLimit(req)
 
-	client, err := forgejo.Client(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("forgejo client: %w", err)
-	}
-
-	// PageSize MUST equal the caller's limit. Upstream computes the offset as
+	// Page size MUST equal the caller's limit. Upstream computes the offset as
 	// (page-1)*PageSize, so requesting limit+1 rows as a truncation probe while
 	// showing only limit of them makes page N+1 start one row past the last row
 	// page N showed — and that row is returned by no page the client can ask
 	// for. The probe and the page cannot share PageSize. "More exists" comes
 	// from the response's Link header instead.
-	rawLabels, resp, err := client.ListRepoLabels(p.Owner, p.Repo, forgejo_sdk.ListLabelsOptions{
-		ListOptions: forgejo_sdk.ListOptions{Page: page, PageSize: limit},
-	})
+	rawLabels, header, err := fetchRepoLabels(ctx, p.Owner, p.Repo, page, limit)
 	if err != nil {
-		if resp != nil {
-			return nil, resource.MapForgejoError(uri, fmt.Errorf("%d %s", resp.StatusCode, err.Error()))
-		}
 		return nil, resource.MapForgejoError(uri, err)
 	}
 
@@ -162,8 +147,8 @@ func repoLabelsResourceHandler(ctx context.Context, req mcp.ReadResourceRequest)
 		items[i] = strconv.FormatInt(l.ID, 10)
 	}
 	bounded := resource.Bounded(items, limit, ListRepoLabelsToolName)
-	if hasMore(resp) {
-		bounded = bounded.WithMoreRemaining(totalCount(resp))
+	if headerHasMore(header) {
+		bounded = bounded.WithMoreRemaining(headerTotalCount(header))
 	}
 
 	labels := make([]labelResourcePayload, 0, len(bounded.Items))
@@ -171,13 +156,7 @@ func repoLabelsResourceHandler(ctx context.Context, req mcp.ReadResourceRequest)
 		if len(labels) >= len(bounded.Items) {
 			break
 		}
-		labels = append(labels, labelResourcePayload{
-			ID:          l.ID,
-			Name:        l.Name,
-			Color:       l.Color,
-			Description: l.Description,
-			URL:         l.URL,
-		})
+		labels = append(labels, labelResourceFromDTO(l))
 	}
 
 	payload := labelsListPayload{
@@ -243,13 +222,7 @@ func orgLabelsResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) 
 		if len(labels) >= len(bounded.Items) {
 			break
 		}
-		labels = append(labels, labelResourcePayload{
-			ID:          l.ID,
-			Name:        l.Name,
-			Color:       l.Color,
-			Description: l.Description,
-			URL:         l.URL,
-		})
+		labels = append(labels, labelResourceFromDTO(l.labelDTO))
 	}
 
 	payload := orgLabelsListPayload{
