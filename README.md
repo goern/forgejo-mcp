@@ -558,7 +558,7 @@ forgejo-mcp --cli list_workflow_runs \
   --output=text
 
 # Run-scoped tools (list_action_run_jobs, cancel_workflow_run, ...) take the
-# database run ID printed by list_workflow_runs (#2671), not the per-repo run
+# database run ID printed by list_workflow_runs (e.g. #2671), not the per-repo run
 # number in the web URL (.../actions/runs/222). To map a web-URL number to a
 # run ID, add "run_number":222 to the list_workflow_runs args.
 
