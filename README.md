@@ -356,16 +356,16 @@ List all my repositories
 | `add_issue_dependency` | Make one issue depend on another. The dependency may live in a different repository: optional `depends_on_owner`/`depends_on_repo` default to `owner`/`repo`. |
 | `remove_issue_dependency` | Remove a dependency from an issue. For a cross-repo dependency, optional `dependency_owner`/`dependency_repo` default to `owner`/`repo`. |
 | `list_repo_milestones` | List milestones with their IDs (use with `update_issue`) |
-| `list_repo_labels` | List labels with their IDs. Merges org-level labels for org-owned repos (set `include_org_labels=false` to opt out). Each entry carries a `scope` field (`"repo"` or `"org"`). |
-| `list_org_labels` | List organization-level labels with their IDs. The assignment tools accept label names directly, so this is for discovery and for the rare name that exists in both the repo and the org scope. |
-| `create_repo_label` | Create a repository label (`name`, `color` as 6-digit hex, optional `description`). Returns the numeric `id`; `add_issue_labels` also takes the name. |
-| `edit_repo_label` | Edit a repository label (PATCH — only supplied fields change: `name`, `color`, `description`). |
+| `list_repo_labels` | List labels with their IDs. Merges org-level labels for org-owned repos (set `include_org_labels=false` to opt out). Each entry carries a `scope` field (`"repo"` or `"org"`), plus `exclusive` and `is_archived` (`false` is present, not omitted). |
+| `list_org_labels` | List organization-level labels with their IDs. The assignment tools accept label names directly, so this is for discovery and for the rare name that exists in both the repo and the org scope. Each entry includes `exclusive` and `is_archived`. |
+| `create_repo_label` | Create a repository label (`name`, `color` as 6-digit hex, optional `description`, `exclusive`, `is_archived`). `exclusive=true` requires a scoped name (a `/` not at either end). Returns the numeric `id`; `add_issue_labels` also takes the name. |
+| `edit_repo_label` | Edit a repository label (PATCH — only supplied fields change: `name`, `color`, `description`, `exclusive`, `is_archived`). Exclusive-only edit does not re-read the current name. |
 | `delete_repo_label` | Delete a repository label. Refuses by default when the label is in use (reports count); set `delete_mode=force` to override. |
-| `get_repo_label` | Get a single repository label by numeric `id`. |
+| `get_repo_label` | Get a single repository label by numeric `id`. Includes `exclusive` and `is_archived`. |
 | `create_org_label` | Create an organization-level label. Same fields as `create_repo_label`. |
-| `edit_org_label` | Edit an organization-level label (PATCH semantics). |
+| `edit_org_label` | Edit an organization-level label (PATCH semantics, including `exclusive` and `is_archived`). |
 | `delete_org_label` | Delete an organization-level label. In-use guard counts across visible org repos (best-effort); `delete_mode=force` overrides. |
-| `get_org_label` | Get a single organization-level label by numeric `id`. |
+| `get_org_label` | Get a single organization-level label by numeric `id`. Includes `exclusive` and `is_archived`. |
 | **Comments** | |
 | `list_issue_comments` | List comments on an issue or PR |
 | `get_issue_comment` | Get a specific comment |

@@ -9,15 +9,17 @@ const (
 	Repo  = "Repository name"
 
 	// Issue/PR parameters
-	Index      = "Issue/PR index"
-	IssueIndex = "Issue index"
-	PRIndex    = "PR index"
-	CommentID  = "Comment ID"
-	Body       = "Content body"
-	Title      = "Title"
-	State      = "State"
-	Labels     = "Label IDs"
-	Milestone  = "Milestone ID"
+	Index          = "Issue/PR index"
+	IssueIndex     = "Issue index"
+	PRIndex        = "PR index"
+	CommentID      = "Comment ID"
+	Body           = "Content body"
+	Title          = "Title"
+	State          = "State"
+	Labels         = "Label IDs"
+	LabelExclusive = "Exclusive scoped label (Forgejo Exclusive checkbox). exclusive=true requires a scoped name: a '/' not at either end"
+	LabelArchived  = "Archive the label (hidden from the default picker)"
+	Milestone      = "Milestone ID"
 
 	// Branch parameters
 	Branch    = "Branch name"

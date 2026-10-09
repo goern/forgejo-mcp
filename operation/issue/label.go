@@ -35,23 +35,27 @@ const (
 var (
 	CreateRepoLabelTool = mcp.NewTool(
 		CreateRepoLabelToolName,
-		mcp.WithDescription("Create a repository label. Returns the created label including its numeric id."),
+		mcp.WithDescription("Create a repository label. Returns the created label including its numeric id, exclusive, and is_archived. exclusive=true requires a scoped name (a '/' not at either end)."),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithString("name", mcp.Required(), mcp.Description("Label name")),
 		mcp.WithString("color", mcp.Required(), mcp.Description("Label color as 6-digit hex (e.g. #0088ff or 0088ff)")),
 		mcp.WithString("description", mcp.Description("Label description")),
+		mcp.WithBoolean("exclusive", mcp.Description(params.LabelExclusive)),
+		mcp.WithBoolean("is_archived", mcp.Description(params.LabelArchived)),
 	)
 
 	EditRepoLabelTool = mcp.NewTool(
 		EditRepoLabelToolName,
-		mcp.WithDescription("Edit a repository label (PATCH — only supplied fields change). Providing no fields is an error."),
+		mcp.WithDescription("Edit a repository label (PATCH — only supplied fields change). Providing no fields is an error. Optional exclusive and is_archived; exclusive=true with a new name requires a scoped name (a '/' not at either end). Exclusive-only edit does not re-read the current name."),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithNumber("id", mcp.Required(), mcp.Description("Label ID")),
 		mcp.WithString("name", mcp.Description("New label name")),
 		mcp.WithString("color", mcp.Description("New label color as 6-digit hex (e.g. #0088ff or 0088ff)")),
 		mcp.WithString("description", mcp.Description("New label description")),
+		mcp.WithBoolean("exclusive", mcp.Description(params.LabelExclusive)),
+		mcp.WithBoolean("is_archived", mcp.Description(params.LabelArchived)),
 	)
 
 	DeleteRepoLabelTool = mcp.NewTool(
@@ -65,7 +69,7 @@ var (
 
 	GetRepoLabelTool = mcp.NewTool(
 		GetRepoLabelToolName,
-		mcp.WithDescription("Get a single repository label by ID."),
+		mcp.WithDescription("Get a single repository label by ID. Includes exclusive and is_archived (false is present, not omitted)."),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithNumber("id", mcp.Required(), mcp.Description("Label ID")),
@@ -73,21 +77,25 @@ var (
 
 	CreateOrgLabelTool = mcp.NewTool(
 		CreateOrgLabelToolName,
-		mcp.WithDescription("Create an organization-level label. Returns the created label including its numeric id."),
+		mcp.WithDescription("Create an organization-level label. Returns the created label including its numeric id, exclusive, and is_archived. exclusive=true requires a scoped name (a '/' not at either end)."),
 		mcp.WithString("org", mcp.Required(), mcp.Description("Organization name")),
 		mcp.WithString("name", mcp.Required(), mcp.Description("Label name")),
 		mcp.WithString("color", mcp.Required(), mcp.Description("Label color as 6-digit hex (e.g. #0088ff or 0088ff)")),
 		mcp.WithString("description", mcp.Description("Label description")),
+		mcp.WithBoolean("exclusive", mcp.Description(params.LabelExclusive)),
+		mcp.WithBoolean("is_archived", mcp.Description(params.LabelArchived)),
 	)
 
 	EditOrgLabelTool = mcp.NewTool(
 		EditOrgLabelToolName,
-		mcp.WithDescription("Edit an organization-level label (PATCH — only supplied fields change). Providing no fields is an error."),
+		mcp.WithDescription("Edit an organization-level label (PATCH — only supplied fields change). Providing no fields is an error. Optional exclusive and is_archived; exclusive=true with a new name requires a scoped name (a '/' not at either end). Exclusive-only edit does not re-read the current name."),
 		mcp.WithString("org", mcp.Required(), mcp.Description("Organization name")),
 		mcp.WithNumber("id", mcp.Required(), mcp.Description("Label ID")),
 		mcp.WithString("name", mcp.Description("New label name")),
 		mcp.WithString("color", mcp.Description("New label color as 6-digit hex (e.g. #0088ff or 0088ff)")),
 		mcp.WithString("description", mcp.Description("New label description")),
+		mcp.WithBoolean("exclusive", mcp.Description(params.LabelExclusive)),
+		mcp.WithBoolean("is_archived", mcp.Description(params.LabelArchived)),
 	)
 
 	DeleteOrgLabelTool = mcp.NewTool(
@@ -100,7 +108,7 @@ var (
 
 	GetOrgLabelTool = mcp.NewTool(
 		GetOrgLabelToolName,
-		mcp.WithDescription("Get a single organization-level label by ID."),
+		mcp.WithDescription("Get a single organization-level label by ID. Includes exclusive and is_archived (false is present, not omitted)."),
 		mcp.WithString("org", mcp.Required(), mcp.Description("Organization name")),
 		mcp.WithNumber("id", mcp.Required(), mcp.Description("Label ID")),
 	)
@@ -115,6 +123,34 @@ func RegisterLabelTool(s *server.MCPServer) {
 	s.AddTool(EditOrgLabelTool, EditOrgLabelFn)
 	s.AddTool(DeleteOrgLabelTool, DeleteOrgLabelFn)
 	s.AddTool(GetOrgLabelTool, GetOrgLabelFn)
+}
+
+// labelDTO is the Forgejo label JSON we accept and return. exclusive and
+// is_archived are always present on read so a false value is visible.
+type labelDTO struct {
+	ID          int64  `json:"id"`
+	Name        string `json:"name"`
+	Color       string `json:"color"`
+	Description string `json:"description"`
+	URL         string `json:"url,omitempty"`
+	Exclusive   bool   `json:"exclusive"`
+	IsArchived  bool   `json:"is_archived"`
+}
+
+type labelCreateOption struct {
+	Name        string `json:"name"`
+	Color       string `json:"color"`
+	Description string `json:"description,omitempty"`
+	Exclusive   *bool  `json:"exclusive,omitempty"`
+	IsArchived  *bool  `json:"is_archived,omitempty"`
+}
+
+type labelPatchOption struct {
+	Name        *string `json:"name,omitempty"`
+	Color       *string `json:"color,omitempty"`
+	Description *string `json:"description,omitempty"`
+	Exclusive   *bool   `json:"exclusive,omitempty"`
+	IsArchived  *bool   `json:"is_archived,omitempty"`
 }
 
 // normalizeColor accepts rrggbb or #rrggbb (6-digit only), lowercases,
@@ -133,6 +169,84 @@ func normalizeColor(color string) (string, error) {
 		}
 	}
 	return "#" + c, nil
+}
+
+// isScopedLabelName reports Forgejo's scoped-label rule: the name contains
+// '/' not at either end.
+func isScopedLabelName(name string) bool {
+	return strings.Contains(name, "/") && !strings.HasPrefix(name, "/") && !strings.HasSuffix(name, "/")
+}
+
+func requireExclusiveScopedName(name string) error {
+	if isScopedLabelName(name) {
+		return nil
+	}
+	return fmt.Errorf("exclusive=true requires a scoped label name (a '/' not at either end), e.g. kind/bug, got %q", name)
+}
+
+func labelCreateFromArgs(args map[string]any) (labelCreateOption, error) {
+	name, _ := args["name"].(string)
+	colorRaw, _ := args["color"].(string)
+	description, _ := args["description"].(string)
+	color, err := normalizeColor(colorRaw)
+	if err != nil {
+		return labelCreateOption{}, err
+	}
+	opt := labelCreateOption{Name: name, Color: color}
+	if description != "" {
+		opt.Description = description
+	}
+	if exclusive, ok := args["exclusive"].(bool); ok {
+		if exclusive {
+			if err := requireExclusiveScopedName(name); err != nil {
+				return labelCreateOption{}, err
+			}
+		}
+		opt.Exclusive = ptr.To(exclusive)
+	}
+	if archived, ok := args["is_archived"].(bool); ok {
+		opt.IsArchived = ptr.To(archived)
+	}
+	return opt, nil
+}
+
+func labelPatchFromArgs(args map[string]any, tool string) (labelPatchOption, error) {
+	nameRaw, nameSet := args["name"].(string)
+	colorRaw, colorSet := args["color"].(string)
+	descRaw, descSet := args["description"].(string)
+	exclusive, exclusiveSet := args["exclusive"].(bool)
+	archived, archivedSet := args["is_archived"].(bool)
+
+	if !nameSet && !colorSet && !descSet && !exclusiveSet && !archivedSet {
+		return labelPatchOption{}, fmt.Errorf("%s: at least one of name, color, description, exclusive, is_archived must be provided", tool)
+	}
+
+	opt := labelPatchOption{}
+	if nameSet && nameRaw != "" {
+		opt.Name = ptr.To(nameRaw)
+	}
+	if colorSet && colorRaw != "" {
+		color, err := normalizeColor(colorRaw)
+		if err != nil {
+			return labelPatchOption{}, err
+		}
+		opt.Color = ptr.To(color)
+	}
+	if descSet {
+		opt.Description = ptr.To(descRaw)
+	}
+	if exclusiveSet {
+		if exclusive && nameSet && nameRaw != "" {
+			if err := requireExclusiveScopedName(nameRaw); err != nil {
+				return labelPatchOption{}, err
+			}
+		}
+		opt.Exclusive = ptr.To(exclusive)
+	}
+	if archivedSet {
+		opt.IsArchived = ptr.To(archived)
+	}
+	return opt, nil
 }
 
 // repoLabelInUseCount returns the number of issues/PRs in the repo that carry
@@ -181,47 +295,21 @@ func orgLabelInUseCount(ctx context.Context, client *forgejo_sdk.Client, org, la
 	return total, nil
 }
 
-// ---- Org label raw-HTTP types ----
-
-type orgLabelOption struct {
-	Name        string  `json:"name,omitempty"`
-	Color       string  `json:"color,omitempty"`
-	Description *string `json:"description,omitempty"`
-}
-
-type orgLabelPatchOption struct {
-	Name        *string `json:"name,omitempty"`
-	Color       *string `json:"color,omitempty"`
-	Description *string `json:"description,omitempty"`
-}
-
 // ---- Repo label handlers ----
 
 func CreateRepoLabelFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called CreateRepoLabelFn")
-	owner, _ := req.GetArguments()["owner"].(string)
-	repo, _ := req.GetArguments()["repo"].(string)
-	name, _ := req.GetArguments()["name"].(string)
-	colorRaw, _ := req.GetArguments()["color"].(string)
-	description, _ := req.GetArguments()["description"].(string)
+	args := req.GetArguments()
+	owner, _ := args["owner"].(string)
+	repo, _ := args["repo"].(string)
 
-	color, err := normalizeColor(colorRaw)
+	opt, err := labelCreateFromArgs(args)
 	if err != nil {
 		return to.ErrorResult(err)
 	}
 
-	client, err := forgejo.Client(ctx)
-	if err != nil {
-		return to.ErrorResult(err)
-	}
-
-	opt := forgejo_sdk.CreateLabelOption{
-		Name:        name,
-		Color:       color,
-		Description: description,
-	}
-	label, _, err := client.CreateLabel(owner, repo, opt)
-	if err != nil {
+	var label labelDTO
+	if err := forgejo.DoJSON(ctx, http.MethodPost, forgejo.APIPath("repos", owner, repo, "labels"), opt, &label); err != nil {
 		return to.ErrorResult(fmt.Errorf("create repo label: %w", err))
 	}
 	return to.TextResult(label)
@@ -229,40 +317,18 @@ func CreateRepoLabelFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 
 func EditRepoLabelFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called EditRepoLabelFn")
-	owner, _ := req.GetArguments()["owner"].(string)
-	repo, _ := req.GetArguments()["repo"].(string)
-	idF, _ := to.Float64(req.GetArguments()["id"])
+	args := req.GetArguments()
+	owner, _ := args["owner"].(string)
+	repo, _ := args["repo"].(string)
+	idF, _ := to.Float64(args["id"])
 
-	nameRaw, nameSet := req.GetArguments()["name"].(string)
-	colorRaw, colorSet := req.GetArguments()["color"].(string)
-	descRaw, descSet := req.GetArguments()["description"].(string)
-
-	if !nameSet && !colorSet && !descSet {
-		return to.ErrorResult(fmt.Errorf("edit_repo_label: at least one of name, color, description must be provided"))
-	}
-
-	opt := forgejo_sdk.EditLabelOption{}
-	if nameSet && nameRaw != "" {
-		opt.Name = ptr.To(nameRaw)
-	}
-	if colorSet && colorRaw != "" {
-		color, err := normalizeColor(colorRaw)
-		if err != nil {
-			return to.ErrorResult(err)
-		}
-		opt.Color = ptr.To(color)
-	}
-	if descSet {
-		opt.Description = ptr.To(descRaw)
-	}
-
-	client, err := forgejo.Client(ctx)
+	opt, err := labelPatchFromArgs(args, EditRepoLabelToolName)
 	if err != nil {
 		return to.ErrorResult(err)
 	}
 
-	label, _, err := client.EditLabel(owner, repo, int64(idF), opt)
-	if err != nil {
+	var label labelDTO
+	if err := forgejo.DoJSON(ctx, http.MethodPatch, forgejo.APIPath("repos", owner, repo, "labels", int64(idF)), opt, &label); err != nil {
 		return to.ErrorResult(fmt.Errorf("edit repo label: %w", err))
 	}
 	return to.TextResult(label)
@@ -311,13 +377,8 @@ func GetRepoLabelFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 	repo, _ := req.GetArguments()["repo"].(string)
 	idF, _ := to.Float64(req.GetArguments()["id"])
 
-	client, err := forgejo.Client(ctx)
-	if err != nil {
-		return to.ErrorResult(err)
-	}
-
-	label, _, err := client.GetRepoLabel(owner, repo, int64(idF))
-	if err != nil {
+	var label labelDTO
+	if err := forgejo.DoJSON(ctx, http.MethodGet, forgejo.APIPath("repos", owner, repo, "labels", int64(idF)), nil, &label); err != nil {
 		return to.ErrorResult(fmt.Errorf("get repo label: %w", err))
 	}
 	return to.TextResult(label)
@@ -327,23 +388,16 @@ func GetRepoLabelFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 
 func CreateOrgLabelFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called CreateOrgLabelFn")
-	org, _ := req.GetArguments()["org"].(string)
-	name, _ := req.GetArguments()["name"].(string)
-	colorRaw, _ := req.GetArguments()["color"].(string)
-	description, _ := req.GetArguments()["description"].(string)
+	args := req.GetArguments()
+	org, _ := args["org"].(string)
 
-	color, err := normalizeColor(colorRaw)
+	opt, err := labelCreateFromArgs(args)
 	if err != nil {
 		return to.ErrorResult(err)
 	}
 
-	body := orgLabelOption{Name: name, Color: color}
-	if description != "" {
-		body.Description = ptr.To(description)
-	}
-
-	var label forgejo_sdk.Label
-	if err := forgejo.DoJSON(ctx, http.MethodPost, forgejo.APIPath("orgs", org, "labels"), body, &label); err != nil {
+	var label labelDTO
+	if err := forgejo.DoJSON(ctx, http.MethodPost, forgejo.APIPath("orgs", org, "labels"), opt, &label); err != nil {
 		return to.ErrorResult(fmt.Errorf("create org label: %w", err))
 	}
 	return to.TextResult(label)
@@ -351,33 +405,16 @@ func CreateOrgLabelFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 
 func EditOrgLabelFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called EditOrgLabelFn")
-	org, _ := req.GetArguments()["org"].(string)
-	idF, _ := to.Float64(req.GetArguments()["id"])
+	args := req.GetArguments()
+	org, _ := args["org"].(string)
+	idF, _ := to.Float64(args["id"])
 
-	nameRaw, nameSet := req.GetArguments()["name"].(string)
-	colorRaw, colorSet := req.GetArguments()["color"].(string)
-	descRaw, descSet := req.GetArguments()["description"].(string)
-
-	if !nameSet && !colorSet && !descSet {
-		return to.ErrorResult(fmt.Errorf("edit_org_label: at least one of name, color, description must be provided"))
+	opt, err := labelPatchFromArgs(args, EditOrgLabelToolName)
+	if err != nil {
+		return to.ErrorResult(err)
 	}
 
-	opt := orgLabelPatchOption{}
-	if nameSet && nameRaw != "" {
-		opt.Name = ptr.To(nameRaw)
-	}
-	if colorSet && colorRaw != "" {
-		color, err := normalizeColor(colorRaw)
-		if err != nil {
-			return to.ErrorResult(err)
-		}
-		opt.Color = ptr.To(color)
-	}
-	if descSet {
-		opt.Description = ptr.To(descRaw)
-	}
-
-	var label forgejo_sdk.Label
+	var label labelDTO
 	if err := forgejo.DoJSON(ctx, http.MethodPatch, forgejo.APIPath("orgs", org, "labels", int64(idF)), opt, &label); err != nil {
 		return to.ErrorResult(fmt.Errorf("edit org label: %w", err))
 	}
@@ -392,7 +429,7 @@ func DeleteOrgLabelFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	id := int64(idF)
 
 	if deleteMode != "force" {
-		var label forgejo_sdk.Label
+		var label labelDTO
 		if err := forgejo.DoJSON(ctx, http.MethodGet, forgejo.APIPath("orgs", org, "labels", id), nil, &label); err != nil {
 			return to.ErrorResult(fmt.Errorf("get org label: %w", err))
 		}
@@ -422,7 +459,7 @@ func GetOrgLabelFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	org, _ := req.GetArguments()["org"].(string)
 	idF, _ := to.Float64(req.GetArguments()["id"])
 
-	var label forgejo_sdk.Label
+	var label labelDTO
 	if err := forgejo.DoJSON(ctx, http.MethodGet, forgejo.APIPath("orgs", org, "labels", int64(idF)), nil, &label); err != nil {
 		return to.ErrorResult(fmt.Errorf("get org label: %w", err))
 	}

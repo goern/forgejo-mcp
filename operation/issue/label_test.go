@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -31,7 +32,13 @@ func newLabelBackend(t *testing.T, muxFn func(*http.ServeMux)) (*httptest.Server
 	muxFn(mux)
 	// Catch-all recorder
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		records = append(records, recordedReq{method: r.Method, path: r.URL.Path})
+		body, _ := io.ReadAll(r.Body)
+		records = append(records, recordedReq{
+			method:  r.Method,
+			path:    r.URL.Path,
+			escaped: r.URL.EscapedPath(),
+			rawBody: body,
+		})
 		w.WriteHeader(http.StatusNotFound)
 	})
 	srv := httptest.NewServer(mux)
@@ -156,18 +163,26 @@ func TestEditRepoLabelFn_PartialPatch(t *testing.T) {
 	if body["name"] == nil {
 		t.Error("name should be set in PATCH body")
 	}
-	if v, ok := body["color"]; ok && v != nil {
-		t.Errorf("color should be null/absent when not provided, got %v", v)
+	if _, ok := body["color"]; ok {
+		t.Errorf("color should be omitted when not provided, got %v", body["color"])
+	}
+	if _, ok := body["exclusive"]; ok {
+		t.Errorf("exclusive should be omitted on name-only PATCH, got %v", body["exclusive"])
 	}
 }
 
 func TestEditRepoLabelFn_EmptyReject(t *testing.T) {
-	newPatchBackend(t, `{}`)
+	_, records := newPatchBackend(t, `{}`)
 	_, err := EditRepoLabelFn(context.Background(), makeReq(map[string]any{
 		"owner": "owner", "repo": "repo", "id": float64(1),
 	}))
 	if err == nil {
 		t.Fatal("expected error when no fields provided")
+	}
+	for _, rec := range *records {
+		if rec.method == http.MethodPatch {
+			t.Errorf("PATCH must not be sent for empty edit, got %+v", rec)
+		}
 	}
 }
 
@@ -272,6 +287,13 @@ func TestGetRepoLabelFn_HappyPath(t *testing.T) {
 	if err != nil || res == nil || res.IsError {
 		t.Fatalf("get label failed: err=%v", err)
 	}
+	out := textOf(res)
+	if !strings.Contains(out, `"exclusive":false`) && !strings.Contains(out, `"exclusive": false`) {
+		t.Errorf("expected exclusive false on get, got %s", out)
+	}
+	if !strings.Contains(out, `"is_archived":false`) && !strings.Contains(out, `"is_archived": false`) {
+		t.Errorf("expected is_archived false on get, got %s", out)
+	}
 }
 
 func TestGetRepoLabelFn_404(t *testing.T) {
@@ -322,6 +344,13 @@ func TestRepoLabelsResource_HappyPath(t *testing.T) {
 	if len(contents) == 0 {
 		t.Fatal("expected contents")
 	}
+	text := contents[0].(mcp.TextResourceContents).Text
+	if !strings.Contains(text, `"exclusive"`) {
+		t.Errorf("list resource JSON missing exclusive, got %s", text)
+	}
+	if !strings.Contains(text, `"is_archived"`) {
+		t.Errorf("list resource JSON missing is_archived, got %s", text)
+	}
 }
 
 func TestRepoLabelsResource_OverCap(t *testing.T) {
@@ -369,5 +398,304 @@ func TestRepoLabelsResource_404(t *testing.T) {
 	_, err := repoLabelsResourceHandler(context.Background(), req)
 	if err == nil {
 		t.Fatal("expected error for 404")
+	}
+}
+
+func TestIsScopedLabelName(t *testing.T) {
+	cases := []struct {
+		name string
+		ok   bool
+	}{
+		{"kind/bug", true},
+		{"scope/sub/item", true},
+		{"bug", false},
+		{"/bug", false},
+		{"kind/", false},
+		{"a/b/", false},
+		{"", false},
+	}
+	for _, c := range cases {
+		if got := isScopedLabelName(c.name); got != c.ok {
+			t.Errorf("isScopedLabelName(%q)=%v, want %v", c.name, got, c.ok)
+		}
+	}
+}
+
+func labelJSON(exclusive, archived bool) string {
+	return fmt.Sprintf(`{"id":1,"name":"kind/bug","color":"#0088ff","description":"","exclusive":%t,"is_archived":%t}`, exclusive, archived)
+}
+
+func assertJSONBool(t *testing.T, raw []byte, key string, want bool) {
+	t.Helper()
+	var body map[string]any
+	if err := json.Unmarshal(raw, &body); err != nil {
+		t.Errorf("body JSON: %v (raw=%s)", err, raw)
+		return
+	}
+	v, ok := body[key]
+	if !ok {
+		t.Errorf("%s missing from body %v", key, body)
+		return
+	}
+	b, ok := v.(bool)
+	if !ok || b != want {
+		t.Errorf("%s: got %v (%T), want %v", key, v, v, want)
+	}
+}
+
+func assertJSONKeyAbsent(t *testing.T, raw []byte, key string) {
+	t.Helper()
+	var body map[string]any
+	if err := json.Unmarshal(raw, &body); err != nil {
+		t.Errorf("body JSON: %v (raw=%s)", err, raw)
+		return
+	}
+	if _, ok := body[key]; ok {
+		t.Errorf("%s must be omitted, body=%v", key, body)
+	}
+}
+
+func TestCreateRepoLabelFn_OmitsExclusive(t *testing.T) {
+	var postBody []byte
+	newLabelBackend(t, func(mux *http.ServeMux) {
+		mux.HandleFunc("/api/v1/repos/owner/repo/labels", func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodPost {
+				w.WriteHeader(http.StatusMethodNotAllowed)
+				return
+			}
+			postBody, _ = io.ReadAll(r.Body)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(labelJSON(false, false)))
+		})
+	})
+	res, err := CreateRepoLabelFn(context.Background(), makeReq(map[string]any{
+		"owner": "owner", "repo": "repo", "name": "bug", "color": "0088ff",
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("create failed: err=%v res=%+v", err, res)
+	}
+	assertJSONKeyAbsent(t, postBody, "exclusive")
+	assertJSONKeyAbsent(t, postBody, "is_archived")
+}
+
+func TestCreateRepoLabelFn_ExclusiveTrueScoped(t *testing.T) {
+	var postBody []byte
+	newLabelBackend(t, func(mux *http.ServeMux) {
+		mux.HandleFunc("/api/v1/repos/owner/repo/labels", func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodPost {
+				w.WriteHeader(http.StatusMethodNotAllowed)
+				return
+			}
+			postBody, _ = io.ReadAll(r.Body)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(labelJSON(true, false)))
+		})
+	})
+	res, err := CreateRepoLabelFn(context.Background(), makeReq(map[string]any{
+		"owner": "owner", "repo": "repo", "name": "kind/bug", "color": "0088ff", "exclusive": true,
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("create failed: err=%v res=%+v", err, res)
+	}
+	assertJSONBool(t, postBody, "exclusive", true)
+	out := textOf(res)
+	if !strings.Contains(out, `"exclusive":true`) && !strings.Contains(out, `"exclusive": true`) {
+		t.Errorf("result missing exclusive true, got %s", out)
+	}
+}
+
+func TestCreateRepoLabelFn_ExclusiveTrueUnscopedNoHTTP(t *testing.T) {
+	for _, name := range []string{"bug", "/bug", "kind/"} {
+		t.Run(name, func(t *testing.T) {
+			_, records := newLabelBackend(t, func(_ *http.ServeMux) {})
+			_, err := CreateRepoLabelFn(context.Background(), makeReq(map[string]any{
+				"owner": "owner", "repo": "repo", "name": name, "color": "0088ff", "exclusive": true,
+			}))
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			if len(*records) != 0 {
+				t.Errorf("HTTP must not be sent, got %d requests: %+v", len(*records), *records)
+			}
+		})
+	}
+}
+
+func TestCreateOrgLabelFn_ExclusiveTrueScoped(t *testing.T) {
+	var postBody []byte
+	newLabelBackend(t, func(mux *http.ServeMux) {
+		mux.HandleFunc("/api/v1/orgs/org/labels", func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodPost {
+				w.WriteHeader(http.StatusMethodNotAllowed)
+				return
+			}
+			postBody, _ = io.ReadAll(r.Body)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(labelJSON(true, false)))
+		})
+	})
+	res, err := CreateOrgLabelFn(context.Background(), makeReq(map[string]any{
+		"org": "org", "name": "kind/bug", "color": "0088ff", "exclusive": true,
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("create failed: err=%v res=%+v", err, res)
+	}
+	assertJSONBool(t, postBody, "exclusive", true)
+}
+
+func TestEditRepoLabelFn_ColorOnlyOmitsFlags(t *testing.T) {
+	var patchBody []byte
+	newLabelBackend(t, func(mux *http.ServeMux) {
+		mux.HandleFunc("/api/v1/repos/owner/repo/labels/1", func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodPatch {
+				w.WriteHeader(http.StatusMethodNotAllowed)
+				return
+			}
+			patchBody, _ = io.ReadAll(r.Body)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(labelJSON(false, false)))
+		})
+	})
+	res, err := EditRepoLabelFn(context.Background(), makeReq(map[string]any{
+		"owner": "owner", "repo": "repo", "id": float64(1), "color": "aabbcc",
+	}))
+	if err != nil || res == nil || res.IsError {
+		t.Fatalf("edit failed: err=%v res=%+v", err, res)
+	}
+	assertJSONKeyAbsent(t, patchBody, "exclusive")
+	assertJSONKeyAbsent(t, patchBody, "is_archived")
+	var body map[string]any
+	_ = json.Unmarshal(patchBody, &body)
+	if body["color"] != "#aabbcc" {
+		t.Errorf("color: got %v", body["color"])
+	}
+}
+
+func TestEditRepoLabelFn_ExclusiveFalseSent(t *testing.T) {
+	var patchBody []byte
+	newLabelBackend(t, func(mux *http.ServeMux) {
+		mux.HandleFunc("/api/v1/repos/owner/repo/labels/1", func(w http.ResponseWriter, r *http.Request) {
+			patchBody, _ = io.ReadAll(r.Body)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(labelJSON(false, false)))
+		})
+	})
+	if _, err := EditRepoLabelFn(context.Background(), makeReq(map[string]any{
+		"owner": "owner", "repo": "repo", "id": float64(1), "exclusive": false,
+	})); err != nil {
+		t.Fatalf("edit failed: %v", err)
+	}
+	assertJSONBool(t, patchBody, "exclusive", false)
+	assertJSONKeyAbsent(t, patchBody, "is_archived")
+}
+
+func TestEditRepoLabelFn_ArchivedFalseSent(t *testing.T) {
+	var patchBody []byte
+	newLabelBackend(t, func(mux *http.ServeMux) {
+		mux.HandleFunc("/api/v1/repos/owner/repo/labels/1", func(w http.ResponseWriter, r *http.Request) {
+			patchBody, _ = io.ReadAll(r.Body)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(labelJSON(false, false)))
+		})
+	})
+	if _, err := EditRepoLabelFn(context.Background(), makeReq(map[string]any{
+		"owner": "owner", "repo": "repo", "id": float64(1), "is_archived": false,
+	})); err != nil {
+		t.Fatalf("edit failed: %v", err)
+	}
+	assertJSONBool(t, patchBody, "is_archived", false)
+	assertJSONKeyAbsent(t, patchBody, "exclusive")
+}
+
+func TestEditRepoLabelFn_ExclusiveOnlyAccepted(t *testing.T) {
+	var patchBody []byte
+	newLabelBackend(t, func(mux *http.ServeMux) {
+		mux.HandleFunc("/api/v1/repos/owner/repo/labels/1", func(w http.ResponseWriter, r *http.Request) {
+			patchBody, _ = io.ReadAll(r.Body)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(labelJSON(true, false)))
+		})
+	})
+	if _, err := EditRepoLabelFn(context.Background(), makeReq(map[string]any{
+		"owner": "owner", "repo": "repo", "id": float64(1), "exclusive": true,
+	})); err != nil {
+		t.Fatalf("edit failed: %v", err)
+	}
+	assertJSONBool(t, patchBody, "exclusive", true)
+	assertJSONKeyAbsent(t, patchBody, "name")
+	assertJSONKeyAbsent(t, patchBody, "color")
+}
+
+func TestEditRepoLabelFn_ArchivedOnlyAccepted(t *testing.T) {
+	var patchBody []byte
+	newLabelBackend(t, func(mux *http.ServeMux) {
+		mux.HandleFunc("/api/v1/repos/owner/repo/labels/1", func(w http.ResponseWriter, r *http.Request) {
+			patchBody, _ = io.ReadAll(r.Body)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(labelJSON(false, true)))
+		})
+	})
+	if _, err := EditRepoLabelFn(context.Background(), makeReq(map[string]any{
+		"owner": "owner", "repo": "repo", "id": float64(1), "is_archived": true,
+	})); err != nil {
+		t.Fatalf("edit failed: %v", err)
+	}
+	assertJSONBool(t, patchBody, "is_archived", true)
+}
+
+func TestEditOrgLabelFn_ExclusiveFalseSent(t *testing.T) {
+	var patchBody []byte
+	newLabelBackend(t, func(mux *http.ServeMux) {
+		mux.HandleFunc("/api/v1/orgs/org/labels/1", func(w http.ResponseWriter, r *http.Request) {
+			patchBody, _ = io.ReadAll(r.Body)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(labelJSON(false, false)))
+		})
+	})
+	if _, err := EditOrgLabelFn(context.Background(), makeReq(map[string]any{
+		"org": "org", "id": float64(1), "exclusive": false,
+	})); err != nil {
+		t.Fatalf("edit failed: %v", err)
+	}
+	assertJSONBool(t, patchBody, "exclusive", false)
+}
+
+func TestGetRepoLabelFn_OwnerSlashEscaped(t *testing.T) {
+	_, records := newLabelBackend(t, func(_ *http.ServeMux) {})
+	_, err := GetRepoLabelFn(context.Background(), makeReq(map[string]any{
+		"owner": "acme/org", "repo": "r", "id": float64(1),
+	}))
+	if err == nil {
+		t.Fatal("expected error from missing label")
+	}
+	if len(*records) == 0 {
+		t.Fatal("expected HTTP request")
+		return
+	}
+	escaped := (*records)[0].escaped
+	if !strings.Contains(escaped, "acme%2Forg") {
+		t.Errorf("escaped path %q should contain acme%%2Forg", escaped)
+	}
+}
+
+func TestRepoLabelResource_IncludesExclusive(t *testing.T) {
+	newLabelBackend(t, labelHandler(t, http.MethodGet, "/api/v1/repos/owner/repo/labels/1", http.StatusOK, map[string]any{
+		"id": 1, "name": "kind/bug", "color": "#ff0000", "exclusive": true, "is_archived": false,
+	}))
+	contents, err := repoLabelResourceHandler(context.Background(), mcp.ReadResourceRequest{
+		Params: mcp.ReadResourceParams{URI: "forgejo://repo/owner/repo/label/1"},
+	})
+	if err != nil {
+		t.Fatalf("resource: %v", err)
+	}
+	text := contents[0].(mcp.TextResourceContents).Text
+	if !strings.Contains(text, `"exclusive":true`) && !strings.Contains(text, `"exclusive": true`) {
+		t.Errorf("missing exclusive true, got %s", text)
+	}
+	if !strings.Contains(text, `"is_archived":false`) && !strings.Contains(text, `"is_archived": false`) {
+		t.Errorf("missing is_archived false, got %s", text)
 	}
 }
