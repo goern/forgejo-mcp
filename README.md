@@ -396,8 +396,8 @@ List all my repositories
 | `list_package_files` | List files of one package version. Client-paged via `page`/`limit` (default 30, max 50); envelope `{files, page, limit, count, has_next, total_count}` (`total_count` is the fetched list length) |
 | **Actions** | |
 | `dispatch_workflow` | Trigger a workflow run via `workflow_dispatch` event |
-| `list_workflow_runs` | List workflow runs with optional filtering by status, event, or SHA |
-| `get_workflow_run` | Get details of a specific workflow run by ID |
+| `list_workflow_runs` | List workflow runs with optional filtering by status, event, run number, or SHA |
+| `get_workflow_run` | Get details of a specific workflow run by database ID |
 | `list_action_run_jobs` | List jobs for a Forgejo v16+ workflow run with client-side `page` and `limit` bounds |
 | `get_action_job_logs` | Read a Forgejo v16+ job log with resumable `offset` and `max_bytes` bounds; defaults to the tail |
 | `cancel_workflow_run` | Cancel a pending or running workflow run. Already-finished runs also return success (HTTP 204); the run is left unchanged |
@@ -556,6 +556,11 @@ forgejo-mcp --cli list_workflow_runs \
 forgejo-mcp --cli list_workflow_runs \
   --args '{"owner":"goern","repo":"forgejo-mcp","status":"failure"}' \
   --output=text
+
+# Run-scoped tools (list_action_run_jobs, cancel_workflow_run, ...) take the
+# database run ID printed by list_workflow_runs (e.g. #2671), not the per-repo run
+# number in the web URL (.../actions/runs/222). To map a web-URL number to a
+# run ID, add "run_number":222 to the list_workflow_runs args.
 
 # List jobs and inspect the tail of a failed job (Forgejo v16+)
 forgejo-mcp --cli list_action_run_jobs \

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
@@ -178,20 +179,22 @@ func TestListWorkflowRunsFn_ReturnsRuns(t *testing.T) {
 		"total_count": 2,
 		"workflow_runs": []map[string]interface{}{
 			{
-				"id":         1,
-				"title":      "Run CI",
-				"status":     "success",
-				"event":      "push",
-				"commit_sha": "abc1234567890",
-				"html_url":   "https://example.com/runs/1",
+				"id":            1,
+				"index_in_repo": 101,
+				"title":         "Run CI",
+				"status":        "success",
+				"event":         "push",
+				"commit_sha":    "abc1234567890",
+				"html_url":      "https://example.com/runs/101",
 			},
 			{
-				"id":         2,
-				"title":      "Deploy",
-				"status":     "running",
-				"event":      "workflow_dispatch",
-				"commit_sha": "def9876543210",
-				"html_url":   "https://example.com/runs/2",
+				"id":            2,
+				"index_in_repo": 202,
+				"title":         "Deploy",
+				"status":        "running",
+				"event":         "workflow_dispatch",
+				"commit_sha":    "def9876543210",
+				"html_url":      "https://example.com/runs/202",
 			},
 		},
 	}
@@ -215,6 +218,14 @@ func TestListWorkflowRunsFn_ReturnsRuns(t *testing.T) {
 	expectedPath := "/api/v1/repos/testowner/testrepo/actions/runs"
 	if *capturedPath != expectedPath {
 		t.Errorf("wrong path: got %q, want %q", *capturedPath, expectedPath)
+	}
+
+	text := result.Content[0].(mcp.TextContent).Text
+	if !strings.Contains(text, "#1 (run number 101) - Run CI") {
+		t.Errorf("output missing database ID with run number, got:\n%s", text)
+	}
+	if !strings.Contains(text, "#2 (run number 202) - Deploy") {
+		t.Errorf("output missing database ID with run number, got:\n%s", text)
 	}
 }
 
@@ -254,13 +265,14 @@ func TestListWorkflowRunsFn_MissingRepo(t *testing.T) {
 
 func TestGetWorkflowRunFn_ReturnsRun(t *testing.T) {
 	mockResponse := map[string]interface{}{
-		"id":         42,
-		"title":      "CI Pipeline",
-		"status":     "success",
-		"event":      "push",
-		"commit_sha": "deadbeef",
-		"prettyref":  "refs/heads/main",
-		"html_url":   "https://example.com/runs/42",
+		"id":            42,
+		"index_in_repo": 7,
+		"title":         "CI Pipeline",
+		"status":        "success",
+		"event":         "push",
+		"commit_sha":    "deadbeef",
+		"prettyref":     "refs/heads/main",
+		"html_url":      "https://example.com/runs/7",
 		"trigger_user": map[string]interface{}{
 			"login":     "testuser",
 			"full_name": "Test User",
@@ -287,6 +299,93 @@ func TestGetWorkflowRunFn_ReturnsRun(t *testing.T) {
 	expectedPath := "/api/v1/repos/testowner/testrepo/actions/runs/42"
 	if *capturedPath != expectedPath {
 		t.Errorf("wrong path: got %q, want %q", *capturedPath, expectedPath)
+	}
+
+	text := result.Content[0].(mcp.TextContent).Text
+	if !strings.Contains(text, "Workflow Run #42 (run number 7)") {
+		t.Errorf("output missing database ID with run number, got:\n%s", text)
+	}
+}
+
+func TestListWorkflowRunsFn_OmitsZeroRunNumber(t *testing.T) {
+	// An older Forgejo may omit index_in_repo entirely; RunNumber decodes as 0.
+	mockResponse := map[string]interface{}{
+		"total_count": 1,
+		"workflow_runs": []map[string]interface{}{
+			{
+				"id":         1,
+				"title":      "Run CI",
+				"status":     "success",
+				"event":      "push",
+				"commit_sha": "abc1234567890",
+				"html_url":   "https://example.com/runs/1",
+			},
+		},
+	}
+
+	srv, _ := setupListRunsMockServer(t, mockResponse, http.StatusOK)
+	defer srv.Close()
+
+	req := newCallToolRequest(map[string]interface{}{
+		"owner": "testowner",
+		"repo":  "testrepo",
+	})
+
+	result, err := ListWorkflowRunsFn(context.Background(), req)
+	if err != nil {
+		t.Fatalf("ListWorkflowRunsFn returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("ListWorkflowRunsFn returned tool error")
+	}
+
+	text := result.Content[0].(mcp.TextContent).Text
+	if !strings.Contains(text, "#1 - Run CI") {
+		t.Errorf("output missing plain run label, got:\n%s", text)
+	}
+	if strings.Contains(text, "(run number 0)") {
+		t.Errorf("output shows a zero run number, got:\n%s", text)
+	}
+}
+
+func TestGetWorkflowRunFn_OmitsZeroRunNumber(t *testing.T) {
+	// An older Forgejo may omit index_in_repo entirely; RunNumber decodes as 0.
+	mockResponse := map[string]interface{}{
+		"id":         42,
+		"title":      "CI Pipeline",
+		"status":     "success",
+		"event":      "push",
+		"commit_sha": "deadbeef",
+		"html_url":   "https://example.com/runs/1",
+		"trigger_user": map[string]interface{}{
+			"login":     "testuser",
+			"full_name": "Test User",
+		},
+	}
+
+	srv, _ := setupListRunsMockServer(t, mockResponse, http.StatusOK)
+	defer srv.Close()
+
+	req := newCallToolRequest(map[string]interface{}{
+		"owner":  "testowner",
+		"repo":   "testrepo",
+		"run_id": float64(42),
+	})
+
+	result, err := GetWorkflowRunFn(context.Background(), req)
+	if err != nil {
+		t.Fatalf("GetWorkflowRunFn returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("GetWorkflowRunFn returned tool error")
+	}
+
+	text := result.Content[0].(mcp.TextContent).Text
+	if !strings.Contains(text, "Workflow Run #42") {
+		t.Errorf("output missing plain header, got:\n%s", text)
+	}
+	if strings.Contains(text, "(run number 0)") {
+		t.Errorf("output shows a zero run number, got:\n%s", text)
 	}
 }
 

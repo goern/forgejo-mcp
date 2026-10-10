@@ -71,9 +71,9 @@ const (
 	Workflow     = "Workflow file or ID (e.g. main.yml)"
 	Inputs       = `Workflow inputs as JSON object (e.g. {"key": "value"})`
 	Event        = "Filter by event type (e.g. push, pull_request, workflow_dispatch)"
-	RunNumber    = "Filter by run number"
+	RunNumber    = "Filter by run number (the per-repo number shown in the web URL, not the database ID)"
 	HeadSHA      = "Filter by HEAD SHA"
-	RunID        = "Run ID"
+	RunID        = "Workflow run ID (the database ID shown by list_workflow_runs, not the run number in the web URL)"
 	JobID        = "Workflow job ID"
 	ArtifactID   = "Artifact ID"
 	ArtifactName = "Filter by artifact name"
