@@ -1,3 +1,70 @@
+## [3.3.0](https://git.b4mad.industries/agentic-forges/forgejo-mcp/compare/v3.2.0...v3.3.0) (2026-10-10)
+
+### :sparkles: Features
+
+* add repo/org Actions secrets tools (list/create-or-update/delete) ([ea50e46](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/ea50e46c402c17d8dab168528d5732a76f0bddd0))
+* **label:** exclusive and archived on create, edit, and read ([7395e13](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/7395e1377636d2eb1fcc39b8a1916e69ce646fdc))
+* **repo:** add atomic binary-safe file writes ([66dc480](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/66dc48016ff118f1b41c81c3277034558fef3769))
+
+### :bug: Fixes
+
+* 🚨 replace deprecated ReverseProxy.Director with Rewrite in test ([d7e4b1c](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/d7e4b1cb66ca074b2a261e7e5c2dce62a93e2816))
+* **actions:** 🐛 show run number alongside the database run ID ([12fd6ee](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/12fd6eea81737b6b61e3d5e0b8789d23c1561a64))
+* **actions:** omit run number suffix when it is zero ([7ab1b11](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/7ab1b11a1969d74f7e0c7269417dffc204e5506a))
+* **deps:** update module github.com/mark3labs/mcp-go to v1.1.0 ([ad9ae80](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/ad9ae8017214ad0374c3fcf5bc56be105a32e79c))
+* **deps:** update module github.com/mark3labs/mcp-go to v1.1.1 ([9c7c683](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/9c7c6839be580464d43dd40e48ee122c7d384ce0))
+* **deps:** update module github.com/mark3labs/mcp-go to v1.2.0 ([bbb2c66](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/bbb2c66e558ae7cf9c50947272e89dd21135a3f0))
+* **deps:** update module github.com/mark3labs/mcp-go to v1.2.1 ([3f4347c](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/3f4347cbd1abd0dcf142b69b77cce0c1465ccb9b))
+* **issue:** catalogue labels through fetchRepoLabels ([cbd006f](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/cbd006fdafb484b69a15827c4f970aef5b7363f2))
+* **label:** convert DTO to resource payload ([b8b0f83](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/b8b0f83ef6aa93cbc34c9cd44deaaa97a316be09))
+
+### :memo: Documentation
+
+* 📝 credit new code contributors in the README ([da7c39e](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/da7c39eb3ac030ff8c8f2a0a4215478c77ae3794)), closes [#335](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/335) [#379](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/379) [#378](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/378) [#605](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/605) [#592](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/592) [#633](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/633) [#628](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/628) [#629](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/629)
+* add README rows for the new Actions secrets tools ([37532df](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/37532df50cc750a03faf87e71cf3ce18af5742d8))
+* exclusive and archived on label tools and demo ([598c583](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/598c583fe326e25a8a0a310a6643f1eaaf604418))
+* mark example run ID as an example ([4e27677](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/4e276770f96dfc8fcceaa54fddc37ba54b0adbd2))
+* **openspec:** propose exclusive and archived on labels ([1296ac8](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/1296ac853b20ad1cb9d629c12ee4be469db82ba2))
+
+### :repeat: CI
+
+* 🚀 bump go-ci GO_IMAGE to golang:1.26 to match go.mod ([7f07cc4](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/7f07cc4aa51f90540974c645a6a64c4e5d8ce52a))
+
+### :repeat: Chore
+
+* archive label-exclusive ([1f2a404](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/1f2a40436fd3a01ea7593a181810ff12e023c623))
+* **deps:** update git.b4mad.industries/agentic-forges/release-tools docker tag to v1.1.0 ([bb8b5e4](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/bb8b5e4daa9a72c7bdf3fd4fae47eb8f4155f7e3))
+* **deps:** update git.b4mad.industries/agentic-forges/release-tools docker tag to v1.2.0 ([6b359ee](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/6b359eec55499ef6497d6ce26cca844c2b2a77ea))
+* **deps:** update module golang.org/x/crypto to v0.56.0 [security] ([823b416](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/823b416d6158f5141fa067530e242e05c03f05c4))
+* **deps:** update module golang.org/x/net to v0.60.0 [security] ([cbbd5f3](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/cbbd5f366c32732786f9d3aee657ef63b459687f))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to 06f9082 ([e95b19f](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/e95b19fd65f5faa282b189272d39b6ba2053b127))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to 4730fe5 ([2a927f6](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/2a927f6364cb6e8850412c39909599906a3fbe75))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to 959fb8a ([ba8823a](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/ba8823adde37c343cd529fffd1a00ab6d040292f))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to 9671a76 ([8ee5ad5](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/8ee5ad5093b220f5e693cbab3c2ea09f0108ea94))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to b3e95d0 ([ad08667](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/ad0866728b6dd71bc0f8cdf1ebec9d8a8086c95c))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to dbe63cc ([cc0efcb](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/cc0efcba1e816b131d1fa84fba52bb608277b34c))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to ea4830e ([250e8cc](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/250e8cc76567ff956bb6f3f6317af7197158362b))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to fa72c31 ([87fc535](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/87fc535d5e4c0a63ebe9996fa2933d6f2a380ad7))
+* **deps:** update quay.io/hummingbird/go docker tag to v1.27.1 ([7ed6ac0](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/7ed6ac0f5d0a223e4cf8cf0eb455dc3dae3816c4))
+* **deps:** update quay.io/hummingbird/go docker tag to v1.27.2 ([993e142](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/993e142160a3ce681a2606d9613fdc1349df5fd1))
+* **deps:** update quay.io/hummingbird/go:1.27.0-builder docker digest to 3849756 ([bbcb96a](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/bbcb96a2824d34c05d5eaabefebf9964c3ea88d0))
+* **deps:** update quay.io/hummingbird/go:1.27.1-builder docker digest to 00345dd ([e2ed3cd](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/e2ed3cd4ac11b735372c91be6db9da1a8d09c25c))
+* **deps:** update quay.io/hummingbird/go:1.27.1-builder docker digest to 0682509 ([e038a7e](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/e038a7ead28bcddddbfe68c359fbcbd288113f53))
+* **deps:** update quay.io/hummingbird/go:1.27.1-builder docker digest to 17eeb8a ([400f8d3](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/400f8d3ed0a726299f7ce032d4214c74a822a427))
+* **deps:** update quay.io/hummingbird/go:1.27.1-builder docker digest to 1a46b13 ([a0713b4](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/a0713b425eeff87dfc4844298ad21cbde3f7906f))
+* **deps:** update quay.io/hummingbird/go:1.27.1-builder docker digest to 1e82c98 ([0457502](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/0457502e58c9188566c5ec47ab5c7cb444db814a))
+* **deps:** update quay.io/hummingbird/go:1.27.1-builder docker digest to 2828ddf ([d2a5b5d](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/d2a5b5defe849e0f8eb8fac13739402328e0419d))
+* **deps:** update quay.io/hummingbird/go:1.27.1-builder docker digest to 2b7b566 ([5d33fc5](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/5d33fc5223a4438614c6619e8c52d47c90fde37c))
+* **deps:** update quay.io/hummingbird/go:1.27.1-builder docker digest to 70f77fe ([8e401d2](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/8e401d25025fd2045987df23e8db3073f40a7d49))
+* **deps:** update quay.io/hummingbird/go:1.27.1-builder docker digest to 80e89be ([e4f778a](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/e4f778a089955fef47eabf1d5941d75bb416eb90))
+* **deps:** update quay.io/hummingbird/go:1.27.1-builder docker digest to a4d75f2 ([b3a84dc](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/b3a84dcab48d313907837ad24acc4ffefcf22c70))
+* **deps:** update quay.io/hummingbird/go:1.27.1-builder docker digest to d025e07 ([b685b6d](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/b685b6d52f810b9bb94b83d755fd4ae55b765c97))
+* **deps:** update quay.io/hummingbird/go:1.27.1-builder docker digest to ebc0a02 ([780e94a](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/780e94a7a112555c3d45a802f4a050f1b77f647a))
+* **deps:** update quay.io/hummingbird/go:1.27.1-builder docker digest to ed97ed1 ([1ce5caf](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/1ce5cafae0a58fd66109e51d3c969cb30600c32f))
+* **deps:** update quay.io/hummingbird/go:1.27.2-builder docker digest to a29ec93 ([6c81318](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/6c81318ad5307326946f56212953a3a398879149))
+* retrigger CI ([ef32137](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/ef3213799153577913439d820b87be6d79e4b241))
+* retrigger CI ([7b61b98](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/7b61b988521334680d2c6151ffcbc6f006f5f70b))
+
 ## [3.2.0](https://git.b4mad.industries/agentic-forges/forgejo-mcp/compare/v3.1.0...v3.2.0) (2026-09-16)
 
 ### :sparkles: Features
