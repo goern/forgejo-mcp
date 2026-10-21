@@ -15,7 +15,7 @@ COPY . .
 
 RUN CGO_ENABLED=0 GOOS=linux make build VERSION="${VERSION}"
 
-FROM quay.io/hummingbird/core-runtime:2.43@sha256:9ba6530eb7cbfc625fb747df77865802f5e6249cdfc88d500bdcdb2690f6e2b8
+FROM quay.io/hummingbird/core-runtime:2.43@sha256:1dc3435a7fd02540d25657bc2dd9723b70a87467fd49b29661b819bb96e626a1
 
 WORKDIR /app
 
