@@ -45,6 +45,7 @@ func Client(ctx context.Context) (*forgejo.Client, error) {
 			forgejo.SetUserAgent(userAgent),
 		)...)
 		if err != nil {
+			err = redactToken(err, token)
 			log.ErrorCtx(ctx, "Failed to create ephemeral Forgejo client",
 				log.SanitizedURLField("url", flag.URL),
 				log.ErrorField(err),

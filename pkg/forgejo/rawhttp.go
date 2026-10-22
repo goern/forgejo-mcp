@@ -143,8 +143,10 @@ func readBodySnippet(r io.Reader) string {
 }
 
 // httpErrorFromResponse builds an HTTPError mapping status to a sentinel.
+// The request's token is redacted from the body, see redactToken.
 func httpErrorFromResponse(req *http.Request, resp *http.Response) *HTTPError {
-	body := readBodySnippet(resp.Body)
+	token, _ := strings.CutPrefix(req.Header.Get("Authorization"), "token ")
+	body := redactTokenString(readBodySnippet(resp.Body), token)
 	e := &HTTPError{
 		StatusCode: resp.StatusCode,
 		Status:     resp.Status,
