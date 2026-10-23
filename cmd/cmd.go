@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation"
 	flagPkg "git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/flag"
@@ -25,6 +26,7 @@ var (
 	allowedHosts   string
 	allowedOrigins string
 	allowFallback  bool
+	heartbeat      time.Duration
 
 	// flagSet is retained so initConfig can ask whether a flag was actually
 	// passed, rather than comparing it to its default value — which cannot
@@ -124,6 +126,14 @@ func initFlags() {
 			"this server's own token. Off by default: it hands this server's forge credential to any "+
 			"caller that can reach the port",
 	)
+	fs.DurationVar(
+		&heartbeat,
+		"heartbeat",
+		30*time.Second,
+		"Interval at which the sse and http transports write a JSON-RPC ping into the "+
+			"notification stream, so clients and proxies that enforce an idle timeout do not "+
+			"drop it. Set 0 to send no heartbeat",
+	)
 	fs.BoolVar(
 		&debug,
 		"d",
@@ -190,6 +200,13 @@ func initConfig() {
 	flagPkg.Host = resolveString(host, "FORGEJO_MCP_HOST", "host")
 	flagPkg.AllowedHosts = splitList(resolveString(allowedHosts, "FORGEJO_MCP_ALLOWED_HOSTS", "allowed-hosts"))
 	flagPkg.AllowedOrigins = splitList(resolveString(allowedOrigins, "FORGEJO_MCP_ALLOWED_ORIGINS", "allowed-origins"))
+	flagPkg.Heartbeat = resolveDuration(heartbeat, "FORGEJO_MCP_HEARTBEAT", "heartbeat")
+	if flagPkg.Heartbeat < 0 {
+		log.Fatal("Invalid heartbeat configuration",
+			log.StringField("heartbeat", flagPkg.Heartbeat.String()),
+			log.StringField("help", "Set 0 to disable the heartbeat, or a positive duration such as 30s"),
+		)
+	}
 	flagPkg.AllowOperatorTokenFallback = allowFallback
 	if !flagWasPassed("allow-operator-token-fallback") {
 		if v := os.Getenv("FORGEJO_MCP_ALLOW_OPERATOR_TOKEN_FALLBACK"); v != "" {
@@ -309,6 +326,7 @@ func Execute(version string) {
 		log.SanitizedURLField("url", flagPkg.URL),
 		log.StringField("transport", transport),
 		log.IntField("sse-port", flagPkg.SSEPort),
+		log.StringField("heartbeat", flagPkg.Heartbeat.String()),
 		log.BoolField("debug", flagPkg.Debug),
 		log.BoolField("token_configured", flagPkg.Token != ""),
 		log.StringField("user_agent", flagPkg.UserAgent),
@@ -351,6 +369,29 @@ func resolveString(value, envVar, flagName string) string {
 		return env
 	}
 	return value
+}
+
+// resolveDuration returns the flag value when the flag was passed, otherwise the
+// environment variable parsed as a Go duration, otherwise the flag's default.
+func resolveDuration(value time.Duration, envVar, flagName string) time.Duration {
+	if flagWasPassed(flagName) {
+		return value
+	}
+	env := os.Getenv(envVar)
+	if env == "" {
+		return value
+	}
+	parsed, err := time.ParseDuration(env)
+	if err != nil {
+		log.Fatal("Invalid environment variable",
+			log.StringField("variable", envVar),
+			log.StringField("value", env),
+			log.StringField("help", "Expected a Go duration such as 30s, 1m or 0"),
+		)
+		return value
+	}
+	log.Debug("Using environment variable", log.StringField("variable", envVar))
+	return parsed
 }
 
 // splitList turns a comma-separated value into a trimmed, non-empty list.

@@ -73,15 +73,17 @@ func transports() []transportCase {
 	return []transportCase{
 		{
 			name: "sse", transport: "sse", path: "/sse", authorization: decoy,
-			handler: func(*testing.T) http.Handler { return newSSEHandler(newMCP()) },
+			handler: func(*testing.T) http.Handler { return newSSEHandler(newMCP(), flag.Heartbeat) },
 		},
 		{
 			name: "http", transport: "http", path: streamableHTTPEndpointPath, authorization: decoy,
-			handler: func(*testing.T) http.Handler { return newStreamableHTTPHandler(newMCP()) },
+			handler: func(*testing.T) http.Handler { return newStreamableHTTPHandler(newMCP(), flag.Heartbeat) },
 		},
 		{
 			name: "http+resource-server", transport: "http", resourceServer: true, path: streamableHTTPEndpointPath,
-			handler:       func(t *testing.T) http.Handler { return rs.handler(t, newStreamableHTTPHandler(newMCP())) },
+			handler: func(t *testing.T) http.Handler {
+				return rs.handler(t, newStreamableHTTPHandler(newMCP(), flag.Heartbeat))
+			},
 			authorization: rs.authorization,
 		},
 	}
