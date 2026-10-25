@@ -33,6 +33,12 @@ type resolveBackendOptions struct {
 	// orgLabels normally; 404 is the user-owned-repository case that
 	// fetchOrgLabels maps to an empty list.
 	orgStatus int
+	// maxPageSize clamps the requested limit the way Forgejo's
+	// MAX_RESPONSE_ITEMS (default 50) does. Zero means no server-side cap.
+	maxPageSize int
+	// pagingHeaders makes the catalogue reads carry X-Total-Count and
+	// Link rel="next", as Forgejo does. Off, a page is just a bare array.
+	pagingHeaders bool
 	// next handles everything that is not a catalogue read.
 	next func(w http.ResponseWriter, r *http.Request, records *[]recordedReq)
 }
@@ -70,7 +76,7 @@ func newResolveBackend(t *testing.T, opts resolveBackendOptions) (records *[]rec
 		switch {
 		case isRepoLabelCatalogRequest(r):
 			reads++
-			writeLabelPage(w, opts.repoLabels, r)
+			writeLabelPage(w, opts.repoLabels, r, opts)
 			return
 		case isOrgLabelCatalogRequest(r):
 			reads++
@@ -79,7 +85,7 @@ func newResolveBackend(t *testing.T, opts resolveBackendOptions) (records *[]rec
 				_, _ = w.Write([]byte(`{"message":"no"}`))
 				return
 			}
-			writeLabelPage(w, opts.orgLabels, r)
+			writeLabelPage(w, opts.orgLabels, r, opts)
 			return
 		}
 
@@ -126,7 +132,7 @@ func isOrgLabelCatalogRequest(r *http.Request) bool {
 
 // writeLabelPage serves the slice of labels the requested page/limit selects,
 // so enumeration terminates on a short page exactly as it would upstream.
-func writeLabelPage(w http.ResponseWriter, labels []catalogLabel, r *http.Request) {
+func writeLabelPage(w http.ResponseWriter, labels []catalogLabel, r *http.Request, opts resolveBackendOptions) {
 	page, err := strconv.Atoi(r.URL.Query().Get("page"))
 	if err != nil || page < 1 {
 		page = 1
@@ -134,6 +140,9 @@ func writeLabelPage(w http.ResponseWriter, labels []catalogLabel, r *http.Reques
 	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
 	if err != nil || limit < 1 {
 		limit = labelCatalogPageSize
+	}
+	if opts.maxPageSize > 0 && limit > opts.maxPageSize {
+		limit = opts.maxPageSize
 	}
 
 	start := (page - 1) * limit
@@ -143,6 +152,13 @@ func writeLabelPage(w http.ResponseWriter, labels []catalogLabel, r *http.Reques
 	end := start + limit
 	if end > len(labels) {
 		end = len(labels)
+	}
+
+	if opts.pagingHeaders {
+		w.Header().Set("X-Total-Count", strconv.Itoa(len(labels)))
+		if end < len(labels) {
+			w.Header().Set("Link", fmt.Sprintf(`<%s?page=%d&limit=%d>; rel="next"`, r.URL.Path, page+1, limit))
+		}
 	}
 
 	parts := make([]string, 0, end-start)
@@ -361,5 +377,55 @@ func TestResolveIssueLabelIDs_OrgLabelsUnauthorized(t *testing.T) {
 
 	if _, err := resolveIssueLabelIDs(context.Background(), "agentic-forges", "forgejo-mcp", "bug"); err == nil {
 		t.Fatal("expected an error when organization labels cannot be read")
+	}
+}
+
+// numberedLabels returns n filler labels with IDs 1..n, then target as ID
+// n+1, so the target sits past any first page the server will serve.
+func numberedLabels(n int, target string) []catalogLabel {
+	out := make([]catalogLabel, 0, n+1)
+	for i := range n {
+		out = append(out, catalogLabel{ID: int64(i + 1), Name: fmt.Sprintf("filler-%d", i)})
+	}
+	return append(out, catalogLabel{ID: int64(n + 1), Name: target})
+}
+
+// TestResolveIssueLabelIDs_ServerPageCap pins the Forgejo behaviour behind
+// forgejo-mcp-grzt: the server clamps limit to MAX_RESPONSE_ITEMS (50), so a
+// 50-row page is not a short page and must not end enumeration. Both header
+// modes are covered: Forgejo sends X-Total-Count/Link, but a proxy may strip
+// them, and enumeration must still reach the end.
+func TestResolveIssueLabelIDs_ServerPageCap(t *testing.T) {
+	for _, headers := range []bool{true, false} {
+		for _, scope := range []string{"repo", "org"} {
+			for _, by := range []string{"name", "id"} {
+				name := fmt.Sprintf("%s/%s/headers=%t", scope, by, headers)
+				t.Run(name, func(t *testing.T) {
+					const total = 120
+					labels := numberedLabels(total, "merge")
+					opts := resolveBackendOptions{maxPageSize: 50, pagingHeaders: headers}
+					if scope == "repo" {
+						opts.repoLabels = labels
+						opts.orgStatus = http.StatusNotFound
+					} else {
+						opts.repoLabels = []catalogLabel{{ID: 5000, Name: "bug"}}
+						opts.orgLabels = labels
+					}
+					newResolveBackend(t, opts)
+
+					token := "merge"
+					if by == "id" {
+						token = strconv.Itoa(total + 1)
+					}
+					ids, err := resolveIssueLabelIDs(context.Background(), "agentic-forges", "forgejo-mcp", token)
+					if err != nil {
+						t.Fatalf("resolveIssueLabelIDs(%q) err: %v", token, err)
+					}
+					if len(ids) != 1 || ids[0] != total+1 {
+						t.Fatalf("expected [%d], got %v", total+1, ids)
+					}
+				})
+			}
+		}
 	}
 }
