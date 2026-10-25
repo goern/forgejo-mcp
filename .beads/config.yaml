@@ -53,6 +53,5 @@
 # - github.org
 # - github.repo
 
-sync.remote: "https://hub.dolt.b4mad.industries/forgejo_mcp"
-
-dolt.shared-server: true
+sync:
+    remote: "https://hub.dolt.b4mad.industries/forgejo_mcp"

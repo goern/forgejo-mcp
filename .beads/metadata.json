@@ -1,7 +1,7 @@
 {
   "database": "dolt",
   "backend": "dolt",
-  "dolt_mode": "server",
+  "dolt_mode": "embedded",
   "dolt_database": "forgejo_mcp",
   "project_id": "94afde95-a460-4260-9e87-ab18b3196052",
   "global_dolt_database": "beads_global"

@@ -49,3 +49,6 @@ references/labels-cache.md
 
 # Beads / Dolt files (added by bd init)
 .beads/proxieddb/
+
+# Beads / Dolt files (added by bd init)
+*.gate.lock*
