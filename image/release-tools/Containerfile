@@ -4,8 +4,8 @@
 # Pinned to a specific version tag (not `latest-builder`) so Renovate has a
 # version signal to automerge on, per .renovaterc's release-tools/base-image-bump rule.
 
-ARG HI_GO_TAG=1.26.5-builder
-ARG HI_GO_DIGEST=sha256:aef155087940a9221c59ca48ad8af371a4c1a46b05f0283737149cb00ef484b3
+ARG HI_GO_TAG=1.26.10-builder
+ARG HI_GO_DIGEST=sha256:3b4ef404a1aa7dc3a5b7034eea9ef028f84c9f7bb5413efae4d8c9a79dde31f7
 ARG SYFT_VERSION=v1.44.0
 ARG SYFT_SHA256=0e91737aee2b5baf1d255b959630194a302335d848ff97bb07921eb6205b5f5a
 ARG GORELEASER_VERSION=v2.16.0
