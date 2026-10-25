@@ -5,22 +5,26 @@ package issue
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"sort"
 	"strconv"
 	"strings"
+
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/forgejo"
 )
 
 const (
-	// labelCatalogPageSize is the page size used while enumerating labels for
-	// name resolution. It is independent of the caller-facing page/limit on
-	// list_repo_labels: that tool browses, this enumeration must be complete,
-	// or a label on page two would resolve as "unknown".
+	// labelCatalogPageSize is the page size requested while enumerating labels
+	// for name resolution. It is a request, not a promise: Forgejo clamps limit
+	// to its MAX_RESPONSE_ITEMS (default 50), so a page shorter than this is
+	// NOT evidence of the last page. See labelCatalogHasMore.
 	labelCatalogPageSize = 100
 
 	// maxLabelCatalogPages caps the enumeration per scope. A server that
 	// ignores paging would otherwise spin forever; the cap turns that into a
-	// message, and numeric ids still work without a catalogue.
-	maxLabelCatalogPages = 20
+	// message, and numeric ids still work without a catalogue. Sized for
+	// 2000 labels at the default server cap of 50 rows per page.
+	maxLabelCatalogPages = 40
 )
 
 // labelsArgDescription keeps the four label arguments telling the same story:
@@ -31,6 +35,28 @@ func labelsArgDescription(lead string) string {
 		"matched before an ID, so a label named \"123\" wins over the ID 123. An " +
 		"unrecognised name is an error and nothing is applied; list_repo_labels shows " +
 		"what exists."
+}
+
+// labelCatalogHasMore decides whether another catalogue page should be
+// fetched, given the page just read (rows), the running total fetched so far
+// (fetched, including rows), and that response's headers. It never compares
+// rows against the requested page size, because the server may have clamped it.
+//
+// In order of authority: an empty page always ends enumeration; X-Total-Count
+// says exactly how many rows exist; a Link header is the server's own answer
+// on whether a next page exists. With neither (a proxy stripped them), keep
+// going until an empty page, bounded by maxLabelCatalogPages.
+func labelCatalogHasMore(rows, fetched int, h http.Header) bool {
+	if rows == 0 {
+		return false
+	}
+	if total, ok := forgejo.TotalCount(h); ok {
+		return fetched < total
+	}
+	if len(h.Values("Link")) > 0 {
+		return headerHasMore(h)
+	}
+	return true
 }
 
 // listAssignableLabels returns every label that can be applied to an issue in
@@ -44,38 +70,42 @@ func labelsArgDescription(lead string) string {
 func listAssignableLabels(ctx context.Context, owner, repo string) ([]ScopedLabel, error) {
 	catalog := []ScopedLabel{}
 
+	repoFetched := 0
 	for page := 1; ; page++ {
 		if page > maxLabelCatalogPages {
 			return nil, fmt.Errorf(
-				"%s/%s has more than %d labels; pass numeric label IDs instead of names",
-				owner, repo, maxLabelCatalogPages*labelCatalogPageSize,
+				"%s/%s has more than %d pages of labels; pass numeric label IDs instead of names",
+				owner, repo, maxLabelCatalogPages,
 			)
 		}
-		repoLabels, _, lerr := fetchRepoLabels(ctx, owner, repo, page, labelCatalogPageSize)
+		repoLabels, rh, lerr := fetchRepoLabels(ctx, owner, repo, page, labelCatalogPageSize)
 		if lerr != nil {
 			return nil, fmt.Errorf("list repo labels err: %w", lerr)
 		}
 		for _, l := range repoLabels {
 			catalog = append(catalog, ScopedLabel{labelDTO: l, Scope: "repo"})
 		}
-		if len(repoLabels) < labelCatalogPageSize {
+		repoFetched += len(repoLabels)
+		if !labelCatalogHasMore(len(repoLabels), repoFetched, rh) {
 			break
 		}
 	}
 
+	orgFetched := 0
 	for page := 1; ; page++ {
 		if page > maxLabelCatalogPages {
 			return nil, fmt.Errorf(
-				"organization %s has more than %d labels; pass numeric label IDs instead of names",
-				owner, maxLabelCatalogPages*labelCatalogPageSize,
+				"organization %s has more than %d pages of labels; pass numeric label IDs instead of names",
+				owner, maxLabelCatalogPages,
 			)
 		}
-		orgLabels, _, oerr := fetchOrgLabels(ctx, owner, page, labelCatalogPageSize)
+		orgLabels, oh, oerr := fetchOrgLabels(ctx, owner, page, labelCatalogPageSize)
 		if oerr != nil {
 			return nil, fmt.Errorf("list org labels err: %w", oerr)
 		}
 		catalog = append(catalog, orgLabels...)
-		if len(orgLabels) < labelCatalogPageSize {
+		orgFetched += len(orgLabels)
+		if !labelCatalogHasMore(len(orgLabels), orgFetched, oh) {
 			break
 		}
 	}
