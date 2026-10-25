@@ -238,6 +238,15 @@ When using SSE mode, start the server first:
 forgejo-mcp --transport sse --url https://your-forgejo-instance.org --token <your-token>
 ```
 
+#### Notification streams and the heartbeat
+
+On `sse` and `http` the server holds a stream open to deliver its own messages
+(notifications, progress, server requests). While a session is idle that stream
+carries nothing, and clients, proxies and NAT devices drop a stream that stays
+silent long enough; one MCP client aborts after six minutes. The server therefore
+writes a JSON-RPC `ping` into the stream every `--heartbeat` interval, `30s` by
+default. Set `--heartbeat 0` to restore the previous, silent behaviour.
+
 #### Remote operation as an OAuth resource server
 
 With `--auth-mode resource-server`, the `http` transport becomes an OAuth 2.0
@@ -623,6 +632,7 @@ You can configure the server using command-line arguments or environment variabl
 | `--allowed-hosts` | `FORGEJO_MCP_ALLOWED_HOSTS` | Comma-separated `Host` names this server answers to; required when `--host` is not loopback |
 | `--allowed-origins` | `FORGEJO_MCP_ALLOWED_ORIGINS` | Comma-separated web origins allowed to send an `Origin` header, as full origins (`https://console.example.org`). Empty by default |
 | `--allow-operator-token-fallback` | `FORGEJO_MCP_ALLOW_OPERATOR_TOKEN_FALLBACK` | On `sse`/`http`, serve requests with no `Authorization` header using this server's own token. Off by default |
+| `--heartbeat` | `FORGEJO_MCP_HEARTBEAT` | Interval at which `sse`/`http` write a JSON-RPC `ping` into the notification stream, so clients and proxies with an idle timeout keep it (default: `30s`; `0` sends none) |
 | `--auth-mode` | `FORGEJO_MCP_AUTH_MODE` | `passthrough` (default) or `resource-server`; see [Remote operation as an OAuth resource server](#remote-operation-as-an-oauth-resource-server) |
 | `--authorization-server` | `FORGEJO_MCP_AUTHORIZATION_SERVER` | `resource-server` mode: issuer URL of the OpenID Connect provider, compared byte for byte |
 | `--resource` | `FORGEJO_MCP_RESOURCE` | `resource-server` mode: canonical URI of the MCP endpoint, for example `https://mcp.example.org/mcp`; its path must be `/mcp` |

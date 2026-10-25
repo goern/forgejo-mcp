@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation/actions"
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation/attachment"
@@ -71,8 +72,16 @@ func disableLibraryHostCheck() bool { return len(flag.AllowedHosts) > 0 }
 // It exists so the conformance tests drive the real construction — the option
 // set, the context function and the mount — rather than a copy of it that can
 // drift. A test that builds its own handler proves nothing about this one.
-func newSSEHandler(s *server.MCPServer) http.Handler {
+//
+// heartbeat is the interval of the ping written into the notification
+// stream. The library sends nothing by default, and a silent stream is dropped
+// by every client, proxy or NAT that enforces an idle timeout. Zero keeps that
+// default.
+func newSSEHandler(s *server.MCPServer, heartbeat time.Duration) http.Handler {
 	opts := []server.SSEOption{server.WithSSEContextFunc(requestTokenContextFunc)}
+	if heartbeat > 0 {
+		opts = append(opts, server.WithKeepAliveInterval(heartbeat))
+	}
 	if disableLibraryHostCheck() {
 		opts = append(opts, server.WithSSEDisableLocalhostProtection(true))
 	}
@@ -82,10 +91,16 @@ func newSSEHandler(s *server.MCPServer) http.Handler {
 // newStreamableHTTPHandler builds the streamable HTTP transport exactly as Run
 // does, mounted on a mux at its endpoint path. Serving the transport as the
 // root handler instead would make it answer on every path.
-func newStreamableHTTPHandler(s *server.MCPServer) http.Handler {
+//
+// heartbeat is the interval of the ping written into the GET stream that
+// carries server-initiated messages. Zero keeps the library's silent default.
+func newStreamableHTTPHandler(s *server.MCPServer, heartbeat time.Duration) http.Handler {
 	opts := []server.StreamableHTTPOption{
 		server.WithHTTPContextFunc(requestTokenContextFunc),
 		server.WithEndpointPath(streamableHTTPEndpointPath),
+	}
+	if heartbeat > 0 {
+		opts = append(opts, server.WithHeartbeatInterval(heartbeat))
 	}
 	if disableLibraryHostCheck() {
 		opts = append(opts, server.WithDisableLocalhostProtection(true))
@@ -234,7 +249,7 @@ func Run(transport, version string) error {
 		if err != nil {
 			return err
 		}
-		handler, err := rs.handler(newStreamableHTTPHandler(mcpServer))
+		handler, err := rs.handler(newStreamableHTTPHandler(mcpServer, flag.Heartbeat))
 		if err != nil {
 			return fmt.Errorf("refusing to start: %w", err)
 		}
@@ -281,7 +296,7 @@ func Run(transport, version string) error {
 		}
 		log.Info("MCP stdio server shutdown")
 	case "sse":
-		sseServer := newSSEHandler(mcpServer)
+		sseServer := newSSEHandler(mcpServer, flag.Heartbeat)
 		log.Info("Starting MCP SSE server",
 			log.IntField("port", flag.SSEPort),
 		)
@@ -294,7 +309,7 @@ func Run(transport, version string) error {
 		}
 		log.Info("MCP SSE server shutdown")
 	case "http":
-		httpMux := newStreamableHTTPHandler(mcpServer)
+		httpMux := newStreamableHTTPHandler(mcpServer, flag.Heartbeat)
 		log.Info("Starting MCP streamable HTTP server",
 			log.IntField("port", flag.HTTPPort),
 		)

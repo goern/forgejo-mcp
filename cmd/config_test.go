@@ -6,6 +6,7 @@ import (
 	stdflag "flag"
 	"reflect"
 	"testing"
+	"time"
 )
 
 // withFlagSet installs a parsed flag set for the precedence helpers to inspect,
@@ -18,6 +19,7 @@ func withFlagSet(t *testing.T, args []string) {
 	fs.String("allowed-hosts", "", "")
 	fs.String("allowed-origins", "", "")
 	fs.Bool("allow-operator-token-fallback", false, "")
+	fs.Duration("heartbeat", 30*time.Second, "")
 	if err := fs.Parse(args); err != nil {
 		t.Fatalf("parse %v: %v", args, err)
 	}
@@ -108,5 +110,41 @@ func TestIsTruthy(t *testing.T) {
 		if isTruthy(v) {
 			t.Errorf("isTruthy(%q) = true", v)
 		}
+	}
+}
+
+func TestHeartbeatEnvironmentIsUsedWhenTheFlagIsAbsent(t *testing.T) {
+	withFlagSet(t, nil)
+	t.Setenv("FORGEJO_MCP_HEARTBEAT", "5s")
+
+	if got := resolveDuration(30*time.Second, "FORGEJO_MCP_HEARTBEAT", "heartbeat"); got != 5*time.Second {
+		t.Fatalf("the environment was ignored when no flag was passed: got %s", got)
+	}
+}
+
+func TestHeartbeatEnvironmentCanDisableIt(t *testing.T) {
+	withFlagSet(t, nil)
+	t.Setenv("FORGEJO_MCP_HEARTBEAT", "0")
+
+	if got := resolveDuration(30*time.Second, "FORGEJO_MCP_HEARTBEAT", "heartbeat"); got != 0 {
+		t.Fatalf("FORGEJO_MCP_HEARTBEAT=0 did not disable the heartbeat: got %s", got)
+	}
+}
+
+func TestExplicitHeartbeatFlagBeatsTheEnvironment(t *testing.T) {
+	withFlagSet(t, []string{"-heartbeat", "10s"})
+	t.Setenv("FORGEJO_MCP_HEARTBEAT", "5s")
+
+	if got := resolveDuration(10*time.Second, "FORGEJO_MCP_HEARTBEAT", "heartbeat"); got != 10*time.Second {
+		t.Fatalf("the environment overrode an explicit flag: got %s", got)
+	}
+}
+
+func TestHeartbeatDefaultSurvivesWhenNeitherIsGiven(t *testing.T) {
+	withFlagSet(t, nil)
+	t.Setenv("FORGEJO_MCP_HEARTBEAT", "")
+
+	if got := resolveDuration(30*time.Second, "FORGEJO_MCP_HEARTBEAT", "heartbeat"); got != 30*time.Second {
+		t.Fatalf("the default was lost: got %s", got)
 	}
 }

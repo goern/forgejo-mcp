@@ -1,5 +1,7 @@
 package flag
 
+import "time"
+
 var (
 	URL       string
 	SSEPort   int
@@ -31,6 +33,12 @@ var (
 	// silently accepts every other service sharing a declared hostname on any
 	// port.
 	AllowedOrigins []string
+
+	// Heartbeat is the interval at which the sse and http transports write a
+	// JSON-RPC ping into the notification stream. The library sends nothing by
+	// default, and a stream that carries no traffic is dropped by any client,
+	// proxy or NAT that enforces an idle timeout. Zero disables the heartbeat.
+	Heartbeat time.Duration
 
 	// AllowOperatorTokenFallback re-enables serving a request that carries no
 	// Authorization header using this server's own configured credential, on
