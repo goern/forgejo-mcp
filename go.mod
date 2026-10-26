@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3 v3.0.0
 	github.com/lestrrat-go/jwx/v3 v3.4.0
-	github.com/mark3labs/mcp-go v1.3.0
+	github.com/mark3labs/mcp-go v1.4.0
 	go.uber.org/zap v1.28.0
 )
 
