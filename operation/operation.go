@@ -46,14 +46,28 @@ func requestTokenContextFunc(ctx context.Context, r *http.Request) context.Conte
 		// must never reach Forgejo. The authentication layer has minted a Forgejo
 		// token for this request; only that one enters the handler context.
 		if token, ok := r.Context().Value(mintedTokenKey{}).(string); ok && token != "" {
-			return forgejo.WithToken(ctx, token)
+			return withRequestCredential(ctx, r, token)
 		}
 		return ctx
 	}
 	if token := extractToken(r.Header.Get("Authorization")); token != "" {
-		return forgejo.WithToken(ctx, token)
+		return withRequestCredential(ctx, r, token)
 	}
 	return ctx
+}
+
+// withRequestCredential puts a per-request credential into ctx together with
+// the Rejection that records whether Forgejo refused it. The Rejection comes
+// from the HTTP layer when withRejectionChallenge is mounted, so that the
+// response status can follow it; otherwise (the sse transport) a fresh one
+// still lets the handler middleware report the refusal. Only a per-request
+// credential gets one: a refused operator token is nothing the caller can fix.
+func withRequestCredential(ctx context.Context, r *http.Request, token string) context.Context {
+	rejection := forgejo.RejectionFrom(r.Context())
+	if rejection == nil {
+		rejection = &forgejo.Rejection{}
+	}
+	return forgejo.WithRejection(forgejo.WithToken(ctx, token), rejection)
 }
 
 // disableLibraryHostCheck reports whether the library's own loopback protection
@@ -106,7 +120,7 @@ func newStreamableHTTPHandler(s *server.MCPServer, heartbeat time.Duration) http
 		opts = append(opts, server.WithDisableLocalhostProtection(true))
 	}
 	mux := http.NewServeMux()
-	mux.Handle(streamableHTTPEndpointPath, server.NewStreamableHTTPServer(s, opts...))
+	mux.Handle(streamableHTTPEndpointPath, withRejectionChallenge(server.NewStreamableHTTPServer(s, opts...)))
 	return mux
 }
 
@@ -405,5 +419,7 @@ func newMCPServer(version string) *server.MCPServer {
 		version,
 		server.WithLogging(),
 		server.WithResourceCapabilities(false, false),
+		server.WithToolHandlerMiddleware(rejectionToolMiddleware),
+		server.WithResourceHandlerMiddleware(rejectionResourceMiddleware),
 	)
 }

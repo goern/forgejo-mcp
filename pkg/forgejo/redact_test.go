@@ -42,8 +42,10 @@ func TestClientRedactsARejectedToken(t *testing.T) {
 	if strings.Contains(err.Error(), rejectedToken) {
 		t.Fatalf("error carries the token: %v", err)
 	}
-	if !strings.Contains(err.Error(), "[sha: [redacted]]") {
-		t.Fatalf("error lost Forgejo's message: %v", err)
+	// The rejection transport replaces Forgejo's message before redaction
+	// ever sees it; redactToken stays as a second line of defence.
+	if !strings.Contains(err.Error(), RejectedCredentialMessage) {
+		t.Fatalf("error lost the rejection message: %v", err)
 	}
 }
 

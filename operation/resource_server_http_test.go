@@ -47,6 +47,15 @@ type rsEnv struct {
 // raw-HTTP helper, exactly as tool handlers do.
 func startResourceServer(t *testing.T) *rsEnv {
 	t.Helper()
+	return startResourceServerWith(t, nil)
+}
+
+// startResourceServerWith is startResourceServer with the handler inner builds
+// in place of the probe, behind the authentication layer. inner runs once the
+// configuration is in place, since the transport reads it when it is built;
+// nil keeps the probe.
+func startResourceServerWith(t *testing.T, inner func() http.Handler) *rsEnv {
+	t.Helper()
 	withResourceServerConfig(t)
 	env := &rsEnv{reached: make(chan error, 8)}
 	env.fixture = newFixture(t, "16.0.3", mustP256(t), "")
@@ -77,7 +86,11 @@ func startResourceServer(t *testing.T) *rsEnv {
 		env.reached <- err
 		w.WriteHeader(http.StatusNoContent)
 	})
-	handler, err := rs.handler(probe)
+	var mcpHandler http.Handler = probe
+	if inner != nil {
+		mcpHandler = inner()
+	}
+	handler, err := rs.handler(mcpHandler)
 	if err != nil {
 		t.Fatalf("handler: %v", err)
 	}
