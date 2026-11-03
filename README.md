@@ -215,6 +215,20 @@ anyway, and it is why that setup is safe to expose.
 On `stdio` the configured token still stands in for an absent header exactly as
 before. Nothing about `stdio` changes.
 
+The server does not check a token when it arrives; Forgejo does, on the first call
+that reaches it. When Forgejo rejects the token (unknown, revoked or expired), the
+call fails with JSON-RPC error code `-32001` and the message `Forgejo rejected the
+access token`. On `http` the response also carries status `401` and
+`WWW-Authenticate: Bearer error="invalid_token"`, which is what makes an OAuth MCP
+client refresh or re-authorize instead of reporting a tool error. On `sse`, and on
+an `http` response that is already streaming, only the error code tells. A call
+that never reaches Forgejo, such as `tools/list`, is answered normally. A token that
+lacks a scope gets an ordinary error, not `-32001`.
+
+Forgejo repeats a rejected token in its error message. The server replaces that
+message before anything reads it, so the token never appears in a response or in
+the server's log, whichever token it was: a client's or the operator's own.
+
 If you run a single-user deployment over `sse` or `http` and want the old behaviour,
 `--allow-operator-token-fallback` restores it. Understand what it means before you use
 it: any client that can reach the port acts as the identity behind your token, without
@@ -283,6 +297,11 @@ discovery document and key set under the issuer path. It refuses to start on a
 configuration it cannot serve safely, and the refusal names the setting to fix.
 The signing key acts for every user whose integration trusts the issuer, so guard
 it like the forge token it replaces.
+
+If Forgejo rejects the JWT signed for a caller, for example because the caller's
+Authorized Integration was deleted, the call fails with `-32603` and a message
+saying so, and the server logs a warning. It does not answer `401`: the caller's
+login is valid, and logging in again would not fix the integration.
 
 - [Operator guide](docs/oauth-resource-server/operator.md): identity provider
   requirements, deployment order, proxy rules, key rotation, and a worked Zitadel

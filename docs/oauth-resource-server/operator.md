@@ -194,6 +194,7 @@ forgejo-mcp accepts an access token until its `exp`, so the provider's access-to
 - Requests refused for their `Host` or `Origin` header are logged as warnings, as in `passthrough` mode.
 - Refused tokens are logged at debug level (`--debug`) with the reason. The client only ever sees the same `401`.
 - Refusal lines are rate-limited.
+- When Forgejo rejects the JWT signed for a caller, a warning names the tool or resource. The caller sees `-32603` with a message pointing at the integration, never a `401`, since logging in again cannot fix it.
 - For accepted requests, the subject and the Forgejo audience are logged at debug level.
 
 ## Worked example: Zitadel
@@ -280,6 +281,6 @@ The command outputs the audience Forgejo generated. Store that as the user's `fo
 | The start is refused with a message naming a setting | That setting. The checks run before anything is bound. |
 | The client logs in, and `/mcp` still answers `401` | forgejo-mcp refuses the token. Run with `--debug` and read the refusal reason. Common causes: `--resource-audience` does not match `aud`, the issuer is spelled differently, or the access token is opaque. |
 | `403` with a message naming the audience claim | The token carries no usable audience claim. The metadata is missing, the action is not attached, or the token was issued before the metadata was set. |
-| Tool calls fail with an authentication error from Forgejo | Forgejo refuses the JWT. There is no integration with this issuer and audience, its `sub` rule names another subject, or Forgejo has not yet fetched a new key (see [Keys and rotation](#keys-and-rotation)). |
+| Tool calls fail with "Forgejo rejected the credential this server issued for you", and the log has a matching warning | Forgejo refuses the JWT. There is no integration with this issuer and audience, its `sub` rule names another subject, or Forgejo has not yet fetched a new key (see [Keys and rotation](#keys-and-rotation)). |
 | Tool calls fail with a missing-scope error from Forgejo | The integration's permissions do not cover the tool. |
 | Saving an integration fails with "Issuer validation failed" | Forgejo cannot fetch the discovery document or the key set. forgejo-mcp is not reachable yet, the proxy redirects, or the [network restrictions](#forgejos-network-restrictions) apply. |

@@ -91,7 +91,7 @@ func rejectionTestServer() *server.MCPServer {
 		time.Sleep(50 * time.Millisecond) // let the transport flush the notification
 		return whoami(ctx)
 	})
-	s.AddResourceTemplate(mcp.NewResourceTemplate("forgejo://probe/{x}", "probe"),
+	s.AddResourceTemplate(mcp.NewResourceTemplate("test-probe://probe/{x}", "probe"),
 		func(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 			var user map[string]any
 			if err := forgejo.DoJSON(ctx, http.MethodGet, forgejo.APIPath("user"), nil, &user); err != nil {
@@ -243,7 +243,7 @@ func TestASwallowedRejectionStillFails(t *testing.T) {
 func TestAResourceReadWithARevokedTokenFails(t *testing.T) {
 	c := passthroughSession(t, rejectedToken)
 
-	resp, reply := c.post(t, 2, "resources/read", `{"uri":"forgejo://probe/x"}`)
+	resp, reply := c.post(t, 2, "resources/read", `{"uri":"test-probe://probe/x"}`)
 	if resp.StatusCode != http.StatusUnauthorized || reply.Error == nil || reply.Error.Code != credentialRejectedCode {
 		t.Fatalf("status %d, error %+v; want 401 and -32001", resp.StatusCode, reply.Error)
 	}

@@ -26,7 +26,7 @@ The planning artifacts and the implementation land together in one pull request,
 
 ## 5. Documentation and end-to-end check
 
-- [ ] 5.1 Document the behaviour for operators and client authors in the README: a rejected token in `passthrough` on `http` yields `401` plus `-32001`; `sse` yields `-32001`; `resource-server` mode reports a server-side failure instead. Verify that the README states the code, the header, and the mode difference, and that `scripts/ci/check-readme-tool-coverage.sh` still passes.
+- [x] 5.1 Document the behaviour for operators and client authors in the README: a rejected token in `passthrough` on `http` yields `401` plus `-32001`; `sse` yields `-32001`; `resource-server` mode reports a server-side failure instead. Verify that the README states the code, the header, and the mode difference, and that `scripts/ci/check-readme-tool-coverage.sh` still passes.
 - [ ] 5.2 Live check against `git.b4mad.industries` with a made-up token, no secret needed: run the built binary with `--transport http` and no operator token, send `tools/call get_my_user_info` with `Authorization: token not-a-real-token`, and record status, headers and body. Verify that the response is `401` with the challenge and `-32001`, and that neither the response nor the server log contains the made-up token. Paste the transcript into the PR description.
 - [ ] 5.3 Run the full CI set on the branch: `go build ./...`, `go vet ./...`, `gofmt -l`, `golangci-lint run ./...`, `go test -race -shuffle=on -count=1 ./...`, `go mod tidy` without drift, `scripts/ci/check-api-path-escaping.sh`, `scripts/ci/check-readme-tool-coverage.sh`, `scripts/ci/check-spec-demo-anchors.sh`, gitleaks, and `openspec validate forge-credential-rejection --strict`. Verify that every one passes.
 
