@@ -12,7 +12,10 @@ import (
 
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation"
 	flagPkg "git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/flag"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/forgejo"
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/log"
+
+	"go.uber.org/zap"
 )
 
 var (
@@ -27,6 +30,9 @@ var (
 	allowedOrigins string
 	allowFallback  bool
 	heartbeat      time.Duration
+	tlsCert        string
+	tlsKey         string
+	tlsCA          string
 
 	// flagSet is retained so initConfig can ask whether a flag was actually
 	// passed, rather than comparing it to its default value — which cannot
@@ -94,6 +100,24 @@ func initFlags() {
 		"user-agent",
 		"",
 		"User agent for HTTP requests (default: forgejo-mcp/<version>)",
+	)
+	fs.StringVar(
+		&tlsCert,
+		"tls-cert",
+		"",
+		"PEM client certificate presented to Forgejo, for instances behind mutual TLS (needs -tls-key)",
+	)
+	fs.StringVar(
+		&tlsKey,
+		"tls-key",
+		"",
+		"PEM private key of -tls-cert",
+	)
+	fs.StringVar(
+		&tlsCA,
+		"tls-ca",
+		"",
+		"PEM CA bundle trusted for Forgejo's server certificate, replacing the system roots",
 	)
 	fs.StringVar(
 		&host,
@@ -264,6 +288,46 @@ func initConfig() {
 	}
 
 	resolveAuthSettings()
+	applyTLSSettings()
+}
+
+// resolveTLSSettings returns the TLS settings for connections to Forgejo, each
+// taken from its flag when passed and from FORGEJO_TLS_* otherwise.
+func resolveTLSSettings() forgejo.TLSSettings {
+	return forgejo.TLSSettings{
+		CertFile: resolveString(tlsCert, "FORGEJO_TLS_CERT", "tls-cert"),
+		KeyFile:  resolveString(tlsKey, "FORGEJO_TLS_KEY", "tls-key"),
+		CAFile:   resolveString(tlsCA, "FORGEJO_TLS_CA", "tls-ca"),
+	}
+}
+
+// applyTLSSettings validates the TLS settings and installs them under every
+// connection to Forgejo. A setting that cannot be applied stops the process:
+// continuing would talk to Forgejo without the TLS the operator asked for.
+func applyTLSSettings() {
+	s := resolveTLSSettings()
+	flagPkg.TLSCert, flagPkg.TLSKey, flagPkg.TLSCA = s.CertFile, s.KeyFile, s.CAFile
+	summary, err := forgejo.ConfigureTLS(s, flagPkg.URL)
+	if err != nil {
+		log.Fatal("Invalid TLS configuration", log.ErrorField(err))
+		return
+	}
+	if summary == nil {
+		return
+	}
+	fields := []zap.Field{
+		log.BoolField("client_cert_configured", summary.ClientCert),
+		log.BoolField("ca_configured", summary.CA),
+	}
+	if summary.ClientCert {
+		fields = append(fields, log.StringField("client_cert_not_after", summary.NotAfter.UTC().Format(time.RFC3339)))
+	}
+	log.Info("TLS configuration for Forgejo loaded", fields...)
+	log.Debug("TLS configuration files",
+		log.StringField("tls_cert", s.CertFile),
+		log.StringField("tls_key", s.KeyFile),
+		log.StringField("tls_ca", s.CAFile),
+	)
 }
 
 func validateURL(urlStr string) error {

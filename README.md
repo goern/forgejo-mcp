@@ -663,12 +663,48 @@ You can configure the server using command-line arguments or environment variabl
 | `--forgejo-jwt-published-key-files` | `FORGEJO_MCP_FORGEJO_JWT_PUBLISHED_KEY_FILES` | `resource-server` mode: comma-separated PEM keys published next to the signing key, for key rotation |
 | `--cli` | - | Enter CLI mode for direct tool invocation |
 | `--user-agent` | `FORGEJO_USER_AGENT` | HTTP User-Agent header (default: `forgejo-mcp/<version>`) |
+| `--tls-cert` | `FORGEJO_TLS_CERT` | PEM client certificate presented to Forgejo, for an instance behind mutual TLS; needs `--tls-key`. See [Connecting to Forgejo behind mutual TLS](#connecting-to-forgejo-behind-mutual-tls) |
+| `--tls-key` | `FORGEJO_TLS_KEY` | PEM private key of `--tls-cert` |
+| `--tls-ca` | `FORGEJO_TLS_CA` | PEM CA bundle trusted for Forgejo's server certificate. It **replaces** the system roots |
 | - | `FORGEJO_MCP_ALLOW_FILE_PATH_UPLOAD` | Allow `file_path` attachment uploads to read the host filesystem (`1`/`true`/`yes`/`on`; off by default) |
 | - | `FORGEJO_MCP_UPLOAD_ROOT` | Confine `file_path` uploads to this directory (default: anywhere the process can read) |
 
 Command-line arguments take priority over environment variables.
 
 The `resource-server` settings are refused in `passthrough` mode, so a configuration that sets them but forgets `--auth-mode resource-server` does not start.
+
+### Connecting to Forgejo behind mutual TLS
+
+If the TLS terminator in front of your Forgejo instance demands a client
+certificate, give forgejo-mcp one. If Forgejo's certificate comes from a
+private CA, give it that CA:
+
+```bash
+forgejo-mcp -t stdio -url https://git.example.com \
+  -tls-cert ~/.config/mtls/client.crt.pem \
+  -tls-key  ~/.config/mtls/client.key.pem \
+  -tls-ca   ~/.config/mtls/internal-ca.crt.pem
+```
+
+`--tls-ca` also works on its own, without a client certificate. Every connection
+to Forgejo uses these settings: tool calls with the caller's token or the
+operator token, the tools that use Forgejo's REST API directly, and the version
+check at startup. In `--cli` mode, set the `FORGEJO_TLS_*` variables.
+
+- **The CA replaces the system roots.** With `--tls-ca` set, a server
+  certificate from any other CA is refused, including public ones. If you need
+  several CAs, concatenate them into one bundle.
+- **Fail closed.** The server does not start in these cases:
+  - a certificate is given without its key, or a key without its certificate;
+  - a file cannot be read, or the certificate and key do not match;
+  - the CA file holds no certificate;
+  - the URL is `http://`;
+  - the client certificate has already expired.
+
+  It never falls back to a connection without the TLS settings you gave. There
+  is no option to skip server certificate verification.
+- **Renewal needs a restart.** The files are read once at startup. The startup
+  log records when the client certificate expires (`client_cert_not_after`).
 
 ### Uploading attachments from the host filesystem
 
