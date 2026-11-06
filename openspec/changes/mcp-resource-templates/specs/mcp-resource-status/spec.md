@@ -24,6 +24,16 @@ The server SHALL register a resource template with URI `forgejo://repo/{owner}/{
 - **THEN** the JSON `statuses` array SHALL contain exactly 30 entries
 - **AND** the response SHALL include a sentinel that names the `get_commit_statuses` tool and includes the total count `M`
 
+#### Scenario: Superseded statuses are not counted
+- **WHEN** a context has reported `pending` and later `success` on the sha
+- **THEN** the system SHALL read `/repos/{owner}/{repo}/commits/{sha}/status`, not the `/statuses` history
+- **AND** the JSON `statuses` array SHALL contain one entry for that context
+- **AND** the JSON `state` field SHALL NOT be derived from the superseded `pending`
+
+#### Scenario: Truncated all-green read does not claim success
+- **WHEN** a client reads a status URI for a sha with `M > 30` status contexts and every fetched context is `success`
+- **THEN** the JSON `state` field SHALL equal `"unknown"`
+
 #### Scenario: Commit with no statuses returns unknown aggregate
 - **WHEN** a client reads a status URI for a sha that has never been reported on
 - **THEN** the JSON `state` field SHALL equal `"unknown"`
