@@ -4,7 +4,7 @@ This guide covers building, developing, and contributing to the Forgejo MCP Serv
 
 ## Prerequisites
 
-- Go 1.24 or later
+- Go 1.26 or later (the `go` directive in `go.mod` is the source of truth)
 - make (optional, for convenience commands)
 
 ## Building
