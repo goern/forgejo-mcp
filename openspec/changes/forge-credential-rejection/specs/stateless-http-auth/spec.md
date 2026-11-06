@@ -36,32 +36,32 @@ When Forgejo answers `401` to a request that carried a credential, no tool resul
 
 ### Requirement: A rejected per-request credential has a dedicated JSON-RPC error code
 
-In `passthrough` mode on `http` and `sse`, a tool call or resource read during which Forgejo answered `401` to the caller's per-request credential SHALL fail with JSON-RPC error code `-32001` and the message `Forgejo rejected the access token`, whatever error the handler itself returned. Every other failure SHALL keep its current code.
+In `passthrough` mode on `http` and `sse`, a tool call or resource read during which Forgejo answered `401` to the caller's per-request credential SHALL fail with JSON-RPC error code `-32004` and the message `Forgejo rejected the access token`, whatever error the handler itself returned. Every other failure SHALL keep its current code.
 
-#### Scenario: A revoked token fails with -32001
+#### Scenario: A revoked token fails with -32004
 
 - **WHEN** a `tools/call` request carries `Authorization: token T` and Forgejo answers `401` to `T`
-- **THEN** the JSON-RPC response SHALL be an error with code `-32001`
+- **THEN** the JSON-RPC response SHALL be an error with code `-32004`
 - **AND** its message SHALL be `Forgejo rejected the access token`
 
-#### Scenario: A resource read with a revoked token fails with -32001
+#### Scenario: A resource read with a revoked token fails with -32004
 
 - **WHEN** a `resources/read` request carries a credential that Forgejo answers with `401`
-- **THEN** the JSON-RPC response SHALL be an error with code `-32001`
+- **THEN** the JSON-RPC response SHALL be an error with code `-32004`
 
 #### Scenario: Insufficient scope is not a rejection
 
 - **WHEN** Forgejo answers `403` to a call made with the per-request credential
-- **THEN** the call SHALL fail as it does today, with a code other than `-32001`
+- **THEN** the call SHALL fail as it does today, with a code other than `-32004`
 
 #### Scenario: The SSE transport reports the code
 
 - **WHEN** the server runs on `sse` in `passthrough` mode and Forgejo answers `401` to the caller's credential during a tool call
-- **THEN** the result delivered on the event stream SHALL be an error with code `-32001`
+- **THEN** the result delivered on the event stream SHALL be an error with code `-32004`
 
 ### Requirement: passthrough on http answers a rejected credential with 401
 
-In `passthrough` mode on `http`, when a request's response is a JSON-RPC error with code `-32001` and its HTTP status has not yet been sent, the server SHALL send status `401` with `WWW-Authenticate: Bearer error="invalid_token"` instead of `200`, keeping the JSON-RPC body. This SHALL NOT add a request to Forgejo or validate any credential at the door.
+In `passthrough` mode on `http`, when a request's response is a JSON-RPC error with code `-32004` and its HTTP status has not yet been sent, the server SHALL send status `401` with `WWW-Authenticate: Bearer error="invalid_token"` instead of `200`, keeping the JSON-RPC body. This SHALL NOT add a request to Forgejo or validate any credential at the door.
 
 #### Scenario: A revoked token yields 401 with a challenge
 
@@ -69,7 +69,7 @@ In `passthrough` mode on `http`, when a request's response is a JSON-RPC error w
 - **AND** a `tools/call` request carries a token that Forgejo answers with `401`
 - **THEN** the HTTP response SHALL have status `401`
 - **AND** it SHALL carry `WWW-Authenticate: Bearer error="invalid_token"`
-- **AND** its body SHALL be the JSON-RPC error with code `-32001`
+- **AND** its body SHALL be the JSON-RPC error with code `-32004`
 
 #### Scenario: A request that never reaches Forgejo is not challenged
 
@@ -81,7 +81,7 @@ In `passthrough` mode on `http`, when a request's response is a JSON-RPC error w
 - **WHEN** the server has already sent the status of a response, because it streams that response
 - **AND** Forgejo then answers `401` to the caller's credential
 - **THEN** the status SHALL be unchanged
-- **AND** the call's result SHALL be the JSON-RPC error with code `-32001`
+- **AND** the call's result SHALL be the JSON-RPC error with code `-32004`
 
 #### Scenario: stdio is unchanged
 

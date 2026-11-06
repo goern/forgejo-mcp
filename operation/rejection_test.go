@@ -191,7 +191,7 @@ func passthroughSession(t *testing.T, token string) *mcpSession {
 
 func callTool(name string) string { return fmt.Sprintf(`{"name":%q,"arguments":{}}`, name) }
 
-// Spec stateless-http-auth, scenarios "A revoked token fails with -32001" and
+// Spec stateless-http-auth, scenarios "A revoked token fails with -32004" and
 // "A revoked token yields 401 with a challenge".
 func TestARevokedTokenYields401WithAChallenge(t *testing.T) {
 	c := passthroughSession(t, rejectedToken)
@@ -205,7 +205,7 @@ func TestARevokedTokenYields401WithAChallenge(t *testing.T) {
 		t.Fatalf("WWW-Authenticate = %q", got)
 	}
 	if reply.Error == nil || reply.Error.Code != credentialRejectedCode || reply.Error.Message != forgejo.RejectedCredentialMessage {
-		t.Fatalf("reply error = %+v, want -32001 with the fixed message", reply.Error)
+		t.Fatalf("reply error = %+v, want -32004 with the fixed message", reply.Error)
 	}
 	for _, e := range logs.All() {
 		if line := e.Message + fmt.Sprint(e.ContextMap()); strings.Contains(line, rejectedToken) {
@@ -223,7 +223,7 @@ func TestARevokedTokenIsRecognisedAfterTheVersionIsKnown(t *testing.T) {
 
 	resp, reply := c.post(t, 2, "tools/call", callTool("whoami"))
 	if resp.StatusCode != http.StatusUnauthorized || reply.Error == nil || reply.Error.Code != credentialRejectedCode {
-		t.Fatalf("status %d, error %+v; want 401 and -32001", resp.StatusCode, reply.Error)
+		t.Fatalf("status %d, error %+v; want 401 and -32004", resp.StatusCode, reply.Error)
 	}
 }
 
@@ -234,18 +234,18 @@ func TestASwallowedRejectionStillFails(t *testing.T) {
 
 	resp, reply := c.post(t, 2, "tools/call", callTool("swallow"))
 	if resp.StatusCode != http.StatusUnauthorized || reply.Error == nil || reply.Error.Code != credentialRejectedCode {
-		t.Fatalf("status %d, error %+v; want 401 and -32001", resp.StatusCode, reply.Error)
+		t.Fatalf("status %d, error %+v; want 401 and -32004", resp.StatusCode, reply.Error)
 	}
 }
 
 // Spec stateless-http-auth, scenario "A resource read with a revoked token
-// fails with -32001".
+// fails with -32004".
 func TestAResourceReadWithARevokedTokenFails(t *testing.T) {
 	c := passthroughSession(t, rejectedToken)
 
 	resp, reply := c.post(t, 2, "resources/read", `{"uri":"test-probe://probe/x"}`)
 	if resp.StatusCode != http.StatusUnauthorized || reply.Error == nil || reply.Error.Code != credentialRejectedCode {
-		t.Fatalf("status %d, error %+v; want 401 and -32001", resp.StatusCode, reply.Error)
+		t.Fatalf("status %d, error %+v; want 401 and -32004", resp.StatusCode, reply.Error)
 	}
 }
 
@@ -296,7 +296,7 @@ func TestAResponseAlreadyBeingStreamedKeepsItsStatus(t *testing.T) {
 		t.Fatalf("status = %d, want the 200 already sent", resp.StatusCode)
 	}
 	if reply.Error == nil || reply.Error.Code != credentialRejectedCode {
-		t.Fatalf("reply error = %+v, want -32001", reply.Error)
+		t.Fatalf("reply error = %+v, want -32004", reply.Error)
 	}
 }
 
@@ -352,7 +352,7 @@ func TestTheSSETransportReportsTheCode(t *testing.T) {
 			continue
 		}
 		if reply.Error == nil || reply.Error.Code != credentialRejectedCode {
-			t.Fatalf("reply error = %+v, want -32001", reply.Error)
+			t.Fatalf("reply error = %+v, want -32004", reply.Error)
 		}
 		return
 	}
@@ -382,7 +382,7 @@ func TestStdioIsUnchanged(t *testing.T) {
 	var decoded rpcReply
 	_ = json.Unmarshal(raw, &decoded)
 	if decoded.Error == nil || decoded.Error.Code == credentialRejectedCode {
-		t.Fatalf("reply error = %+v, want an ordinary error without -32001", decoded.Error)
+		t.Fatalf("reply error = %+v, want an ordinary error without -32004", decoded.Error)
 	}
 	if !strings.Contains(decoded.Error.Message, forgejo.RejectedCredentialMessage) {
 		t.Fatalf("reply error = %q, want the fixed message", decoded.Error.Message)
@@ -559,5 +559,35 @@ func TestAListenStreamWorksThroughTheRejectionWriter(t *testing.T) {
 	case <-arrived:
 	case <-time.After(5 * time.Second):
 		t.Fatal("no list_changed notification arrived on the listen stream")
+	}
+}
+
+// A Rejection is shared by everything one HTTP request serves. That is one
+// call only because the streamable transport refuses JSON-RPC batches: if
+// mcp-go starts accepting them, one refused call would fail its siblings
+// too, and this test is the reminder to revisit rejectionToolMiddleware.
+func TestABatchIsRefusedSoARejectionCoversOneCall(t *testing.T) {
+	c := passthroughSession(t, rejectedToken)
+	body := `[{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"whoami"}},` +
+		`{"jsonrpc":"2.0","id":3,"method":"tools/list","params":{}}]`
+	req, err := http.NewRequest(http.MethodPost, c.url, strings.NewReader(body))
+	if err != nil {
+		t.Fatalf("build request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json, text/event-stream")
+	req.Header.Set("Authorization", c.authorization)
+	req.Header.Set("Mcp-Session-Id", c.sessionID)
+	resp, err := (&http.Client{Timeout: 10 * time.Second}).Do(req)
+	if err != nil {
+		t.Fatalf("post batch: %v", err)
+	}
+	defer resp.Body.Close()
+	var reply rpcReply
+	if err := json.NewDecoder(resp.Body).Decode(&reply); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.StatusCode != http.StatusBadRequest || reply.Error == nil || reply.Error.Code != mcp.PARSE_ERROR {
+		t.Fatalf("status %d, error %+v; want 400 and a parse error, i.e. no batch support", resp.StatusCode, reply.Error)
 	}
 }

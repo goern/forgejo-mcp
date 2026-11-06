@@ -52,7 +52,7 @@ For the request context to reach the `RoundTripper`, the ephemeral SDK client is
 
 An HTTP middleware in front of the MCP endpoint puts a fresh marker (a small struct holding an atomic flag and the auth mode) into the request context before the transport sees the request. `requestTokenContextFunc` already receives the `*http.Request`, so it copies the marker into the context the handlers get. The SSE transport gets the same marker per posted message.
 
-Only calls that use a **per-request** credential carry a marker: the caller's token in `passthrough`, or the minted JWT in `resource-server` mode. The operator token never marks anything, so a stdio or fallback call can never produce `-32001` or a `401`.
+Only calls that use a **per-request** credential carry a marker: the caller's token in `passthrough`, or the minted JWT in `resource-server` mode. The operator token never marks anything, so a stdio or fallback call can never produce `-32004` or a `401`.
 
 *Alternative:* return a typed error from the `RoundTripper` and let it propagate. Rejected: handlers flatten errors with `%v`, so the type would not survive.
 
@@ -60,16 +60,16 @@ Only calls that use a **per-request** credential carry a marker: the caller's to
 
 A tool handler middleware and a resource handler middleware run after the handler. If the marker is set, they discard whatever the handler returned (error or result) and return:
 
-- in `passthrough`: `server.NewHandlerError` with code `-32001` and message `Forgejo rejected the access token`;
+- in `passthrough`: `server.NewHandlerError` with code `-32004` and message `Forgejo rejected the access token`;
 - in `resource-server`: a plain error with the fixed server-side message (so mcp-go reports `-32603`), plus a warning-level log line naming the tool. No JWT is logged, since the body was already replaced.
 
 Discarding a successful result is deliberate. A handler that treats a `401` as "nothing found" (as `DoJSONList` does for `404`) must not turn a revoked credential into an empty answer.
 
-`-32001` follows the server-defined range (`-32000` to `-32099`) and lines up with `-32002` (403) and `-32003` (404) that `operation/resource` already uses.
+`-32004` comes from the implementation-defined range `-32000` to `-32019` (`-32020` to `-32099` is reserved for the MCP specification). It avoids every code an MCP SDK already gives a meaning: `-32000` (connection closed) and `-32001` (request timeout) in the TypeScript and Python SDKs, `-32002` (resource not found) in mcp-go, and `-32003`, which `operation/resource` uses for a `404`. An earlier draft used `-32001`; review pointed out that a client mapping codes would read it as a timeout.
 
-### D4. A `ResponseWriter` wrapper turns `-32001` into a `401` on `http`
+### D4. A `ResponseWriter` wrapper turns `-32004` into a `401` on `http`
 
-The same HTTP middleware wraps the `ResponseWriter`. When the transport calls `WriteHeader(200)` and the marker is set in `passthrough` mode, the wrapper writes `401` with `WWW-Authenticate: Bearer error="invalid_token"` instead. The JSON-RPC body passes through unchanged. If the status was already sent (an upgraded event stream), nothing changes and the client sees `-32001` in the stream.
+The same HTTP middleware wraps the `ResponseWriter`. When the transport calls `WriteHeader(200)` and the marker is set in `passthrough` mode, the wrapper writes `401` with `WWW-Authenticate: Bearer error="invalid_token"` instead. The JSON-RPC body passes through unchanged. If the status was already sent (an upgraded event stream), nothing changes and the client sees `-32004` in the stream.
 
 The wrapper MUST keep `http.Flusher` (and expose `Unwrap` for `http.ResponseController`). Hiding it would make mcp-go refuse `subscriptions/listen` and silently stop upgrading responses to event streams.
 
@@ -85,7 +85,7 @@ D3 and D4 branch on the marker's auth mode. In `resource-server` mode, the inbou
 
 - **[A `401` that is not about the credential]** Forgejo answers `401` only for authentication. A reverse proxy in front of Forgejo might send its own `401`. → It is still a refusal of this request's credential from the client's point of view, and the fixed message stays accurate enough. Proxy setups that need a different credential are out of scope.
 - **[A call that hits Forgejo several times]** Some tools make more than one request. Once one `401` marks the call, the call fails as a whole. → That is the intended outcome: the credential is the same for every request in the call.
-- **[A JSON-RPC batch]** One HTTP request can carry several calls (older protocol versions). If any of them marks the shared marker, the whole response gets `401`. → They all carry the same credential, and the client has to re-authorize either way.
+- **[A JSON-RPC batch]** The marker belongs to the HTTP request, not to the call. In a batch, one refused call would fail its siblings too, including one that never reached Forgejo. → mcp-go's streamable transport refuses batches (`400`, `-32700`), so one request carries one call. A test pins that, so a future mcp-go that accepts batches fails it and this decision is revisited.
 - **[The wrapper hides streaming capability]** → D4 requires `Flusher` and `Unwrap`, and a test asserts that `subscriptions/listen` still streams through the wrapper.
 - **[Forgejo's diagnostic detail is lost]** The original rejection text (malformed token, unknown token, task token) is no longer visible. → It is not safe to show, since it is the credential itself. The status and the fixed message suffice for every client action. Operators debugging Forgejo-side configuration still have Forgejo's own logs.
 

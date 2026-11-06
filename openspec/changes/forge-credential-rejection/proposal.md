@@ -16,7 +16,7 @@ Two things go wrong:
 - **Detect the rejection where it happens, not by error text.** A Forgejo `401` to a request that carried the caller's per-request credential is recognised at the HTTP transport level. That covers every path to Forgejo: SDK calls, the SDK's version probe in `NewClient`, and the raw helpers.
 - **Replace Forgejo's rejection body with a fixed message** before anything reads it. No error string, log line or JSON-RPC response can then carry the echoed credential, whichever code path produced it.
 - **`passthrough` on `http`:** a tool call or resource read whose credential Forgejo rejected is answered with **HTTP `401`** and `WWW-Authenticate: Bearer error="invalid_token"`, still carrying the JSON-RPC error body.
-- **Dedicated JSON-RPC error code `-32001`** ("Forgejo rejected the access token") for such calls, in every transport. It is the only signal where the HTTP status can no longer change: the `sse` transport, and a response the server has already started streaming. It lines up with the codes resources already use for `403` (`-32002`) and `404` (`-32003`).
+- **Dedicated JSON-RPC error code `-32004`** ("Forgejo rejected the access token") for such calls, in every transport. It is the only signal where the HTTP status can no longer change: the `sse` transport, and a response the server has already started streaming. It is chosen from the implementation-defined range so that it collides with no code an MCP SDK already uses (`-32001` is the TypeScript and Python SDKs' request timeout).
 - **`resource-server` mode:** when Forgejo rejects the JWT this server minted, the answer is **not** a `401`. The caller's sign-in is valid; the cause is server-side (for example a removed Authorized Integration or a key mismatch), and a challenge would send the client into a re-authorization loop that cannot succeed. The call fails with a fixed message naming that cause, and the operator gets a log line.
 - **Unchanged:** `stdio`, any call made with the operator's own token, the door check, and the `401` that `resource-server` mode already returns for an invalid inbound token.
 
@@ -28,12 +28,12 @@ None.
 
 ### Modified Capabilities
 
-- `stateless-http-auth`: adds how a forge-side rejection of the per-request credential is reported (`401` + challenge in `passthrough` on `http`, `-32001` everywhere, fixed message), and extends the existing "does not log the token" guarantee from ephemeral construction to every Forgejo response that rejects a per-request credential.
+- `stateless-http-auth`: adds how a forge-side rejection of the per-request credential is reported (`401` + challenge in `passthrough` on `http`, `-32004` everywhere, fixed message), and extends the existing "does not log the token" guarantee from ephemeral construction to every Forgejo response that rejects a per-request credential.
 - `forgejo-jwt-issuer`: adds how a forge-side rejection of the minted JWT is reported in `resource-server` mode (no challenge, fixed server-side message, operator log line).
 
 ## Impact
 
 - **Code:** `pkg/forgejo` (a rejection-observing `http.RoundTripper` for the ephemeral SDK client and the raw-HTTP client, and a per-request rejection marker carried in the context); `operation/operation.go` (the marker enters the context in `requestTokenContextFunc`, a tool and resource handler middleware maps a marked call to the dedicated error, and a `ResponseWriter` wrapper around the streamable-HTTP handler turns it into a `401`).
 - **Builds on #683.** Its redaction stays as a second line of defence. If #683 has not merged when this is implemented, its commit is carried here with authorship kept.
-- **Client-visible:** in `passthrough` mode on `http`, a rejected credential now yields `401` instead of `200`. Clients that already handle a `401` (all OAuth-capable MCP clients) re-authorize; others see the same failed call with a clearer message. Proxies can match `-32001` instead of error text.
+- **Client-visible:** in `passthrough` mode on `http`, a rejected credential now yields `401` instead of `200`. Clients that already handle a `401` (all OAuth-capable MCP clients) re-authorize; others see the same failed call with a clearer message. Proxies can match `-32004` instead of error text.
 - **No new flags, no door check, no extra Forgejo request.** Related: #701, #683, #588, #710, #582 / #584.

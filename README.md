@@ -217,13 +217,13 @@ before. Nothing about `stdio` changes.
 
 The server does not check a token when it arrives; Forgejo does, on the first call
 that reaches it. When Forgejo rejects the token (unknown, revoked or expired), the
-call fails with JSON-RPC error code `-32001` and the message `Forgejo rejected the
+call fails with JSON-RPC error code `-32004` and the message `Forgejo rejected the
 access token`. On `http` the response also carries status `401` and
 `WWW-Authenticate: Bearer error="invalid_token"`, which is what makes an OAuth MCP
 client refresh or re-authorize instead of reporting a tool error. On `sse`, and on
 an `http` response that is already streaming, only the error code tells. A call
 that never reaches Forgejo, such as `tools/list`, is answered normally. A token that
-lacks a scope gets an ordinary error, not `-32001`.
+lacks a scope gets an ordinary error, not `-32004`.
 
 Forgejo repeats a rejected token in its error message. The server replaces that
 message before anything reads it, so the token never appears in a response or in

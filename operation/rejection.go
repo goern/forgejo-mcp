@@ -14,9 +14,12 @@ import (
 )
 
 // credentialRejectedCode is the JSON-RPC error code of a call during which
-// Forgejo refused the caller's own credential. It sits in the server-defined
-// range next to the -32002 (403) and -32003 (404) that resource errors use.
-const credentialRejectedCode = -32001
+// Forgejo refused the caller's own credential. It is taken from the
+// implementation-defined range -32000..-32019 and avoids the codes MCP SDKs
+// already give a meaning: -32000 (connection closed) and -32001 (request
+// timeout) in the TypeScript and Python SDKs, -32002 (resource not found) in
+// mcp-go, and -32003, which operation/resource uses for a 404.
+const credentialRejectedCode = -32004
 
 // mintedCredentialRejectedMessage is what a caller sees in resource-server mode
 // when Forgejo refuses the JWT this server minted. The caller's sign-in is
@@ -59,6 +62,12 @@ func rejectionOutcome(ctx context.Context, what string) error {
 
 // rejectionToolMiddleware maps a tool call whose credential Forgejo refused to
 // the rejection outcome.
+//
+// The Rejection it reads belongs to the HTTP request, not to the call. The two
+// coincide because the streamable transport refuses JSON-RPC batches, so one
+// request carries one call; TestABatchIsRefusedSoARejectionCoversOneCall
+// guards that. With batches, one refused call would fail its siblings too,
+// including one that never reached Forgejo.
 func rejectionToolMiddleware(next server.ToolHandlerFunc) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		result, err := next(ctx, request)
