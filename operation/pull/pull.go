@@ -3,6 +3,7 @@ package pull
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strconv"
 
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation/params"
@@ -28,6 +29,8 @@ const (
 	MergePullRequestToolName       = "merge_pull_request"
 	ListPullRequestFilesToolName   = "list_pull_request_files"
 	GetPullRequestDiffToolName     = "get_pull_request_diff"
+
+	mergeStyles = "merge, rebase, rebase-merge, squash"
 )
 
 var (
@@ -128,7 +131,7 @@ var (
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithNumber("index", mcp.Required(), mcp.Description(params.PRIndex)),
-		mcp.WithString("style", mcp.Required(), mcp.Description("Merge style (merge, rebase, rebase-merge, squash)")),
+		mcp.WithString("style", mcp.Required(), mcp.Description("Merge style ("+mergeStyles+")")),
 		mcp.WithString("title", mcp.Description("Merge commit title")),
 		mcp.WithString("message", mcp.Description("Merge commit message")),
 		mcp.WithBoolean("delete_branch_after_merge", mcp.Description("Delete head branch after merge")),
@@ -340,6 +343,9 @@ func MergePullRequestFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 	repo, _ := req.GetArguments()["repo"].(string)
 	index, _ := to.Float64(req.GetArguments()["index"])
 	style, _ := req.GetArguments()["style"].(string)
+	if style == "" {
+		return to.ErrorResult(missingMergeStyleError(req.GetArguments()))
+	}
 	title, _ := req.GetArguments()["title"].(string)
 	message, _ := req.GetArguments()["message"].(string)
 	deleteBranch, _ := req.GetArguments()["delete_branch_after_merge"].(bool)
@@ -360,20 +366,12 @@ func MergePullRequestFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 		opt.Message = message
 	}
 
-	client, err := forgejo.Client(ctx)
-	if err != nil {
-		return to.ErrorResult(err)
-	}
-	merged, resp, err := client.MergePullRequest(owner, repo, int64(index), opt)
-	if err != nil {
+	// Not client.MergePullRequest: the SDK reports a 4xx as (false, resp, nil)
+	// and closes the body, so Forgejo's reason never reaches the caller. It
+	// also made a refused merge_when_checks_succeed look scheduled.
+	path := forgejo.APIPath("repos", owner, repo, "pulls", int64(index), "merge")
+	if err := forgejo.DoJSON(ctx, http.MethodPost, path, opt, nil); err != nil {
 		return to.ErrorResult(fmt.Errorf("merge pull request err: %w", err))
-	}
-	if !merged && !mergeWhenChecks {
-		statusCode := 0
-		if resp != nil {
-			statusCode = resp.StatusCode
-		}
-		return to.ErrorResult(fmt.Errorf("merge pull request: server returned HTTP %d (expected 200)", statusCode))
 	}
 
 	result := "Pull request merged successfully"
@@ -383,6 +381,16 @@ func MergePullRequestFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.Call
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{mcp.NewTextContent(result)},
 	}, nil
+}
+
+// missingMergeStyleError is checked locally because mcp-go does not enforce
+// required parameters: an absent style would reach Forgejo as an empty "Do"
+// and come back as a 422. merge_style is the misspelling agents actually send.
+func missingMergeStyleError(args map[string]any) error {
+	if _, ok := args["merge_style"]; ok {
+		return fmt.Errorf("merge pull request: unknown parameter merge_style, use style (%s)", mergeStyles)
+	}
+	return fmt.Errorf("merge pull request: style is required (%s)", mergeStyles)
 }
 
 func ListPullRequestFilesFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
