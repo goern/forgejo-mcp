@@ -60,8 +60,13 @@ func (e *HTTPError) Unwrap() error { return e.wrapped }
 
 // rawHTTPClient is package-level so tests can swap timeouts; a single
 // shared client lets keep-alives work across tool calls. Its transport
-// replaces the body of a Forgejo 401, see rejection.go.
-var rawHTTPClient = &http.Client{Timeout: 60 * time.Second, Transport: &rejectionTransport{}}
+// replaces the body of a Forgejo 401, see rejection.go, and its redirect
+// policy keeps a write from degrading to a read, see redirect.go.
+var rawHTTPClient = &http.Client{
+	Timeout:       60 * time.Second,
+	Transport:     &rejectionTransport{},
+	CheckRedirect: checkRedirect,
+}
 
 // userAgent returns the configured UA, falling back to forgejo-mcp/<version>.
 func userAgent() string {

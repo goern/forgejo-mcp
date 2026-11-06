@@ -169,11 +169,21 @@ func ForkRepoFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResu
 	if err != nil {
 		return to.ErrorResult(err)
 	}
-	_, _, err = client.CreateFork(user, repo, opt)
+	fork, resp, err := client.CreateFork(user, repo, opt)
 	if err != nil {
-		return to.ErrorResult(fmt.Errorf("fork repository error %w", err))
+		return to.ErrorResult(forkError(resp, err))
 	}
-	return to.TextResult("Fork success")
+	return to.TextResult(fork)
+}
+
+// forkError adds the status and URL of the response to err. resp is nil when
+// no response was received; err then names the URL itself.
+func forkError(resp *forgejo_sdk.Response, err error) error {
+	if resp == nil || resp.Response == nil {
+		return fmt.Errorf("fork repository: %w", err)
+	}
+	return fmt.Errorf("fork repository: %s %s: %s: %w",
+		resp.Request.Method, resp.Request.URL.Redacted(), resp.Status, err)
 }
 
 func ListMyReposFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
