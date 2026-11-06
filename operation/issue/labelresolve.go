@@ -4,6 +4,7 @@ package issue
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"sort"
@@ -22,10 +23,16 @@ const (
 
 	// maxLabelCatalogPages caps the enumeration per scope. A server that
 	// ignores paging would otherwise spin forever; the cap turns that into a
-	// message, and numeric ids still work without a catalogue. Sized for
-	// 2000 labels at the default server cap of 50 rows per page.
+	// message, and numeric ids still resolve, one direct read each (see
+	// resolveLabelWithoutCatalog). Sized for 2000 labels at the default server
+	// cap of 50 rows per page.
 	maxLabelCatalogPages = 40
 )
+
+// errLabelCatalogTooLarge marks a catalogue abandoned at maxLabelCatalogPages.
+// Its text is the advice the caller sees, so resolveIssueLabelIDs must keep
+// that advice true by resolving numeric tokens without the catalogue.
+var errLabelCatalogTooLarge = errors.New("pass numeric label IDs instead of names")
 
 // labelsArgDescription keeps the four label arguments telling the same story:
 // what they accept, and that a name they cannot resolve stops the call instead
@@ -74,8 +81,8 @@ func listAssignableLabels(ctx context.Context, owner, repo string) ([]ScopedLabe
 	for page := 1; ; page++ {
 		if page > maxLabelCatalogPages {
 			return nil, fmt.Errorf(
-				"%s/%s has more than %d pages of labels; pass numeric label IDs instead of names",
-				owner, repo, maxLabelCatalogPages,
+				"%s/%s has more than %d pages of labels; %w",
+				owner, repo, maxLabelCatalogPages, errLabelCatalogTooLarge,
 			)
 		}
 		repoLabels, rh, lerr := fetchRepoLabels(ctx, owner, repo, page, labelCatalogPageSize)
@@ -95,8 +102,8 @@ func listAssignableLabels(ctx context.Context, owner, repo string) ([]ScopedLabe
 	for page := 1; ; page++ {
 		if page > maxLabelCatalogPages {
 			return nil, fmt.Errorf(
-				"organization %s has more than %d pages of labels; pass numeric label IDs instead of names",
-				owner, maxLabelCatalogPages,
+				"organization %s has more than %d pages of labels; %w",
+				owner, maxLabelCatalogPages, errLabelCatalogTooLarge,
 			)
 		}
 		orgLabels, oh, oerr := fetchOrgLabels(ctx, owner, page, labelCatalogPageSize)
@@ -127,6 +134,9 @@ func listAssignableLabels(ctx context.Context, owner, repo string) ([]ScopedLabe
 // literally named "123" stays reachable through an argument documented to take
 // names. An ID is honoured only when the catalogue has it, which turns a stale
 // ID into the same clear error as a stale name.
+//
+// A catalogue too large to enumerate is the one exception: names then fail, and
+// numeric tokens are checked one by one by resolveLabelWithoutCatalog.
 func resolveIssueLabelIDs(ctx context.Context, owner, repo, csv string) ([]int64, error) {
 	tokens := splitCSV(csv)
 	if len(tokens) == 0 {
@@ -134,6 +144,11 @@ func resolveIssueLabelIDs(ctx context.Context, owner, repo, csv string) ([]int64
 	}
 
 	catalog, err := listAssignableLabels(ctx, owner, repo)
+	if errors.Is(err, errLabelCatalogTooLarge) {
+		return collectLabelIDs(tokens, func(token string) (int64, error) {
+			return resolveLabelWithoutCatalog(ctx, owner, repo, token, err)
+		})
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -145,12 +160,20 @@ func resolveIssueLabelIDs(ctx context.Context, owner, repo, csv string) ([]int64
 		byID[l.ID] = l
 	}
 
+	return collectLabelIDs(tokens, func(token string) (int64, error) {
+		return resolveOneLabel(token, byName, byID)
+	})
+}
+
+// collectLabelIDs resolves every token before returning, so one bad token fails
+// the whole call ahead of any write, and collapses tokens naming the same label.
+func collectLabelIDs(tokens []string, resolve func(string) (int64, error)) ([]int64, error) {
 	ids := make([]int64, 0, len(tokens))
 	seen := make(map[int64]bool, len(tokens))
 	for _, token := range tokens {
-		id, rerr := resolveOneLabel(token, byName, byID)
-		if rerr != nil {
-			return nil, rerr
+		id, err := resolve(token)
+		if err != nil {
+			return nil, err
 		}
 		if seen[id] {
 			continue
@@ -178,14 +201,51 @@ func resolveOneLabel(token string, byName map[string][]ScopedLabel, byID map[int
 		if _, ok := byID[id]; ok {
 			return id, nil
 		}
-		return 0, fmt.Errorf(
-			"label %q is neither a label name nor the ID of a label on this issue's repository or organization; list_repo_labels shows what exists",
-			token,
-		)
+		return 0, labelNotInScopeError(token)
 	}
 
 	return 0, fmt.Errorf(
 		"unknown label %q: no repository or organization label has that name; list_repo_labels shows what exists, create_repo_label adds one",
+		token,
+	)
+}
+
+// resolveLabelWithoutCatalog resolves one token when the catalogue could not be
+// enumerated. A partial catalogue cannot prove a name is unique, so a name stays
+// an error (catalogErr) and a numeric token is always read as an ID, even if a
+// label beyond the cap has that name. The ID is still checked against the
+// repository and then its organization, so a stale ID fails before any write.
+//
+// A 404 from the org endpoint also covers a user-owned repository. Any other
+// failure surfaces as itself rather than as "no such label".
+func resolveLabelWithoutCatalog(ctx context.Context, owner, repo, token string, catalogErr error) (int64, error) {
+	id, perr := strconv.ParseInt(token, 10, 64)
+	if perr != nil {
+		return 0, fmt.Errorf("cannot resolve label name %q: %w", token, catalogErr)
+	}
+
+	var label labelDTO
+	err := forgejo.DoJSON(ctx, http.MethodGet, forgejo.APIPath("repos", owner, repo, "labels", id), nil, &label)
+	if err == nil {
+		return id, nil
+	}
+	if !errors.Is(err, forgejo.ErrNotFound) {
+		return 0, fmt.Errorf("get repo label %d err: %w", id, err)
+	}
+
+	err = forgejo.DoJSON(ctx, http.MethodGet, forgejo.APIPath("orgs", owner, "labels", id), nil, &label)
+	if err == nil {
+		return id, nil
+	}
+	if !errors.Is(err, forgejo.ErrNotFound) {
+		return 0, fmt.Errorf("get org label %d err: %w", id, err)
+	}
+	return 0, labelNotInScopeError(token)
+}
+
+func labelNotInScopeError(token string) error {
+	return fmt.Errorf(
+		"label %q is neither a label name nor the ID of a label on this issue's repository or organization; list_repo_labels shows what exists",
 		token,
 	)
 }
