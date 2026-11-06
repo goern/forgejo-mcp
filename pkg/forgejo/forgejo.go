@@ -40,11 +40,16 @@ func Client(ctx context.Context) (*forgejo.Client, error) {
 			userAgent = "forgejo-mcp/" + flag.Version
 		}
 
+		// The request context reaches every SDK request, so a 401 to this
+		// credential marks the caller's Rejection (see rejection.go).
 		c, err := forgejo.NewClient(flag.URL, clientOptions(
+			forgejo.SetHTTPClient(sdkHTTPClient),
+			forgejo.SetContext(ctx),
 			forgejo.SetToken(token),
 			forgejo.SetUserAgent(userAgent),
 		)...)
 		if err != nil {
+			err = redactToken(err, token)
 			log.ErrorCtx(ctx, "Failed to create ephemeral Forgejo client",
 				log.SanitizedURLField("url", flag.URL),
 				log.ErrorField(err),
@@ -82,6 +87,7 @@ func Client(ctx context.Context) (*forgejo.Client, error) {
 	}
 
 	c, err := forgejo.NewClient(flag.URL, clientOptions(
+		forgejo.SetHTTPClient(sdkHTTPClient),
 		forgejo.SetToken(flag.Token),
 		forgejo.SetUserAgent(userAgent),
 	)...)

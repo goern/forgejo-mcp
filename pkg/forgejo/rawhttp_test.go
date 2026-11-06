@@ -139,7 +139,13 @@ func TestDoJSON_4xxErrorTypes(t *testing.T) {
 			if tc.want != nil && !errors.Is(err, tc.want) {
 				t.Fatalf("expected wrapped %v, got %v", tc.want, err)
 			}
-			if !strings.Contains(he.Body, "nope") {
+			// A 401 carries the fixed rejection message instead of Forgejo's,
+			// which would echo the credential (see rejection.go).
+			wantBody := "nope"
+			if tc.status == http.StatusUnauthorized {
+				wantBody = RejectedCredentialMessage
+			}
+			if !strings.Contains(he.Body, wantBody) {
 				t.Fatalf("body snippet missing payload: %q", he.Body)
 			}
 		})

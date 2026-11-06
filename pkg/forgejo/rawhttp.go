@@ -59,8 +59,9 @@ func (e *HTTPError) Error() string {
 func (e *HTTPError) Unwrap() error { return e.wrapped }
 
 // rawHTTPClient is package-level so tests can swap timeouts; a single
-// shared client lets keep-alives work across tool calls.
-var rawHTTPClient = &http.Client{Timeout: 60 * time.Second}
+// shared client lets keep-alives work across tool calls. Its transport
+// replaces the body of a Forgejo 401, see rejection.go.
+var rawHTTPClient = &http.Client{Timeout: 60 * time.Second, Transport: &rejectionTransport{}}
 
 // userAgent returns the configured UA, falling back to forgejo-mcp/<version>.
 func userAgent() string {
@@ -143,8 +144,10 @@ func readBodySnippet(r io.Reader) string {
 }
 
 // httpErrorFromResponse builds an HTTPError mapping status to a sentinel.
+// The request's token is redacted from the body, see redactToken.
 func httpErrorFromResponse(req *http.Request, resp *http.Response) *HTTPError {
-	body := readBodySnippet(resp.Body)
+	token, _ := strings.CutPrefix(req.Header.Get("Authorization"), "token ")
+	body := redactTokenString(readBodySnippet(resp.Body), token)
 	e := &HTTPError{
 		StatusCode: resp.StatusCode,
 		Status:     resp.Status,

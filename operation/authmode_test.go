@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/flag"
@@ -209,6 +210,9 @@ type fixture struct {
 	// forgejoRequests records "<path> <Authorization header>" for every request
 	// Forgejo received.
 	forgejoRequests []string
+	// rejectUser makes Forgejo answer /api/v1/user with 401, repeating the
+	// presented credential in the message as the real Forgejo does.
+	rejectUser atomic.Bool
 }
 
 func (f *fixture) requests() []string {
@@ -229,6 +233,12 @@ func newFixture(t *testing.T, forgejoVersion string, signingKey crypto.PrivateKe
 		case "/api/v1/version":
 			_ = json.NewEncoder(w).Encode(map[string]string{"version": forgejoVersion})
 		case "/api/v1/user":
+			if f.rejectUser.Load() {
+				token := strings.TrimPrefix(r.Header.Get("Authorization"), "token ")
+				w.WriteHeader(http.StatusUnauthorized)
+				_ = json.NewEncoder(w).Encode(map[string]string{"message": "access token does not exist [sha: " + token + "]"})
+				return
+			}
 			_ = json.NewEncoder(w).Encode(map[string]any{"id": 1, "login": "synapse"})
 		default:
 			http.NotFound(w, r)
