@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -427,5 +428,129 @@ func TestResolveIssueLabelIDs_ServerPageCap(t *testing.T) {
 				})
 			}
 		}
+	}
+}
+
+// serveLabelsByID answers the single-label reads the resolver falls back to
+// once the catalogue is too large to enumerate. status, when set, replaces every
+// answer.
+func serveLabelsByID(repoIDs, orgIDs []int64, status int) func(http.ResponseWriter, *http.Request, *[]recordedReq) {
+	return func(w http.ResponseWriter, r *http.Request, _ *[]recordedReq) {
+		if status != 0 {
+			w.WriteHeader(status)
+			_, _ = w.Write([]byte(`{"message":"no"}`))
+			return
+		}
+		known := repoIDs
+		if strings.HasPrefix(r.URL.Path, "/api/v1/orgs/") {
+			known = orgIDs
+		}
+		id, err := strconv.ParseInt(r.URL.Path[strings.LastIndex(r.URL.Path, "/")+1:], 10, 64)
+		if err == nil && slices.Contains(known, id) {
+			_, _ = fmt.Fprintf(w, `{"id":%d,"name":"found","color":"ffffff"}`, id)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"message":"not found"}`))
+	}
+}
+
+// TestResolveIssueLabelIDs_PastCatalogueCap pins the promise in the cap's own
+// error message: with too many labels to enumerate, "pass numeric label IDs
+// instead of names" must actually work. Refs #635.
+func TestResolveIssueLabelIDs_PastCatalogueCap(t *testing.T) {
+	const serverCap = 50
+	tooMany := numberedLabels(maxLabelCatalogPages*serverCap+10, "merge")
+	const repoLabel, orgLabel, staleID = 7, 90001, 424242
+
+	tests := []struct {
+		name      string
+		overOrg   bool
+		status    int
+		token     string
+		want      []int64
+		wantErr   string
+		wantReads []string
+	}{
+		{
+			name: "repo id", token: "7", want: []int64{repoLabel},
+			wantReads: []string{"/api/v1/repos/agentic-forges/forgejo-mcp/labels/7"},
+		},
+		{
+			name: "org id", token: "90001", want: []int64{orgLabel},
+			wantReads: []string{
+				"/api/v1/repos/agentic-forges/forgejo-mcp/labels/90001",
+				"/api/v1/orgs/agentic-forges/labels/90001",
+			},
+		},
+		{
+			name: "org catalogue over the cap", overOrg: true, token: "90001", want: []int64{orgLabel},
+			wantReads: []string{
+				"/api/v1/repos/agentic-forges/forgejo-mcp/labels/90001",
+				"/api/v1/orgs/agentic-forges/labels/90001",
+			},
+		},
+		{
+			name: "duplicate ids collapse", token: "7,7", want: []int64{repoLabel},
+			wantReads: []string{
+				"/api/v1/repos/agentic-forges/forgejo-mcp/labels/7",
+				"/api/v1/repos/agentic-forges/forgejo-mcp/labels/7",
+			},
+		},
+		{
+			name: "stale id", token: strconv.Itoa(staleID), wantErr: "neither a label name nor the ID",
+			wantReads: []string{
+				"/api/v1/repos/agentic-forges/forgejo-mcp/labels/424242",
+				"/api/v1/orgs/agentic-forges/labels/424242",
+			},
+		},
+		{name: "name", token: "merge", wantErr: "pass numeric label IDs"},
+		{
+			name: "id then name", token: "7,merge", wantErr: "pass numeric label IDs",
+			wantReads: []string{"/api/v1/repos/agentic-forges/forgejo-mcp/labels/7"},
+		},
+		{
+			name: "forbidden is not unknown", status: http.StatusForbidden, token: "7", wantErr: "get repo label 7",
+			wantReads: []string{"/api/v1/repos/agentic-forges/forgejo-mcp/labels/7"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := resolveBackendOptions{
+				maxPageSize:   serverCap,
+				pagingHeaders: true,
+				repoLabels:    tooMany,
+				next:          serveLabelsByID([]int64{repoLabel}, []int64{orgLabel}, tt.status),
+			}
+			if tt.overOrg {
+				opts.repoLabels = []catalogLabel{{ID: repoLabel, Name: "bug"}}
+				opts.orgLabels = tooMany
+			}
+			records, _ := newResolveBackend(t, opts)
+
+			ids, err := resolveIssueLabelIDs(context.Background(), "agentic-forges", "forgejo-mcp", tt.token)
+
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("expected an error containing %q, got ids=%v err=%v", tt.wantErr, ids, err)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("resolveIssueLabelIDs(%q) err: %v", tt.token, err)
+				}
+				if !equalInt64s(ids, tt.want) {
+					t.Fatalf("expected %v, got %v", tt.want, ids)
+				}
+			}
+
+			got := make([]string, 0, len(*records))
+			for _, rec := range *records {
+				got = append(got, rec.path)
+			}
+			if !slices.Equal(got, tt.wantReads) {
+				t.Fatalf("single-label reads:\n got %v\nwant %v", got, tt.wantReads)
+			}
+		})
 	}
 }
