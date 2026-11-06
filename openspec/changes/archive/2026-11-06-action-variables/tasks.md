@@ -15,4 +15,4 @@
 ## 3. Docs
 
 - [x] 3.1 README Actions rows and `extension/manifest.json`
-- [ ] 3.2 Archive this change in the same pull request
+- [x] 3.2 Archive this change in the same pull request
