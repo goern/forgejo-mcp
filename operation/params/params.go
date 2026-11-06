@@ -83,6 +83,9 @@ const (
 	Status       = "Filter by status (e.g. waiting, running, success, failure, cancelled)"
 	SecretName   = "Secret name (letters, digits, underscores; cannot start with GITEA_ or GITHUB_)"
 	SecretData   = "Secret value (plaintext in transit; stored encrypted by Forgejo, never returned by the API)"
+	ActionScope  = `Action scope: "user", "org", or "repo". user takes no org, owner, or repo. org takes org. repo takes owner and repo`
+	VariableName = "Action variable name. A single path segment: slash, question mark, and hash are rejected before any request"
+	VariableData = "Action variable value. The Forgejo JSON field is value. Empty is rejected before any request. Create and update do not echo it"
 
 	// Misc parameters
 	Description = "Description"
