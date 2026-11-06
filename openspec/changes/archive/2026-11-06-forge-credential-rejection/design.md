@@ -97,4 +97,4 @@ This change is merged unarchived. A follow-up PR archives it once it is merged, 
 
 ## Open Questions
 
-- Whether to keep #683's redaction helpers after this lands, or fold them in. That is a clean-up question; the behaviour is the same either way.
+- ~~Whether to keep #683's redaction helpers after this lands, or fold them in.~~ **Resolved at archive (2026-11-06): keep them, as a second line of defence.** The transport replaces only the body of a `401`. `redactToken` (ephemeral construction) and `redactTokenString` (the raw helpers' body snippet in `pkg/forgejo/rawhttp.go`) also cover any other status whose body might repeat the credential, such as a proxy's error page, at the cost of one string replacement per failed call. Review on #712 reached the same conclusion.

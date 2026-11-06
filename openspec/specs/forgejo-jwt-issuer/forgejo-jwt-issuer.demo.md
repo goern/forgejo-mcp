@@ -441,3 +441,66 @@ journalctl -u forgejo-mcp -o cat | grep -o -E '(DEBUG|INFO|WARN|ERROR)' | sort |
      16 INFO
       3 WARN
 ```
+
+<!-- spec-scenario: forgejo-jwt-issuer#the-integration-was-removed -->
+**Proves:** [spec.md → Scenario: The integration was removed](./spec.md#scenario-the-integration-was-removed)
+
+Added by the change `forge-credential-rejection` (#712), captured on 2026-11-06 against `66ef1f0`. The deployment above runs a build from before that change, so these three proofs come from the test alone.
+
+#### Scenario: The integration was removed
+- **WHEN** a caller with a valid access token makes a tool call
+- **AND** Forgejo answers `401` to the minted JWT, for example because the caller's Authorized Integration was deleted
+- **THEN** the HTTP response SHALL NOT have status `401` and SHALL NOT carry `WWW-Authenticate`
+- **AND** the JSON-RPC error SHALL have code `-32603`
+- **AND** its message SHALL say that Forgejo rejected the credential this server issued, not that the caller's sign-in failed
+
+<!-- evidence-kind: test-invocation -->
+*Proof:* the test runs the streamable-HTTP handler in `resource-server` mode with a valid access token from the in-process identity provider, and the in-process Forgejo answers `401` to the minted JWT, as it does once the Authorized Integration is gone. The test requires a status other than `401`, no `WWW-Authenticate` header, code `-32603`, and exactly the server-side message, which tells the caller that signing in again will not help.
+
+```bash
+proof ./operation/ -run '^TestARejectedMintedJWTIsAServerSideFailure$'
+```
+
+```output
+--- PASS: TestARejectedMintedJWTIsAServerSideFailure
+ok  	git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation
+```
+
+<!-- spec-scenario: forgejo-jwt-issuer#the-operator-learns-of-the-rejection -->
+**Proves:** [spec.md → Scenario: The operator learns of the rejection](./spec.md#scenario-the-operator-learns-of-the-rejection)
+
+#### Scenario: The operator learns of the rejection
+- **WHEN** Forgejo answers `401` to a minted JWT
+- **THEN** the server SHALL log an entry at warning level or above naming the tool and the rejection
+- **AND** that entry SHALL NOT contain the JWT or any part of its signature
+
+<!-- evidence-kind: test-invocation -->
+*Proof:* the same test captures every log entry at debug level. It requires one entry at warning level or above that reports the rejected JWT and names the tool, and it fails if any entry contains the minted JWT or its signature. It takes the JWT from what the in-process Forgejo received, so the check uses the real credential, not a guess.
+
+```bash
+proof ./operation/ -run '^TestARejectedMintedJWTIsAServerSideFailure$'
+```
+
+```output
+--- PASS: TestARejectedMintedJWTIsAServerSideFailure
+ok  	git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation
+```
+
+<!-- spec-scenario: forgejo-jwt-issuer#the-echoed-jwt-never-reaches-the-caller -->
+**Proves:** [spec.md → Scenario: The echoed JWT never reaches the caller](./spec.md#scenario-the-echoed-jwt-never-reaches-the-caller)
+
+#### Scenario: The echoed JWT never reaches the caller
+- **WHEN** Forgejo's rejection message repeats the minted JWT
+- **THEN** no part of the response to the caller SHALL contain the JWT
+
+<!-- evidence-kind: test-invocation -->
+*Proof:* the in-process Forgejo repeats the presented credential in its `401` message, as the real one does (`access token does not exist [sha: …]`). The test requires that the reply's error message, which is the only text the call returns, does not contain the minted JWT's signature; it is exactly the fixed server-side message. The transport replaces Forgejo's `401` body before anything reads it, so the echo cannot reach the caller on any path.
+
+```bash
+proof ./operation/ -run '^TestARejectedMintedJWTIsAServerSideFailure$'
+```
+
+```output
+--- PASS: TestARejectedMintedJWTIsAServerSideFailure
+ok  	git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation
+```
