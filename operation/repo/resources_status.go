@@ -3,7 +3,11 @@ package repo
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"strconv"
 	"time"
 
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation/resource"
@@ -40,8 +44,9 @@ type statusResourcePayload struct {
 // RegisterStatusResource registers the forgejo://repo/{owner}/{repo}/commit/{sha}/status
 // resource template. The resource aggregates per-context CI statuses for a commit SHA and
 // returns a combined state. This is the canonical "is the commit green?" surface. The
-// combined state is computed server-side from the per-context list. The resource is
-// pinned to an immutable SHA; clients may cache responses keyed by URI.
+// state is computed from the latest status of each context. The resource is pinned to
+// an immutable SHA, but statuses on it still change while CI runs, so a cached read can
+// be stale until the runs finish.
 func RegisterStatusResource(s *server.MCPServer) {
 	resource.RegisterTemplate(
 		s,
@@ -52,8 +57,9 @@ func RegisterStatusResource(s *server.MCPServer) {
 			"Aggregated CI status for a Forgejo repository commit. "+
 				"URI: forgejo://repo/{owner}/{repo}/commit/{sha}/status — sha must be a full 40-character hex SHA. "+
 				"Returns combined state (success|failure|pending|unknown) plus bounded per-context statuses. "+
-				"Pinned to an immutable SHA; safe to cache by URI. "+
-				"Use get_commit_statuses tool for paginated per-context enumeration.",
+				"Reports the latest status of each context; superseded statuses are not counted. "+
+				"Pinned to an immutable SHA, but the state changes while CI runs. "+
+				"Use get_commit_statuses tool for the paginated status history.",
 		),
 		mcp.WithTemplateMIMEType("application/json"),
 	)
@@ -67,25 +73,33 @@ func statusResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]
 		return nil, resource.MapForgejoError(uri, err)
 	}
 
-	client, err := forgejo.Client(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("forgejo client: %w", err)
-	}
-
+	// /status, not /statuses: the latter is the append-only history, where a run
+	// that went pending then success is two rows and the pending one never leaves.
+	// /status holds the latest row per context. Not client.GetCombinedStatus, which
+	// cannot set a limit or return X-Total-Count.
+	//
 	// Request EmbeddedListCap+1 items so resource.Bounded can distinguish
 	// "exactly at cap" from "over cap" and surface the truncated sentinel.
 	// Forgejo's server default page size equals EmbeddedListCap (30), so
-	// leaving PageSize at zero silently caps responses at the cap and the
-	// >cap check in Bounded never fires.
-	statuses, resp, err := client.ListStatuses(params.Owner, params.Repo, params.SHA, forgejo_sdk.ListStatusesOption{
-		ListOptions: forgejo_sdk.ListOptions{PageSize: resource.EmbeddedListCap + 1},
-	})
-	if err != nil {
-		if resp != nil {
-			return nil, resource.MapForgejoError(uri, fmt.Errorf("%d %s", resp.StatusCode, err.Error()))
+	// omitting the limit silently caps responses at the cap and the >cap check
+	// in Bounded never fires.
+	var combined struct {
+		Statuses []*forgejo_sdk.Status `json:"statuses"`
+	}
+	path := forgejo.APIPath("repos", params.Owner, params.Repo, "commits", params.SHA, "status") +
+		"?limit=" + strconv.Itoa(resource.EmbeddedListCap+1)
+	header, err := forgejo.DoJSONWithHeader(ctx, http.MethodGet, path, nil, &combined)
+	// Forgejo has answered a commit with no statuses with an empty body.
+	if err != nil && !errors.Is(err, io.EOF) {
+		var he *forgejo.HTTPError
+		if errors.As(err, &he) {
+			// Not err itself: its text holds the URL, and MapForgejoError matches
+			// substrings, so a SHA containing "403" would read as access denied.
+			err = fmt.Errorf("%s: %s", he.Status, he.Body)
 		}
 		return nil, resource.MapForgejoError(uri, err)
 	}
+	statuses := combined.Statuses
 
 	items := make([]string, 0, len(statuses))
 	itemData := make([]statusItem, 0, len(statuses))
@@ -100,17 +114,30 @@ func statusResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]
 
 	bounded := resource.Bounded(items, resource.EmbeddedListCap, "get_commit_statuses")
 
+	// X-Total-Count is the real number of contexts. The body's total_count is
+	// only the page length, and an instance may cap the page below our limit.
+	total := len(itemData)
+	if n := forgejo.TotalCountPtr(header); n != nil && *n > total {
+		total = *n
+		bounded = bounded.WithMoreRemaining(total)
+	}
+
 	boundedItems := itemData
-	if bounded.Truncated {
-		boundedItems = itemData[:resource.EmbeddedListCap]
+	if len(boundedItems) > resource.EmbeddedListCap {
+		boundedItems = boundedItems[:resource.EmbeddedListCap]
 	}
 
 	state := computeAggregateState(statuses)
+	// Only the fetched contexts were counted, so all-green proves nothing about
+	// the rest. A failure or pending seen here still stands.
+	if bounded.Truncated && state == "success" {
+		state = "unknown"
+	}
 
 	payload := statusResourcePayload{
 		SHA:        params.SHA,
 		State:      state,
-		TotalCount: len(itemData),
+		TotalCount: total,
 		Statuses:   boundedItems,
 		Truncated:  bounded.Truncated,
 	}
