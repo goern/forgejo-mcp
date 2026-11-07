@@ -428,10 +428,10 @@ List all my repositories
 | `get_workflow_run` | Get details of a specific workflow run by database ID |
 | `list_action_run_jobs` | List jobs for a Forgejo v16+ workflow run with client-side `page` and `limit` bounds |
 | `get_action_job_logs` | Read a Forgejo v16+ job log with resumable `offset` and `max_bytes` bounds; defaults to the tail |
-| `cancel_workflow_run` | Cancel a pending or running workflow run. Already-finished runs also return success (HTTP 204); the run is left unchanged |
-| `delete_workflow_run` | Delete a completed workflow run. A live run is an API error. Removes the run and its job logs; Forgejo marks that run's artifacts deleted |
-| `list_action_run_artifacts` | List artifacts of a workflow run. Server-paged via `page`/`limit` (default 30, max 50); optional `name` filter. Envelope `{artifacts, page, limit, count, total_count?}` |
-| `get_action_artifact` | Get metadata for one Actions artifact. Does not download the zip |
+| `cancel_workflow_run` | Cancel a pending or running Forgejo v16+ workflow run. Already-finished runs also return success (HTTP 204); the run is left unchanged |
+| `delete_workflow_run` | Delete a completed Forgejo v16+ workflow run. A live run is an API error. Removes the run and its job logs; Forgejo marks that run's artifacts deleted |
+| `list_action_run_artifacts` | List artifacts of a Forgejo v16+ workflow run. Server-paged via `page`/`limit` (default 30, max 50); optional `name` filter. Envelope `{artifacts, page, limit, count, total_count?}` |
+| `get_action_artifact` | Get metadata for one Forgejo v16+ Actions artifact. Does not download the zip |
 | `list_repo_action_secrets` | List a repository's Actions secrets (names only; Forgejo never returns values). Client-paged via `page`/`limit` (default 30, max 50) |
 | `create_or_update_repo_action_secret` | Create or update a repository Actions secret. Overwrites any existing secret with the same name; the value is never echoed back |
 | `delete_repo_action_secret` | Delete a repository Actions secret |
@@ -601,7 +601,7 @@ forgejo-mcp --cli get_action_job_logs \
 # Forgejo's run-wide ZIP log endpoint has no Range support. Enumerate jobs and
 # fetch their bounded plaintext logs instead.
 
-# List artifacts of a run, then read one artifact's metadata (no zip download)
+# List artifacts of a run, then read one artifact's metadata (no zip download, Forgejo v16+)
 forgejo-mcp --cli list_action_run_artifacts \
   --args '{"owner":"goern","repo":"forgejo-mcp","run_id":123,"limit":30}' \
   --output=text
@@ -622,6 +622,7 @@ forgejo-mcp --cli list_package_files \
 
 # delete_package removes one version. Do not invoke it against a registry you do not own.
 
+# cancel_workflow_run and delete_workflow_run need Forgejo v16+.
 # cancel_workflow_run is 204 even when the run already finished.
 # delete_workflow_run only succeeds for a completed run; a live run is an error.
 
