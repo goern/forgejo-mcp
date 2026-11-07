@@ -165,7 +165,7 @@ func issueResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]m
 	iss, resp, err := client.GetIssue(params.Owner, params.Repo, params.Index)
 	if err != nil {
 		if resp != nil {
-			return nil, resource.MapForgejoError(uri, fmt.Errorf("%d %s", resp.StatusCode, err.Error()))
+			return nil, resource.MapForgejoError(uri, resource.WithStatus(resp.StatusCode, err))
 		}
 		return nil, resource.MapForgejoError(uri, err)
 	}
@@ -297,7 +297,7 @@ func commentResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([
 	c, resp, err := client.GetIssueComment(params.Owner, params.Repo, params.ID)
 	if err != nil {
 		if resp != nil {
-			return nil, resource.MapForgejoError(uri, fmt.Errorf("%d %s", resp.StatusCode, err.Error()))
+			return nil, resource.MapForgejoError(uri, resource.WithStatus(resp.StatusCode, err))
 		}
 		return nil, resource.MapForgejoError(uri, err)
 	}

@@ -83,7 +83,7 @@ func branchProtectionsResourceHandler(ctx context.Context, req mcp.ReadResourceR
 	})
 	if err != nil {
 		if resp != nil {
-			return nil, resource.MapForgejoError(uri, fmt.Errorf("%d %s", resp.StatusCode, err.Error()))
+			return nil, resource.MapForgejoError(uri, resource.WithStatus(resp.StatusCode, err))
 		}
 		return nil, resource.MapForgejoError(uri, err)
 	}
@@ -134,7 +134,7 @@ func branchProtectionResourceHandler(ctx context.Context, req mcp.ReadResourceRe
 	bp, resp, err := client.GetBranchProtection(p.Owner, p.Repo, p.Rule)
 	if err != nil {
 		if resp != nil {
-			return nil, resource.MapForgejoError(uri, fmt.Errorf("%d %s", resp.StatusCode, err.Error()))
+			return nil, resource.MapForgejoError(uri, resource.WithStatus(resp.StatusCode, err))
 		}
 		return nil, resource.MapForgejoError(uri, err)
 	}
