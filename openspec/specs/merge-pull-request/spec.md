@@ -5,7 +5,7 @@ The merge-pull-request capability exposes Forgejo's pull-request merge operation
 ## Requirements
 
 ### Requirement: Merge a pull request
-The system SHALL expose a `merge_pull_request` MCP tool that merges a pull request. The tool SHALL accept owner, repo, and PR index as required parameters. The tool SHALL accept a required `style` parameter with values `merge`, `rebase`, `rebase-merge`, or `squash`. The tool SHALL accept optional parameters: `title` (merge commit title), `message` (merge commit message), `delete_branch_after_merge` (boolean), `force_merge` (boolean), and `merge_when_checks_succeed` (boolean). The tool SHALL call the Forgejo SDK `MergePullRequest` method and return a success message.
+The system SHALL expose a `merge_pull_request` MCP tool that merges a pull request. The tool SHALL accept owner, repo, and PR index as required parameters. The tool SHALL accept a required `style` parameter with values `merge`, `rebase`, `rebase-merge`, or `squash`. The tool SHALL accept optional parameters: `title` (merge commit title), `message` (merge commit message), `delete_branch_after_merge` (boolean), `force_merge` (boolean), and `merge_when_checks_succeed` (boolean). The tool SHALL POST to Forgejo's merge endpoint directly, so a refusal keeps its response body, and return a success message.
 
 #### Scenario: Merge with default merge style
 - **WHEN** the tool is called with owner="org", repo="project", index=1, style="merge"
@@ -33,12 +33,26 @@ The system SHALL expose a `merge_pull_request` MCP tool that merges a pull reque
 
 #### Scenario: Merge fails due to conflicts
 - **WHEN** the tool is called on a PR that has merge conflicts
-- **THEN** the SDK returns an error and the tool propagates it to the caller
+- **THEN** Forgejo refuses the merge and the tool returns an error containing Forgejo's response body
 
 #### Scenario: Merge an already-merged PR
 - **WHEN** the tool is called on a PR that is already merged or closed
-- **THEN** the SDK returns an error and the tool propagates it to the caller
+- **THEN** Forgejo refuses the merge and the tool returns an error containing Forgejo's response body
 
 #### Scenario: Invalid merge style
 - **WHEN** the tool is called with style="invalid"
-- **THEN** the SDK returns a validation error and the tool propagates it to the caller
+- **THEN** Forgejo returns a validation error and the tool returns an error containing Forgejo's response body
+
+#### Scenario: Missing merge style
+- **WHEN** the tool is called without `style`
+- **THEN** the tool returns an error naming `style` and its allowed values
+- **AND** the system SHALL NOT send an HTTP request
+
+#### Scenario: Misspelled merge style parameter
+- **WHEN** the tool is called with `merge_style` instead of `style`
+- **THEN** the tool returns an error naming `merge_style` and directing the caller to `style`
+- **AND** the system SHALL NOT send an HTTP request
+
+#### Scenario: Refused scheduled merge is not reported as scheduled
+- **WHEN** the tool is called with merge_when_checks_succeed=true and Forgejo refuses the request
+- **THEN** the tool returns an error and SHALL NOT report the merge as scheduled
