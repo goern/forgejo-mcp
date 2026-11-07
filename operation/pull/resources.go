@@ -99,7 +99,7 @@ func prResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.
 	pr, resp, err := client.GetPullRequest(params.Owner, params.Repo, params.Index)
 	if err != nil {
 		if resp != nil {
-			return nil, resource.MapForgejoError(uri, fmt.Errorf("%d %s", resp.StatusCode, err.Error()))
+			return nil, resource.MapForgejoError(uri, resource.WithStatus(resp.StatusCode, err))
 		}
 		return nil, resource.MapForgejoError(uri, err)
 	}

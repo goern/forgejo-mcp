@@ -69,7 +69,7 @@ func repoResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]mc
 	r, resp, err := client.GetRepo(params.Owner, params.Repo)
 	if err != nil {
 		if resp != nil {
-			return nil, resource.MapForgejoError(uri, fmt.Errorf("%d %s", resp.StatusCode, err.Error()))
+			return nil, resource.MapForgejoError(uri, resource.WithStatus(resp.StatusCode, err))
 		}
 		return nil, resource.MapForgejoError(uri, err)
 	}

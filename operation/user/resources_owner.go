@@ -82,7 +82,7 @@ func ownerResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]m
 		// if user fetch failed for a reason other than 404, surface it immediately
 		if userErr != nil && !is404(userResp, userErr) {
 			if userResp != nil {
-				return nil, resource.MapForgejoError(uri, fmt.Errorf("%d %s", userResp.StatusCode, userErr.Error()))
+				return nil, resource.MapForgejoError(uri, resource.WithStatus(userResp.StatusCode, userErr))
 			}
 			return nil, resource.MapForgejoError(uri, userErr)
 		}
@@ -97,7 +97,7 @@ func ownerResourceHandler(ctx context.Context, req mcp.ReadResourceRequest) ([]m
 			}
 			// orgResp != nil (non-404 HTTP error): surface the status + org message.
 			if orgResp != nil {
-				return nil, resource.MapForgejoError(uri, fmt.Errorf("%d %s", orgResp.StatusCode, orgErr.Error()))
+				return nil, resource.MapForgejoError(uri, resource.WithStatus(orgResp.StatusCode, orgErr))
 			}
 			// orgResp == nil: real transport/network/context error — surface orgErr.
 			return nil, resource.MapForgejoError(uri, orgErr)

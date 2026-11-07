@@ -141,7 +141,7 @@ func repoIssuesResourceHandler(ctx context.Context, req mcp.ReadResourceRequest)
 	rawIssues, resp, err := client.ListRepoIssues(p.Owner, p.Repo, opt)
 	if err != nil {
 		if resp != nil {
-			return nil, resource.MapForgejoError(uri, fmt.Errorf("%d %s", resp.StatusCode, err.Error()))
+			return nil, resource.MapForgejoError(uri, resource.WithStatus(resp.StatusCode, err))
 		}
 		return nil, resource.MapForgejoError(uri, err)
 	}
@@ -314,7 +314,7 @@ func issueCommentsResourceHandler(ctx context.Context, req mcp.ReadResourceReque
 	})
 	if err != nil {
 		if resp != nil {
-			return nil, resource.MapForgejoError(uri, fmt.Errorf("%d %s", resp.StatusCode, err.Error()))
+			return nil, resource.MapForgejoError(uri, resource.WithStatus(resp.StatusCode, err))
 		}
 		return nil, resource.MapForgejoError(uri, err)
 	}
