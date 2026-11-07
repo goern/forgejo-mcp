@@ -88,4 +88,4 @@ func (t *rejectionTransport) RoundTrip(req *http.Request) (*http.Response, error
 
 // sdkHTTPClient is the HTTP client every SDK client is built with. It is
 // shared so that keep-alive connections survive across per-request clients.
-var sdkHTTPClient = &http.Client{Transport: &rejectionTransport{}}
+var sdkHTTPClient = &http.Client{Transport: &rejectionTransport{}, CheckRedirect: checkRedirect}
