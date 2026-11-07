@@ -123,7 +123,7 @@ func TestListActionVariablesFn_OmitsValuesAndTotalCount(t *testing.T) {
 }
 
 func TestListActionVariablesFn_OmitsTotalCountWithoutHeader(t *testing.T) {
-	srv, _ := setupVariableMockServer(t, func(w http.ResponseWriter, r *http.Request) {
+	srv, capture := setupVariableMockServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`[]`))
 	})
@@ -133,8 +133,28 @@ func TestListActionVariablesFn_OmitsTotalCountWithoutHeader(t *testing.T) {
 		"scope": "org", "org": "acme", "page": 2, "limit": 10,
 	}))
 	text := toolText(t, result, err)
+	if capture.uri != "/api/v1/orgs/acme/actions/variables?limit=10&page=2" {
+		t.Fatalf("uri %s", capture.uri)
+	}
 	if strings.Contains(text, "total_count") {
 		t.Fatalf("total_count present without header: %s", text)
+	}
+}
+
+func TestListActionVariablesFn_RejectsLimitAboveMax(t *testing.T) {
+	srv, capture := setupVariableMockServer(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Error("unexpected HTTP")
+	})
+	defer srv.Close()
+
+	_, err := ListActionVariablesFn(context.Background(), newCallToolRequest(map[string]any{
+		"scope": "user", "limit": 51,
+	}))
+	if err == nil || !strings.Contains(err.Error(), "between 1 and 50") {
+		t.Fatalf("error %v", err)
+	}
+	if capture.hits != 0 {
+		t.Fatalf("hits = %d, want 0", capture.hits)
 	}
 }
 
@@ -253,6 +273,9 @@ func TestUpdateActionVariableFn_Puts(t *testing.T) {
 	text := toolText(t, result, err)
 	if capture.method != http.MethodPut || capture.uri != "/api/v1/user/actions/variables/TOKEN" {
 		t.Fatalf("%s %s", capture.method, capture.uri)
+	}
+	if !strings.Contains(capture.body, `"value":"next"`) {
+		t.Fatalf("body %s", capture.body)
 	}
 	if strings.Contains(text, "next") || !strings.Contains(text, `"status":"updated"`) {
 		t.Fatalf("result %s", text)
