@@ -220,7 +220,9 @@ scripts/ci/openspec-validate.sh
 ```
 
 It also runs as a pre-commit hook (`openspec-validate`) and skips with a warning
-if `openspec` is not installed.
+if `openspec` is not installed or is not the version the CI image ships
+(`EXPECTED_VERSION` in the script — newer releases tighten rules, e.g. 1.16 turns
+the ">500 characters" requirement note into a strict-failing warning).
 
 ## Reviewing a pull request: confirm CI actually ran
 
