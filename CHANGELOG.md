@@ -1,3 +1,10 @@
+## [3.4.1](https://git.b4mad.industries/agentic-forges/forgejo-mcp/compare/v3.4.0...v3.4.1) (2026-11-08)
+
+### :bug: Fixes
+
+* 🐛 skip openspec-validate on a different openspec than CI's ([5fb29a6](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/5fb29a629a9570f952918fe3fa07eaaaf778259d))
+* **security:** 🔒️ keep the Forgejo token on the configured instance ([39405f2](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/39405f25728128b0d9e033d36b78fd2a36512eea))
+
 ## [3.4.0](https://git.b4mad.industries/agentic-forges/forgejo-mcp/compare/v3.3.0...v3.4.0) (2026-11-07)
 
 ### :sparkles: Features
