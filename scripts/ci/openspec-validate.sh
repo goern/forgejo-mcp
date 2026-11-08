@@ -15,7 +15,8 @@
 # first line happens to end before the keyword is rejected even though the
 # paragraph is full of SHALLs.
 #
-# Skips with a warning when openspec is not installed, so contributors
+# Skips with a warning when openspec is not installed or is not the version
+# the CI image ships (see EXPECTED_VERSION), so contributors
 # without the tool are not blocked; CI runs it in an image that has it.
 #
 # POSIX sh — no bashisms — so it runs identically in local shells, the
@@ -29,6 +30,20 @@ cd "$ROOT"
 if ! command -v openspec >/dev/null 2>&1; then
   echo "openspec-validate: openspec not found on PATH — skipping." >&2
   echo "openspec-validate: install it to catch spec errors before CI does." >&2
+  exit 0
+fi
+
+# The openspec the CI image (RELEASE_TOOLS_IMAGE in
+# .tekton/tasks/openspec-validate.yaml) ships. Rules change between releases —
+# 1.16 promotes the ">500 characters" requirement note from INFO to WARNING,
+# which --strict turns into a failure CI never sees — so a different local
+# version gives verdicts that do not match CI. Bump this together with the
+# image.
+EXPECTED_VERSION="1.13.0"
+have="$(openspec --version 2>/dev/null | head -n 1 | tr -d '[:space:]')"
+if [ "$have" != "$EXPECTED_VERSION" ]; then
+  echo "openspec-validate: openspec $have != $EXPECTED_VERSION (the CI image's) — skipping." >&2
+  echo "openspec-validate: its verdict would not match CI. Install $EXPECTED_VERSION to run this locally." >&2
   exit 0
 fi
 
