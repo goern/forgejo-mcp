@@ -31,6 +31,15 @@ func checkRedirect(req *http.Request, via []*http.Request) error {
 	if len(via) >= maxRedirects {
 		return fmt.Errorf("stopped after %d redirects", maxRedirects)
 	}
+	// net/http keeps Authorization across a redirect to the same host on
+	// another port, to a subdomain, and from https to http. None of those is
+	// the Forgejo instance the token belongs to, so the token is dropped on
+	// any hop that leaves it. The redirect itself is still followed: object
+	// storage serving attachments directly answers with a presigned URL on
+	// another host, which needs no token and is refused when given one.
+	if req.Header.Get("Authorization") != "" && !withinInstanceURL(req.URL) {
+		req.Header.Del("Authorization")
+	}
 	previous := via[len(via)-1]
 	if req.Method == previous.Method {
 		return nil

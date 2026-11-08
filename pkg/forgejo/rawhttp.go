@@ -78,10 +78,12 @@ func userAgent() string {
 
 // resolveURL turns a path or absolute URL into an absolute URL string.
 // API paths (e.g. "/repos/x/y/issues/1/assets") are prefixed with
-// flag.URL + "/api/v1". Absolute URLs are returned verbatim.
+// flag.URL + "/api/v1". Absolute URLs are returned verbatim, but only when
+// they lie within the configured instance: every caller attaches the token,
+// so an absolute URL elsewhere is refused with ErrCrossOrigin.
 func resolveURL(pathOrURL string) (string, error) {
-	if strings.HasPrefix(pathOrURL, "http://") || strings.HasPrefix(pathOrURL, "https://") {
-		return pathOrURL, nil
+	if absolute, err := checkAbsoluteWithinInstance(pathOrURL); absolute || err != nil {
+		return pathOrURL, err
 	}
 	base := strings.TrimRight(flag.URL, "/")
 	if base == "" {
@@ -95,11 +97,15 @@ func resolveURL(pathOrURL string) (string, error) {
 }
 
 // resolveSameOriginURL is like resolveURL but for asset/download URLs that
-// live outside the /api/v1 prefix (e.g. /attachments/{uuid}). Absolute URLs
-// pass through; relative URLs hang off flag.URL with no /api/v1.
+// live outside the /api/v1 prefix (e.g. /attachments/{uuid}). Relative URLs
+// hang off flag.URL with no /api/v1. Absolute URLs pass through only when
+// they lie within the configured instance (scheme, host, port and ROOT_URL
+// path, see WithinInstance); anything else is refused with ErrCrossOrigin,
+// because the caller is about to attach the token. An attachment's
+// browser_download_url is server-supplied and can be an external link.
 func resolveSameOriginURL(pathOrURL string) (string, error) {
-	if strings.HasPrefix(pathOrURL, "http://") || strings.HasPrefix(pathOrURL, "https://") {
-		return pathOrURL, nil
+	if absolute, err := checkAbsoluteWithinInstance(pathOrURL); absolute || err != nil {
+		return pathOrURL, err
 	}
 	base := strings.TrimRight(flag.URL, "/")
 	if base == "" {
@@ -382,7 +388,9 @@ func writeMultipart(pipeWriter *io.PipeWriter, multipartWriter *multipart.Writer
 // DoRaw fetches bytes from a URL (absolute or relative-to-flag.URL with no
 // /api/v1 prefix), adding the configured auth header. Caps the response at
 // MaxInlineDownloadBytes; ErrPayloadTooLarge is returned if the body would
-// exceed the cap. Returns body bytes + content type.
+// exceed the cap. Returns body bytes + content type. A URL outside the
+// configured instance is refused with ErrCrossOrigin before any request is
+// made, and a redirect off the instance drops the token (see checkRedirect).
 func DoRaw(ctx context.Context, pathOrURL string) ([]byte, string, error) {
 	full, err := resolveSameOriginURL(pathOrURL)
 	if err != nil {

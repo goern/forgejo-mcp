@@ -816,3 +816,61 @@ func TestHandlers_RejectMissingNumericArgs(t *testing.T) {
 		t.Fatalf("expected error when numeric args missing")
 	}
 }
+
+// A browser_download_url on another host must not receive the token, or any
+// request at all; the tool returns the metadata with inline:false instead of
+// an error, saying why. Over-cap sizes take the same path: the size advice
+// would otherwise tell the caller to send the token there.
+func TestDownloadAttachmentFns_ForeignDownloadURL_NotFetched(t *testing.T) {
+	for _, size := range []int{5, forgejo.MaxInlineDownloadBytes + 1} {
+		var foreignHits int
+		foreign := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			foreignHits++
+		}))
+		meta := func(w http.ResponseWriter, _ *http.Request) {
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"id": 42, "name": "f.bin", "size": size, "uuid": "u",
+				"browser_download_url": foreign.URL + "/steal",
+			})
+		}
+		newBackend(t,
+			route{http.MethodGet, "/api/v1/repos/o/r/issues/3/assets/42", meta},
+			route{http.MethodGet, "/api/v1/repos/o/r/issues/comments/7/assets/42", meta},
+		)
+		calls := map[string]func() (*mcp.CallToolResult, error){
+			"issue": func() (*mcp.CallToolResult, error) {
+				return DownloadIssueAttachmentFn(context.Background(), req(map[string]any{
+					"owner": "o", "repo": "r", "index": 3.0, "attachment_id": 42.0,
+				}))
+			},
+			"comment": func() (*mcp.CallToolResult, error) {
+				return DownloadCommentAttachmentFn(context.Background(), req(map[string]any{
+					"owner": "o", "repo": "r", "comment_id": 7.0, "attachment_id": 42.0,
+				}))
+			},
+		}
+		for name, call := range calls {
+			res, err := call()
+			if err != nil {
+				t.Fatalf("%s/size %d: err: %v", name, size, err)
+			}
+			if res.IsError {
+				t.Fatalf("%s/size %d: want metadata, got error result: %s", name, size, extractTextContent(t, res))
+			}
+			if _, ok := extractBlobResource(res); ok {
+				t.Fatalf("%s/size %d: foreign content must not be inlined", name, size)
+			}
+			text := extractTextContent(t, res)
+			if !strings.Contains(text, `"inline":false`) || !strings.Contains(text, "outside the configured Forgejo instance") {
+				t.Fatalf("%s/size %d: want inline:false with the cross-origin reason, got %s", name, size, text)
+			}
+			if strings.Contains(text, "Authorization: token") {
+				t.Fatalf("%s/size %d: must not advise sending the token: %s", name, size, text)
+			}
+		}
+		foreign.Close()
+		if foreignHits != 0 {
+			t.Fatalf("size %d: foreign host received %d request(s); want none", size, foreignHits)
+		}
+	}
+}
