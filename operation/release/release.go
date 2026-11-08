@@ -638,6 +638,14 @@ func DeleteReleaseAttachmentFn(ctx context.Context, req mcp.CallToolRequest) (*m
 func downloadResultFor(ctx context.Context, att *forgejo_sdk.Attachment) (*mcp.CallToolResult, error) {
 	res := &downloadResult{Attachment: att}
 
+	// Checked before the size cap: the cap's advice to fetch the URL with
+	// the token must not be given for a URL the token does not belong to.
+	if !forgejo.WithinInstance(att.DownloadURL) {
+		res.Inline = false
+		res.Reason = forgejo.CrossOriginDownloadReason
+		return to.TextResult(res)
+	}
+
 	if att.Size >= forgejo.MaxInlineDownloadBytes {
 		res.Inline = false
 		res.Reason = fmt.Sprintf("size %d bytes >= inline cap %d; fetch browser_download_url with Authorization: token <TOKEN>", att.Size, forgejo.MaxInlineDownloadBytes)
@@ -646,6 +654,11 @@ func downloadResultFor(ctx context.Context, att *forgejo_sdk.Attachment) (*mcp.C
 
 	body, ct, err := forgejo.DoRaw(ctx, att.DownloadURL)
 	if err != nil {
+		if errors.Is(err, forgejo.ErrCrossOrigin) {
+			res.Inline = false
+			res.Reason = forgejo.CrossOriginDownloadReason
+			return to.TextResult(res)
+		}
 		if errors.Is(err, forgejo.ErrPayloadTooLarge) {
 			res.Inline = false
 			res.Reason = "body exceeded inline cap during fetch; fetch browser_download_url with Authorization: token <TOKEN>"

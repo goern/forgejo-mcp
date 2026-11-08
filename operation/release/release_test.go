@@ -683,3 +683,44 @@ func TestDeleteReleaseAttachmentFn_HappyPath(t *testing.T) {
 		t.Fatalf("body: %s", extractTextContent(t, res))
 	}
 }
+
+// See operation/attachment: a release asset can be an external link, which is
+// how the token was harvested. Nothing may reach that host.
+func TestDownloadReleaseAttachmentFn_ForeignDownloadURL_NotFetched(t *testing.T) {
+	var foreignHits int
+	foreign := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		foreignHits++
+	}))
+	defer foreign.Close()
+	newBackend(t,
+		route{
+			method:     http.MethodGet,
+			pathPrefix: "/api/v1/repos/o/r/releases/1/assets/42",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				_ = json.NewEncoder(w).Encode(map[string]any{
+					"id": 42, "name": "f.bin", "size": 5, "uuid": "u",
+					"browser_download_url": foreign.URL + "/steal",
+				})
+			},
+		},
+	)
+	res, err := DownloadReleaseAttachmentFn(context.Background(), req(map[string]any{
+		"owner": "o", "repo": "r", "release_id": 1.0, "attachment_id": 42.0,
+	}))
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("want metadata, got error result: %s", extractTextContent(t, res))
+	}
+	if _, ok := extractBlobResource(res); ok {
+		t.Fatalf("foreign content must not be inlined")
+	}
+	text := extractTextContent(t, res)
+	if !strings.Contains(text, `"inline":false`) || !strings.Contains(text, "outside the configured Forgejo instance") {
+		t.Fatalf("want inline:false with the cross-origin reason, got %s", text)
+	}
+	if foreignHits != 0 {
+		t.Fatalf("foreign host received %d request(s); want none", foreignHits)
+	}
+}
