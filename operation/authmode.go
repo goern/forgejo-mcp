@@ -176,17 +176,29 @@ func prepareResourceServer(ctx context.Context) (*resourceServer, error) {
 		return nil, fmt.Errorf("refusing to start: -forgejo-jwt-issuer: %w", err)
 	}
 
-	version, err := forgejo.ProbeServerVersion(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("refusing to start: cannot read the Forgejo version: %w", err)
+	version := flag.ForgejoVersion
+	if version == "" {
+		probed, err := forgejo.ProbeServerVersion(ctx)
+		switch {
+		case errors.Is(err, forgejo.ErrSignInRequired):
+			return nil, fmt.Errorf("refusing to start: Forgejo at %s requires sign-in to read its version and publishes no /swagger.v1.json; set -forgejo-version (%w)",
+				log.SanitizeURL(flag.URL), err)
+		case err != nil:
+			return nil, fmt.Errorf("refusing to start: cannot read the Forgejo version: %w", err)
+		}
+		version = probed
 	}
 	major, err := forgejo.MajorVersion(version)
 	if err != nil {
 		return nil, fmt.Errorf("refusing to start: %w", err)
 	}
 	if major < minForgejoMajorForResourceServer {
-		return nil, fmt.Errorf("refusing to start: -auth-mode resource-server requires Forgejo %d.0 or newer, but %s reports %s",
-			minForgejoMajorForResourceServer, log.SanitizeURL(flag.URL), version)
+		source := log.SanitizeURL(flag.URL) + " reports"
+		if flag.ForgejoVersion != "" {
+			source = "-forgejo-version is"
+		}
+		return nil, fmt.Errorf("refusing to start: -auth-mode resource-server requires Forgejo %d.0 or newer, but %s %s",
+			minForgejoMajorForResourceServer, source, version)
 	}
 	forgejo.SetServerVersion(version)
 

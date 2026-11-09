@@ -2,6 +2,7 @@ package operation
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -283,20 +284,9 @@ func Run(transport, version string) error {
 		return nil
 	}
 
-	// Test connection to Forgejo instance before starting the server
-	log.Info("Testing connection to Forgejo instance",
-		log.SanitizedURLField("url", flag.URL),
-	)
-	if err := testConnection(); err != nil {
-		log.Error("Failed to connect to Forgejo instance",
-			log.SanitizedURLField("url", flag.URL),
-			log.ErrorField(err),
-		)
-		return fmt.Errorf("connection test failed: %w", err)
+	if err := checkForgejoAtStartup(context.Background(), transport); err != nil {
+		return err
 	}
-	log.Info("Successfully connected to Forgejo instance",
-		log.SanitizedURLField("url", flag.URL),
-	)
 
 	switch transport {
 	case "stdio":
@@ -347,6 +337,70 @@ func Run(transport, version string) error {
 
 func testConnection() error {
 	return forgejo.VerifyConnection()
+}
+
+// checkForgejoAtStartup checks the Forgejo instance before passthrough mode
+// binds a listener.
+//
+// A version set with -forgejo-version is recorded first, so every SDK client
+// skips its own version request. With an operator token, or on stdio, the
+// authenticated connection test runs as before and its failure is fatal: that
+// test checks the credential, not only the version. On sse and http without a
+// token there is nothing to authenticate with, so it probes the version
+// anonymously instead -- unless the setting already names it. A Forgejo that
+// only asks for sign-in is not a reason to refuse: every request brings its
+// own token. A Forgejo that cannot be reached, or answers anything else, is.
+func checkForgejoAtStartup(ctx context.Context, transport string) error {
+	if v := flag.ForgejoVersion; v != "" {
+		forgejo.SetServerVersion(v)
+		log.Info("Using the Forgejo version from the configuration",
+			log.StringField("server_version", v),
+			log.StringField("source", "-forgejo-version / FORGEJO_VERSION"),
+		)
+	}
+
+	networkTransport := transport == "http" || transport == "sse"
+	if flag.Token != "" || !networkTransport {
+		log.Info("Testing connection to Forgejo instance",
+			log.SanitizedURLField("url", flag.URL),
+		)
+		if err := testConnection(); err != nil {
+			log.Error("Failed to connect to Forgejo instance",
+				log.SanitizedURLField("url", flag.URL),
+				log.ErrorField(err),
+			)
+			return fmt.Errorf("connection test failed: %w", err)
+		}
+		log.Info("Successfully connected to Forgejo instance",
+			log.SanitizedURLField("url", flag.URL),
+		)
+		return nil
+	}
+
+	if flag.ForgejoVersion != "" {
+		return nil
+	}
+	version, err := forgejo.ProbeServerVersion(ctx)
+	switch {
+	case err == nil:
+		log.Info("Forgejo instance reachable",
+			log.SanitizedURLField("url", flag.URL),
+			log.StringField("server_version", version),
+		)
+		return nil
+	case errors.Is(err, forgejo.ErrSignInRequired):
+		log.Warn("Forgejo requires sign-in to read its version; starting without it. Every request still needs its own token",
+			log.SanitizedURLField("url", flag.URL),
+			log.ErrorField(err),
+		)
+		return nil
+	default:
+		log.Error("Failed to reach Forgejo instance",
+			log.SanitizedURLField("url", flag.URL),
+			log.ErrorField(err),
+		)
+		return fmt.Errorf("connection test failed: %w", err)
+	}
 }
 
 func RegisterCoreResources(s *server.MCPServer) {
