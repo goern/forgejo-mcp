@@ -11,8 +11,9 @@ var (
 	UserAgent string
 
 	// ForgejoVersion is the Forgejo version the operator states with
-	// -forgejo-version / FORGEJO_VERSION. When set, the server does not probe
-	// the version at startup and uses this value instead.
+	// -forgejo-version / FORGEJO_MCP_FORGEJO_VERSION. When set, the server does
+	// not read the version from Forgejo at startup and uses this value instead;
+	// it still checks that Forgejo is reachable.
 	ForgejoVersion string
 
 	// Host is the address the network transports bind to. It defaults to

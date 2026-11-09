@@ -1,10 +1,12 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+
 # Spec Delta
 
 ## ADDED Requirements
 
 ### Requirement: Tokenless passthrough on a network transport starts on a sign-in-only Forgejo
 
-In `passthrough` mode on `http` or `sse` with no operator token configured, the startup check SHALL be the anonymous version probe of capability `forgejo-version-detection`, not an SDK client. If Forgejo requires sign-in, the server SHALL log a warning and start. It SHALL refuse to start only when Forgejo was not usable. With `--forgejo-version` set it SHALL skip the probe. Per-request authentication SHALL NOT change.
+In `passthrough` mode on `http` or `sse` with no operator token configured, the startup check SHALL be the anonymous version probe of capability `forgejo-version-detection`, not an SDK client. If Forgejo requires sign-in, the server SHALL log a warning and start. It SHALL refuse to start only when Forgejo was not usable. With `--forgejo-version` set it SHALL NOT read the version, but SHALL still check anonymously that Forgejo is reachable. Per-request authentication SHALL NOT change.
 
 #### Scenario: Forgejo requires sign-in
 
@@ -23,8 +25,8 @@ In `passthrough` mode on `http` or `sse` with no operator token configured, the 
 #### Scenario: Wrong URL still fails fast
 
 - **WHEN** the server starts on `http` in `passthrough` mode with no operator token
-- **AND** the host in `--url` does not resolve, or `/api/v1/version` answers `404`
-- **THEN** the server SHALL refuse to start before binding any listener
+- **AND** the host in `--url` does not resolve, `/api/v1/version` answers `404`, or it answers `403` with a body that is not a Forgejo API error
+- **THEN** the server SHALL refuse to start before binding any listener, whether or not `--forgejo-version` is set
 
 #### Scenario: Requests still need their own token
 

@@ -221,10 +221,11 @@ ok  	git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation
 
 #### Scenario: Version supplied by the operator
 - **WHEN** the server is started in `resource-server` mode with `--forgejo-version 16.0.7`
-- **THEN** the version check SHALL pass without requesting the version from Forgejo
+- **THEN** the version check SHALL pass without reading the version from Forgejo
+- **AND** the server SHALL check, with one anonymous request, that Forgejo is reachable
 
 <!-- evidence-kind: test-invocation -->
-*Proof:* with `-forgejo-version 16.0.7` and a Forgejo that requires sign-in, the startup passes. The test asserts that neither `/api/v1/version` nor `/swagger.v1.json` was requested.
+*Proof:* with `-forgejo-version 16.0.7` and a Forgejo that requires sign-in, the startup passes. The test asserts that `/swagger.v1.json` was not requested, that `/api/v1/version` was requested once and without a credential, and that the log names the setting as the source of the version.
 
 ```bash
 proof ./operation/ -run '^TestPrepareResourceServerUsesTheVersionSetting$'

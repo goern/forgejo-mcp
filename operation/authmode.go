@@ -177,11 +177,16 @@ func prepareResourceServer(ctx context.Context) (*resourceServer, error) {
 	}
 
 	version := flag.ForgejoVersion
-	if version == "" {
+	if version != "" {
+		logStatedForgejoVersion()
+		if err := checkForgejoReachable(ctx); err != nil {
+			return nil, fmt.Errorf("refusing to start: cannot reach Forgejo: %w", err)
+		}
+	} else {
 		probed, err := forgejo.ProbeServerVersion(ctx)
 		switch {
 		case errors.Is(err, forgejo.ErrSignInRequired):
-			return nil, fmt.Errorf("refusing to start: Forgejo at %s requires sign-in to read its version and publishes no /swagger.v1.json; set -forgejo-version (%w)",
+			return nil, fmt.Errorf("refusing to start: Forgejo at %s requires sign-in to read its version, and no version could be read from /swagger.v1.json; set -forgejo-version (%w)",
 				log.SanitizeURL(flag.URL), err)
 		case err != nil:
 			return nil, fmt.Errorf("refusing to start: cannot read the Forgejo version: %w", err)

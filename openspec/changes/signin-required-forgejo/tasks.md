@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+
 # Tasks
 
 ## 1. Version probe in pkg/forgejo
@@ -14,7 +16,7 @@
 
 ## 2. The --forgejo-version setting
 
-- [x] 2.1 Add `ForgejoVersion` to `pkg/flag`, the `--forgejo-version` flag, and `FORGEJO_VERSION` resolution via `resolveString` in `cmd/cmd.go`. Validate it in `initConfig` with `forgejo.MajorVersion` (fatal, naming the setting). Do not add it to `ResourceServerSettings`. Verify with `cmd` tests:
+- [x] 2.1 Add `ForgejoVersion` to `pkg/flag`, the `--forgejo-version` flag, and `FORGEJO_MCP_FORGEJO_VERSION` resolution via `resolveString` in `cmd/cmd.go`. Validate it in `initConfig` with `forgejo.MajorVersion` (fatal, naming the setting). Do not add it to `ResourceServerSettings`. Verify with `cmd` tests:
   - the flag wins over env;
   - env alone applies;
   - `--cli` mode reads env;
@@ -45,6 +47,17 @@
   - `go mod tidy` with no drift;
   - `scripts/ci/check-api-path-escaping.sh`, `scripts/ci/check-readme-tool-coverage.sh`.
 - [x] 5.2 Run `openspec validate signin-required-forgejo --strict` and verify that it is valid.
+
+## 6. Review follow-ups (PR #730)
+
+- [x] 6.1 Validate `--forgejo-version` with the SDK's parser (`forgejo.ValidateVersion`), so `16.banana`, `+16` or `16.0.7 rc` refuse startup instead of failing every client build. Verify with `cmd` and `pkg/forgejo` tests.
+- [x] 6.2 Record the setting in `initConfig`, so `--cli` gets it too. Verify with a `cmd` test in `--cli` mode.
+- [x] 6.3 Rename the environment variable to `FORGEJO_MCP_FORGEJO_VERSION`. Verify that the bare `FORGEJO_VERSION` is ignored.
+- [x] 6.4 With the setting given, keep one anonymous reachability request (`CheckReachable`) in tokenless passthrough and in `resource-server` mode, and warn when Forgejo reports a different version, also after `testConnection`. Verify with startup tests for unreachable, `404`, mismatch and build-metadata-only difference.
+- [x] 6.5 Count a `401`/`403` as sign-in only when it carries a Forgejo API error. Verify with probe tests for HTML, plain-text, empty and array bodies.
+- [x] 6.6 Log the stated version and its source in `resource-server` mode. Verify with `TestPrepareResourceServerUsesTheVersionSetting`.
+- [x] 6.7 Drain the `/version` body before the fallback, bound the probe with a 15 s deadline, keep user information out of probe errors, and distrust a swagger document reached off the instance. Verify with probe tests.
+- [x] 6.8 Fix the refusal message, the `anonymousGet` comment, the README sentence on startup refusals, the dead `written` counter, and the missing SPDX headers.
 
 ## Workflow follow-up
 

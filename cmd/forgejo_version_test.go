@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation"
+	flagPkg "git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/flag"
+	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/forgejo"
 )
 
 // withForgejoVersionFlag parses args into a flag set holding -forgejo-version,
@@ -32,7 +34,7 @@ func withForgejoVersionFlag(t *testing.T, args []string) {
 
 // Spec forgejo-version-detection, scenario "Flag wins over environment".
 func TestForgejoVersionFlagWinsOverEnvironment(t *testing.T) {
-	t.Setenv("FORGEJO_VERSION", "15.0.11")
+	t.Setenv(forgejoVersionEnv, "15.0.11")
 	withForgejoVersionFlag(t, []string{"-forgejo-version", "16.0.7"})
 
 	got, err := resolveForgejoVersion()
@@ -42,7 +44,7 @@ func TestForgejoVersionFlagWinsOverEnvironment(t *testing.T) {
 }
 
 func TestForgejoVersionEnvironmentAlone(t *testing.T) {
-	t.Setenv("FORGEJO_VERSION", "16.0.7+gitea-1.22.0")
+	t.Setenv(forgejoVersionEnv, "16.0.7+gitea-1.22.0")
 	withForgejoVersionFlag(t, []string{})
 
 	got, err := resolveForgejoVersion()
@@ -53,7 +55,7 @@ func TestForgejoVersionEnvironmentAlone(t *testing.T) {
 
 // --cli runs initConfig without parsing a flag set.
 func TestForgejoVersionCLIModeReadsEnvironment(t *testing.T) {
-	t.Setenv("FORGEJO_VERSION", "16")
+	t.Setenv(forgejoVersionEnv, "16")
 	withForgejoVersionFlag(t, nil)
 
 	got, err := resolveForgejoVersion()
@@ -64,8 +66,13 @@ func TestForgejoVersionCLIModeReadsEnvironment(t *testing.T) {
 
 // Spec forgejo-version-detection, scenario "Unparsable value".
 func TestForgejoVersionRefusesAnUnparsableValue(t *testing.T) {
-	t.Setenv("FORGEJO_VERSION", "")
-	for _, v := range []string{"banana", "v", ".16", "-1.0"} {
+	t.Setenv(forgejoVersionEnv, "")
+	for _, v := range []string{
+		"banana", "v", ".16", "-1.0",
+		// A numeric major, but the SDK's parser refuses each of these, so
+		// every client build would fail after startup.
+		"16.banana", "+16", "16.0.7 rc", "16..0", "16.0.x",
+	} {
 		withForgejoVersionFlag(t, []string{"-forgejo-version", v})
 
 		_, err := resolveForgejoVersion()
@@ -78,9 +85,40 @@ func TestForgejoVersionRefusesAnUnparsableValue(t *testing.T) {
 	}
 }
 
+// The bare FORGEJO_VERSION is what container tooling sets; it is not read.
+func TestForgejoVersionIgnoresTheUnprefixedVariable(t *testing.T) {
+	t.Setenv(forgejoVersionEnv, "")
+	t.Setenv("FORGEJO_VERSION", "latest")
+	withForgejoVersionFlag(t, []string{})
+
+	got, err := resolveForgejoVersion()
+	if err != nil || got != "" {
+		t.Fatalf("resolveForgejoVersion = %q, %v; want empty", got, err)
+	}
+}
+
+// --cli mode records the setting too, so its SDK clients skip the version
+// request. initConfig calls applyForgejoVersion in every mode.
+func TestForgejoVersionIsRecordedInCLIMode(t *testing.T) {
+	t.Setenv(forgejoVersionEnv, "16.0.7")
+	withForgejoVersionFlag(t, nil)
+	prev := flagPkg.ForgejoVersion
+	t.Cleanup(func() {
+		flagPkg.ForgejoVersion = prev
+		forgejo.SetServerVersion("")
+	})
+
+	if err := applyForgejoVersion(); err != nil {
+		t.Fatalf("applyForgejoVersion: %v", err)
+	}
+	if got := forgejo.KnownServerVersion(); got != "16.0.7" {
+		t.Fatalf("recorded version = %q, want 16.0.7", got)
+	}
+}
+
 // Spec forgejo-version-detection, scenario "Setting absent".
 func TestForgejoVersionAbsent(t *testing.T) {
-	t.Setenv("FORGEJO_VERSION", "")
+	t.Setenv(forgejoVersionEnv, "")
 	withForgejoVersionFlag(t, []string{})
 
 	got, err := resolveForgejoVersion()
@@ -93,14 +131,14 @@ func TestForgejoVersionAbsent(t *testing.T) {
 // setting, so passthrough mode does not refuse it.
 func TestPassthroughAcceptsForgejoVersion(t *testing.T) {
 	withAuthFlags(t, nil)
-	t.Setenv("FORGEJO_VERSION", "16.0.7")
+	t.Setenv(forgejoVersionEnv, "16.0.7")
 	for _, s := range resourceServerSettings() {
-		if s.envVar == "FORGEJO_VERSION" || s.flagName == "forgejo-version" {
+		if s.envVar == forgejoVersionEnv || s.flagName == "forgejo-version" {
 			t.Fatal("forgejo-version is listed as a resource-server-only setting")
 		}
 	}
 	resolveAuthSettings()
 	if err := operation.ValidateAuthConfig("http", false); err != nil {
-		t.Fatalf("passthrough with FORGEJO_VERSION: %v", err)
+		t.Fatalf("passthrough with FORGEJO_MCP_FORGEJO_VERSION: %v", err)
 	}
 }

@@ -296,11 +296,9 @@ func initConfig() {
 		}
 	}
 
-	version, err := resolveForgejoVersion()
-	if err != nil {
+	if err := applyForgejoVersion(); err != nil {
 		log.Fatal("Invalid Forgejo version configuration", log.ErrorField(err))
 	}
-	flagPkg.ForgejoVersion = version
 
 	resolveAuthSettings()
 	applyTLSSettings()
@@ -345,15 +343,36 @@ func applyTLSSettings() {
 	)
 }
 
-// resolveForgejoVersion reads -forgejo-version / FORGEJO_VERSION, the flag
-// winning, and refuses a value with no numeric major version.
+// applyForgejoVersion resolves -forgejo-version and records it. It is
+// recorded here, once, so every mode -- server and --cli alike -- builds its
+// SDK clients without asking Forgejo for the version.
+func applyForgejoVersion() error {
+	version, err := resolveForgejoVersion()
+	if err != nil {
+		return err
+	}
+	flagPkg.ForgejoVersion = version
+	if version != "" {
+		forgejo.SetServerVersion(version)
+	}
+	return nil
+}
+
+// forgejoVersionEnv is the environment variable behind -forgejo-version. It
+// carries the FORGEJO_MCP_ prefix because a bare FORGEJO_VERSION is commonly
+// set by tooling that picks a Forgejo container tag.
+const forgejoVersionEnv = "FORGEJO_MCP_FORGEJO_VERSION"
+
+// resolveForgejoVersion reads -forgejo-version / FORGEJO_MCP_FORGEJO_VERSION,
+// the flag winning, and refuses a value the Forgejo SDK cannot parse or that
+// has no numeric major version.
 func resolveForgejoVersion() (string, error) {
-	v := strings.TrimSpace(resolveString(forgejoVersion, "FORGEJO_VERSION", "forgejo-version"))
+	v := strings.TrimSpace(resolveString(forgejoVersion, forgejoVersionEnv, "forgejo-version"))
 	if v == "" {
 		return "", nil
 	}
-	if _, err := forgejo.MajorVersion(v); err != nil {
-		return "", fmt.Errorf("-forgejo-version / FORGEJO_VERSION: %w", err)
+	if err := forgejo.ValidateVersion(v); err != nil {
+		return "", fmt.Errorf("-forgejo-version / %s: %w", forgejoVersionEnv, err)
 	}
 	return v, nil
 }

@@ -148,8 +148,24 @@ func VerifyConnection() error {
 		log.StringField("server_version", version),
 		log.IntField("response_status", resp.StatusCode),
 	)
+	WarnOnVersionMismatch(version)
 
 	return nil
+}
+
+// WarnOnVersionMismatch logs a warning when Forgejo reports a version other
+// than the one the operator stated with -forgejo-version. The stated version
+// keeps driving the SDK, so a stale value after an upgrade must not go
+// unnoticed.
+func WarnOnVersionMismatch(reported string) {
+	stated := flag.ForgejoVersion
+	if stated == "" || reported == "" || SameVersion(stated, reported) {
+		return
+	}
+	log.Warn("Forgejo reports a different version than -forgejo-version states; the stated version is used",
+		log.StringField("stated_version", stated),
+		log.StringField("reported_version", reported),
+	)
 }
 
 // HealthCheck performs a lightweight health check

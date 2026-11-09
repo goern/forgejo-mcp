@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"git.b4mad.industries/agentic-forges/forgejo-mcp/v3/pkg/flag"
 )
@@ -21,6 +22,7 @@ import (
 type signInForge struct {
 	srv             *httptest.Server
 	versionStatus   int
+	versionBody     string           // the body of a non-200 /version answer; "" means a Forgejo API error
 	swagger         http.HandlerFunc // nil: 404
 	versionRequests atomic.Int64
 	swaggerRequests atomic.Int64
@@ -43,6 +45,8 @@ func newSignInForge(t *testing.T, prefix string, versionStatus int, swagger http
 			w.WriteHeader(f.versionStatus)
 			if f.versionStatus == http.StatusOK {
 				_, _ = w.Write([]byte(`{"version":"16.0.7+gitea-1.22.0"}`))
+			} else if f.versionBody != "" {
+				_, _ = w.Write([]byte(f.versionBody))
 			} else {
 				_, _ = w.Write([]byte(`{"message":"Only signed in user is allowed to call APIs."}`))
 			}
@@ -195,16 +199,13 @@ func TestProbeSendsNoCredentialOnEitherRequest(t *testing.T) {
 
 // Spec forgejo-version-detection, scenario "Oversized swagger document".
 func TestProbeBoundsTheSwaggerRead(t *testing.T) {
-	var written atomic.Int64
 	huge := func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"paths":{"x":"`))
 		chunk := []byte(strings.Repeat("a", 64<<10))
 		// Twice the bound, then the info the probe must never reach.
 		for i := 0; i < 2*maxSwaggerBody/len(chunk); i++ {
-			n, err := w.Write(chunk)
-			written.Add(int64(n))
-			if err != nil {
+			if _, err := w.Write(chunk); err != nil {
 				return
 			}
 		}
@@ -229,5 +230,173 @@ func TestProbeFindsSwaggerUnderASubPath(t *testing.T) {
 	}
 	if got != "16.0.7" || f.swaggerRequests.Load() != 1 {
 		t.Fatalf("version = %q, swagger requests %d; want 16.0.7 and 1", got, f.swaggerRequests.Load())
+	}
+}
+
+// Spec forgejo-version-detection, scenario "Refusal that is not from
+// Forgejo": a proxy, a WAF or another service refusing the request is not a
+// closed Forgejo, so swagger is not tried and the outcome is not
+// ErrSignInRequired.
+func TestProbeTreatsANonForgejoRefusalAsNotUsable(t *testing.T) {
+	bodies := map[string]string{
+		"HTML":          "<html><body>403 Forbidden</body></html>",
+		"plain text":    "Unauthorized",
+		"empty message": `{"message":""}`,
+		"JSON array":    `["message"]`,
+		"empty":         " ",
+	}
+	for name, body := range bodies {
+		for _, status := range []int{http.StatusUnauthorized, http.StatusForbidden} {
+			t.Run(name+" "+http.StatusText(status), func(t *testing.T) {
+				f := newSignInForge(t, "", status, swaggerDoc("16.0.7"))
+				f.versionBody = body
+
+				_, err := ProbeServerVersion(context.Background())
+				if err == nil || errors.Is(err, ErrSignInRequired) {
+					t.Fatalf("err = %v, want a failure that is not ErrSignInRequired", err)
+				}
+				if _, err := CheckReachable(context.Background()); err == nil {
+					t.Fatal("CheckReachable accepted a refusal that is not from Forgejo")
+				}
+				if n := f.swaggerRequests.Load(); n != 0 {
+					t.Fatalf("swagger requested %d times, want 0", n)
+				}
+			})
+		}
+	}
+}
+
+// Spec forgejo-version-detection, scenario "Swagger redirected off the
+// instance": a document from another origin is not trusted.
+func TestProbeDoesNotTrustSwaggerFromAnotherOrigin(t *testing.T) {
+	other := httptest.NewServer(swaggerDoc("16.0.7"))
+	t.Cleanup(other.Close)
+	newSignInForge(t, "", http.StatusForbidden, func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, other.URL+"/swagger.v1.json", http.StatusFound)
+	})
+
+	got, err := ProbeServerVersion(context.Background())
+	if !errors.Is(err, ErrSignInRequired) || !strings.Contains(err.Error(), "outside the Forgejo instance") {
+		t.Fatalf("ProbeServerVersion = %q, %v; want ErrSignInRequired naming the redirect", got, err)
+	}
+}
+
+// A redirect that stays on the instance is followed.
+func TestProbeFollowsASameOriginSwaggerRedirect(t *testing.T) {
+	var f *signInForge
+	f = newSignInForge(t, "", http.StatusForbidden, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("moved") == "" {
+			http.Redirect(w, r, f.srv.URL+"/swagger.v1.json?moved=1", http.StatusFound)
+			return
+		}
+		swaggerDoc("16.0.7")(w, r)
+	})
+
+	got, err := ProbeServerVersion(context.Background())
+	if err != nil || got != "16.0.7" {
+		t.Fatalf("ProbeServerVersion = %q, %v; want 16.0.7", got, err)
+	}
+}
+
+// User information in -url never reaches a probe error.
+func TestProbeErrorsCarryNoUserInformation(t *testing.T) {
+	f := newSignInForge(t, "", http.StatusForbidden, nil)
+	flag.URL = strings.Replace(f.srv.URL, "http://", "http://probe-user:probe-secret@", 1)
+
+	_, err := ProbeServerVersion(context.Background())
+	if !errors.Is(err, ErrSignInRequired) {
+		t.Fatalf("err = %v, want ErrSignInRequired", err)
+	}
+	if strings.Contains(err.Error(), "probe-secret") || strings.Contains(err.Error(), "probe-user") {
+		t.Fatalf("error leaks user information: %v", err)
+	}
+
+	f.srv.Close()
+	_, err = ProbeServerVersion(context.Background())
+	if err == nil || strings.Contains(err.Error(), "probe-secret") || strings.Contains(err.Error(), "probe-user") {
+		t.Fatalf("transport error = %v, want one without user information", err)
+	}
+}
+
+// The whole probe is bounded by probeTimeout, not by rawHTTPClient's 60s.
+func TestProbeIsBoundedByItsTimeout(t *testing.T) {
+	prev := probeTimeout
+	probeTimeout = 100 * time.Millisecond
+	t.Cleanup(func() { probeTimeout = prev })
+	release := make(chan struct{})
+	newSignInForge(t, "", http.StatusForbidden, func(http.ResponseWriter, *http.Request) { <-release })
+	// Registered after the stub's own cleanup, so it runs first: srv.Close
+	// waits for the stalled handler.
+	t.Cleanup(func() { close(release) })
+
+	start := time.Now()
+	_, err := ProbeServerVersion(context.Background())
+	if !errors.Is(err, ErrSignInRequired) {
+		t.Fatalf("err = %v, want ErrSignInRequired", err)
+	}
+	if d := time.Since(start); d > 5*time.Second {
+		t.Fatalf("probe took %s, want it cut off near %s", d, probeTimeout)
+	}
+}
+
+// CheckReachable never reads swagger: it reports a version on 200, nothing on
+// a Forgejo sign-in refusal, and an error for anything else.
+func TestCheckReachable(t *testing.T) {
+	t.Run("open", func(t *testing.T) {
+		f := newSignInForge(t, "", http.StatusOK, swaggerDoc("99.0.0"))
+		got, err := CheckReachable(context.Background())
+		if err != nil || got != "16.0.7+gitea-1.22.0" {
+			t.Fatalf("CheckReachable = %q, %v", got, err)
+		}
+		if f.swaggerRequests.Load() != 0 {
+			t.Fatal("swagger was requested")
+		}
+	})
+	t.Run("sign-in required", func(t *testing.T) {
+		f := newSignInForge(t, "", http.StatusForbidden, swaggerDoc("16.0.7"))
+		got, err := CheckReachable(context.Background())
+		if err != nil || got != "" {
+			t.Fatalf("CheckReachable = %q, %v; want reachable with no version", got, err)
+		}
+		if f.swaggerRequests.Load() != 0 {
+			t.Fatal("swagger was requested")
+		}
+	})
+	t.Run("404", func(t *testing.T) {
+		newSignInForge(t, "", http.StatusNotFound, nil)
+		if _, err := CheckReachable(context.Background()); err == nil {
+			t.Fatal("CheckReachable accepted a 404")
+		}
+	})
+}
+
+func TestValidateVersion(t *testing.T) {
+	for _, v := range []string{"16", "16.0.7", "v16.0.7", "16.0.7+gitea-1.22.0", "16.0.0-dev-741-6f391573+gitea-1.22.0"} {
+		if err := ValidateVersion(v); err != nil {
+			t.Errorf("ValidateVersion(%q) = %v, want nil", v, err)
+		}
+	}
+	// Each has a numeric major, but the SDK's parser refuses it.
+	for _, v := range []string{"16.banana", "+16", "16.0.7 rc", "16..0", "16.0.x", "banana"} {
+		if err := ValidateVersion(v); err == nil {
+			t.Errorf("ValidateVersion(%q) = nil, want an error", v)
+		}
+	}
+}
+
+func TestSameVersion(t *testing.T) {
+	cases := []struct {
+		a, b string
+		want bool
+	}{
+		{"16.0.7", "16.0.7+gitea-1.22.0", true},
+		{"16", "16.0.0", true},
+		{"16.0.7", "16.0.6+gitea-1.22.0", false},
+		{"16.0.7", "16.0.7-rc1", false},
+	}
+	for _, c := range cases {
+		if got := SameVersion(c.a, c.b); got != c.want {
+			t.Errorf("SameVersion(%q, %q) = %v, want %v", c.a, c.b, got, c.want)
+		}
 	}
 }

@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+
 # Spec Delta
 
 ## MODIFIED Requirements
@@ -15,7 +17,7 @@ In `resource-server` mode, the server SHALL check its configuration before bindi
 - **Host not answered.** The host of `-resource` or of `-forgejo-jwt-issuer` is not a host this server answers to under its Host policy.
 - **Resource path.** The path of `-resource` is not `/mcp`, the path of the MCP endpoint. The protected resource metadata names `-resource` as the resource, so any other path publishes a resource this server does not serve.
 - **Signing key.** The signing key or a published key cannot be loaded, is not of a supported type (see capability `forgejo-jwt-issuer`), or two published keys have the same key ID.
-- **Forgejo version.** `--forgejo-version` is unset and the anonymous probe of capability `forgejo-version-detection` reads no version, or the version in use, probed or set, is below 16.0. When the probe read no version, the message SHALL name `--forgejo-version`.
+- **Forgejo version.** `--forgejo-version` is unset and the anonymous probe of capability `forgejo-version-detection` reads no version, or the version in use, probed or set, is below 16.0, or `--forgejo-version` is set and Forgejo is not reachable. When the probe read no version, the message SHALL name `--forgejo-version`.
 - **Identity provider metadata.** The provider's metadata cannot be retrieved, its `issuer` differs from `-authorization-server` by even one character, or it names no `jwks_uri`.
 
 #### Scenario: Incompatible transport
@@ -50,7 +52,8 @@ In `resource-server` mode, the server SHALL check its configuration before bindi
 #### Scenario: Version supplied by the operator
 
 - **WHEN** the server is started in `resource-server` mode with `--forgejo-version 16.0.7`
-- **THEN** the version check SHALL pass without requesting the version from Forgejo
+- **THEN** the version check SHALL pass without reading the version from Forgejo
+- **AND** the server SHALL check, with one anonymous request, that Forgejo is reachable
 
 #### Scenario: Supplied version too old
 

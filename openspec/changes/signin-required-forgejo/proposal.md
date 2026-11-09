@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+
 # Proposal
 
 ## Why
@@ -8,12 +10,12 @@ The same instances still serve `/swagger.v1.json` anonymously, and its `info.ver
 
 ## What Changes
 
-- **One anonymous version probe** for every caller: `GET /api/v1/version`. If Forgejo answers `401` or `403`, the probe reads `info.version` from `/swagger.v1.json` instead, with a bounded read. No credential is sent on either request.
-- **New setting `--forgejo-version` / `FORGEJO_VERSION`**, optional, valid in every mode. When set, forgejo-mcp does not probe the version. It uses the value for the `resource-server` floor check and passes it to the SDK, so per-request clients skip the SDK's own version request. An unparsable value refuses startup.
+- **One anonymous version probe** for every caller: `GET /api/v1/version`. If Forgejo answers `401` or `403` with a Forgejo API error, the probe reads `info.version` from `/swagger.v1.json` instead, with a bounded read, and trusts it only from the instance itself. No credential is sent on either request.
+- **New setting `--forgejo-version` / `FORGEJO_MCP_FORGEJO_VERSION`**, optional, valid in every mode. When set, forgejo-mcp does not read the version: one anonymous request to `/api/v1/version` only checks that `--url` reaches Forgejo, and a different reported version is logged as a warning. It uses the value for the `resource-server` floor check and passes it to the SDK in every mode, `--cli` included, so clients skip the SDK's own version request. A value the SDK cannot parse refuses startup.
 - **Tokenless passthrough on `http`/`sse`** no longer builds an SDK client at startup. It runs the probe instead:
   - if a version is read, it is logged;
-  - if Forgejo answers `401`/`403` and the swagger fallback fails too, a warning is logged and the server starts. Every request still needs its own token, as before;
-  - if Forgejo cannot be reached (DNS, connection, TLS) or answers anything else, startup still fails, so a wrong URL is caught at once.
+  - if Forgejo answers `401`/`403` with a Forgejo API error and the swagger fallback fails too, a warning is logged and the server starts. Every request still needs its own token, as before;
+  - if Forgejo cannot be reached (DNS, connection, TLS) or answers anything else, including a `401`/`403` that is not a Forgejo API error (a proxy, a WAF), startup still fails, so a wrong URL is caught at once. This holds with `--forgejo-version` set too.
 - **`resource-server` mode** uses the same probe. If it reads no version and `--forgejo-version` is unset, startup is refused with a message that names `--forgejo-version`.
 - Unchanged: `stdio`, `--cli`, and any configuration with an operator token keep today's authenticated connection check, and its failure stays fatal.
 
@@ -26,7 +28,7 @@ The same instances still serve `/swagger.v1.json` anonymously, and its `info.ver
 
 ### New Capabilities
 
-- `forgejo-version-detection`: how forgejo-mcp learns the version of the Forgejo instance it serves, namely the anonymous probe, the swagger fallback, and the `--forgejo-version` setting that overrides both. #710 extends this capability with API detection later.
+- `forgejo-version-detection`: how forgejo-mcp learns the version of the Forgejo instance it serves, namely the anonymous probe, the swagger fallback, and the `--forgejo-version` setting that replaces both. #710 extends this capability with API detection later.
 
 ### Modified Capabilities
 
@@ -40,4 +42,4 @@ The same instances still serve `/swagger.v1.json` anonymously, and its `info.ver
 - `operation/authmode.go`: `prepareResourceServer` honours `--forgejo-version`.
 - `cmd/cmd.go`, `pkg/flag/flag.go`: the new setting and its validation.
 - `README.md` (configuration table), `docs/oauth-resource-server/operator.md` (requirements, refusal list).
-- No new dependency. No change for stdio users or for deployments with an operator token.
+- No new module: `github.com/hashicorp/go-version`, already in the graph through the SDK, becomes a direct dependency so the setting is validated with the parser the SDK uses. No change for stdio users or for deployments with an operator token.

@@ -442,20 +442,52 @@ func TestPrepareResourceServerNamesTheSettingWhenNoVersionIsReadable(t *testing.
 	}
 }
 
-// Spec oauth-resource-server, scenario "Version supplied by the operator".
+// Spec oauth-resource-server, scenario "Version supplied by the operator":
+// the version is not read, only one anonymous reachability request is sent,
+// and the log names the setting as the source.
 func TestPrepareResourceServerUsesTheVersionSetting(t *testing.T) {
 	withResourceServerConfig(t)
 	withVersionSetting(t, "16.0.7")
 	f := newFixture(t, "16.0.7", mustP256(t), "")
 	f.signInRequired.Store(true)
+	logs := captureLogs(t, zapcore.InfoLevel)
 
 	if _, err := prepareResourceServer(context.Background()); err != nil {
 		t.Fatalf("prepareResourceServer: %v", err)
 	}
+	versionRequests := 0
 	for _, req := range f.requests() {
-		if strings.HasPrefix(req, "/api/v1/version ") || strings.HasPrefix(req, "/swagger.v1.json ") {
-			t.Fatalf("the version was requested although it is configured: %q", req)
+		if strings.HasPrefix(req, "/swagger.v1.json ") {
+			t.Fatalf("swagger was read although the version is configured: %q", req)
 		}
+		if strings.HasPrefix(req, "/api/v1/version ") {
+			versionRequests++
+			if !strings.HasSuffix(req, " ") {
+				t.Fatalf("the reachability check carried a credential: %q", req)
+			}
+		}
+	}
+	if versionRequests != 1 {
+		t.Fatalf("%d /api/v1/version requests, want 1 (the reachability check)", versionRequests)
+	}
+	stated := logs.FilterMessage("Using the Forgejo version from the configuration").All()
+	if len(stated) != 1 || stated[0].ContextMap()["source"] != forgejoVersionSource {
+		t.Fatalf("log lines naming the stated version: %v", stated)
+	}
+}
+
+// Stating the version does not skip the check that -url reaches Forgejo.
+func TestPrepareResourceServerRefusesAnUnreachableForgejoWithTheVersionSetting(t *testing.T) {
+	withResourceServerConfig(t)
+	withVersionSetting(t, "16.0.7")
+	newFixture(t, "16.0.7", mustP256(t), "")
+	srv := httptest.NewServer(http.NotFoundHandler())
+	flag.URL = srv.URL
+	srv.Close()
+
+	_, err := prepareResourceServer(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "cannot reach Forgejo") {
+		t.Fatalf("error = %v, want a refusal for an unreachable Forgejo", err)
 	}
 }
 
