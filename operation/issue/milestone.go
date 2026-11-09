@@ -58,10 +58,11 @@ var (
 
 	DeleteMilestoneTool = mcp.NewTool(
 		DeleteMilestoneToolName,
-		mcp.WithDescription("Delete a repository milestone by ID. Issues assigned to it are kept and simply lose the milestone."),
+		mcp.WithDescription("Delete a repository milestone by ID. By default refuses if any issue/PR is assigned to it; set delete_mode=force to delete anyway (assigned issues are kept and simply lose the milestone)."),
 		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
 		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
 		mcp.WithNumber("id", mcp.Required(), mcp.Description("Milestone ID")),
+		mcp.WithString("delete_mode", mcp.Description("safe (default): refuse if issues are assigned and report count. force: delete unconditionally.")),
 	)
 )
 
@@ -83,6 +84,16 @@ func parseMilestoneState(state string) (forgejo_sdk.StateType, error) {
 	}
 }
 
+// parseMilestoneID rejects a missing or non-numeric id instead of letting it
+// become milestone 0 and surface as a confusing 404.
+func parseMilestoneID(args map[string]any) (int64, error) {
+	id, err := to.Float64(args["id"])
+	if err != nil {
+		return 0, fmt.Errorf("invalid id: %w", err)
+	}
+	return int64(id), nil
+}
+
 func CreateMilestoneFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	log.Debugf("Called CreateMilestoneFn")
 	args := req.GetArguments()
@@ -95,6 +106,9 @@ func CreateMilestoneFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 
 	if title == "" {
 		return to.ErrorResult(fmt.Errorf("title is required"))
+	}
+	if state == "" {
+		state = "open" // schema defaults are advisory; apply it here so it always holds
 	}
 	st, err := parseMilestoneState(state)
 	if err != nil {
@@ -129,13 +143,16 @@ func GetMilestoneFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 	args := req.GetArguments()
 	owner, _ := args["owner"].(string)
 	repo, _ := args["repo"].(string)
-	id, _ := to.Float64(args["id"])
+	id, err := parseMilestoneID(args)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
 
 	client, err := forgejo.Client(ctx)
 	if err != nil {
 		return to.ErrorResult(err)
 	}
-	milestone, _, err := client.GetMilestone(owner, repo, int64(id))
+	milestone, _, err := client.GetMilestone(owner, repo, id)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("get milestone err: %w", err))
 	}
@@ -147,7 +164,10 @@ func EditMilestoneFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToo
 	args := req.GetArguments()
 	owner, _ := args["owner"].(string)
 	repo, _ := args["repo"].(string)
-	id, _ := to.Float64(args["id"])
+	id, err := parseMilestoneID(args)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
 	title, _ := args["title"].(string)
 	description, hasDescription := args["description"].(string)
 	state, _ := args["state"].(string)
@@ -180,7 +200,7 @@ func EditMilestoneFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToo
 	if err != nil {
 		return to.ErrorResult(err)
 	}
-	milestone, _, err := client.EditMilestone(owner, repo, int64(id), opt)
+	milestone, _, err := client.EditMilestone(owner, repo, id, opt)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("edit milestone err: %w", err))
 	}
@@ -192,15 +212,29 @@ func DeleteMilestoneFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 	args := req.GetArguments()
 	owner, _ := args["owner"].(string)
 	repo, _ := args["repo"].(string)
-	id, _ := to.Float64(args["id"])
+	id, err := parseMilestoneID(args)
+	if err != nil {
+		return to.ErrorResult(err)
+	}
+
+	deleteMode, _ := args["delete_mode"].(string)
 
 	client, err := forgejo.Client(ctx)
 	if err != nil {
 		return to.ErrorResult(err)
 	}
-	_, err = client.DeleteMilestone(owner, repo, int64(id))
+	if deleteMode != "force" {
+		ms, _, err := client.GetMilestone(owner, repo, id)
+		if err != nil {
+			return to.ErrorResult(fmt.Errorf("get milestone err: %w", err))
+		}
+		if count := ms.OpenIssues + ms.ClosedIssues; count > 0 {
+			return to.ErrorResult(fmt.Errorf("milestone %q has %d issue(s)/PR(s) assigned (%d open, %d closed); set delete_mode=force to delete anyway", ms.Title, count, ms.OpenIssues, ms.ClosedIssues))
+		}
+	}
+	_, err = client.DeleteMilestone(owner, repo, id)
 	if err != nil {
 		return to.ErrorResult(fmt.Errorf("delete milestone err: %w", err))
 	}
-	return to.TextResult(fmt.Sprintf("Deleted milestone %d", int64(id)))
+	return to.TextResult(fmt.Sprintf("Deleted milestone %d", id))
 }

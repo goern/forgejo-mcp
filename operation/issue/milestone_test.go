@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
+	"github.com/mark3labs/mcp-go/mcp"
 )
 
 // milestoneHandler is labelHandler plus capture of the request body so tests
@@ -50,7 +51,7 @@ func TestCreateMilestoneFn_HappyPath(t *testing.T) {
 	if err := json.Unmarshal(got, &payload); err != nil {
 		t.Fatalf("bad payload: %v", err)
 	}
-	if payload["title"] != "Phase 1" || payload["description"] != "first" || payload["state"] != "" && payload["state"] != "open" {
+	if payload["title"] != "Phase 1" || payload["description"] != "first" || payload["state"] != "open" {
 		t.Errorf("unexpected payload: %s", got)
 	}
 	if !strings.HasPrefix(payload["due_on"].(string), "2026-08-20") {
@@ -113,10 +114,65 @@ func TestEditMilestoneFn_Rejects(t *testing.T) {
 	}
 }
 
+// milestoneDeleteBackend serves GET (with the given issue counts) and DELETE
+// on milestone 3 and records whether DELETE was reached.
+func milestoneDeleteBackend(t *testing.T, open, closed int, deleted *bool) {
+	t.Helper()
+	newLabelBackend(t, func(mux *http.ServeMux) {
+		mux.HandleFunc("/api/v1/repos/owner/repo/milestones/3", func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodGet:
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(forgejo_sdk.Milestone{ID: 3, Title: "v1", OpenIssues: open, ClosedIssues: closed})
+			case http.MethodDelete:
+				*deleted = true
+				w.WriteHeader(http.StatusNoContent)
+			default:
+				w.WriteHeader(http.StatusMethodNotAllowed)
+			}
+		})
+	})
+}
+
 func TestDeleteMilestoneFn(t *testing.T) {
-	newLabelBackend(t, milestoneHandler(t, http.MethodDelete, "/api/v1/repos/owner/repo/milestones/3", http.StatusNoContent, nil, nil))
-	res, err := DeleteMilestoneFn(context.Background(), makeReq(map[string]any{"owner": "owner", "repo": "repo", "id": float64(3)}))
-	if err != nil || res == nil || res.IsError {
-		t.Fatalf("unexpected error: err=%v res=%+v", err, res)
+	cases := []struct {
+		name         string
+		open, closed int
+		mode         string
+		wantDeleted  bool
+	}{
+		{"empty milestone, safe", 0, 0, "", true},
+		{"in use, safe refuses", 2, 1, "", false},
+		{"closed issues only, safe refuses", 0, 1, "", false},
+		{"in use, force deletes", 2, 1, "force", true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var deleted bool
+			milestoneDeleteBackend(t, tc.open, tc.closed, &deleted)
+			args := map[string]any{"owner": "owner", "repo": "repo", "id": float64(3)}
+			if tc.mode != "" {
+				args["delete_mode"] = tc.mode
+			}
+			_, err := DeleteMilestoneFn(context.Background(), makeReq(args))
+			if deleted != tc.wantDeleted {
+				t.Fatalf("deleted=%v, want %v (err=%v)", deleted, tc.wantDeleted, err)
+			}
+			if !tc.wantDeleted && (err == nil || !strings.Contains(err.Error(), "delete_mode=force")) {
+				t.Errorf("refusal should point at delete_mode=force, got %v", err)
+			}
+		})
+	}
+}
+
+func TestMilestoneFns_RejectBadID(t *testing.T) {
+	newLabelBackend(t, func(*http.ServeMux) {})
+	args := map[string]any{"owner": "owner", "repo": "repo", "id": "abc", "title": "x"}
+	for name, fn := range map[string]func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error){
+		"get": GetMilestoneFn, "edit": EditMilestoneFn, "delete": DeleteMilestoneFn,
+	} {
+		if _, err := fn(context.Background(), makeReq(args)); err == nil || !strings.Contains(err.Error(), "invalid id") {
+			t.Errorf("%s: expected invalid id error, got %v", name, err)
+		}
 	}
 }
