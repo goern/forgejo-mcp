@@ -180,11 +180,17 @@ mcp.WithNumber("page", mcp.Description(params.Page), mcp.DefaultNumber(1))
 
 ## Dependencies
 
+The direct dependencies, with their exact versions and major-version paths in
+`go.mod`:
+
 | Package | Purpose |
-|---------|---------|
-| `codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2` | Forgejo API client |
+| --- | --- |
+| `codeberg.org/mvdkleijn/forgejo-sdk` | Forgejo API client |
 | `github.com/mark3labs/mcp-go` | MCP protocol implementation |
-| `github.com/spf13/cobra` | CLI framework |
+| `github.com/lestrrat-go/jwx` | JWTs and JWKS in `resource-server` mode |
+| `go.uber.org/zap` | Logging (`pkg/log`) |
+
+Command-line parsing uses the standard library's `flag` package (`cmd/cmd.go`).
 
 ## Testing
 
@@ -193,6 +199,41 @@ Run with debug mode to troubleshoot issues:
 ```bash
 FORGEJO_DEBUG=true ./forgejo-mcp --transport stdio --url <url> --token <token>
 ```
+
+### Testing raw-HTTP path escaping
+
+A test that checks how `forgejo.APIPath` or a raw-HTTP call site escapes
+`owner`, `repo` or another segment can pass against unescaped code. Two
+things cause that, and either one alone is enough:
+
+- **`r.URL.Path` is decoded.** An escaped `o%2Fx%2F..%2F..%2Fadmin` reads back
+  there as `o/x/../../admin`, so the test cannot tell what went over the wire.
+  Assert on `r.RequestURI`, the raw request target including the query.
+  `r.URL.EscapedPath()` also works for path-only assertions.
+- **`http.ServeMux` cleans paths.** When broken code sends a literal `..`, the
+  mux answers with a redirect to the cleaned path, the client follows it, and
+  the handler sees `/repos/admin/…` without any `..`. A test asserting "no
+  `/../` in the path" then passes against exactly the code it should catch.
+  Record the request in a bare `http.HandlerFunc`, not behind a mux.
+
+Prefer asserting the exact expected request target over asserting the absence
+of a pattern: a redirect or a decoded path cannot satisfy an exact match by
+accident.
+
+**Mutation-check the test.** Revert the fix it defends, for example by
+building the path with `fmt.Sprintf`, and confirm that the test fails. Treat
+this as the standard for every test that defends a security fix: a test that
+cannot fail is worse than none, because it reads as proof.
+
+Worked examples:
+
+- `pkg/forgejo/path_test.go`, `TestAPIPath_HostileOwnerStaysOnEndpoint`:
+  an exact `RequestURI` match for a traversal in `owner` and a `?` in `repo`.
+- `operation/issue/issue_test.go`, `TestListRepoIssues_SortPathEscapesSegments`:
+  the same hostile input through a tool handler, asserted on `RequestURI` in a
+  bare handler.
+
+Thanks to synath, who found the trap in #483.
 
 ## OpenSpec conventions
 
