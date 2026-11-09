@@ -19,7 +19,9 @@ make build
 
 Start the server without a global token. On this transport every client supplies its
 own, so the server does not need one — and if you do configure one, it is used only for
-the server's own startup connection check, never on a client's behalf:
+the server's own startup connection check, never on a client's behalf. Without one, the
+server reads only the instance's version, anonymously; an instance that requires sign-in
+for that is fine, the server logs a warning and starts:
 
 ```bash
 ./forgejo-mcp --transport http --url https://codeberg.org
