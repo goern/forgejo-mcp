@@ -43,7 +43,7 @@ spec:
       description: Full image reference (tag@digest) of the built image.
   steps:
     - name: build
-      image: quay.io/buildah/stable:v1.43.5@sha256:a6f96bfffc47f36462985573d85e87f782bf2d8b37e02cb3dd307713bfa6cc13
+      image: quay.io/buildah/stable:v1.46.1@sha256:72b49c4af6c63850200cc8809d513691d61ceb440358faff305b540c4b9fc038
       securityContext:
         privileged: true
       workingDir: $(workspaces.source.path)
