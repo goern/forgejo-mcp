@@ -118,8 +118,8 @@ Link is on the **name**, not a version. `repo` is the repository name under the
 same owner. Cross-owner is 404 upstream ([forgejo#11483](https://codeberg.org/forgejo/forgejo/issues/11483)).
 Do not delete versions as part of this walkthrough.
 
-Host for this slice: `https://git.b4mad.industries` (Forgejo 16). Sections 2-5
-above are the original `#543` capture and do not show link/unlink.
+Host for this slice: `https://git.b4mad.industries` (Forgejo 17.0.2). Sections
+2-5 above are the original `#543` capture and do not show link/unlink.
 
 ### 6a. `owner/repo` as `repo` is rejected with no HTTP
 
@@ -136,21 +136,72 @@ Captured 2026-09-13 against this binary (no request is sent).
 
 ### 6b. Live link, get, unlink
 
+Captured 2026-11-21 against Forgejo 17.0.2 with one disposable generic
+package, `nesvet/forgejo-mcp-link-demo@0.0.1`, deleted afterwards. Each output
+block is the `text` field of the tool result.
+
 ```bash
-export FORGEJO_URL=https://git.b4mad.industries
-# TODO: re-run against live instance -- no token in this environment
 ${FORGEJO_MCP_BIN} --cli get_package \
-  --args '{"owner":"OWNER","type":"generic","name":"dist","version":"1.0.0"}'
-${FORGEJO_MCP_BIN} --cli link_package \
-  --args '{"owner":"OWNER","type":"generic","name":"dist","repo":"REPO"}'
-${FORGEJO_MCP_BIN} --cli get_package \
-  --args '{"owner":"OWNER","type":"generic","name":"dist","version":"1.0.0"}'
-${FORGEJO_MCP_BIN} --cli unlink_package \
-  --args '{"owner":"OWNER","type":"generic","name":"dist"}'
+  --args '{"owner":"nesvet","type":"generic","name":"forgejo-mcp-link-demo","version":"0.0.1"}'
 ```
 
-Expected on a live Forgejo 16: get before omits `repository` (or documents
-that it was already linked); link returns `"status":"linked"`; get after
-shows `"repository":"OWNER/REPO"`; unlink then get omits `repository` again.
-Already-linked and unlink-when-not-linked are upstream 400; they stay MCP
-errors, not `"linked"` / `"unlinked"`.
+```output
+{"Result":{"id":992,"type":"generic","name":"forgejo-mcp-link-demo","version":"0.0.1","html_url":"https://git.b4mad.industries/nesvet/-/packages/generic/forgejo-mcp-link-demo/0.0.1","created_at":"2026-11-21T17:08:16Z"}}
+```
+
+No `repository` key: the name is not linked yet.
+
+```bash
+${FORGEJO_MCP_BIN} --cli link_package \
+  --args '{"owner":"nesvet","type":"generic","name":"forgejo-mcp-link-demo","repo":"forgejo-mcp"}'
+```
+
+```output
+{"Result":{"owner":"nesvet","type":"generic","name":"forgejo-mcp-link-demo","repo":"forgejo-mcp","status":"linked"}}
+```
+
+```bash
+${FORGEJO_MCP_BIN} --cli get_package \
+  --args '{"owner":"nesvet","type":"generic","name":"forgejo-mcp-link-demo","version":"0.0.1"}'
+```
+
+```output
+{"Result":{"id":992,"type":"generic","name":"forgejo-mcp-link-demo","version":"0.0.1","html_url":"https://git.b4mad.industries/nesvet/-/packages/generic/forgejo-mcp-link-demo/0.0.1","created_at":"2026-11-21T17:08:16Z","repository":"nesvet/forgejo-mcp"}}
+```
+
+```bash
+${FORGEJO_MCP_BIN} --cli unlink_package \
+  --args '{"owner":"nesvet","type":"generic","name":"forgejo-mcp-link-demo"}'
+```
+
+```output
+{"Result":{"owner":"nesvet","type":"generic","name":"forgejo-mcp-link-demo","status":"unlinked"}}
+```
+
+A `get_package` after unlink returns the first output again, without
+`repository`.
+
+### 6c. Upstream refusals stay tool errors
+
+Linking a name that is already linked, and unlinking one that is not, are
+upstream 400s. The tool reports them as errors, not as `"linked"` or
+`"unlinked"`:
+
+```output
+Error: tool execution failed: link package: POST https://git.b4mad.industries/api/v1/packages/nesvet/generic/forgejo-mcp-link-demo/-/link/forgejo-mcp: 400 Bad Request: {"message":"invalid argument","url":"https://git.b4mad.industries/api/swagger"}
+Error: tool execution failed: unlink package: POST https://git.b4mad.industries/api/v1/packages/nesvet/generic/forgejo-mcp-link-demo/-/unlink: 400 Bad Request: {"message":"invalid argument","url":"https://git.b4mad.industries/api/swagger"}
+```
+
+A repository with the Packages unit disabled refuses the link with 403:
+
+```output
+Error: tool execution failed: link package: POST https://git.b4mad.industries/api/v1/packages/nesvet/generic/forgejo-mcp-link-demo/-/link/forgejo-mcp: 403 Forbidden: {"message":"permission denied","url":"https://git.b4mad.industries/api/swagger"}
+```
+
+`PathEscape` leaves `.` and `..` unchanged, and the HTTP client does not
+normalise them away: `repo: ".."` reaches the link handler as a repository
+name and is a 404, not a request one level up:
+
+```output
+Error: tool execution failed: link package: POST https://git.b4mad.industries/api/v1/packages/nesvet/generic/forgejo-mcp-link-demo/-/link/..: 404 Not Found: {"message":"repository does not exist [id: 0, uid: 39, owner_name: , name: ..]","url":"https://git.b4mad.industries/api/swagger"}
+```
