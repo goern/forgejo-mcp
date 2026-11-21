@@ -48,6 +48,17 @@
                 "default: (?<depName>git\\.b4mad\\.industries/agentic-forges/release-tools):(?<currentValue>v[0-9][^\\s]*)"
             ],
             "datasourceTemplate": "docker"
+        },
+        {
+            "customType": "regex",
+            "description": "buildah step images in .tekton/release-tools/tasks/*.yaml, pinned by tag and digest. Renovate's tekton manager is not enabled here, so without this manager the pin would rot. Pinned after quay.io/buildah/stable:latest moved from 1.43.5 to 1.46.1 and broke the v3.5.0 image build on 2026-11-21 (mounting an overlay over build context directory: invalid argument).",
+            "managerFilePatterns": [
+                "/^\\.tekton/release-tools/tasks/.*\\.yaml$/"
+            ],
+            "matchStrings": [
+                "image: (?<depName>quay\\.io/buildah/stable):(?<currentValue>v[0-9][^@\\s]*)@(?<currentDigest>sha256:[a-f0-9]{64})"
+            ],
+            "datasourceTemplate": "docker"
         }
     ],
     "description": [
@@ -106,6 +117,17 @@
             "matchFileNames": [
                 "image/release-tools/npm/package.json",
                 "image/release-tools/Containerfile"
+            ],
+            "automerge": false,
+            "labels": [
+                "Kind/Enhancement",
+                "release-tools/tool-bump"
+            ]
+        },
+        {
+            "description": "buildah builds and pushes every release image, and PR CI never runs it: a bad buildah only shows up when a tag is cut. 1.43.5 -> 1.46.1 was a minor bump and broke the v3.5.0 image build, so no buildah update is automerged, not even a digest. A human cuts a test release or runs the image tasks first.",
+            "matchPackageNames": [
+                "quay.io/buildah/stable"
             ],
             "automerge": false,
             "labels": [
