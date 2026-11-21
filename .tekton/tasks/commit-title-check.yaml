@@ -125,6 +125,16 @@ spec:
         git fetch --no-tags --depth=200 origin "${BASE_REF}:refs/remotes/origin/${BASE_REF}" || \
           git fetch --no-tags origin "${BASE_REF}:refs/remotes/origin/${BASE_REF}"
 
+        # fetch-source clones the PR head shallow. If HEAD is a merge commit
+        # (e.g. "Merge branch 'main' into …"), the shallow boundary cuts its
+        # parents, so git sees a parentless commit, --no-merges keeps it, and
+        # its generated subject fails the check (#670, #629). Deepen the PR
+        # head as well, so merges keep their parents and are skipped.
+        if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
+          git fetch --no-tags --deepen=200 origin "$(git rev-parse HEAD)" || \
+            git fetch --no-tags --unshallow origin
+        fi
+
         range="origin/${BASE_REF}..HEAD"
         echo "Checking commits in range: ${range}"
 
