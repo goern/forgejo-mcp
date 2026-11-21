@@ -81,5 +81,12 @@ var (
 	// refuses to start when it is not empty.
 	ResourceServerSettings []string
 
+	// TLSCert, TLSKey and TLSCA are the PEM files that configure TLS on every
+	// connection to Forgejo: a client certificate and its key, and a CA bundle
+	// that replaces the system roots. Empty means unset.
+	TLSCert string
+	TLSKey  string
+	TLSCA   string
+
 	Debug bool
 )
