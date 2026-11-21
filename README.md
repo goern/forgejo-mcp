@@ -432,6 +432,11 @@ List all my repositories
 | `delete_workflow_run` | Delete a completed Forgejo v16+ workflow run. A live run is an API error. Removes the run and its job logs; Forgejo marks that run's artifacts deleted |
 | `list_action_run_artifacts` | List artifacts of a Forgejo v16+ workflow run. Server-paged via `page`/`limit` (default 30, max 50); optional `name` filter. Envelope `{artifacts, page, limit, count, total_count?}` |
 | `get_action_artifact` | Get metadata for one Forgejo v16+ Actions artifact. Does not download the zip |
+| `list_action_variables` | List action variables for `scope` `user`, `org`, or `repo`. Rows are `name`, `owner_id`, `repo_id` (no value). `page` default 1, `limit` default 30 max 50. Envelope `{variables, scope, page, limit, count, total_count?}`. Forgejo has no REST API for instance-global action variables. A job can still see one. This tool does not return it |
+| `get_action_variable` | Get one action variable, including `data`. A missing name is an error. Same scope rules. No instance-global REST API |
+| `create_action_variable` | Create an action variable (Forgejo POST). `data` is sent as JSON `value` and is not echoed. A `/`, `?`, or `#` in `name` is rejected before any request |
+| `update_action_variable` | Update an action variable (Forgejo PUT). `data` is not echoed. A missing name is an error |
+| `delete_action_variable` | Delete an action variable. A missing name is an error |
 | `list_repo_action_secrets` | List a repository's Actions secrets (names only; Forgejo never returns values). Client-paged via `page`/`limit` (default 30, max 50) |
 | `create_or_update_repo_action_secret` | Create or update a repository Actions secret. Overwrites any existing secret with the same name; the value is never echoed back |
 | `delete_repo_action_secret` | Delete a repository Actions secret |

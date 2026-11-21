@@ -94,6 +94,10 @@
       "description": "Check if a user is a member of an organization"
     },
     {
+      "name": "create_action_variable",
+      "description": "Create an action variable for scope user, org, or repo. Forgejo POST. data is not echoed. No REST API for instance-global variables."
+    },
+    {
       "name": "create_branch",
       "description": "Create branch"
     },
@@ -164,6 +168,10 @@
     {
       "name": "create_review_requests",
       "description": "Request reviews from specific users or teams"
+    },
+    {
+      "name": "delete_action_variable",
+      "description": "Delete an action variable for scope user, org, or repo. A missing name is an error."
     },
     {
       "name": "delete_branch",
@@ -318,6 +326,10 @@
       "description": "Read a bounded byte range from a Forgejo v16+ workflow job log. Omitting offset returns the tail."
     },
     {
+      "name": "get_action_variable",
+      "description": "Get one action variable, including its value, for scope user, org, or repo. A missing name is an error."
+    },
+    {
       "name": "get_branch_protection",
       "description": "Get a single branch protection rule by name"
     },
@@ -428,6 +440,10 @@
     {
       "name": "list_action_run_jobs",
       "description": "List jobs for a Forgejo v16+ workflow run with bounded client-side pagination."
+    },
+    {
+      "name": "list_action_variables",
+      "description": "List action variables for scope user, org, or repo. page default 1, limit default 30 max 50. Values are omitted. total_count only with X-Total-Count."
     },
     {
       "name": "list_branches",
@@ -624,6 +640,10 @@
     {
       "name": "test_repo_hook",
       "description": "Trigger a test delivery for a repository webhook. WARNING: each call triggers a live HTTP delivery to the webhook URL."
+    },
+    {
+      "name": "update_action_variable",
+      "description": "Update an action variable for scope user, org, or repo. Forgejo PUT. data is not echoed."
     },
     {
       "name": "update_file",

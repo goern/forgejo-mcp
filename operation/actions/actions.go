@@ -48,6 +48,11 @@ func RegisterTool(s *server.MCPServer) {
 	s.AddTool(ListOrgActionSecretsTool, ListOrgActionSecretsFn)
 	s.AddTool(CreateOrUpdateOrgActionSecretTool, CreateOrUpdateOrgActionSecretFn)
 	s.AddTool(DeleteOrgActionSecretTool, DeleteOrgActionSecretFn)
+	s.AddTool(ListActionVariablesTool, ListActionVariablesFn)
+	s.AddTool(GetActionVariableTool, GetActionVariableFn)
+	s.AddTool(CreateActionVariableTool, CreateActionVariableFn)
+	s.AddTool(UpdateActionVariableTool, UpdateActionVariableFn)
+	s.AddTool(DeleteActionVariableTool, DeleteActionVariableFn)
 }
 
 func DispatchWorkflowFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
