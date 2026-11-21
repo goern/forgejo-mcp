@@ -384,6 +384,10 @@ List all my repositories
 | `add_issue_dependency` | Make one issue depend on another. The dependency may live in a different repository: optional `depends_on_owner`/`depends_on_repo` default to `owner`/`repo`. |
 | `remove_issue_dependency` | Remove a dependency from an issue. For a cross-repo dependency, optional `dependency_owner`/`dependency_repo` default to `owner`/`repo`. |
 | `list_repo_milestones` | List milestones with their IDs (use with `update_issue`) |
+| `create_milestone` | Create a milestone (`title`, optional `description`, `state` (default `open`), `due_on` RFC3339). Returns numeric `id` for immediate use in `update_issue`. |
+| `get_milestone` | Get a single milestone by ID. |
+| `edit_milestone` | Edit a milestone (PATCH — only supplied fields change: `title`, `description`, `state`, `due_on`). The Forgejo API can replace a deadline but not clear it. |
+| `delete_milestone` | Delete a milestone by ID. Refuses by default when issues are assigned (reports count); set `delete_mode=force` to delete anyway — the issues lose the milestone. |
 | `list_repo_labels` | List labels with their IDs. Merges org-level labels for org-owned repos (set `include_org_labels=false` to opt out). Each entry carries a `scope` field (`"repo"` or `"org"`), plus `exclusive` and `is_archived` (`false` is present, not omitted). |
 | `list_org_labels` | List organization-level labels with their IDs. The assignment tools accept label names directly, so this is for discovery and for the rare name that exists in both the repo and the org scope. Each entry includes `exclusive` and `is_archived`. |
 | `create_repo_label` | Create a repository label (`name`, `color` as 6-digit hex, optional `description`, `exclusive`, `is_archived`). `exclusive=true` requires a scoped name (a `/` not at either end). Returns the numeric `id`; `add_issue_labels` also takes the name. |

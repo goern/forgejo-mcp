@@ -550,6 +550,22 @@
       "description": "List repository milestones"
     },
     {
+      "name": "create_milestone",
+      "description": "Create a repository milestone. Returns the created milestone including its numeric id (use with update_issue)."
+    },
+    {
+      "name": "get_milestone",
+      "description": "Get a single repository milestone by ID."
+    },
+    {
+      "name": "edit_milestone",
+      "description": "Edit a repository milestone (PATCH — only supplied fields change). Providing no fields is an error."
+    },
+    {
+      "name": "delete_milestone",
+      "description": "Delete a repository milestone by ID. By default refuses if any issue/PR is assigned to it; set delete_mode=force to delete anyway (assigned issues are kept and simply lose the milestone)."
+    },
+    {
       "name": "list_repo_notifications",
       "description": "Filter notifications scoped to a single repository"
     },

@@ -155,6 +155,13 @@ func minimalArgs(toolName string) map[string]any {
 		base["branch"] = "new-branch"
 	case "fork_repo":
 		// needs owner + repo (already set)
+	case "create_milestone":
+		base["title"] = "test milestone"
+	case "get_milestone", "delete_milestone":
+		base["id"] = float64(1)
+	case "edit_milestone":
+		base["id"] = float64(1)
+		base["title"] = "renamed"
 	case "list_repo_milestones", "list_repo_labels":
 		// needs owner + repo (already set), defaults apply for page/limit/state
 	}
