@@ -139,4 +139,5 @@ const (
 	PackageName    = "Package name (container names may contain /)"
 	PackageVersion = "Package version"
 	PackageQ       = "Filter by package name (Forgejo q substring)"
+	PackageRepo    = "Repository name under the same owner (not owner/repo). Cross-owner is 404 upstream."
 )

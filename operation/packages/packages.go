@@ -23,6 +23,8 @@ const (
 	GetPackageToolName       = "get_package"
 	DeletePackageToolName    = "delete_package"
 	ListPackageFilesToolName = "list_package_files"
+	LinkPackageToolName      = "link_package"
+	UnlinkPackageToolName    = "unlink_package"
 
 	defaultPackagesLimit = 30
 	maxPackagesLimit     = 50
@@ -110,6 +112,8 @@ func RegisterTool(s *server.MCPServer) {
 	s.AddTool(GetPackageTool, GetPackageFn)
 	s.AddTool(DeletePackageTool, DeletePackageFn)
 	s.AddTool(ListPackageFilesTool, ListPackageFilesFn)
+	s.AddTool(LinkPackageTool, LinkPackageFn)
+	s.AddTool(UnlinkPackageTool, UnlinkPackageFn)
 }
 
 func GetPackageFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -174,18 +178,26 @@ func requiredOwner(args map[string]any) (string, error) {
 	return owner, nil
 }
 
-func requiredPackageCoords(args map[string]any) (owner, packageType, name, version string, err error) {
+func requiredPackageNameCoords(args map[string]any) (owner, packageType, name string, err error) {
 	owner, err = requiredOwner(args)
 	if err != nil {
-		return "", "", "", "", err
+		return "", "", "", err
 	}
 	packageType, _ = args["type"].(string)
 	if packageType == "" {
-		return "", "", "", "", errors.New("type is required")
+		return "", "", "", errors.New("type is required")
 	}
 	name, _ = args["name"].(string)
 	if name == "" {
-		return "", "", "", "", errors.New("name is required")
+		return "", "", "", errors.New("name is required")
+	}
+	return owner, packageType, name, nil
+}
+
+func requiredPackageCoords(args map[string]any) (owner, packageType, name, version string, err error) {
+	owner, packageType, name, err = requiredPackageNameCoords(args)
+	if err != nil {
+		return "", "", "", "", err
 	}
 	version, _ = args["version"].(string)
 	if version == "" {

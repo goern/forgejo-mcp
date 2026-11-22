@@ -434,6 +434,10 @@
       "description": "Change issue state"
     },
     {
+      "name": "link_package",
+      "description": "Link a package name to a repository under the same owner. repo is the repository name, not owner/repo. Cross-owner is 404 upstream."
+    },
+    {
       "name": "list_action_run_artifacts",
       "description": "List artifacts of a Forgejo v16+ workflow run. Server-paged via page/limit (default 30, max 50); optional name filter."
     },
@@ -656,6 +660,10 @@
     {
       "name": "test_repo_hook",
       "description": "Trigger a test delivery for a repository webhook. WARNING: each call triggers a live HTTP delivery to the webhook URL."
+    },
+    {
+      "name": "unlink_package",
+      "description": "Unlink a package name from its repository. Unlink is on the package name, not a version."
     },
     {
       "name": "update_action_variable",
