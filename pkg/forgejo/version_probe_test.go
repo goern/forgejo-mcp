@@ -4,6 +4,8 @@ package forgejo
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"net/http"
@@ -398,5 +400,61 @@ func TestSameVersion(t *testing.T) {
 		if got := SameVersion(c.a, c.b); got != c.want {
 			t.Errorf("SameVersion(%q, %q) = %v, want %v", c.a, c.b, got, c.want)
 		}
+	}
+}
+
+// The swagger fallback goes through the same client as /version, so it
+// carries the TLS settings from -tls-cert, -tls-key and -tls-ca. Against an
+// instance that requires both sign-in and a client certificate, the probe
+// reads the version only with the certificate configured; without it, the
+// handshake fails, which is not "sign-in required".
+func TestProbeFallsBackToSwaggerOverMutualTLS(t *testing.T) {
+	ca := newTestCA(t, "forge CA")
+	var swaggerRequests atomic.Int64
+	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v1/version":
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusForbidden)
+			_, _ = w.Write([]byte(`{"message":"Only signed in user is allowed to call APIs."}`))
+		case "/swagger.v1.json":
+			swaggerRequests.Add(1)
+			swaggerDoc("16.0.7+gitea-1.22.0")(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	pool := x509.NewCertPool()
+	pool.AddCert(ca.cert)
+	srv.TLS = &tls.Config{
+		Certificates: []tls.Certificate{ca.issue(t, x509.ExtKeyUsageServerAuth, time.Now().Add(time.Hour))},
+		ClientCAs:    pool,
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		MinVersion:   tls.VersionTLS12,
+	}
+	srv.StartTLS()
+	t.Cleanup(srv.Close)
+	savedURL, savedToken := flag.URL, flag.Token
+	flag.URL, flag.Token = srv.URL, ""
+	t.Cleanup(func() { flag.URL, flag.Token = savedURL, savedToken })
+	restoreTransports(t)
+
+	if _, err := ProbeServerVersion(context.Background()); err == nil || errors.Is(err, ErrSignInRequired) {
+		t.Fatalf("without TLS settings: err = %v, want a handshake failure that is not ErrSignInRequired", err)
+	}
+
+	s := clientFiles(t, ca, time.Now().Add(time.Hour))
+	s.CAFile = writeFile(t, "ca.pem", ca.pem)
+	configure(t, s)
+
+	v, err := ProbeServerVersion(context.Background())
+	if err != nil {
+		t.Fatalf("ProbeServerVersion: %v", err)
+	}
+	if v != "16.0.7+gitea-1.22.0" {
+		t.Fatalf("version = %q, want 16.0.7+gitea-1.22.0", v)
+	}
+	if swaggerRequests.Load() != 1 {
+		t.Fatalf("%d swagger requests got past the handshake, want 1", swaggerRequests.Load())
 	}
 }

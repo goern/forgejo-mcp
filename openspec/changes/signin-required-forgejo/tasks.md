@@ -12,7 +12,7 @@
   - no `Authorization` header on either request even with `flag.Token` set;
   - an oversized body without `info` (`ErrSignInRequired`, bounded read);
   - a `ROOT_URL` sub-path (`https://host/forgejo` → `/forgejo/swagger.v1.json`).
-- [x] 1.2 Verify with `go test -race ./pkg/forgejo/` that the existing version and rejection tests still pass, and that the swagger request goes through `rawHTTPClient`: one test with the mTLS test server from #725, if that has merged, otherwise with a redirect-policy test.
+- [x] 1.2 Verify with `go test -race ./pkg/forgejo/` that the existing version and rejection tests still pass, and that the swagger request goes through `rawHTTPClient`: one test with the mTLS test server from #725, if that has merged, otherwise with a redirect-policy test. (#725 merged: `TestProbeFallsBackToSwaggerOverMutualTLS`.)
 
 ## 2. The --forgejo-version setting
 
