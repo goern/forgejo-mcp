@@ -97,14 +97,19 @@ The server SHALL validate the TLS settings before it serves anything or runs a C
 - **WHEN** a TLS setting is given and the Forgejo URL starts with `http://`
 - **THEN** the server exits at startup with an error saying that TLS settings need an `https` URL
 
-### Requirement: An expired client certificate is refused at startup
+### Requirement: A client certificate outside its validity window is refused at startup
 
-The server SHALL refuse to start when the configured client certificate has already expired, and SHALL log the certificate's expiry time when it starts with one. The certificate is read once at startup; replacing the file takes effect on the next restart.
+The server SHALL refuse to start when the configured client certificate has already expired or is not valid yet, and SHALL log the certificate's expiry time when it starts with one. The certificate is read once at startup; replacing the file takes effect on the next restart.
 
 #### Scenario: Expired certificate
 
 - **WHEN** `-tls-cert` names a certificate whose validity ended before startup
 - **THEN** the server exits at startup with an error naming `-tls-cert` and the expiry time
+
+#### Scenario: Certificate not valid yet
+
+- **WHEN** `-tls-cert` names a certificate whose validity starts after startup, for example because it was deployed ahead of its window or the host clock is behind
+- **THEN** the server exits at startup with an error naming `-tls-cert` and the time the certificate becomes valid
 
 #### Scenario: Valid certificate
 

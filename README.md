@@ -718,12 +718,17 @@ check at startup. In `--cli` mode, set the `FORGEJO_TLS_*` variables.
   - a file cannot be read, or the certificate and key do not match;
   - the CA file holds no certificate;
   - the URL is `http://`;
-  - the client certificate has already expired.
+  - the client certificate has already expired, or is not valid yet.
 
   It never falls back to a connection without the TLS settings you gave. There
   is no option to skip server certificate verification.
 - **Renewal needs a restart.** The files are read once at startup. The startup
   log records when the client certificate expires (`client_cert_not_after`).
+- **Not for the identity provider.** In `resource-server` mode, OIDC discovery
+  and the JWKS fetch use their own client. It presents no client certificate
+  and does not trust the `--tls-ca` bundle. An identity provider behind mutual
+  TLS, including the same Forgejo, is not supported yet: startup fails with a
+  TLS handshake error at the discovery or JWKS request.
 
 ### Uploading attachments from the host filesystem
 
