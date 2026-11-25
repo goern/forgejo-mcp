@@ -23,3 +23,8 @@
 - Open the PR, referencing #232 (to be closed once this lands), with Paul Berz as `Co-authored-by` on the implementation commit.
 - Archive the change after merge, in a follow-up PR.
 - File a follow-up issue for certificate rotation and inline PEM if someone asks for them.
+
+## 4. Review follow-ups (#755, #756)
+
+- [x] 4.1 Refuse a client certificate whose `NotBefore` is after startup, with an error naming `-tls-cert` and the time it becomes valid (#756). Verify with a `TestTLSStartupValidation` case.
+- [x] 4.2 README, "Connecting to Forgejo behind mutual TLS": state that the TLS settings do not cover the identity-provider requests in `resource-server` mode (#755).

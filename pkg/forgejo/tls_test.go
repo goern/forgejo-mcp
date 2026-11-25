@@ -74,6 +74,12 @@ func (ca *testCA) issue(t *testing.T, usage x509.ExtKeyUsage, notAfter time.Time
 
 func (ca *testCA) issuePEM(t *testing.T, usage x509.ExtKeyUsage, notAfter time.Time) (certPEM, keyPEM []byte) {
 	t.Helper()
+	return ca.issuePEMValidFrom(t, usage, time.Now().Add(-2*time.Hour), notAfter)
+}
+
+// issuePEMValidFrom is issuePEM with an explicit start of the validity window.
+func (ca *testCA) issuePEMValidFrom(t *testing.T, usage x509.ExtKeyUsage, notBefore, notAfter time.Time) (certPEM, keyPEM []byte) {
+	t.Helper()
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		t.Fatal(err)
@@ -81,7 +87,7 @@ func (ca *testCA) issuePEM(t *testing.T, usage x509.ExtKeyUsage, notAfter time.T
 	tmpl := &x509.Certificate{
 		SerialNumber: big.NewInt(serialCounter.Add(1)),
 		Subject:      pkix.Name{CommonName: "forgejo-mcp test"},
-		NotBefore:    time.Now().Add(-2 * time.Hour),
+		NotBefore:    notBefore,
 		NotAfter:     notAfter,
 		KeyUsage:     x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:  []x509.ExtKeyUsage{usage},
@@ -344,12 +350,17 @@ func TestTLSNothingConfiguredLeavesTheTransportsAlone(t *testing.T) {
 }
 
 // Spec forgejo-client-tls, requirement "TLS settings are validated at startup
-// and fail closed", plus "An expired client certificate is refused at
-// startup".
+// and fail closed", plus "A client certificate outside its validity window
+// is refused at startup".
 func TestTLSStartupValidation(t *testing.T) {
 	ca := newTestCA(t, "forge CA")
 	valid := clientFiles(t, ca, time.Now().Add(time.Hour))
 	expired := clientFiles(t, ca, time.Now().Add(-time.Hour))
+	notYetCert, notYetKey := ca.issuePEMValidFrom(t, x509.ExtKeyUsageClientAuth, time.Now().Add(time.Hour), time.Now().Add(2*time.Hour))
+	notYetValid := TLSSettings{
+		CertFile: writeFile(t, "not-yet.crt", notYetCert),
+		KeyFile:  writeFile(t, "not-yet.key", notYetKey),
+	}
 	other := clientFiles(t, ca, time.Now().Add(time.Hour))
 	caFile := writeFile(t, "ca.pem", ca.pem)
 	notPEM := writeFile(t, "junk.pem", []byte("not a certificate\n"))
@@ -370,6 +381,7 @@ func TestTLSStartupValidation(t *testing.T) {
 		{"CA file without certificates", TLSSettings{CAFile: notPEM}, "", []string{tlsCASetting, "no PEM certificate"}},
 		{"missing CA file", TLSSettings{CAFile: missing}, "", []string{tlsCASetting}},
 		{"expired client certificate", expired, "", []string{tlsCertSetting, "expired at"}},
+		{"client certificate not valid yet", notYetValid, "", []string{tlsCertSetting, "not valid until"}},
 		{"http URL", TLSSettings{CAFile: caFile}, "http://forge.example", []string{"https"}},
 	}
 	for _, tc := range cases {

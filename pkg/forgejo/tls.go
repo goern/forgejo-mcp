@@ -103,6 +103,9 @@ func buildTLSConfig(s TLSSettings, now time.Time) (*tls.Config, *TLSSummary, err
 		if now.After(leaf.NotAfter) {
 			return nil, nil, fmt.Errorf("%s: the client certificate expired at %s", tlsCertSetting, leaf.NotAfter.UTC().Format(time.RFC3339))
 		}
+		if now.Before(leaf.NotBefore) {
+			return nil, nil, fmt.Errorf("%s: the client certificate is not valid until %s; check the clock on this host", tlsCertSetting, leaf.NotBefore.UTC().Format(time.RFC3339))
+		}
 		cfg.Certificates = []tls.Certificate{pair}
 		summary.ClientCert = true
 		summary.NotAfter = leaf.NotAfter
