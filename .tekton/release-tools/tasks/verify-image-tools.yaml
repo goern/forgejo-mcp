@@ -15,7 +15,7 @@ spec:
       default: vfs
   steps:
     - name: verify-tools
-      image: quay.io/buildah/stable:v1.46.1@sha256:72b49c4af6c63850200cc8809d513691d61ceb440358faff305b540c4b9fc038
+      image: quay.io/buildah/stable:v1.46.1@sha256:a3de0b518395b28d4c5174ea685c86e4c6b5cdd9ab23f327b7f252a5e932608f
       securityContext:
         privileged: true
       script: |
