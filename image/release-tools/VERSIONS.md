@@ -17,7 +17,7 @@ Go version shipped: `1.26.10` (from tag)
 |---|---|---|---|---|
 | `syft` | `v1.44.0` | prebuilt `syft_1.44.0_linux_amd64.tar.gz` from anchore releases | `0e91737aee2b5baf1d255b959630194a302335d848ff97bb07921eb6205b5f5a` | Verified against `syft_1.44.0_checksums.txt`. Binary at `/usr/local/bin/syft`. Update `SYFT_SHA256` ARG in Containerfile on bump. |
 | `goreleaser` | `v2.16.0` | prebuilt `goreleaser_Linux_x86_64.tar.gz` from goreleaser releases | `eaae05b5eba07533bd0f06846b68c808399504784df00c62eb219541fc04e5e2` | Verified against `checksums.txt`. Binary at `/usr/local/bin/goreleaser`. Update `GORELEASER_SHA256` ARG in Containerfile on bump. |
-| `cosign` | `v3.1.5` | prebuilt `cosign-linux-amd64` from sigstore releases | see `cosign_checksums.txt` (runtime-fetched) | SHA256 verified at build time against cosign_checksums.txt. Binary at `/usr/local/bin/cosign`. |
+| `cosign` | `v3.1.6` | prebuilt `cosign-linux-amd64` from sigstore releases | see `cosign_checksums.txt` (runtime-fetched) | SHA256 verified at build time against cosign_checksums.txt. Binary at `/usr/local/bin/cosign`. |
 | `govulncheck` | `latest` | `go install golang.org/x/vuln/cmd/govulncheck@latest` | n/a (go sumdb integrity) | Binary at `/usr/local/bin/govulncheck`; Renovate tracks `golang.org/x/vuln` |
 | `go-licenses` | `v2.0.1` | `go install github.com/google/go-licenses@v2.0.1` | n/a (go sumdb integrity) | Binary at `/usr/local/bin/go-licenses`; used by `go-ci` task to fail PRs pulling forbidden/restricted licenses (GPL/AGPL/LGPL/MPL). Update `GO_LICENSES_VERSION` ARG in Containerfile on bump. |
 
