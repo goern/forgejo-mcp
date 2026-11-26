@@ -56,7 +56,9 @@ Do not add a copyright line — the SPDX identifier line alone is sufficient.
    escapes every segment. A hand-rolled `fmt.Sprintf("/repos/%s/…")` lets an
    owner containing `/` or `?` retarget the request at another endpoint;
    `scripts/ci/check-api-path-escaping.sh` fails the build on it. Append query
-   strings to the `APIPath` result.
+   strings to the `APIPath` result. A test for the escaping must read
+   `r.RequestURI` in a bare handler, not `r.URL.Path` behind a `ServeMux`;
+   see "Testing raw-HTTP path escaping" in [DEVELOPER.md](DEVELOPER.md).
 6. **Bound the output.** If response size depends on data (not tool
    semantics), the tool MUST satisfy [docs/design/output-bounding.md](docs/design/output-bounding.md):
    client-controlled bound + resumability + documented parameters. Use the
