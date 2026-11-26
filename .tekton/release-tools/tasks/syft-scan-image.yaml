@@ -29,7 +29,7 @@ spec:
       description: Workspace-relative path of the emitted SBOM file.
   steps:
     - name: scan
-      image: quay.io/buildah/stable:v1.46.1@sha256:a3de0b518395b28d4c5174ea685c86e4c6b5cdd9ab23f327b7f252a5e932608f
+      image: quay.io/buildah/stable:v1.46.1@sha256:c252a310e3554face522db705b3b501132a80d30ce75c011ef6187a96f34db6e
       securityContext:
         privileged: true
       workingDir: $(workspaces.source.path)
