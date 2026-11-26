@@ -1,3 +1,52 @@
+## [3.6.0](https://git.b4mad.industries/agentic-forges/forgejo-mcp/compare/v3.5.0...v3.6.0) (2026-11-26)
+
+### :sparkles: Features
+
+* **packages:** link and unlink a package to a repository ([21a84a0](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/21a84a032cae1c2a766b8f966d677b08865286a4))
+
+### :bug: Fixes
+
+* address review of the sign-in-required startup ([#730](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/730)) ([82eeb77](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/82eeb77b7cdfa0cbacad075eb424bd3d36dbb152))
+* **forgejo:** refuse a client certificate that is not valid yet at startup ([e5ced5b](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/e5ced5b4defaf8032fb8efb97bc82e31fc541799)), closes [#756](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/756) [#755](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/755)
+* start against a Forgejo instance that requires sign-in ([949227c](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/949227ce14f9c821d0eb07845643ea9dbda22bad)), closes [#729](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/729)
+
+### :memo: Documentation
+
+* 📝 record cosign v3.1.6 in release-tools VERSIONS.md ([2071d6b](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/2071d6b2a74f563cdf3089f0aec6cba20cf90a9d)), closes [#771](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/771)
+* 📝 sync release-tools VERSIONS.md with the Containerfile pins ([8439593](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/843959300cae670abe6a142e328665cbdce842ce)), closes [#769](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/769)
+* describe startup against a sign-in-only Forgejo and -forgejo-version ([d13651f](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/d13651fb76c7074f23414050ba8324c0b091241c)), closes [#729](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/729)
+* document the RequestURI and ServeMux traps in escaping tests ([926c428](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/926c42840893988e2ff2645184403ba376e41614)), closes [#500](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/500)
+* **openspec:** propose package link and unlink ([9257891](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/9257891ac0c57aecaa8cf24b03bcf78ad04c45b2))
+* **openspec:** propose signin-required-forgejo ([296aad7](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/296aad74adf1c0f5c7b16d447260e3dd31e702f6)), closes [#729](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/729)
+* package link tools and demo ([5ecda3f](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/5ecda3f91bbc116736d0671fd3d544f44e8d3814))
+* **packages:** capture the link demo live on Forgejo 17.0.2 ([d3632c4](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/d3632c4be08169cde89b7c5b4be46dc5b762d4cb))
+
+### :white_check_mark: Tests
+
+* probe the swagger fallback over mutual TLS ([e86e124](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/e86e1241370590a78f53aab38da6c875ff05db4e)), closes [#725](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/725)
+
+### :repeat: CI
+
+* 💚 deepen the PR head before checking commit titles ([e72b99e](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/e72b99e775c3b8de5b8c4cf74aea78c3771a57cc)), closes [#670](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/670) [#629](https://git.b4mad.industries/agentic-forges/forgejo-mcp/issues/629)
+* 📌 pin buildah to v1.43.5 in the release-tools image tasks ([23d510e](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/23d510e577ae5a8a8e6530be778bc25a33a0d71c))
+
+### :repeat: Chore
+
+* archive package-link ([8fd63bc](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/8fd63bc49591c76e1794be4663d8f63ba0c5acf7))
+* **deps:** update dependency sigstore/cosign to v3.1.5 ([2bc08bf](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/2bc08bf6a9b87d32795a06545279f9806d4cb38b))
+* **deps:** update dependency sigstore/cosign to v3.1.6 ([95158e7](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/95158e730599d62b2b490a3bcb6bffd6fdfc48f5))
+* **deps:** update quay.io/buildah/stable docker tag to v1.46.1 ([172e4b1](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/172e4b19f287859361e038f8271fbbe797d59ab5))
+* **deps:** update quay.io/buildah/stable:v1.46.1 docker digest to a3de0b5 ([69611ff](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/69611ff1c884221b23aa3ddf8b0274baa1bfa37e))
+* **deps:** update quay.io/buildah/stable:v1.46.1 docker digest to c252a31 ([b4174ff](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/b4174fff43543039450a82c5ab03ceb47ea214df))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to 3353904 ([25bc1e1](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/25bc1e1b9c4094604f488f371a0b45b79ddf815d))
+* **deps:** update quay.io/hummingbird/core-runtime:2.43 docker digest to fe49c1e ([e387b29](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/e387b29cb6255d390f5321238493de4a2eb7bae1))
+* **deps:** update quay.io/hummingbird/go:1.27.4-builder docker digest to 246cf9c ([0b270d0](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/0b270d00cceec09d9eae3b22d121ec5914b5cc01))
+* **deps:** update quay.io/hummingbird/go:1.27.4-builder docker digest to 2f8d4b3 ([fe778b5](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/fe778b5e0269d9bbce695f5e3df0e0718dc9eccd))
+* **deps:** update quay.io/hummingbird/go:1.27.4-builder docker digest to 720e268 ([810ff9e](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/810ff9eb5fac0688df9db00d4d8f38234ddd0b14))
+* **deps:** update quay.io/hummingbird/go:1.27.4-builder docker digest to 9f44138 ([48ab3e8](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/48ab3e813fa2eefaf6671f0f125abcb67311279e))
+* **deps:** update quay.io/hummingbird/go:1.27.4-builder docker digest to af27111 ([c3d9189](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/c3d9189a6104629bb5fcf03c8d7f631c6470a82c))
+* **deps:** update quay.io/hummingbird/go:1.27.4-builder docker digest to fbda982 ([4c346a1](https://git.b4mad.industries/agentic-forges/forgejo-mcp/commit/4c346a129221d9b50d8df17669d39b11f5bdf889))
+
 ## [3.5.0](https://git.b4mad.industries/agentic-forges/forgejo-mcp/compare/v3.4.1...v3.5.0) (2026-11-21)
 
 ### :sparkles: Features
