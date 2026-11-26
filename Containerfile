@@ -1,4 +1,4 @@
-FROM quay.io/hummingbird/go:1.27.4-builder@sha256:720e268151dc7a0c5152e38b95aba648e6e828bdb9204bb195eda694469d24ba AS build
+FROM quay.io/hummingbird/go:1.27.4-builder@sha256:3676bcd20d81b6f3497e66bf62f645d5529a97d17f5fed4772fe3b9095da8a2b AS build
 
 # Version is injected at build time; the container has no usable .git to derive
 # it from (see `make container`). Defaults to "dev" for plain `podman build`.
