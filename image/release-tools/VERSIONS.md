@@ -7,9 +7,9 @@ Update this file, then regenerate `npm/package-lock.json` and rebuild the image.
 
 | Image | Tag | Digest | Notes |
 |---|---|---|---|
-| `registry.access.redhat.com/hi/go` | `1.25.10-builder` | `sha256:1a99d42f555db97455998945faf3c797c1f65ce1b92e4d9952a589446d114d6c` | Pinned to a specific `MAJOR.MINOR.PATCH-builder` tag published by Hummingbird, replacing the earlier floating `latest-builder`. Track at https://catalog.redhat.com/software/containers/hi/go/. |
+| `registry.access.redhat.com/hi/go` | `1.26.10-builder` | `sha256:8534a929a08031ad051058a3573ebd9f2e7c187314e406dc2815070c64c445a2` | Pinned to a specific `MAJOR.MINOR.PATCH-builder` tag published by Hummingbird, replacing the earlier floating `latest-builder`. Track at https://catalog.redhat.com/software/containers/hi/go/. |
 
-Go version shipped: `1.25.10` (from tag)
+Go version shipped: `1.26.10` (from tag)
 
 ## Tools Installed via Build Stage (compiled/fetched)
 
@@ -17,9 +17,9 @@ Go version shipped: `1.25.10` (from tag)
 |---|---|---|---|---|
 | `syft` | `v1.44.0` | prebuilt `syft_1.44.0_linux_amd64.tar.gz` from anchore releases | `0e91737aee2b5baf1d255b959630194a302335d848ff97bb07921eb6205b5f5a` | Verified against `syft_1.44.0_checksums.txt`. Binary at `/usr/local/bin/syft`. Update `SYFT_SHA256` ARG in Containerfile on bump. |
 | `goreleaser` | `v2.16.0` | prebuilt `goreleaser_Linux_x86_64.tar.gz` from goreleaser releases | `eaae05b5eba07533bd0f06846b68c808399504784df00c62eb219541fc04e5e2` | Verified against `checksums.txt`. Binary at `/usr/local/bin/goreleaser`. Update `GORELEASER_SHA256` ARG in Containerfile on bump. |
-| `cosign` | `v3.0.6` | prebuilt `cosign-linux-amd64` from sigstore releases | see `cosign_checksums.txt` (runtime-fetched) | SHA256 verified at build time against cosign_checksums.txt. Binary at `/usr/local/bin/cosign`. |
+| `cosign` | `v3.1.6` | prebuilt `cosign-linux-amd64` from sigstore releases | see `cosign_checksums.txt` (runtime-fetched) | SHA256 verified at build time against cosign_checksums.txt. Binary at `/usr/local/bin/cosign`. |
 | `govulncheck` | `latest` | `go install golang.org/x/vuln/cmd/govulncheck@latest` | n/a (go sumdb integrity) | Binary at `/usr/local/bin/govulncheck`; Renovate tracks `golang.org/x/vuln` |
-| `go-licenses` | `v1.6.0` | `go install github.com/google/go-licenses@v1.6.0` | n/a (go sumdb integrity) | Binary at `/usr/local/bin/go-licenses`; used by `go-ci` task to fail PRs pulling forbidden/restricted licenses (GPL/AGPL/LGPL/MPL). Update `GO_LICENSES_VERSION` ARG in Containerfile on bump. |
+| `go-licenses` | `v2.0.1` | `go install github.com/google/go-licenses@v2.0.1` | n/a (go sumdb integrity) | Binary at `/usr/local/bin/go-licenses`; used by `go-ci` task to fail PRs pulling forbidden/restricted licenses (GPL/AGPL/LGPL/MPL). Update `GO_LICENSES_VERSION` ARG in Containerfile on bump. |
 
 ## Tools Installed via dnf (final stage)
 
@@ -36,7 +36,7 @@ Go version shipped: `1.25.10` (from tag)
 | Package | Version | npm Integrity Hash | Tarball SHA256 |
 |---|---|---|---|
 | `@anthropic-ai/mcpb` | `2.1.2` | see `npm/package-lock.json` | see `npm/package-lock.json` `integrity` field |
-| `@fission-ai/openspec` | `1.3.1` | see `npm/package-lock.json` | see `npm/package-lock.json` `integrity` field |
+| `@fission-ai/openspec` | `1.17.0` | see `npm/package-lock.json` | see `npm/package-lock.json` `integrity` field |
 
 The tarball SHA256 is recorded in `npm/package-lock.json` under `integrity` (sha512 format).
 A manual integrity check: `npm pack @anthropic-ai/mcpb@2.1.2 --dry-run` and compare hash.
