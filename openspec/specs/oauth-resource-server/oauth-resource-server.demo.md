@@ -4,6 +4,7 @@
 
 *Captured: 2026-09-10 via Showboat 0.6.1*
 <!-- captured-for: PR #584 -->
+<!-- extended-for: PR #730 (signin-required-forgejo), four Forgejo-version scenarios, test evidence only -->
 <!-- captured-at: 2026-09-10 -->
 <!-- captured-against: 8d525d7 (byteflavour/feat/oauth-rs-issuer-core); live evidence against https://forgejo-mcp.byteflavour.dev running 7d48e99 (tag deploy/chiba-20260910); review follow-ups and every refusal re-captured 2026-09-14 against the same branch after 5b065d6 -->
 <!-- re-capture changed only the log line of each refusal, cmd/cmd.go:294 to :295, moved by later commits to cmd/cmd.go -->
@@ -173,6 +174,85 @@ proof ./operation/ -run '^TestPrepareResourceServerRefusesForgejoBefore16$'
 
 ```output
 --- PASS: TestPrepareResourceServerRefusesForgejoBefore16
+ok  	git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation
+```
+
+<!-- spec-scenario: oauth-resource-server#forgejo-requires-sign-in-version-read-from-swagger -->
+**Proves:** [spec.md → Scenario: Forgejo requires sign-in, version read from swagger](./spec.md#scenario-forgejo-requires-sign-in-version-read-from-swagger)
+
+#### Scenario: Forgejo requires sign-in, version read from swagger
+- **WHEN** the server is started in `resource-server` mode, Forgejo answers `403` on `/api/v1/version`, and `/swagger.v1.json` carries `info.version` `16.0.7+gitea-1.22.0`
+- **THEN** the version check SHALL pass with version `16.0.7+gitea-1.22.0`
+
+<!-- evidence-kind: test-invocation -->
+*Proof:* a Forgejo that answers an anonymous `/api/v1/version` with `403` but serves `info.version` in `/swagger.v1.json` passes the startup. The test asserts that swagger was read and that no request to Forgejo carried a credential.
+
+```bash
+proof ./operation/ -run '^TestPrepareResourceServerReadsTheVersionFromSwagger$'
+```
+
+```output
+--- PASS: TestPrepareResourceServerReadsTheVersionFromSwagger
+ok  	git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation
+```
+
+<!-- spec-scenario: oauth-resource-server#forgejo-requires-sign-in-and-publishes-no-swagger -->
+**Proves:** [spec.md → Scenario: Forgejo requires sign-in and publishes no swagger](./spec.md#scenario-forgejo-requires-sign-in-and-publishes-no-swagger)
+
+#### Scenario: Forgejo requires sign-in and publishes no swagger
+- **WHEN** the server is started in `resource-server` mode without `--forgejo-version`, Forgejo answers `403` on `/api/v1/version`, and the swagger fallback reads no version
+- **THEN** it SHALL refuse to start
+- **AND** the message SHALL say that Forgejo requires sign-in to read its version and name `--forgejo-version`
+
+<!-- evidence-kind: test-invocation -->
+*Proof:* with `/api/v1/version` answering `403` and no `/swagger.v1.json`, the startup refuses. The test asserts that the message says `requires sign-in` and names `-forgejo-version`.
+
+```bash
+proof ./operation/ -run '^TestPrepareResourceServerNamesTheSettingWhenNoVersionIsReadable$'
+```
+
+```output
+--- PASS: TestPrepareResourceServerNamesTheSettingWhenNoVersionIsReadable
+ok  	git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation
+```
+
+<!-- spec-scenario: oauth-resource-server#version-supplied-by-the-operator -->
+**Proves:** [spec.md → Scenario: Version supplied by the operator](./spec.md#scenario-version-supplied-by-the-operator)
+
+#### Scenario: Version supplied by the operator
+- **WHEN** the server is started in `resource-server` mode with `--forgejo-version 16.0.7`
+- **THEN** the version check SHALL pass without reading the version from Forgejo
+- **AND** the server SHALL check, with one anonymous request, that Forgejo is reachable
+
+<!-- evidence-kind: test-invocation -->
+*Proof:* with `-forgejo-version 16.0.7` and a Forgejo that requires sign-in, the startup passes. The test asserts that `/swagger.v1.json` was not requested, that `/api/v1/version` was requested once and without a credential, and that the log names the setting as the source of the version.
+
+```bash
+proof ./operation/ -run '^TestPrepareResourceServerUsesTheVersionSetting$'
+```
+
+```output
+--- PASS: TestPrepareResourceServerUsesTheVersionSetting
+ok  	git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation
+```
+
+<!-- spec-scenario: oauth-resource-server#supplied-version-too-old -->
+**Proves:** [spec.md → Scenario: Supplied version too old](./spec.md#scenario-supplied-version-too-old)
+
+#### Scenario: Supplied version too old
+- **WHEN** the server is started in `resource-server` mode with `--forgejo-version 15.0.11`
+- **THEN** it SHALL refuse to start
+- **AND** the message SHALL say that `resource-server` mode requires Forgejo 16.0 or newer
+
+<!-- evidence-kind: test-invocation -->
+*Proof:* `-forgejo-version 15.0.11` makes the startup refuse. The test asserts that the message says `requires Forgejo 16.0 or newer` and `-forgejo-version is 15.0.11`.
+
+```bash
+proof ./operation/ -run '^TestPrepareResourceServerRefusesASuppliedVersionBefore16$'
+```
+
+```output
+--- PASS: TestPrepareResourceServerRefusesASuppliedVersionBefore16
 ok  	git.b4mad.industries/agentic-forges/forgejo-mcp/v3/operation
 ```
 

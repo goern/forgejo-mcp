@@ -10,6 +10,12 @@ var (
 	Version   string
 	UserAgent string
 
+	// ForgejoVersion is the Forgejo version the operator states with
+	// -forgejo-version / FORGEJO_MCP_FORGEJO_VERSION. When set, the server does
+	// not read the version from Forgejo at startup and uses this value instead;
+	// it still checks that Forgejo is reachable.
+	ForgejoVersion string
+
 	// Host is the address the network transports bind to. It defaults to
 	// loopback, per the Model Context Protocol's guidance that a locally-run
 	// server "SHOULD bind only to localhost (127.0.0.1) rather than all

@@ -27,7 +27,7 @@ forgejo-mcp keeps no per-user state and holds no forge token. Its one secret is 
 
 ## Requirements
 
-**Forgejo 16.0 or newer.** forgejo-mcp reads `/api/v1/version` at startup and refuses older versions.
+**Forgejo 16.0 or newer.** forgejo-mcp reads the version at startup, without a credential, and refuses older versions. It asks `/api/v1/version` first. An instance that requires sign-in (`[service] REQUIRE_SIGNIN_VIEW = true`) answers that with `403`, so forgejo-mcp then reads `info.version` from `/swagger.v1.json`, which such an instance still publishes. If swagger is disabled too (`[api] ENABLE_SWAGGER = false`), state the version with `--forgejo-version` (`FORGEJO_MCP_FORGEJO_VERSION`), for example `16.0.7`. forgejo-mcp then checks the value you give instead of reading the version. It still sends one anonymous request to `/api/v1/version` to check that `--url` reaches Forgejo, and logs a warning if Forgejo reports a version other than yours.
 
 **An OpenID Connect provider** that can:
 
@@ -72,7 +72,7 @@ forgejo-mcp refuses to start, before it binds a socket, when:
 - the host of `--resource` or `--forgejo-jwt-issuer` is not in `--allowed-hosts`;
 - the path of `--resource` is not `/mcp`;
 - the key cannot be used;
-- Forgejo is older than 16.0;
+- Forgejo is older than 16.0, or its version cannot be read and `--forgejo-version` is unset, or Forgejo cannot be reached;
 - the provider's metadata is unreachable, names another issuer or names no key set.
 
 The message names the setting to fix.

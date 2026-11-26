@@ -168,6 +168,13 @@ You can run a single centralized `forgejo-mcp` instance and let each client prov
    - `Authorization: Bearer <token>` (OAuth2/MCP style)
    - Note: The scheme (`token` or `Bearer`) is case-insensitive.
 
+   An instance that requires sign-in (`REQUIRE_SIGNIN_VIEW`) is fine: without a global
+   token the server only reads the instance's version anonymously at startup, falling
+   back to `/swagger.v1.json`, and starts with a warning if neither is readable. It
+   refuses to start when `--url` does not answer like Forgejo: no response at all, a
+   status other than `200`, `401` or `403`, or a `401`/`403` that is not a Forgejo API
+   error. That check runs even when `--forgejo-version` is set.
+
 See [demos/multi-tenant-http.md](demos/multi-tenant-http.md) for a copy-pasteable walkthrough.
 
 #### Exposing the server to a network
@@ -685,6 +692,7 @@ You can configure the server using command-line arguments or environment variabl
 | `--tls-cert` | `FORGEJO_TLS_CERT` | PEM client certificate presented to Forgejo, for an instance behind mutual TLS; needs `--tls-key`. See [Connecting to Forgejo behind mutual TLS](#connecting-to-forgejo-behind-mutual-tls) |
 | `--tls-key` | `FORGEJO_TLS_KEY` | PEM private key of `--tls-cert` |
 | `--tls-ca` | `FORGEJO_TLS_CA` | PEM CA bundle trusted for Forgejo's server certificate. It **replaces** the system roots |
+| `--forgejo-version` | `FORGEJO_MCP_FORGEJO_VERSION` | Forgejo version to assume instead of reading it at startup, for example `16.0.7`. Optional; only needed in `resource-server` mode when the instance requires sign-in and does not publish `/swagger.v1.json`. Startup still checks that Forgejo is reachable, and warns if Forgejo reports a different version |
 | - | `FORGEJO_MCP_ALLOW_FILE_PATH_UPLOAD` | Allow `file_path` attachment uploads to read the host filesystem (`1`/`true`/`yes`/`on`; off by default) |
 | - | `FORGEJO_MCP_UPLOAD_ROOT` | Confine `file_path` uploads to this directory (default: anywhere the process can read) |
 

@@ -33,6 +33,7 @@ var (
 	tlsCert        string
 	tlsKey         string
 	tlsCA          string
+	forgejoVersion string
 
 	// flagSet is retained so initConfig can ask whether a flag was actually
 	// passed, rather than comparing it to its default value — which cannot
@@ -94,6 +95,14 @@ func initFlags() {
 		"token",
 		"",
 		"Your personal access token",
+	)
+	fs.StringVar(
+		&forgejoVersion,
+		"forgejo-version",
+		"",
+		"Forgejo version to assume instead of reading it from the instance at startup "+
+			"(for example: 16.0.7). Only needed when the instance requires sign-in and does not "+
+			"publish /swagger.v1.json",
 	)
 	fs.StringVar(
 		&userAgent,
@@ -287,6 +296,10 @@ func initConfig() {
 		}
 	}
 
+	if err := applyForgejoVersion(); err != nil {
+		log.Fatal("Invalid Forgejo version configuration", log.ErrorField(err))
+	}
+
 	resolveAuthSettings()
 	applyTLSSettings()
 }
@@ -328,6 +341,40 @@ func applyTLSSettings() {
 		log.StringField("tls_key", s.KeyFile),
 		log.StringField("tls_ca", s.CAFile),
 	)
+}
+
+// applyForgejoVersion resolves -forgejo-version and records it. It is
+// recorded here, once, so every mode -- server and --cli alike -- builds its
+// SDK clients without asking Forgejo for the version.
+func applyForgejoVersion() error {
+	version, err := resolveForgejoVersion()
+	if err != nil {
+		return err
+	}
+	flagPkg.ForgejoVersion = version
+	if version != "" {
+		forgejo.SetServerVersion(version)
+	}
+	return nil
+}
+
+// forgejoVersionEnv is the environment variable behind -forgejo-version. It
+// carries the FORGEJO_MCP_ prefix because a bare FORGEJO_VERSION is commonly
+// set by tooling that picks a Forgejo container tag.
+const forgejoVersionEnv = "FORGEJO_MCP_FORGEJO_VERSION"
+
+// resolveForgejoVersion reads -forgejo-version / FORGEJO_MCP_FORGEJO_VERSION,
+// the flag winning, and refuses a value the Forgejo SDK cannot parse or that
+// has no numeric major version.
+func resolveForgejoVersion() (string, error) {
+	v := strings.TrimSpace(resolveString(forgejoVersion, forgejoVersionEnv, "forgejo-version"))
+	if v == "" {
+		return "", nil
+	}
+	if err := forgejo.ValidateVersion(v); err != nil {
+		return "", fmt.Errorf("-forgejo-version / %s: %w", forgejoVersionEnv, err)
+	}
+	return v, nil
 }
 
 func validateURL(urlStr string) error {

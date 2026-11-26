@@ -213,6 +213,11 @@ type fixture struct {
 	// rejectUser makes Forgejo answer /api/v1/user with 401, repeating the
 	// presented credential in the message as the real Forgejo does.
 	rejectUser atomic.Bool
+	// signInRequired makes Forgejo answer an anonymous /api/v1/version with
+	// 403, as an instance with REQUIRE_SIGNIN_VIEW does.
+	signInRequired atomic.Bool
+	// swaggerVersion, when set, is served as info.version in /swagger.v1.json.
+	swaggerVersion atomic.Value
 }
 
 func (f *fixture) requests() []string {
@@ -231,7 +236,19 @@ func newFixture(t *testing.T, forgejoVersion string, signingKey crypto.PrivateKe
 		f.mu.Unlock()
 		switch r.URL.Path {
 		case "/api/v1/version":
+			if f.signInRequired.Load() && r.Header.Get("Authorization") == "" {
+				w.WriteHeader(http.StatusForbidden)
+				_ = json.NewEncoder(w).Encode(map[string]string{"message": "Only signed in user is allowed to call APIs."})
+				return
+			}
 			_ = json.NewEncoder(w).Encode(map[string]string{"version": forgejoVersion})
+		case "/swagger.v1.json":
+			v, _ := f.swaggerVersion.Load().(string)
+			if v == "" {
+				http.NotFound(w, r)
+				return
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"swagger": "2.0", "info": map[string]string{"version": v}})
 		case "/api/v1/user":
 			if f.rejectUser.Load() {
 				token := strings.TrimPrefix(r.Header.Get("Authorization"), "token ")
@@ -376,5 +393,112 @@ func TestPrepareResourceServerRefusesAProviderIssuerMismatch(t *testing.T) {
 	_, err := prepareResourceServer(context.Background())
 	if err == nil || !strings.Contains(err.Error(), "-authorization-server") || !strings.Contains(err.Error(), "must match exactly") {
 		t.Fatalf("error = %v, want a refusal of the issuer mismatch", err)
+	}
+}
+
+// withVersionSetting sets -forgejo-version for one test.
+func withVersionSetting(t *testing.T, v string) {
+	t.Helper()
+	prev := flag.ForgejoVersion
+	t.Cleanup(func() { flag.ForgejoVersion = prev })
+	flag.ForgejoVersion = v
+}
+
+// Spec oauth-resource-server, scenario "Forgejo requires sign-in, version read
+// from swagger".
+func TestPrepareResourceServerReadsTheVersionFromSwagger(t *testing.T) {
+	withResourceServerConfig(t)
+	withVersionSetting(t, "")
+	f := newFixture(t, "16.0.7+gitea-1.22.0", mustP256(t), "")
+	f.signInRequired.Store(true)
+	f.swaggerVersion.Store("16.0.7+gitea-1.22.0")
+
+	if _, err := prepareResourceServer(context.Background()); err != nil {
+		t.Fatalf("prepareResourceServer: %v", err)
+	}
+	var swagger bool
+	for _, req := range f.requests() {
+		if !strings.HasSuffix(req, " ") {
+			t.Fatalf("a startup request to Forgejo carried a credential: %q", req)
+		}
+		swagger = swagger || strings.HasPrefix(req, "/swagger.v1.json ")
+	}
+	if !swagger {
+		t.Fatal("swagger was not read")
+	}
+}
+
+// Spec oauth-resource-server, scenario "Forgejo requires sign-in and publishes
+// no swagger".
+func TestPrepareResourceServerNamesTheSettingWhenNoVersionIsReadable(t *testing.T) {
+	withResourceServerConfig(t)
+	withVersionSetting(t, "")
+	f := newFixture(t, "16.0.7", mustP256(t), "")
+	f.signInRequired.Store(true)
+
+	_, err := prepareResourceServer(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "requires sign-in") || !strings.Contains(err.Error(), "-forgejo-version") {
+		t.Fatalf("error = %v, want a refusal naming sign-in and -forgejo-version", err)
+	}
+}
+
+// Spec oauth-resource-server, scenario "Version supplied by the operator":
+// the version is not read, only one anonymous reachability request is sent,
+// and the log names the setting as the source.
+func TestPrepareResourceServerUsesTheVersionSetting(t *testing.T) {
+	withResourceServerConfig(t)
+	withVersionSetting(t, "16.0.7")
+	f := newFixture(t, "16.0.7", mustP256(t), "")
+	f.signInRequired.Store(true)
+	logs := captureLogs(t, zapcore.InfoLevel)
+
+	if _, err := prepareResourceServer(context.Background()); err != nil {
+		t.Fatalf("prepareResourceServer: %v", err)
+	}
+	versionRequests := 0
+	for _, req := range f.requests() {
+		if strings.HasPrefix(req, "/swagger.v1.json ") {
+			t.Fatalf("swagger was read although the version is configured: %q", req)
+		}
+		if strings.HasPrefix(req, "/api/v1/version ") {
+			versionRequests++
+			if !strings.HasSuffix(req, " ") {
+				t.Fatalf("the reachability check carried a credential: %q", req)
+			}
+		}
+	}
+	if versionRequests != 1 {
+		t.Fatalf("%d /api/v1/version requests, want 1 (the reachability check)", versionRequests)
+	}
+	stated := logs.FilterMessage("Using the Forgejo version from the configuration").All()
+	if len(stated) != 1 || stated[0].ContextMap()["source"] != forgejoVersionSource {
+		t.Fatalf("log lines naming the stated version: %v", stated)
+	}
+}
+
+// Stating the version does not skip the check that -url reaches Forgejo.
+func TestPrepareResourceServerRefusesAnUnreachableForgejoWithTheVersionSetting(t *testing.T) {
+	withResourceServerConfig(t)
+	withVersionSetting(t, "16.0.7")
+	newFixture(t, "16.0.7", mustP256(t), "")
+	srv := httptest.NewServer(http.NotFoundHandler())
+	flag.URL = srv.URL
+	srv.Close()
+
+	_, err := prepareResourceServer(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "cannot reach Forgejo") {
+		t.Fatalf("error = %v, want a refusal for an unreachable Forgejo", err)
+	}
+}
+
+// Spec oauth-resource-server, scenario "Supplied version too old".
+func TestPrepareResourceServerRefusesASuppliedVersionBefore16(t *testing.T) {
+	withResourceServerConfig(t)
+	withVersionSetting(t, "15.0.11")
+	newFixture(t, "16.0.7", mustP256(t), "")
+
+	_, err := prepareResourceServer(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "requires Forgejo 16.0 or newer") || !strings.Contains(err.Error(), "-forgejo-version is 15.0.11") {
+		t.Fatalf("error = %v, want a refusal naming Forgejo 16.0 and the setting", err)
 	}
 }
